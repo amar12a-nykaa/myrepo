@@ -20,6 +20,8 @@ embed = IPython.embed
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils 
 
+TABLE = 'popularity'
+
 def valid_date(s):
   try:
     if re.search("^-?[0-9]+$", s):
@@ -48,9 +50,8 @@ parser.add_argument("--debug", action='store_true')
 argv = vars(parser.parse_args())
 
 debug = argv['debug']
-#print(argv)
 
-if argv['num_prods'] == 0 and not argv['yes']:
+if argv['num_prods'] == 0 and not argv['yes'] and not argv['dont_run_report']:
   response = input("Are you sure you want to run full report? [Y/n]")
   if response == 'Y':
     print("Running full report .. ")
@@ -137,7 +138,7 @@ def fetch_data():
 def write_report_data_to_db():
 
   with closing(conn.cursor()) as cursor:
-    query = "delete from popularity"
+    query = "delete from %s" % TABLE
     #print(query)
     cursor.execute(query)
     conn.commit()
@@ -152,6 +153,10 @@ def write_report_data_to_db():
         "orders": product['orders'],
         "productid": product['product'],
       })
+
+      d['cart_additions'] = max(d['orders'], d['cart_additions'])
+      d['views'] = max(d['orders'], d['views'])
+
       types =  {
         "views": int,
         "cart_additions": int,
@@ -167,7 +172,7 @@ def write_report_data_to_db():
       values_format_list = ", ".join( [ map_type[types[x]] for x in d.keys()  ])
       values_list = list(d.values())
 
-      query = "replace into popularity (" + fields_list + ") VALUES(" +values_format_list + ") "
+      query = "replace into "+TABLE+" (" + fields_list + ") VALUES(" +values_format_list + ") "
       query = query % tuple(values_list)
 
       if debug: print(query)
@@ -182,16 +187,18 @@ else:
   print("Skipped writing into DB")
 
 
-total_prods = Utils.fetchResults(conn, "select count(*) as cnt from popularity")[0]['cnt']
+total_prods = Utils.fetchResults(conn, "select count(*) as cnt from %s" % TABLE)[0]['cnt']
 print("total_prods: %s" % total_prods)
 
-num_steps = 4
+num_steps = 100
 step_size = total_prods / num_steps
 step_boundaries = []
 step_boundaries.append(0)
 for i in range(0, num_steps -1 ):
-  skip = (i + 1) * step_size 
-  val = Utils.fetchResults(conn, "select views from popularity order by views limit %d, 1" % skip)[0]['views']
+  skip = (i + 1) * int(step_size )
+  query =  "select views from {TABLE} order by views limit {skip}, 1".format(TABLE=TABLE, skip=skip)
+  print(query)
+  val = Utils.fetchResults(conn, query )[0]['views']
   print(val)
   step_boundaries.append(val)
 
@@ -203,23 +210,37 @@ for i in range(0, num_steps):
   if i < num_steps -1:
     maxm = step_boundaries[i+1]
     max_clause = " and views <= %d" % maxm
-  views_points = .4 / num_steps
+  views_points = 1 * ((i+1)*1.0/num_steps)
   print("min:%d max:%d" % (minm, maxm))
-  query = "select * from popularity where views > %d %s" % (minm, max_clause)
+  query = "select * from {TABLE} where views > {minm} {max_clause}".format(TABLE=TABLE, minm=minm, max_clause=max_clause)
   print(query)
   results = Utils.fetchResults(conn, query)
   print(results)
   for res in results:
     orders = res['orders']
-    views = res['views']
-    cart_additions = res['cart_additions']
+    cart_additions = max(orders, res['cart_additions'], )
+    views = max(cart_additions, res['views'])
 
-    popularity = 2*(orders/cart_additions + cart_additions/views) + views_points
-    popularity = round(popularity /4.4 * 100, 2)
+    print(orders, cart_additions, views)
+    if cart_additions and views:
+      add_to_cart_by_views = cart_additions/views
+      orders_by_add_to_cart = orders/cart_additions
+    else:
+      add_to_cart_by_views = 0 
+      orders_by_add_to_cart = 0 
+
+    f1 = 1 
+    f2 = 1
+    popularity = (f1 * add_to_cart_by_views + f2 * orders_by_add_to_cart ) *   views_points
+    popularity = round(popularity /(f1 + f2 ) * 100, 2)
+
     print("popularity: %s" % popularity)
     with closing(conn.cursor()) as cursor:
-      query = "update popularity set popularity = %d where productid = '%s'" % (popularity, res['productid'])
+      query = "update {TABLE} set popularity = {popularity}, orders_by_add_to_cart = {orders_by_add_to_cart}, add_to_cart_by_views={add_to_cart_by_views}, views_points = {views_points} where productid = '{productid}'".format(TABLE=TABLE, popularity=popularity, orders_by_add_to_cart=orders_by_add_to_cart, add_to_cart_by_views=add_to_cart_by_views, views_points=views_points, productid=res['productid'])
       print(query)
+      if popularity>100:
+        embed()
+        sys.exit()
       cursor.execute(query)
       conn.commit()
 
