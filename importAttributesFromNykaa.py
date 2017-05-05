@@ -1,4 +1,6 @@
 #!/usr/bin/python
+import sys
+sys.path.append('/home/apis/nykaa/')
 import traceback
 import mysql.connector
 from contextlib import closing
