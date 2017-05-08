@@ -7,6 +7,7 @@ import os
 import os.path
 import sys
 import mysql.connector
+import traceback 
 
 from collections import OrderedDict
 from contextlib import closing
@@ -167,8 +168,8 @@ def write_report_data_to_db(conn):
         "productid": product['product'],
       })
 
-      d['cart_additions'] = max(d['orders'], d['cart_additions'])
-      d['views'] = max(d['orders'], d['views'])
+      #d['cart_additions'] = max(d['orders'], d['cart_additions'])
+      #d['views'] = max(d['orders'], d['views'])
 
       types =  {
         "views": int,
@@ -244,8 +245,10 @@ for i in range(0, num_steps):
   print(results)
   for res in results:
     orders = res['orders']
-    cart_additions = max(orders, res['cart_additions'], )
-    views = max(cart_additions, res['views'])
+#    cart_additions = max(orders, res['cart_additions'], )
+#    views = max(cart_additions, res['views'])
+    cart_additions = res['cart_additions']
+    views = res['views']
 
     print(orders, cart_additions, views)
     if cart_additions and views:
