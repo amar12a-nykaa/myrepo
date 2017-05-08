@@ -1,3 +1,4 @@
+import json
 import arrow
 import re
 import datetime 
@@ -20,7 +21,6 @@ embed = IPython.embed
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils 
 
-TABLE = 'popularity'
 
 def valid_date(s):
   try:
@@ -44,12 +44,15 @@ parser.add_argument("--startdate", help="startdate in YYYYMMDD format or number 
 parser.add_argument("--enddate", help="enddate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace().format('YYYY-MM-DD'))
 parser.add_argument("--dump-metrics", help="Dump metrics into a file", action='store_true')
 parser.add_argument("--dont-run-report", action='store_true', help="Used for development. Uses sample report data.")
+parser.add_argument("--write-to-file", help="Only runs the report and prints.", type=str)
 parser.add_argument("--dont-write-to-db", help="Only runs the report and prints.", action='store_true')
 parser.add_argument("--dont-calculate-popularity", help="", action='store_true')
+parser.add_argument("--table", type=str, default='popularity')
 parser.add_argument("--debug", action='store_true')
 argv = vars(parser.parse_args())
 
 debug = argv['debug']
+TABLE = argv['table']
 
 if argv['num_prods'] == 0 and not argv['yes'] and not argv['dont_run_report']:
   response = input("Are you sure you want to run full report? [Y/n]")
@@ -116,11 +119,6 @@ def fetch_data():
         .element('category')\
         .range(argv['startdate'], argv['enddate'])\
         .run()
-        #.element('evar3', top=50000, startingWith=0) \
-        #.element('evar1')\
-        #.metric('orders') \
-        #.granularity('day')\
-        #.filter(element='evar91', selected=['Product Detail Page'])\
     print(" --- ")
     #print(report)
     data = report.data
@@ -140,8 +138,15 @@ def write_report_data_to_db():
   with closing(conn.cursor()) as cursor:
     query = "delete from %s" % TABLE
     #print(query)
-    cursor.execute(query)
-    conn.commit()
+    try:
+      cursor.execute(query)
+      conn.commit()
+    except:
+      print(traceback.format_exc())
+      print("Retrying connction")
+      conn = Utils.mysqlConnection()
+      cursor.execute(query)
+      conn.commit()
 
 
   with closing(conn.cursor()) as cursor:
@@ -176,8 +181,21 @@ def write_report_data_to_db():
       query = query % tuple(values_list)
 
       if debug: print(query)
-      cursor.execute(query)
-    conn.commit()
+      try:
+        cursor.execute(query)
+      except:
+        print(traceback.format_exc())
+        print("Retrying connction")
+        conn = Utils.mysqlConnection()
+        cursor.execute(query)
+        conn.commit()
+
+filename = argv['write_to_file']
+if filename:
+  with open(filename, 'w+') as f:
+    for product in fetch_data():
+      f.write(json.dumps(product) + "\n")
+  sys.exit()
 
 
 conn = Utils.mysqlConnection()
@@ -241,6 +259,15 @@ for i in range(0, num_steps):
       if popularity>100:
         embed()
         sys.exit()
-      cursor.execute(query)
-      conn.commit()
+      try:
+        cursor.execute(query)
+        conn.commit()
+      except:
+        print(traceback.format_exc())
+        print("Retrying connction")
+        conn = Utils.mysqlConnection()
+        cursor.execute(query)
+        conn.commit()
+
+
 
