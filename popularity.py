@@ -45,6 +45,7 @@ parser.add_argument("--enddate", help="enddate in YYYYMMDD format or number of d
 parser.add_argument("--dump-metrics", help="Dump metrics into a file", action='store_true')
 parser.add_argument("--dont-run-report", action='store_true', help="Used for development. Uses sample report data.")
 parser.add_argument("--write-to-file", help="Only runs the report and prints.", type=str)
+parser.add_argument("--from-file", help="Read report from file", type=str)
 parser.add_argument("--dont-write-to-db", help="Only runs the report and prints.", action='store_true')
 parser.add_argument("--dont-calculate-popularity", help="", action='store_true')
 parser.add_argument("--table", type=str, default='popularity')
@@ -93,6 +94,13 @@ if argv['dump_metrics']:
 
 
 def fetch_data():
+  if argv['from_file']:
+    with open(argv['from_file'],  'r') as f:
+      for line in f:
+        print(line)
+        yield json.loads(line)
+    return
+
   if argv['dont_run_report']:
     for product in [{'product': '110406', 'category': '::unspecified::', 'event5': 88768, 'cartadditions': 3783, 'orders': 607}, {'product': '71406', 'category': '::unspecified::', 'event5': 86358, 'cartadditions': 13185, 'orders': 2012}, {'product': '121646', 'category': '::unspecified::', 'event5': 82681, 'cartadditions': 167, 'orders': 5}, {'product': '114009', 'category': '::unspecified::', 'event5': 61102, 'cartadditions': 7524, 'orders': 1021}, {'product': '61421', 'category': '::unspecified::', 'event5': 46153, 'cartadditions': 17883, 'orders': 2383}, {'product': '129627', 'category': '::unspecified::', 'event5': 43787, 'cartadditions': 13829, 'orders': 2317}, {'product': '112443', 'category': '::unspecified::', 'event5': 42340, 'cartadditions': 6336, 'orders': 1222}, {'product': '121634', 'category': '::unspecified::', 'event5': 40456, 'cartadditions': 89, 'orders': 0}, {'product': '6478', 'category': '::unspecified::', 'event5': 33264, 'cartadditions': 3522, 'orders': 622}, {'product': '92042', 'category': '::unspecified::', 'event5': 32633, 'cartadditions': 628, 'orders': 185}]:
       yield product
@@ -133,7 +141,7 @@ def fetch_data():
 
 
 
-def write_report_data_to_db():
+def write_report_data_to_db(conn):
 
   with closing(conn.cursor()) as cursor:
     query = "delete from %s" % TABLE
@@ -200,7 +208,7 @@ if filename:
 
 conn = Utils.mysqlConnection()
 if not argv['dont_write_to_db']:
-  write_report_data_to_db()
+  write_report_data_to_db(conn)
 else:
   print("Skipped writing into DB")
 
