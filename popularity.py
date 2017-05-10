@@ -1,27 +1,31 @@
-import json
-import arrow
-import re
-import datetime 
 import argparse
+import datetime
+import json
 import os
 import os.path
+import re
 import sys
-import mysql.connector
-import traceback 
-
+import traceback
 from collections import OrderedDict
 from contextlib import closing
 
 import arrow
 import IPython
-
+import mysql.connector
+import numpy
 import omniture
+import pandas as pd
+from pymongo import MongoClient
 
 embed = IPython.embed
 
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils 
+from pas.v1.utils import Utils
 
+client = MongoClient()
+raw_data = client['search']['raw_data']
+processed_data = client['search']['processed_data']
+popularity_table = client['search']['popularity']
 
 def valid_date(s):
   try:
@@ -38,25 +42,42 @@ def valid_date(s):
     raise argparse.ArgumentTypeError(msg)
 
 
+#def valid_month(s):
+#  try:
+#    if re.search("^-?[0-9]+$", s):
+#      return now.replace().format('YYYY-MM-DD')
+#    else:
+#      raise Exception("Bad month format")
+#      return arrow.get(s, 'YYYY-MM-DD').format('YYYY-MM-DD')
+#      #return datetime.datetime.strptime(s, "%Y-%m-%d")
+#  except ValueError:
+#    msg = "Not a valid date: '{0}'.".format(s)
+#    raise argparse.ArgumentTypeError(msg)
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--num-prods", '-n', required=True, help="Number of products to be fetched from omniture. Pass 0 for fetching all.", default=0, type=int)
 parser.add_argument("--yes", '-y', help="Pass this to avoid prompt and run full report", action='store_true')
 parser.add_argument("--startdate", help="startdate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-30).format('YYYY-MM-DD'))
 parser.add_argument("--enddate", help="enddate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace().format('YYYY-MM-DD'))
+#parser.add_argument("--month", help="month in YYYYMM format", type=valid_date, default=arrow.now().replace().format('YYYY-MM-DD'))
+
+#parser.add_argument("--run-report", action='store_true', help="Used for development. Uses sample report data.")
+parser.add_argument("--fetch-omniture", help="Only runs the report and prints.", action='store_true')
+parser.add_argument("--preprocess", help="Only runs the report and prints.", action='store_true')
+parser.add_argument("--popularity", help="Calculates popularity", action='store_true')
 parser.add_argument("--dump-metrics", help="Dump metrics into a file", action='store_true')
-parser.add_argument("--dont-run-report", action='store_true', help="Used for development. Uses sample report data.")
-parser.add_argument("--write-to-file", help="Only runs the report and prints.", type=str)
+
 parser.add_argument("--from-file", help="Read report from file", type=str)
-parser.add_argument("--dont-write-to-db", help="Only runs the report and prints.", action='store_true')
-parser.add_argument("--dont-calculate-popularity", help="", action='store_true')
 parser.add_argument("--table", type=str, default='popularity')
 parser.add_argument("--debug", action='store_true')
 argv = vars(parser.parse_args())
 
 debug = argv['debug']
 TABLE = argv['table']
+startdatetime = arrow.get(argv['startdate']).datetime
+enddatetime = arrow.get(argv['enddate']).datetime
 
-if argv['num_prods'] == 0 and not argv['yes'] and not argv['dont_run_report']:
+if argv['num_prods'] == 0 and not argv['yes']:
   response = input("Are you sure you want to run full report? [Y/n]")
   if response == 'Y':
     print("Running full report .. ")
@@ -64,10 +85,10 @@ if argv['num_prods'] == 0 and not argv['yes'] and not argv['dont_run_report']:
     print("Exiting")
     sys.exit()
 
-if argv['num_prods'] == 0:
+if argv['num_prods'] and argv['fetch_omniture']== 0:
   print("=== Running full report. All data will be flushed. === ")
 
-if not argv['dont_run_report'] or argv['dump_metrics']:
+if argv['fetch_omniture'] or argv['dump_metrics']:
   analytics = omniture.authenticate('soumen.seth:FSN E-Commerce', '770f388b78d019017d5e8bd7a63883fb')
   suite = analytics.suites['fsnecommerceprod']
 
@@ -102,11 +123,6 @@ def fetch_data():
         yield json.loads(line)
     return
 
-  if argv['dont_run_report']:
-    for product in [{'product': '110406', 'category': '::unspecified::', 'event5': 88768, 'cartadditions': 3783, 'orders': 607}, {'product': '71406', 'category': '::unspecified::', 'event5': 86358, 'cartadditions': 13185, 'orders': 2012}, {'product': '121646', 'category': '::unspecified::', 'event5': 82681, 'cartadditions': 167, 'orders': 5}, {'product': '114009', 'category': '::unspecified::', 'event5': 61102, 'cartadditions': 7524, 'orders': 1021}, {'product': '61421', 'category': '::unspecified::', 'event5': 46153, 'cartadditions': 17883, 'orders': 2383}, {'product': '129627', 'category': '::unspecified::', 'event5': 43787, 'cartadditions': 13829, 'orders': 2317}, {'product': '112443', 'category': '::unspecified::', 'event5': 42340, 'cartadditions': 6336, 'orders': 1222}, {'product': '121634', 'category': '::unspecified::', 'event5': 40456, 'cartadditions': 89, 'orders': 0}, {'product': '6478', 'category': '::unspecified::', 'event5': 33264, 'cartadditions': 3522, 'orders': 622}, {'product': '92042', 'category': '::unspecified::', 'event5': 32633, 'cartadditions': 628, 'orders': 185}]:
-      yield product
-    return
-
   print("Running report .. ")
   total_rows = argv['num_prods'] or 0
   if not total_rows:
@@ -127,13 +143,17 @@ def fetch_data():
         .element('product', top=top, startingWith=startingWith)\
         .element('category')\
         .range(argv['startdate'], argv['enddate'])\
+        .granularity("day")\
         .run()
     print(" --- ")
     #print(report)
     data = report.data
-    if argv['dont_write_to_db']:
+    if argv['fetch_omniture']:
       print(data)
     for product in data:
+      if 'datetime' in product:
+        product['date'] = datetime.datetime.strftime(product['datetime'], '%Y-%m-%d')
+        #product.pop("datetime")
       yield product
 
     if len(data) < top or (total_rows and top * report_cnt > total_rows):
@@ -141,144 +161,63 @@ def fetch_data():
     startingWith += top
 
 
+def write_report_data_to_db():
 
-def write_report_data_to_db(conn):
+  for product in fetch_data():
+    #print(product['product'])
+    d = {
+      "views": product['event5'],
+      "cart_additions": product['cartadditions'],
+      "orders": product['orders'],
+      "productid": product['product'],
+      "date" : product['datetime']
+    }
 
-  with closing(conn.cursor()) as cursor:
-    query = "delete from %s" % TABLE
-    #print(query)
-    try:
-      cursor.execute(query)
-      conn.commit()
-    except:
-      print(traceback.format_exc())
-      print("Retrying connction")
-      conn = Utils.mysqlConnection()
-      cursor.execute(query)
-      conn.commit()
+    #d['cart_additions'] = max(d['orders'], d['cart_additions'])
+    #d['views'] = max(d['orders'], d['views'])
 
+    #print("d: %s" % d)
+    #print("product: %s" % product)
+    raw_data.update({"date": d['date'], 'productid': d['productid']}, d, upsert=True)
 
-  with closing(conn.cursor()) as cursor:
-    for product in fetch_data():
-      #print(product['product'])
-      d = OrderedDict({
-        "views": product['event5'],
-        "cart_additions": product['cartadditions'],
-        "orders": product['orders'],
-        "productid": product['product'],
-      })
+def preprocess_data():
+  print("preprocess_data")
+  print(argv)
+  for product in raw_data.find({"date": {"$gt": startdatetime, "$lt": enddatetime}}):
+    print(product)
+#TODO preprocessing 
+    p = product
+    processed_data.update({"date": p['date'], "productid": p['productid']}, p, upsert=True)
 
-      #d['cart_additions'] = max(d['orders'], d['cart_additions'])
-      #d['views'] = max(d['orders'], d['views'])
+def normalize(a):
+  return (a-min(a))/(max(a)-min(a))
 
-      types =  {
-        "views": int,
-        "cart_additions": int,
-        "orders": int,
-        "productid": str
-      }
-      map_type = {
-        str: "'%s'",
-        int: "%d"
-      }
+def calculate_popularity():
+  results = []
+  for p in processed_data.aggregate([{"$group": {"_id": "$productid" , "views": {"$sum": "$views"}, "cart_additions": {"$sum": "$cart_additions"}, "orders": {"$sum": "$orders"}}},\
+      {"$limit": 10},\
+      ]):
+    p['productid'] = p.pop("_id")
+    results.append(p)
 
-      fields_list = ", ".join(d.keys())
-      values_format_list = ", ".join( [ map_type[types[x]] for x in d.keys()  ])
-      values_list = list(d.values())
+  df = pd.DataFrame(results)
 
-      query = "replace into "+TABLE+" (" + fields_list + ") VALUES(" +values_format_list + ") "
-      query = query % tuple(values_list)
+  df['Vn'] = normalize(df['views'])
+  df['Cn'] = normalize(df['cart_additions'])
+  df['On'] = normalize(df['orders'])
+  df['popularity'] = normalize(numpy.log(1 + df['Vn'] + 2*df['Cn'] + 3*df['On'])) * 100
 
-      if debug: print(query)
-      try:
-        cursor.execute(query)
-      except:
-        print(traceback.format_exc())
-        print("Retrying connction")
-        conn = Utils.mysqlConnection()
-        cursor.execute(query)
-        conn.commit()
-
-filename = argv['write_to_file']
-if filename:
-  with open(filename, 'w+') as f:
-    for product in fetch_data():
-      f.write(json.dumps(product) + "\n")
+  print(df)
+  for i, row in df.iterrows():
+    row = dict(row)
+    popularity_table.update({"_id": row['productid'], "productid": row['productid']}, row, upsert=True)
   sys.exit()
 
+if argv['fetch_omniture']:
+  write_report_data_to_db()
 
-conn = Utils.mysqlConnection()
-if not argv['dont_write_to_db']:
-  write_report_data_to_db(conn)
-else:
-  print("Skipped writing into DB")
+if argv['preprocess']:
+  preprocess_data()
 
-
-total_prods = Utils.fetchResults(conn, "select count(*) as cnt from %s" % TABLE)[0]['cnt']
-print("total_prods: %s" % total_prods)
-
-num_steps = 100
-step_size = total_prods / num_steps
-step_boundaries = []
-step_boundaries.append(0)
-for i in range(0, num_steps -1 ):
-  skip = (i + 1) * int(step_size )
-  query =  "select views from {TABLE} order by views limit {skip}, 1".format(TABLE=TABLE, skip=skip)
-  print(query)
-  val = Utils.fetchResults(conn, query )[0]['views']
-  print(val)
-  step_boundaries.append(val)
-
-print("step_boundaries: %s" % step_boundaries)
-for i in range(0, num_steps):
-  print("--")
-  minm = step_boundaries[i]
-  max_clause = ""
-  if i < num_steps -1:
-    maxm = step_boundaries[i+1]
-    max_clause = " and views <= %d" % maxm
-  views_points = 1 * ((i+1)*1.0/num_steps)
-  print("min:%d max:%d" % (minm, maxm))
-  query = "select * from {TABLE} where views > {minm} {max_clause}".format(TABLE=TABLE, minm=minm, max_clause=max_clause)
-  print(query)
-  results = Utils.fetchResults(conn, query)
-  print(results)
-  for res in results:
-    orders = res['orders']
-#    cart_additions = max(orders, res['cart_additions'], )
-#    views = max(cart_additions, res['views'])
-    cart_additions = res['cart_additions']
-    views = res['views']
-
-    print(orders, cart_additions, views)
-    if cart_additions and views:
-      add_to_cart_by_views = cart_additions/views
-      orders_by_add_to_cart = orders/cart_additions
-    else:
-      add_to_cart_by_views = 0 
-      orders_by_add_to_cart = 0 
-
-    f1 = 1 
-    f2 = 1
-    popularity = (f1 * add_to_cart_by_views + f2 * orders_by_add_to_cart ) *   views_points
-    popularity = round(popularity /(f1 + f2 ) * 100, 2)
-
-    print("popularity: %s" % popularity)
-    with closing(conn.cursor()) as cursor:
-      query = "update {TABLE} set popularity = {popularity}, orders_by_add_to_cart = {orders_by_add_to_cart}, add_to_cart_by_views={add_to_cart_by_views}, views_points = {views_points} where productid = '{productid}'".format(TABLE=TABLE, popularity=popularity, orders_by_add_to_cart=orders_by_add_to_cart, add_to_cart_by_views=add_to_cart_by_views, views_points=views_points, productid=res['productid'])
-      print(query)
-      if popularity>100:
-        embed()
-        sys.exit()
-      try:
-        cursor.execute(query)
-        conn.commit()
-      except:
-        print(traceback.format_exc())
-        print("Retrying connction")
-        conn = Utils.mysqlConnection()
-        cursor.execute(query)
-        conn.commit()
-
-
-
+if argv['popularity']:
+  calculate_popularity()
