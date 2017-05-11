@@ -194,20 +194,26 @@ def calculate_popularity():
     popularity_table.update({"_id": row['productid'], "productid": row['productid']}, row, upsert=True)
   sys.exit()
 
-def post_to_solr():
+#def post_to_solr():
   #qwerty
   #asdf
   #zxcv
   #qwer
 
 if argv['fetch_omniture']:
+  print("fetch_omniture start: %s" % arrow.now())
   write_report_data_to_db()
+  print("fetch_omniture end: %s" % arrow.now())
 
 if argv['preprocess']:
+  print("preprocess start: %s" % arrow.now())
   preprocess_data()
+  print("preprocess end: %s" % arrow.now())
 
 if argv['popularity']:
+  print("popularity start: %s" % arrow.now())
   calculate_popularity()
+  print("popularity end: %s" % arrow.now())
 
 if argv['post_to_solr']:
   post_to_solr()
