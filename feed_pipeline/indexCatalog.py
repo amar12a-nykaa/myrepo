@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import sys
 import json
+import socket
 import argparse
 import traceback
 import dateparser
@@ -18,6 +19,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
 argv = vars(parser.parse_args())
 file_path = argv['filepath']
+
+host = 'localhost'
+if socket.gethostname().startswith('admin'):
+  host = 'internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com' 
 
 required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
 'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
@@ -91,8 +96,8 @@ for index, row in enumerate(all_rows):
       for info in cat_info:
         doc['category_facet'].append(info)
     elif len(category_ids)!=len(category_names):
-      with open("/data/inconsistent_cat.txt", "a") as f:
-        f.write("%s\n"%doc['sku'])
+    #  with open("/data/inconsistent_cat.txt", "a") as f:
+    #    f.write("%s\n"%doc['sku'])
       print('inconsistent category values for %s'%doc['sku'])
 
     #Price and availability
@@ -106,7 +111,7 @@ for index, row in enumerate(all_rows):
     else:
       # get price and availability from PAS
       params = {'sku': doc['sku'], 'type': doc['type']}
-      pas_object = json.loads(urllib.request.urlopen("http://localhost/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))['skus'] 
+      pas_object = json.loads(urllib.request.urlopen("http://" + host + "/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))['skus'] 
       if pas_object.get(doc['sku']):
         pas = pas_object[doc['sku']]
         missing_fields = []
@@ -126,10 +131,10 @@ for index, row in enumerate(all_rows):
         if missing_fields:
           raise Exception("Missing PAS fields: %s"%missing_fields)
       else:
-        r = json.loads(urllib.request.urlopen("http://internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
-        if not r['skus'].get(doc['sku']):
-          with open("/data/missing_skus.txt", "a") as f:
-            f.write("%s\n"%doc['sku'])
+        #r = json.loads(urllib.request.urlopen("http://internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
+        #if not r['skus'].get(doc['sku']):
+        #  with open("/data/missing_skus.txt", "a") as f:
+        #    f.write("%s\n"%doc['sku'])
         raise Exception("sku not found in Price DB.")
 
     doc['is_saleable'] = doc['in_stock']
@@ -199,8 +204,8 @@ for index, row in enumerate(all_rows):
         doc['offers'].append({'id': offer_ids[i], 'name': offer_names[i], 'description': offer_descriptions[i]})
         doc['offer_facet'].append({'id': offer_ids[i], 'name': offer_names[i]})
     elif offer_ids:
-      with open("/data/inconsistent_offers.txt", "a") as f:
-        f.write("%s\n"%doc['sku'])
+      #with open("/data/inconsistent_offers.txt", "a") as f:
+      #  f.write("%s\n"%doc['sku'])
       print('inconsistent offer values for %s'%doc['sku'])
     doc['offer_count'] = len(doc['offers'])
 
@@ -222,9 +227,9 @@ for index, row in enumerate(all_rows):
           for attr_id, attrs in option_attrs.items():
             facets.append(attrs)
         doc[field_prefix + '_facet'] = facets
-      elif len(facet_ids) != len(facet_values):
-        with open("/data/inconsistent_facet.txt", "a") as f:
-          f.write("%s  %s\n"%(doc['sku'], field))
+      #elif len(facet_ids) != len(facet_values):
+      #  with open("/data/inconsistent_facet.txt", "a") as f:
+      #    f.write("%s  %s\n"%(doc['sku'], field))
 
     doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
     doc['create_time'] = row['created_at']
