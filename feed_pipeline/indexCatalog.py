@@ -73,9 +73,8 @@ for index, row in enumerate(all_rows):
     doc['add_to_cart_url'] = row['add_to_cart_url']
     if row['eretailer']:
       doc['eretailer'] = row['eretailer'] == '1'
-    if doc['type'] == 'simple':
-      doc['redirect_to_parent'] = row['redirect_to_parent'] == '1'
-
+    doc['redirect_to_parent'] = row['redirect_to_parent'] == '1'
+    doc['shipping_quote'] = row.get('shipping_quote')
 
     # Product URL and slug
     product_url = row['product_url']
@@ -96,8 +95,8 @@ for index, row in enumerate(all_rows):
       for info in cat_info:
         doc['category_facet'].append(info)
     elif len(category_ids)!=len(category_names):
-    #  with open("/data/inconsistent_cat.txt", "a") as f:
-    #    f.write("%s\n"%doc['sku'])
+      with open("/data/inconsistent_cat.txt", "a") as f:
+        f.write("%s\n"%doc['sku'])
       print('inconsistent category values for %s'%doc['sku'])
 
     #Price and availability
@@ -126,15 +125,18 @@ for index, row in enumerate(all_rows):
           doc['quantity'] = pas.get('quantity')
 
         if pas.get('backorders') is not None:
-          doc['backorders'] = pas.get('backorders') == 1
+          doc['backorders'] = pas.get('backorders') == True
+
+        if pas.get('disabled') is not None:
+          doc['disabled'] = pas.get('disabled')
 
         if missing_fields:
           raise Exception("Missing PAS fields: %s"%missing_fields)
       else:
-        #r = json.loads(urllib.request.urlopen("http://internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
-        #if not r['skus'].get(doc['sku']):
-        #  with open("/data/missing_skus.txt", "a") as f:
-        #    f.write("%s\n"%doc['sku'])
+        r = json.loads(urllib.request.urlopen("http://internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
+        if not r['skus'].get(doc['sku']):
+          with open("/data/missing_skus.txt", "a") as f:
+            f.write("%s\n"%doc['sku'])
         raise Exception("sku not found in Price DB.")
 
     doc['is_saleable'] = doc['in_stock']
@@ -163,6 +165,7 @@ for index, row in enumerate(all_rows):
     if doc['type'] == 'configurable':
       variant_type = row['variant_type']
       variant_skus = row['parent_sku'].split('|') if row['parent_sku'] else []
+      variant_ids = row['parent_id'].split('|') if row['parent_id'] else []
       variant_name_key = ''
       variant_icon_key = ''
       if variant_type == 'shade':
@@ -173,14 +176,14 @@ for index, row in enumerate(all_rows):
 
       variant_names = row[variant_name_key].split('|') if variant_name_key and row[variant_name_key] else []
       variant_icons = row[variant_icon_key].split('|') if variant_icon_key and row[variant_icon_key] else []
-      if variant_type and variant_skus and len(variant_skus)==len(variant_names):
+      if variant_type and variant_skus and len(variant_skus)==len(variant_names) and len(variant_skus)==len(variant_ids):
         if variant_icons and len(variant_icons) != len(variant_skus):
           variant_icons = []
         variants_arr = []
         if not variant_icons:
           variant_icons = [""]*len(variant_skus)
         for i, sku in enumerate(variant_skus):
-          variants_arr.append({'sku': variant_skus[i], 'name': variant_names[i], 'icon': variant_icons[i]})
+          variants_arr.append({'sku': variant_skus[i], 'id': variant_ids[i], 'name': variant_names[i], 'icon': variant_icons[i]})
         doc['variants'] = {variant_type: variants_arr}
         doc['variant_type'] = variant_type
       doc['option_count'] = len(variant_skus)
@@ -204,8 +207,8 @@ for index, row in enumerate(all_rows):
         doc['offers'].append({'id': offer_ids[i], 'name': offer_names[i], 'description': offer_descriptions[i]})
         doc['offer_facet'].append({'id': offer_ids[i], 'name': offer_names[i]})
     elif offer_ids:
-      #with open("/data/inconsistent_offers.txt", "a") as f:
-      #  f.write("%s\n"%doc['sku'])
+      with open("/data/inconsistent_offers.txt", "a") as f:
+        f.write("%s\n"%doc['sku'])
       print('inconsistent offer values for %s'%doc['sku'])
     doc['offer_count'] = len(doc['offers'])
 
