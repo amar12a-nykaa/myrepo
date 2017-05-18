@@ -95,8 +95,8 @@ for index, row in enumerate(all_rows):
       for info in cat_info:
         doc['category_facet'].append(info)
     elif len(category_ids)!=len(category_names):
-      with open("/data/inconsistent_cat.txt", "a") as f:
-        f.write("%s\n"%doc['sku'])
+      #with open("/data/inconsistent_cat.txt", "a") as f:
+      #  f.write("%s\n"%doc['sku'])
       print('inconsistent category values for %s'%doc['sku'])
 
     #Price and availability
@@ -133,10 +133,10 @@ for index, row in enumerate(all_rows):
         if missing_fields:
           raise Exception("Missing PAS fields: %s"%missing_fields)
       else:
-        r = json.loads(urllib.request.urlopen("http://internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
-        if not r['skus'].get(doc['sku']):
-          with open("/data/missing_skus.txt", "a") as f:
-            f.write("%s\n"%doc['sku'])
+        #r = json.loads(urllib.request.urlopen("http://internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
+        #if not r['skus'].get(doc['sku']):
+          #with open("/data/missing_skus.txt", "a") as f:
+            #f.write("%s\n"%doc['sku'])
         raise Exception("sku not found in Price DB.")
 
     doc['is_saleable'] = doc['in_stock']
@@ -207,8 +207,8 @@ for index, row in enumerate(all_rows):
         doc['offers'].append({'id': offer_ids[i], 'name': offer_names[i], 'description': offer_descriptions[i]})
         doc['offer_facet'].append({'id': offer_ids[i], 'name': offer_names[i]})
     elif offer_ids:
-      with open("/data/inconsistent_offers.txt", "a") as f:
-        f.write("%s\n"%doc['sku'])
+      #with open("/data/inconsistent_offers.txt", "a") as f:
+      #  f.write("%s\n"%doc['sku'])
       print('inconsistent offer values for %s'%doc['sku'])
     doc['offer_count'] = len(doc['offers'])
 
