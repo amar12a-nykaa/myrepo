@@ -2,7 +2,7 @@
 <?php
 
 function getNykaaConnection() {
-  $nykaaConnection = new PDO("mysql:host=proddbnaykaa-2016-reports01.ciel4c1bqlwh.ap-southeast-1.rds.amazonaws.com;dbname=nykaalive1", "anik", "slATy:2Rl9Me5mR");
+  $nykaaConnection = new PDO("mysql:host=proddbnykaa-reports-06052017.ciel4c1bqlwh.ap-southeast-1.rds.amazonaws.com;dbname=nykaalive1", "anik", "slATy:2Rl9Me5mR");
   $nykaaConnection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
   return $nykaaConnection;
 }
@@ -188,6 +188,7 @@ function shouldSkipMatching($product) {
   return false;
 }
 
+/*
 function fetchPWSProduct($sku) {
   global $pwsConnection;
 
@@ -206,10 +207,12 @@ function fetchPWSProduct($sku) {
 
   return $stm->fetch(PDO::FETCH_ASSOC);
 }
+*/
 
-function fetchPWSBundle($sku) {
+function fetchPWSProduct($sku, $type) {
+  $sku = strtoupper($sku);
   $host = "internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com";
-  $url = "http://$host/apis/v1/pas.get?sku=$sku&type=bundle";
+  $url = "http://$host/apis/v1/pas.get?sku=" . urlencode($sku) . "&type=$type";
   $data = json_decode(file_get_contents($url), true);
   if(!isset($data['skus'][$sku])) return null;
   return $data['skus'][$sku];
@@ -342,7 +345,7 @@ while($result1 = $stm->fetch(PDO::FETCH_ASSOC)) {
   $sku = $result1['sku'];
   $type = $result1['type_id'];
 
-  $result2 = ($type == 'bundle')? fetchPWSBundle($sku) : fetchPWSProduct($sku);
+  $result2 = fetchPWSProduct($sku, $type);
   $result2 = processPWSProduct($result2);
   logIfMissing($result2, $sku, $type);
   logIfMismatch($result1, $result2, $sku, $type);
