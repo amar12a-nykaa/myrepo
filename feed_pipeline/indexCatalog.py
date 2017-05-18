@@ -194,6 +194,9 @@ for index, row in enumerate(all_rows):
         doc['variant_name'] = variant_name
         if variant_icon:
           doc['variant_icon'] = variant_icon
+    elif doc['type'] == 'bundle':
+      product_ids = row['parent_id'].split('|') if row['parent_id'] else []
+      doc['product_ids'] = product_ids
 
     # offers stuff
     offer_ids = row['offer_id'].split("|") if row['offer_id'] else []
