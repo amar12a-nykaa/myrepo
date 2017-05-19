@@ -1,3 +1,4 @@
+import pprint
 import argparse
 import datetime
 import json
@@ -62,7 +63,8 @@ debug = argv['debug']
 TABLE = argv['table']
 startdatetime = arrow.get(argv['startdate']).datetime
 enddatetime = arrow.get(argv['enddate']).datetime
-
+print(startdatetime)
+print(enddatetime)
 if argv['num_prods'] == 0 and not argv['yes']:
   response = input("Are you sure you want to run full report? [Y/n]")
   if response == 'Y':
@@ -156,19 +158,25 @@ def write_report_data_to_db():
       "orders": product['orders'],
       "productid": product['product'],
       "date" : product['datetime'],
-      "platform": product['platform']
+      #"platform": product['platform']
     }
 
-    raw_data.update({"date": d['date'], 'productid': d['productid'], 'platform': d['platform']}, d, upsert=True)
+    raw_data.update({"date": d['date'], 'productid': d['productid'], 
+      #'platform': d['platform']
+      }, d, upsert=True)
 
 def preprocess_data():
   print("preprocess_data")
   print(argv)
-  for product in raw_data.find({"date": {"$gt": startdatetime, "$lt": enddatetime}}):
+  count = raw_data.count({"date": {"$gte": startdatetime, "$lte": enddatetime}})
+  print("count: %s" % count)
+  for product in raw_data.find({"date": {"$gte": startdatetime, "$lte": enddatetime}}, no_cursor_timeout=True):
     print(product)
 #TODO preprocessing 
     p = product
-    processed_data.update({"date": p['date'], "productid": p['productid'], 'platform': d['platform']}, p, upsert=True)
+    processed_data.update({"date": p['date'], "productid": p['productid'], 
+      #'platform': p['platform']
+      }, p, upsert=True)
 
 def normalize(a):
   return (a-min(a))/(max(a)-min(a))
@@ -176,7 +184,7 @@ def normalize(a):
 def calculate_popularity():
   results = []
   for p in processed_data.aggregate([{"$group": {"_id": "$productid" , "views": {"$sum": "$views"}, "cart_additions": {"$sum": "$cart_additions"}, "orders": {"$sum": "$orders"}}},\
-      {"$limit": 10},\
+      #{"$limit": 10},\
       ]):
     p['productid'] = p.pop("_id")
     results.append(p)
@@ -194,12 +202,23 @@ def calculate_popularity():
     popularity_table.update({"_id": row['productid'], "productid": row['productid']}, row, upsert=True)
   sys.exit()
 
-#def post_to_solr():
-  #qwerty
-  #asdf
-  #zxcv
-  #qwer
+def post_to_solr(productid, popularity):
+  params = {}
+  params['q'] = "product_id:%s" % productid
+  try:
+    response = Utils.makeSolrRequest(params)
+    if not response['docs']:
+      print("productid not found: %s" % productid)
+      return
+    doc = response['docs'][0]
+    required_fields = ["create_time", "discount", "in_stock", "mrp", "popularity", "price", "product_id", "psku", "sku", "title", "type", "update_time", "visibility", 'product_id']
+    doc = {k: v for k,v in doc.items() if k in required_fields}
 
+    doc.update({"popularity":  {"set": popularity}})
+    response = Utils.updateCatalog([doc])
+    print(response)
+  except:
+    print("[ERROR] Could not update this product on Solr: %s" % productid)
 if argv['fetch_omniture']:
   print("fetch_omniture start: %s" % arrow.now())
   write_report_data_to_db()
@@ -216,4 +235,6 @@ if argv['popularity']:
   print("popularity end: %s" % arrow.now())
 
 if argv['post_to_solr']:
-  post_to_solr()
+  for p in popularity_table.find():
+    print(p)
+    post_to_solr(productid=p['productid'], popularity=p['popularity'])
