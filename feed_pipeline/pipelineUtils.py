@@ -35,7 +35,7 @@ class PipelineUtils:
           else:
             option_attrs[option_id]['color_code'] = [option_value]
         jsonstr = json.dumps(option_attrs[option_id])
-        MemcacheUtils.set('option-%s' % option_id, jsonstr)
+        MemcacheUtils.set(key, jsonstr)
 
     return option_attrs
 
