@@ -235,6 +235,6 @@ if argv['popularity']:
   print("popularity end: %s" % arrow.now())
 
 if argv['post_to_solr']:
-  for p in popularity_table.find():
+  for p in popularity_table.find(no_cursor_timeout=True):
     print(p)
     post_to_solr(productid=p['productid'], popularity=p['popularity'])
