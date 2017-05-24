@@ -127,15 +127,26 @@ def fetch_data():
     while(True):
       print("== report  %d ==" % report_cnt)
       report_cnt += 1
-      report = suites[platform].report \
-          .metric('event5') \
-          .metric('cartadditions') \
-          .metric('orders') \
-          .element('product', top=top, startingWith=startingWith)\
-          .element('category')\
-          .range(argv['startdate'], argv['enddate'])\
-          .granularity("day")\
-          .run()
+      MAX_ATTEMPTS = 3 
+      for attempt in range(0,MAX_ATTEMPTS):
+        print("Attempt %r to fetch omniture data" % attempt)
+        try:
+          report = suites[platform].report \
+              .metric('event5') \
+              .metric('cartadditions') \
+              .metric('orders') \
+              .element('product', top=top, startingWith=startingWith)\
+              .element('category')\
+              .range(argv['startdate'], argv['enddate'])\
+              .granularity("day")\
+              .run()
+        except:
+          print("[ERROR] Attempt %r to fetch omniture data failed!" % attempt)
+          print(traceback.format_exc())
+          pass
+        else:
+          break
+
       print(" --- ")
       data = report.data
       for product in data:
