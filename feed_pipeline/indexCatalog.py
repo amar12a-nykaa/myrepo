@@ -237,6 +237,11 @@ class CatalogIndexer:
           #  with open("/data/inconsistent_facet.txt", "a") as f:
           #    f.write("%s  %s\n"%(doc['sku'], field))
 
+        # meta info: dynamic fields
+        meta_fields = [field for field in row.keys() if field.startswith("meta_")]
+        for field in meta_fields:
+          doc[field] = row.get(field, "")
+
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
