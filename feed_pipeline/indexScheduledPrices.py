@@ -50,7 +50,7 @@ class ScheduledPriceUpdater:
     for bundle in results:
       bundle_count += PipelineUtils.updateCatalog(bundle['sku'], None, 'bundle')
 
-    print("Total %s simple and %s bundle products updated."%(product_count, bundle_count))
+    print("[%s] Total %s simple and %s bundle products updated."%(current_datetime, product_count, bundle_count))
     cursor.close()
     mysql_conn.close()
 
