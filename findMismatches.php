@@ -282,6 +282,7 @@ function sendReportEmail() {
   $mail->setFrom('noreply@nykaa.com', 'No Reply');
   $mail->addAddress('sandeep@gludo.com', 'Sandeep Kadam');
   $mail->addAddress('kangkan@gludo.com', 'Kangkan Boro');
+  $mail->addAddress('mayank@gludo.com', 'Mayank Jaiswal');
   $mail->addAddress('sanjay.suri@nykaa.com', 'Sanjay Suri');
   $mail->addAddress('gaurav.pandey@nykaa.com', 'Gaurav Pandey');
   $mail->addAddress('niharika.bajpai@nykaa.com', 'Niharika Bajpai');

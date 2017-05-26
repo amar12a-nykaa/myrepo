@@ -118,5 +118,5 @@ class PipelineUtils:
 
     update_docs = PipelineUtils.getProductsToIndex(products)
     if update_docs:
-      response= Utils.updateCatalog(update_docs)
+      Utils.updateCatalog(update_docs)
     return len(update_docs)
