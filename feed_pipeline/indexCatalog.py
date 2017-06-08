@@ -20,7 +20,7 @@ class CatalogIndexer:
   def index(file_path):
     host = 'localhost'
     if socket.gethostname().startswith('admin'):
-      host = 'internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com' 
+      host = 'priceapi.nyk00-int.network'
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
     'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
@@ -134,7 +134,7 @@ class CatalogIndexer:
             if missing_fields:
               raise Exception("Missing PAS fields: %s"%missing_fields)
           else:
-            #r = json.loads(urllib.request.urlopen("http://internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
+            #r = json.loads(urllib.request.urlopen("http://priceapi.nyk00-int.network/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
             #if not r['skus'].get(doc['sku']):
               #with open("/data/missing_skus.txt", "a") as f:
                 #f.write("%s\n"%doc['sku'])
