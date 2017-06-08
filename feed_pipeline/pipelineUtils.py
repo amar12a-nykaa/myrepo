@@ -11,7 +11,7 @@ from pas.v1.utils import Utils, MemcacheUtils
 class PipelineUtils:
   host = 'localhost'
   if socket.gethostname().startswith('admin'):
-    host = 'internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com'
+    host = 'priceapi.nyk00-int.network'
 
   def getOptionAttributes(option_ids):
     option_attrs = {}
