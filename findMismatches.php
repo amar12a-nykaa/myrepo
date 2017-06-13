@@ -8,7 +8,7 @@ function getNykaaConnection() {
 }
 
 function getPWSConnection() {
-  $pwsConnection = new PDO("mysql:host=ec2-52-220-91-218.ap-southeast-1.compute.amazonaws.com;dbname=nykaa", "api", "aU%v#sq1");
+  $pwsConnection = new PDO("mysql:host=priceapidb.nykaa-internal.com;dbname=nykaa", "api", "aU%v#sq1");
   $pwsConnection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
   return $pwsConnection;
 }
@@ -211,9 +211,21 @@ function fetchPWSProduct($sku) {
 
 function fetchPWSProduct($sku, $type) {
   $sku = strtoupper($sku);
-  $host = "internal-SPSAPITargetGroup-internal-1197013483.ap-southeast-1.elb.amazonaws.com";
+  $host = "priceapi.nyk00-int.network";
   $url = "http://$host/apis/v1/pas.get?sku=" . urlencode($sku) . "&type=$type";
-  $data = json_decode(file_get_contents($url), true);
+  $content = file_get_contents($url);
+  if($content === FALSE) {
+    print("Failed to fetch URL: $url. Retrying 1..\n");
+    $content = file_get_contents($url);
+    if($content === FALSE) {
+      print("Failed to fetch URL: $url. Retrying 2..\n");
+      $content = file_get_contents($url);
+      if($content === FALSE) {
+        print("Failed to fetch URL: $url. Skipping..\n");
+      }
+    }
+  }
+  $data = json_decode($content, true);
   if(!isset($data['skus'][$sku])) return null;
   return $data['skus'][$sku];
 }
@@ -285,9 +297,12 @@ function sendReportEmail() {
   $mail->addAddress('mayank@gludo.com', 'Mayank Jaiswal');
   $mail->addAddress('sanjay.suri@nykaa.com', 'Sanjay Suri');
   $mail->addAddress('gaurav.pandey@nykaa.com', 'Gaurav Pandey');
+  $mail->addAddress('gaurav.pushkar@nykaa.com', 'Gaurav Pushkar');
   $mail->addAddress('niharika.bajpai@nykaa.com', 'Niharika Bajpai');
   $mail->addAddress('rahil.khan@nykaa.com', 'Rahil Khan');
   $mail->addAddress('vijay.gupta@nykaa.com', 'Vijay Gupta');
+  $mail->addAddress('anil.kumar@nykaa.com', 'Anil Kumar');
+  $mail->addAddress('oncall@nykaa.com', 'Oncall');
   $mail->Subject = 'Price mismatch report';
   $mail->Body = $body;
 
