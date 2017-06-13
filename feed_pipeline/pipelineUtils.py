@@ -69,18 +69,6 @@ class PipelineUtils:
     if missing_fields:
       raise Exception("Missing Fields: %s" % missing_fields)
 
-  def validate_catalog_feed_row(row):
-    non_empty_fields = ['sku', 'product_id', 'name', 'type_id', 'created_at']
-    for key, value in row.items():
-      value = value.strip()
-      value = '' if value.lower() == 'null' else value
-      if key in ['sku', 'parent_sku']:
-        value = value.upper()
-      row[key] = value
-
-      if key in non_empty_fields and not row[key]:
-        raise Exception("'"+key+"' cannot be empty.")
-
   def getProductsToIndex(products):
     params = json.dumps({"products": products}).encode('utf8')
     req = urllib.request.Request("http://" + PipelineUtils.host + "/apis/v1/pas.get", data=params, headers={'content-type': 'application/json'})
