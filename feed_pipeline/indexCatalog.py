@@ -257,6 +257,10 @@ class CatalogIndexer:
               doc['product_qty_map'] = product_qty_map  
 
             if missing_fields:
+              #if doc['type']=='configurable':
+              #  line = doc['sku'] + "  " + ",".join(row['parent_sku'].split("|"))
+              #  with open("no_child_configurables.txt", "a") as f:
+              #    f.write("%s\n"%line)
               raise Exception("Missing PAS fields: %s"%missing_fields)
           else:
             #r = json.loads(urllib.request.urlopen("http://priceapi.nyk00-int.network/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
