@@ -20,11 +20,11 @@ print("\n\nIndexing documents from csv file in: %s"%file_path)
 CatalogIndexer.index(file_path)
 
 
-print("\n\nUpdating Popularity values")
-cmd = ['python3', 'popularity.py', '--post-to-solr', '-n0', '-y']
-p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-for line in p.stdout:
-  print(line)
-p.wait()
+#print("\n\nUpdating Popularity values")
+#cmd = ['python3', 'popularity.py', '--post-to-solr', '-n0', '-y']
+#p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+#for line in p.stdout:
+#  print(line)
+#p.wait()
 
 print("\n\nFinished running catalog pipeline")

@@ -13,6 +13,7 @@ from pipelineUtils import PipelineUtils
 from pas.v1.utils import Utils
 from pas.v1.csvutils import read_csv_from_file
 from pas.v1.exceptions import SolrError
+from popularity_api import get_popularity_for_ids
 
 
 class CatalogIndexer:
@@ -119,7 +120,6 @@ class CatalogIndexer:
         doc['product_ingredients'] = row['product_ingredients']
         if row['fbn']:
           doc['fbn'] = row['fbn'].lower() == 'yes'
-        doc['popularity'] = 0  #initialize it with 0, popularity script will take care of filling in values
         doc['add_to_cart_url'] = row['add_to_cart_url']
         if row['eretailer']:
           doc['eretailer'] = row['eretailer'] == '1'
@@ -128,6 +128,13 @@ class CatalogIndexer:
         doc['vendor_id'] = row['vendor_id']
         doc['vendor_sku'] = row['vendor_sku']
 
+        #Popularity
+        popularity_obj = get_popularity_for_ids([doc['product_id']]) 
+        popularity_obj = popularity_obj.get(doc['product_id'])
+        doc['popularity'] = 0 
+        if popularity_obj:
+          doc['popularity'] = popularity_obj['popularity']
+            
         # Product URL and slug
         product_url = row['product_url']
         if product_url:
