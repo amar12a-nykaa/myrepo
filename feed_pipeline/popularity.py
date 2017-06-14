@@ -217,14 +217,15 @@ def calculate_popularity():
 
 class SolrPostManager:
   size = 0
-  BATCH_SIZE = 10
+  BATCH_SIZE = 200
   docs = []
   ids = []
   id_popularity = {}
 
   def post_to_solr(self, productid, popularity):
     self.id_popularity[productid] = popularity
-    self.ids.append(productid)
+    if productid and 'unspecified' not in productid:
+      self.ids.append(productid)
 
     if len(self.ids) > self.BATCH_SIZE:
       self.flush()
@@ -234,15 +235,16 @@ class SolrPostManager:
   def flush(self ):
     ids = self.ids
 
+    required_fields = ['sku', 'product_id']
     params = {}
     params['q'] = " OR ".join(["product_id:%s" %x for x in ids] )
+    params['fl'] = ",".join(required_fields)
 
     response = Utils.makeSolrRequest(params)
     docs = response['docs']
     final_docs = []
     for i, doc in enumerate(docs):
       doc['popularity'] = self.id_popularity[doc['product_id']]
-      required_fields = ["create_time", "discount", "in_stock", "mrp", "popularity", "price", "product_id", "psku", "sku", "title", "type", "update_time", "visibility", 'product_id']
       doc = {k: v for k,v in doc.items() if k in required_fields}
       doc.update({"popularity":  {"set": self.id_popularity[doc['product_id']]}})
       final_docs.append(doc)
@@ -290,6 +292,5 @@ if argv['popularity']:
 if argv['post_to_solr']:
   post_mgr = SolrPostManager()
   for p in popularity_table.find(no_cursor_timeout=True):
-    #print(p)
     post_mgr.post_to_solr(productid=p['productid'], popularity=p['popularity'])
   post_mgr.flush()
