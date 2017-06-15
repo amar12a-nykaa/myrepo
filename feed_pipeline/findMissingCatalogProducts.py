@@ -33,6 +33,8 @@ for product in results:
 if skus_from_db:
   querysolr(skus_from_db)
 
+mysql_conn.close()
+mysql_conn = Utils.mysqlConnection('r')
 
 query = "SELECT sku FROM bundles"
 results = Utils.fetchResults(mysql_conn, query)
