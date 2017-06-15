@@ -9,10 +9,11 @@ import urllib.request
 import urllib.parse
 from datetime import datetime
 sys.path.append('/home/apis/nykaa/')
-from pipelineUtils import PipelineUtils
 from pas.v1.utils import Utils
-from pas.v1.csvutils import read_csv_from_file
+from collections import OrderedDict
+from pipelineUtils import PipelineUtils
 from pas.v1.exceptions import SolrError
+from pas.v1.csvutils import read_csv_from_file
 from popularity_api import get_popularity_for_ids
 
 
@@ -149,7 +150,10 @@ class CatalogIndexer:
           doc['category_facet'] = []
           cat_info = PipelineUtils.getCategoryFacetAttributes(category_ids)
           for info in cat_info:
-            doc['category_facet'].append(info)
+            cat_facet = OrderedDict()
+            for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
+              cat_facet[key] = info.get(key)
+            doc['category_facet'].append(cat_facet)
         elif len(category_ids)!=len(category_names):
           #with open("/data/inconsistent_cat.txt", "a") as f:
           #  f.write("%s\n"%doc['sku'])
@@ -277,7 +281,10 @@ class CatalogIndexer:
           doc['offer_facet'] = []
           for i, offer_id in enumerate(offer_ids):
             doc['offers'].append({'id': offer_ids[i], 'name': offer_names[i], 'description': offer_descriptions[i]})
-            doc['offer_facet'].append({'id': offer_ids[i], 'name': offer_names[i]})
+            offer_facet = OrderedDict()
+            offer_facet['id'] = offer_ids[i]
+            offer_facet['name'] = offer_names[i]
+            doc['offer_facet'].append(offer_facet)
         #elif offer_ids:
           #with open("/data/inconsistent_offers.txt", "a") as f:
           #  f.write("%s\n"%doc['sku'])
@@ -296,11 +303,19 @@ class CatalogIndexer:
             facets = []
             if field_prefix == 'brand':
               for i, brand_id in enumerate(facet_ids):
-                facets.append({'id': brand_id, 'name': facet_values[i]})
+                brand_facet = OrderedDict()
+                brand_facet['id'] = brand_id
+                brand_facet['name'] = facet_values[i]
+                facets.append(brand_facet)
             else:
               option_attrs = PipelineUtils.getOptionAttributes(facet_ids)
               for attr_id, attrs in option_attrs.items():
-                facets.append(attrs)
+                other_facet = OrderedDict()
+                other_facet['id'] = attrs['id']
+                other_facet['name'] = attrs['name']
+                if attrs.get('color_code'):
+                  other_facet['color_code'] = attrs['color_code']
+                facets.append(other_facet)
             doc[field_prefix + '_facet'] = facets
           #elif len(facet_ids) != len(facet_values):
           #  with open("/data/inconsistent_facet.txt", "a") as f:

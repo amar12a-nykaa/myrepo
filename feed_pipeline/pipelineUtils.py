@@ -58,7 +58,6 @@ class PipelineUtils:
     query = "SELECT * FROM nk_categories WHERE category_id IN (%s)"%in_p
     results = Utils.fetchResults(mysql_conn, query, tuple(cat_ids))
     for result in results:
-      #print('category_facet: %s'%result)
       cat_facet_attrs.append(result)
 
     return cat_facet_attrs
