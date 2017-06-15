@@ -9,9 +9,12 @@ from pas.v1.utils import Utils, MemcacheUtils
 
 
 class PipelineUtils:
-  host = 'localhost'
-  if socket.gethostname().startswith('admin'):
-    host = 'priceapi.nyk00-int.network'
+
+  def getAPIHost():
+    host = 'localhost'
+    if socket.gethostname().startswith('admin'):
+      host = 'priceapi.nyk00-int.network'
+    return host 
 
   def getOptionAttributes(option_ids):
     option_attrs = {}
@@ -71,7 +74,7 @@ class PipelineUtils:
 
   def getProductsToIndex(products):
     params = json.dumps({"products": products}).encode('utf8')
-    req = urllib.request.Request("http://" + PipelineUtils.host + "/apis/v1/pas.get", data=params, headers={'content-type': 'application/json'})
+    req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.get", data=params, headers={'content-type': 'application/json'})
     pas_object = json.loads(urllib.request.urlopen(req, params).read().decode('utf-8'))['skus']
    
     update_docs = []

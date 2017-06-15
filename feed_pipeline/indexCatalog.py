@@ -68,9 +68,6 @@ class CatalogIndexer:
       row[key] = value
 
   def index(file_path):
-    host = 'localhost'
-    if socket.gethostname().startswith('admin'):
-      host = 'priceapi.nyk00-int.network'
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
     'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
@@ -226,7 +223,7 @@ class CatalogIndexer:
         else:
           # get price and availability from PAS
           params = {'sku': doc['sku'], 'type': doc['type']}
-          pas_object = json.loads(urllib.request.urlopen("http://" + host + "/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))['skus'] 
+          pas_object = json.loads(urllib.request.urlopen("http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))['skus'] 
           if pas_object.get(doc['sku']):
             pas = pas_object[doc['sku']]
             missing_fields = []
