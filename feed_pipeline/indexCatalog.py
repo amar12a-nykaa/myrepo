@@ -68,7 +68,7 @@ class CatalogIndexer:
 
       row[key] = value
 
-  def index(file_path):
+  def index(file_path, collection):
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
     'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
@@ -333,7 +333,7 @@ class CatalogIndexer:
 
         #index to solr in batches of 300
         if ((index+1) % 300 == 0) or (index+1 >= count):
-          Utils.indexCatalog(input_docs)
+          Utils.indexCatalog(input_docs, collection=collection)
           input_docs = []
       except SolrError as e:
         raise Exception(str(e))
