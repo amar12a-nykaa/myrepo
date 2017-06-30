@@ -30,7 +30,7 @@ function fetchNykaaProducts() {
       WHERE cpbs.parent_product_id = e.entity_id)
       ELSE cpedsp.value END
       ) AS special_price,
-      csi.qty
+      csi.qty, csi.is_in_stock, csi.backorders
 
       FROM catalog_product_entity as e 
       LEFT JOIN catalog_product_entity_varchar cpevn on cpevn.entity_id = e.entity_id AND cpevn.attribute_id = 56 AND cpevn.store_id = 0 
@@ -58,7 +58,7 @@ function fetchNykaaProducts() {
       WHERE cpbs.parent_product_id = e.entity_id)
       ELSE cpedsp.value END
       ) AS special_price,
-      csi.qty
+      csi.qty, csi.is_in_stock, csi.backorders
 
       FROM catalog_product_entity as e 
       INNER JOIN catalog_product_entity_int AS at_status_default ON ( at_status_default.entity_id = e.entity_id ) 
@@ -89,13 +89,16 @@ function processNykaaProduct($product) {
 
   // Remove unwanted fields from result
   unset($product['name']);
-  unset($product['qty']);
 
   $product['sku'] = trim($product['sku']);
   $product['price'] = (float)$product['price'];
   $product['special_price'] = ($product['special_price'] === NULL)? $product['price'] : $product['special_price'];
   $product['special_price'] = (float)$product['special_price'];
   $product['discount'] = (float)$product['discount'];
+  $product['quantity'] = (int)$product['qty'];
+  $product['is_in_stock'] = (int)$product['is_in_stock'];
+  $product['backorders'] = (int)$product['backorders'];
+  unset($product['qty']);
 
   if($product['type_id'] == 'bundle') {
     $product['price'] = round($product['price']);
@@ -120,6 +123,7 @@ function processPWSProduct($product) {
 
   $product['mrp'] = (float)$product['mrp'];
   $product['discount'] = (float)$product['discount'];
+  $product['backorders'] = (int)$product['backorders'];
 
   if(!empty($skuClause)) {
     print("==PWS Price==\n");
@@ -133,10 +137,12 @@ function init() {
   global $counter, $sku, $skuClause, $enabledOnly, $sendMail, $limitClause;
   global $missingFile, $mismatchFile, $missingFilename, $mismatchFilename;
   global $nykaaConnection, $pwsConnection, $numMismatch, $numMissing;
+  global $numAvailabilityMismatch;
 
   $counter = 0;
   $numMissing = 0;
   $numMismatch = 0;
+  $numAvailabilityMismatch = 0;
 
   $sku = '';
   $enabledOnly = True;
@@ -245,7 +251,7 @@ function logIfMissing($product, $sku, $type) {
 }
 
 function logIfMismatch($result1, $result2, $sku, $type) {
-  global $numMismatch, $mismatchFile, $skuClause;
+  global $numMismatch, $mismatchFile, $skuClause, $numAvailabilityMismatch;
 
   if(empty($result2)) return;
 
@@ -257,6 +263,15 @@ function logIfMismatch($result1, $result2, $sku, $type) {
         $result1['special_price'] . "," . $result2['sp'] . "," . $result1['discount'] . "," .
         $result2['discount'] . "\n");
     }
+  }
+
+  if(($result1['quantity'] !== $result2['quantity']) || 
+     ($result1['is_in_stock'] !== $result2['is_in_stock']) ||
+     ($result1['backorders'] !== $result2['backorders'])) {
+    $numAvailabilityMismatch++;
+    print("$sku,$type," . $result1['quantity'] . "," . $result2['quantity'] . "," .
+        $result1['is_in_stock'] . "," . $result2['is_in_stock'] . "," .
+        $result1['backorders'] . "," . $result2['backorders'] . "\n");
   }
 }
 
@@ -337,18 +352,19 @@ function logProducts($result1, $result2) {
 }
 
 function printProgress() {
-  global $counter, $numMismatch, $numMissing;
+  global $counter, $numMismatch, $numMissing, $numAvailabilityMismatch;
   if(++$counter%1000 == 0) {
     print('[' . date("D M j Y, G:i:s") . '] ');
-    print("Progress: $counter, Mismatches: $numMismatch, Missing: $numMissing\n");
+    print("Progress: $counter, Price Mismatches: $numMismatch, Missing: $numMissing, Availability Mismatches: $numAvailabilityMismatch\n");
   }
 }
 
 function printReport() {
-  global $counter, $numMismatch, $numMissing;
+  global $counter, $numMismatch, $numMissing, $numAvailabilityMismatch;
   print("Total products: $counter\n");
   print("Total products missing: $numMissing\n");
   print("Total price mismatches: $numMismatch\n");
+  print("Total availability mismatches: $numAvailabilityMismatch\n");
 }
 
 init();
