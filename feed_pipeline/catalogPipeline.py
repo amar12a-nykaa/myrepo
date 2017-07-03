@@ -15,17 +15,25 @@ FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-f", "--filepath", help='path to csv file')
+parser.add_argument("-p", "--filepath", help='path to csv file')
 parser.add_argument("-u", "--url", help='url to csv file')
 parser.add_argument("-i", "--importattrs", action='store_true', help='Flag to import attributes first')
+parser.add_argument("-f", "--force", action='store_true', help='Force run the indexing, without any restrictions')
 argv = vars(parser.parse_args())
 
 file_path = argv['filepath']
 url = argv['url']
+import_attrs = argv.get('importattrs', False)
+force_run = argv.get('force', False)
+
 if not (file_path or url):
-  raise Exception("Either of filepath[-f] or url[-u] of the feed needs to be provided.")
+  msg = "Either of filepath[-f] or url[-u] of the feed needs to be provided."
+  print(msg)
+  raise Exception(msg)
 elif (file_path and url):
-  raise Exception("Please provide only one of filepath[-f] or url[-u] for the feed")
+  msg = "Please provide only one of filepath[-f] or url[-u] for the feed"
+  print(msg)
+  raise Exception(msg)
 
 # If url given, download the feed first
 if url:
@@ -41,7 +49,6 @@ if url:
     raise
 
 # Import attributes from Nykaa DBs
-import_attrs = argv.get('importattrs', False)
 if import_attrs:
   print("Importing attributes from Nykaa DB....")
   NykaaImporter.importAttrs()
@@ -64,7 +71,9 @@ if cluster_status:
     inactive_collection = YANG_COLL
     
 else:
-  raise Exception("[ERROR] Failed to fetch solr cluster status. Aborting..")
+  msg = "[ERROR] Failed to fetch solr cluster status. Aborting.."
+  print(msg)
+  raise Exception(msg)
 
 print("Active collection: %s"%active_collection)
 print("Inactive collection: %s"%inactive_collection)
@@ -74,6 +83,21 @@ resp = Utils.clearSolrCollection(inactive_collection)
 
 print("\n\nIndexing documents from csv file '%s' to collection '%s'."%(file_path, inactive_collection))
 CatalogIndexer.index(file_path, inactive_collection)
+
+# Verify correctness of indexing by comparing total number of documents in both active and inactive collections
+params = {'q': '*:*', 'rows': '0'}
+num_docs_active = Utils.makeSolrRequest(params, collection=active_collection)['numFound']
+num_docs_inactive = Utils.makeSolrRequest(params, collection=inactive_collection)['numFound']
+print('Number of documents in active collection(%s): %s'%(active_collection, num_docs_active))
+print('Number of documents in inactive collection(%s): %s'%(inactive_collection, num_docs_inactive))
+
+# if it decreased more than 5% of current, abort and throw an error
+docs_ratio = num_docs_inactive/num_docs_active
+if docs_ratio < 0.95 and not force_run:
+  msg = "[ERROR] Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."
+  print(msg)
+  raise Exception(msg)
+
 
 # Update alias CATALOG_COLLECTION_ALIAS to point to freshly indexed collection(inactive_collection)
 # and do basic verification
