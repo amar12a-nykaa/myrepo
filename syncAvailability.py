@@ -32,12 +32,12 @@ for row in results:
     backorders = int(row['backorders'])
     assert backorders in [0, 1], "backorders can be 0 or 1 only"
 
-    is_in_stock = int(row['is_in_stock'])
-    assert is_in_stock in [0, 1], "is_in_stock can be 0 or 1 only"
+    #is_in_stock = int(row['is_in_stock'])
+    #assert is_in_stock in [0, 1], "is_in_stock can be 0 or 1 only"
 
     quantity = int(row['quantity'])
 
-    params = {'sku': sku, 'type': product_type, 'backorders': backorders, 'is_in_stock': is_in_stock, 'quantity': quantity}
+    params = {'sku': sku, 'type': product_type, 'backorders': backorders, 'quantity': quantity}
     response = json.loads(urllib.request.urlopen("http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.set?"+urllib.parse.urlencode(params)).read().decode('utf-8'))  
     response_status = response.get('status') 
     if response_status.lower()!='ok':
