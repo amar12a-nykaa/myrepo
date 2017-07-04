@@ -266,11 +266,9 @@ function logIfMismatch($result1, $result2, $sku, $type) {
   }
 
   if(($result1['quantity'] !== $result2['quantity']) || 
-     ($result1['is_in_stock'] !== $result2['is_in_stock']) ||
      ($result1['backorders'] !== $result2['backorders'])) {
     $numAvailabilityMismatch++;
     print("$sku,$type," . $result1['quantity'] . "," . $result2['quantity'] . "," .
-        $result1['is_in_stock'] . "," . $result2['is_in_stock'] . "," .
         $result1['backorders'] . "," . $result2['backorders'] . "\n");
   }
 }
