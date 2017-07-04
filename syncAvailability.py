@@ -9,7 +9,7 @@ sys.path.append('/home/apis/nykaa/')
 from pas.v1.utils import Utils
 from feed_pipeline.pipelineUtils import PipelineUtils
 
-MAX_PARALLEL_REQUESTS = 100
+MAX_PARALLEL_REQUESTS = 20
 
 def construct_url(params):
   return "http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.set?"+urllib.parse.urlencode(params)
