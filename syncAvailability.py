@@ -44,6 +44,8 @@ for index, row in enumerate(results):
     backorders = int(row['backorders'])
     assert backorders in [0, 1], "backorders can be 0 or 1 only"
     quantity = int(row['quantity'])
+    if quantity < 0 and not backorders:
+      quantity = 0
 
     params = {'sku': sku, 'type': product_type, 'backorders': backorders, 'quantity': quantity}
     req_urls[sku] = construct_url(params)   
