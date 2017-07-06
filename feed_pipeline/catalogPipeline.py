@@ -27,11 +27,11 @@ import_attrs = argv.get('importattrs', False)
 force_run = argv.get('force', False)
 
 if not (file_path or url):
-  msg = "Either of filepath[-f] or url[-u] of the feed needs to be provided."
+  msg = "Either of filepath[-p] or url[-u] of the feed needs to be provided."
   print(msg)
   raise Exception(msg)
 elif (file_path and url):
-  msg = "Please provide only one of filepath[-f] or url[-u] for the feed"
+  msg = "Please provide only one of filepath[-p] or url[-u] for the feed"
   print(msg)
   raise Exception(msg)
 
