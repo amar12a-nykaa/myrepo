@@ -1,9 +1,9 @@
-import pprint
 import argparse
 import datetime
 import json
 import os
 import os.path
+import pprint
 import re
 import sys
 import traceback
@@ -18,10 +18,11 @@ import omniture
 import pandas as pd
 from pymongo import MongoClient
 
-embed = IPython.embed
-
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
+
+embed = IPython.embed
+
 
 client = MongoClient()
 raw_data = client['search']['raw_data']
@@ -213,6 +214,49 @@ def calculate_popularity():
     popularity_table.update({"_id": row['productid'], "productid": row['productid']}, row, upsert=True)
   sys.exit()
 
+
+class SolrPostManager:
+  size = 0
+  BATCH_SIZE = 200
+  docs = []
+  ids = []
+  id_popularity = {}
+
+  def post_to_solr(self, productid, popularity):
+    self.id_popularity[productid] = popularity
+    if productid and 'unspecified' not in productid:
+      self.ids.append(productid)
+
+    if len(self.ids) > self.BATCH_SIZE:
+      self.flush()
+    return
+
+
+  def flush(self ):
+    ids = self.ids
+
+    required_fields = ['sku', 'product_id']
+    params = {}
+    params['q'] = " OR ".join(["product_id:%s" %x for x in ids] )
+    params['fl'] = ",".join(required_fields)
+
+    response = Utils.makeSolrRequest(params)
+    docs = response['docs']
+    final_docs = []
+    for i, doc in enumerate(docs):
+      doc['popularity'] = self.id_popularity[doc['product_id']]
+      doc = {k: v for k,v in doc.items() if k in required_fields}
+      doc.update({"popularity":  {"set": self.id_popularity[doc['product_id']]}})
+      final_docs.append(doc)
+
+    print("flushing... ")
+    try:
+      response = Utils.updateCatalog(final_docs)
+    except:
+      print("[ERROR] Could not post to solr following ids: %s" % [x['product_id'] for x in final_docs])
+    self.ids = []
+    
+
 def post_to_solr(productid, popularity):
   params = {}
   params['q'] = "product_id:%s" % productid
@@ -246,6 +290,7 @@ if argv['popularity']:
   print("popularity end: %s" % arrow.now())
 
 if argv['post_to_solr']:
-  for p in popularity_table.find():
-    print(p)
-    post_to_solr(productid=p['productid'], popularity=p['popularity'])
+  post_mgr = SolrPostManager()
+  for p in popularity_table.find(no_cursor_timeout=True):
+    post_mgr.post_to_solr(productid=p['productid'], popularity=p['popularity'])
+  post_mgr.flush()

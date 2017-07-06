@@ -88,3 +88,10 @@ ENV/
 # Rope project settings
 .ropeproject
 out
+
+
+#Project related
+feed_pipeline/popularity_log
+feed_pipeline/last_update_time.txt
+feed_pipeline/error_log
+feed_pipeline/missing_skus.txt
