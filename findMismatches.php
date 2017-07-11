@@ -2,7 +2,7 @@
 <?php
 
 function getNykaaConnection() {
-  $nykaaConnection = new PDO("mysql:host=proddbnykaa-reports-06052017.ciel4c1bqlwh.ap-southeast-1.rds.amazonaws.com;dbname=nykaalive1", "anik", "slATy:2Rl9Me5mR");
+  $nykaaConnection = new PDO("mysql:host=reports-read-replica.nyk00-int.network;dbname=nykaalive1", "anik", "slATy:2Rl9Me5mR");
   $nykaaConnection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
   return $nykaaConnection;
 }
@@ -30,7 +30,7 @@ function fetchNykaaProducts() {
       WHERE cpbs.parent_product_id = e.entity_id)
       ELSE cpedsp.value END
       ) AS special_price,
-      csi.qty, csi.is_in_stock, csi.backorders
+      csi.qty, csi.is_in_stock, IF(csi.use_config_backorders=0 AND csi.backorders=1, '1','0') AS backorders
 
       FROM catalog_product_entity as e 
       LEFT JOIN catalog_product_entity_varchar cpevn on cpevn.entity_id = e.entity_id AND cpevn.attribute_id = 56 AND cpevn.store_id = 0 
@@ -58,7 +58,7 @@ function fetchNykaaProducts() {
       WHERE cpbs.parent_product_id = e.entity_id)
       ELSE cpedsp.value END
       ) AS special_price,
-      csi.qty, csi.is_in_stock, csi.backorders
+      csi.qty, csi.is_in_stock, IF(csi.use_config_backorders=0 AND csi.backorders=1, '1','0') AS backorders
 
       FROM catalog_product_entity as e 
       INNER JOIN catalog_product_entity_int AS at_status_default ON ( at_status_default.entity_id = e.entity_id ) 
@@ -123,6 +123,10 @@ function processPWSProduct($product) {
 
   $product['mrp'] = (float)$product['mrp'];
   $product['discount'] = (float)$product['discount'];
+
+  if(!isset($product['backorders'])) {
+    $product['backorders'] = 0;
+  }
   $product['backorders'] = (int)$product['backorders'];
 
   if(!empty($skuClause)) {
@@ -135,14 +139,16 @@ function processPWSProduct($product) {
 
 function init() {
   global $counter, $sku, $skuClause, $enabledOnly, $sendMail, $limitClause;
-  global $missingFile, $mismatchFile, $missingFilename, $mismatchFilename;
+  global $missingFile, $mismatchFile, $qtyMismatchFile;
+  global $missingFilename, $mismatchFilename, $qtyMismatchFilename;
   global $nykaaConnection, $pwsConnection, $numMismatch, $numMissing;
-  global $numAvailabilityMismatch;
+  global $numAvailabilityMismatch, $numNegativeWithoutBackorders;
 
   $counter = 0;
   $numMissing = 0;
   $numMismatch = 0;
   $numAvailabilityMismatch = 0;
+  $numNegativeWithoutBackorders = 0;
 
   $sku = '';
   $enabledOnly = True;
@@ -174,13 +180,16 @@ function init() {
   }
 
   $missingFilename = '/tmp/missing_skus.csv';
-  $mismatchFilename = '/tmp/mismatch_skus.csv';
+  $mismatchFilename = '/tmp/price_mismatch_skus.csv';
+  $qtyMismatchFilename = '/tmp/availability_mismatch_skus.csv';
 
   if(empty($skuClause)) {
     $missingFile = fopen($missingFilename, "w");
     $mismatchFile = fopen($mismatchFilename, "w");
+    $qtyMismatchFile = fopen($qtyMismatchFilename, "w");
     fwrite($missingFile, "sku,type\n");
     fwrite($mismatchFile, "sku,type,magento price,pws price,magento sp,pws sp,magneto discount,pws discount\n");
+    fwrite($qtyMismatchFile, "sku,type,magento quantity,pws quantity,magento backorders,pws backorders\n");
   }
 
   $nykaaConnection = getNykaaConnection();
@@ -193,27 +202,6 @@ function shouldSkipMatching($product) {
   if($product['type_id'] == 'bundle' && $product['discount'] == 0) return true;
   return false;
 }
-
-/*
-function fetchPWSProduct($sku) {
-  global $pwsConnection;
-
-  if(empty($pwsConnection)) {
-    $pwsConnection = getPWSConnection();
-  }
-
-  $stm = $pwsConnection->prepare("SELECT sku, mrp, sp, discount FROM products WHERE sku = :sku");
-  try {
-    $stm->execute(array(':sku' => $sku));
-  } catch (Exception $e) {
-    $pwsConnection = getPWSConnection();
-    $stm = $pwsConnection->prepare("SELECT sku, mrp, sp, discount FROM products WHERE sku = :sku");
-    $stm->execute(array(':sku' => $sku));
-  }
-
-  return $stm->fetch(PDO::FETCH_ASSOC);
-}
-*/
 
 function fetchPWSProduct($sku, $type) {
   $sku = strtoupper($sku);
@@ -251,7 +239,8 @@ function logIfMissing($product, $sku, $type) {
 }
 
 function logIfMismatch($result1, $result2, $sku, $type) {
-  global $numMismatch, $mismatchFile, $skuClause, $numAvailabilityMismatch;
+  global $numMismatch, $mismatchFile, $qtyMismatchFile, $skuClause;
+  global $numAvailabilityMismatch, $numNegativeWithoutBackorders;
 
   if(empty($result2)) return;
 
@@ -265,25 +254,38 @@ function logIfMismatch($result1, $result2, $sku, $type) {
     }
   }
 
-  if(($result1['quantity'] !== $result2['quantity']) || 
-     ($result1['backorders'] !== $result2['backorders'])) {
-    $numAvailabilityMismatch++;
-    print("$sku,$type," . $result1['quantity'] . "," . $result2['quantity'] . "," .
-        $result1['backorders'] . "," . $result2['backorders'] . "\n");
+  if($result2['type'] !== 'bundle') {
+    if(($result1['quantity'] !== $result2['quantity']) || 
+       ($result1['backorders'] !== $result2['backorders'])) {
+      if(($result1['quantity'] < 0) && ($result1['backorders'] == 0)) {
+        $numNegativeWithoutBackorders++;
+      }
+
+      if(($result1['quantity'] < 0) && ($result1['backorders'] == 0) && 
+         ($result2['quantity'] == 0) && ($result2['backorders'] == 0)) {
+        //Ignore the case where magento quantity < 0 while pws quantity = 0
+      } else {
+        $numAvailabilityMismatch++;
+        fwrite($qtyMismatchFile, "$sku,$type," . $result1['quantity'] . "," . $result2['quantity'] . "," .
+            $result1['backorders'] . "," . $result2['backorders'] . "\n");
+      }
+    }
   }
 }
 
 function cleanup() {
-  global $skuClause, $mismatchFile, $missingFile;
+  global $skuClause, $mismatchFile, $missingFile, $qtyMismatchFile;
   if(empty($skuClause)) {
     fclose($mismatchFile);
     fclose($missingFile);
+    fclose($qtyMismatchFile);
   }
 }
 
 function sendReportEmail() {
-  global $numMismatch, $numMissing, $sendMail, $skuClause;
-  global $counter, $missingFilename, $mismatchFilename;
+  global $numMismatch, $numMissing, $numAvailabilityMismatch, $sendMail, $skuClause;
+  global $counter, $missingFilename, $mismatchFilename, $qtyMismatchFilename;
+  global $numNegativeWithoutBackorders;
 
   if(!$sendMail || !empty($skuClause)) return;
 
@@ -291,6 +293,8 @@ function sendReportEmail() {
   $body .= "Total products: $counter\n";
   $body .= "Total products missing: $numMissing\n";
   $body .= "Total price mismatches: $numMismatch\n";
+  $body .= "Total availability mismatches: $numAvailabilityMismatch\n";
+  //$body .= "Negative quantity products without backorders: $numNegativeWithoutBackorders\n";
   $body .= "\n\n";
   $body .= "Disclaimer: This is an automated email.\n";
 
@@ -327,6 +331,10 @@ function sendReportEmail() {
     $mail->addAttachment($missingFilename);
   }
 
+  if($numAvailabilityMismatch > 0) {
+    $mail->addAttachment($qtyMismatchFilename);
+  }
+
   print("Sending report...\n");
   if (!$mail->send()) {
     echo "Mailer Error: " . $mail->ErrorInfo;
@@ -350,19 +358,20 @@ function logProducts($result1, $result2) {
 }
 
 function printProgress() {
-  global $counter, $numMismatch, $numMissing, $numAvailabilityMismatch;
+  global $counter, $numMismatch, $numMissing, $numAvailabilityMismatch, $numNegativeWithoutBackorders;
   if(++$counter%1000 == 0) {
     print('[' . date("D M j Y, G:i:s") . '] ');
-    print("Progress: $counter, Price Mismatches: $numMismatch, Missing: $numMissing, Availability Mismatches: $numAvailabilityMismatch\n");
+    print("Progress: $counter, Price Mismatches: $numMismatch, Missing: $numMissing, Availability Mismatches: $numAvailabilityMismatch, Negative Without Backorders: $numNegativeWithoutBackorders\n");
   }
 }
 
 function printReport() {
-  global $counter, $numMismatch, $numMissing, $numAvailabilityMismatch;
+  global $counter, $numMismatch, $numMissing, $numAvailabilityMismatch, $numNegativeWithoutBackorders;
   print("Total products: $counter\n");
   print("Total products missing: $numMissing\n");
   print("Total price mismatches: $numMismatch\n");
   print("Total availability mismatches: $numAvailabilityMismatch\n");
+  print("Negative quantity products without backorders: $numNegativeWithoutBackorders\n");
 }
 
 init();

@@ -7,7 +7,7 @@ db = client['search']
 print(db.popularity.find_one())
 
 def nykaaMysqlConnection():
-	host = 'analytics-3.ciel4c1bqlwh.ap-southeast-1.rds.amazonaws.com'
+	host = 'nykaa-analytics.nyk00-int.network'
 	user = 'analytics'
 	password = 'P1u8Sxh7kNr'
 
