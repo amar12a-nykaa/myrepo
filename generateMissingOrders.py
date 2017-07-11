@@ -30,12 +30,19 @@ def generateMagentoOrders():
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
 
-    current_ts = datetime.now()
-    time_to = current_ts.strftime('%Y-%m-%d %H:00:00')
-    time_from = (current_ts - timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
+    now = arrow.utcnow()
+    end = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    start = end.replace(hour=-1)
 
-    print("%s to %s" % (time_from, time_to))
+#    current_ts = datetime.now()
+#    time_to = current_ts.strftime('%Y-%m-%d %H:00:00')
+#    time_from = (current_ts - timedelta(hours=1)).strftime('%Y-%m-%d %H:00:00')
 
+    time_from = start.format('YYYY-MM-DD HH:mm:ss')
+    time_to = end.format('YYYY-MM-DD HH:mm:ss')
+
+    print("generateMagentoOrders ... %s to %s "% (time_from, time_to))
+    sys.exit()
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     query = """SELECT f.sku, ROUND(SUM(f.qty)) AS 'quantity'
              FROM(SELECT a.increment_id, a.sku, a.name, a.parent_item_id,  a.item_id, IFNULL(b.q_c,a.q_s) AS qty
@@ -97,12 +104,14 @@ def getOrderMismatches(magento_orders, gludo_orders):
 
 def generate_gludo_orders():
   now = arrow.utcnow()
+  end = now.replace(hour=0, minute=0, second=0, microsecond=0)
+  start = end.replace(hour=-1)
 
   DIR = "/tmp/error_logs_api_machines"
   machines = ['52.220.215.78' , '52.221.72.116', '52.221.34.173', '52.77.199.176']
   os.system("mkdir -p %s" % DIR)
 
-  datestrs = [now.format('YYYY-MM-DD')]
+  datestrs = [start.format('YYYY-MM-DD')]
 
   outfile = "/tmp/qty_decs.txt"
   os.system("rm -f %s" % outfile)
@@ -149,7 +158,7 @@ def generate_gludo_orders():
       csv.write("sku,quantity\n")
       for line in f:
 
-        date_search_str = now.format("MMM DD HH")
+        date_search_str = start.format("MMM DD HH")
         print(date_search_str + ".*Quantity decreased for sku ([^ ]+) by ([0-9]+)")
         
         m = re.search(date_search_str + ".*Quantity decreased for sku ([^ ]+) by ([0-9]+)", line) 
