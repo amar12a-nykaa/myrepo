@@ -203,7 +203,7 @@ class CatalogIndexer:
             for i, sku in enumerate(variant_skus):
               variants_arr.append({'sku': variant_skus[i], 'id': variant_ids[i], 'name': variant_names[i], 'icon': variant_icons[i]})
             doc['variants'] = {variant_type: variants_arr}
-            doc['variant_type'] = variant_type
+          doc['variant_type'] = variant_type
           doc['option_count'] = len(variant_skus)
         elif doc['type'] == 'simple':
           variant_name = row['shade_name'] or row['size']

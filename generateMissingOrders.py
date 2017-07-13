@@ -63,7 +63,7 @@ def generateMagentoOrders():
 
     if argv['sku']:
       query = "select * from (%s)A where sku = '%s'" % (query, argv['sku'])
-      #print(query)
+      print(query)
     results = Utils.fetchResults(nykaa_mysql_conn, query)
     for row in results:
 #      if argv['sku']:
@@ -138,7 +138,9 @@ def generate_gludo_orders():
         if not localfile:
           continue
         cmd = 'grep "Quantity decreased" %s >> %s' % (localfile, outfile)
-        print(cmd)
+        if argv['sku']:
+          cmd = 'grep "Quantity decreased" %s | grep "%s" >> %s' % (localfile, argv['sku'], outfile)
+          print(cmd)
         os.system(cmd)
 
   os.system("rm -f /nykaa/scripts/gludo_orders.csv")
@@ -146,13 +148,15 @@ def generate_gludo_orders():
     with open("/nykaa/scripts/gludo_orders.csv", 'w') as csv:
       csv.write("sku,quantity\n")
       for line in f:
-
         date_search_str = start.format("MMM DD HH")
-        #print(date_search_str + ".*Quantity decreased for sku ([^ ]+) by ([0-9]+)")
-        
         m = re.search(date_search_str + ".*Quantity decreased for sku ([^ ]+) by ([0-9]+)", line) 
         if not m:
           continue
+
+        if argv['sku']:
+          print(date_search_str + ".*Quantity decreased for sku ([^ ]+) by ([0-9]+)")
+          print(line)
+
         sku = m.group(1)
         qty = m.group(2)
         csv.write("%s,%s\n" % (sku, qty))
