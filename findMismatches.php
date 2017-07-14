@@ -315,12 +315,14 @@ function sendReportEmail() {
   $mail->addAddress('sanjay.suri@nykaa.com', 'Sanjay Suri');
   $mail->addAddress('gaurav.pandey@nykaa.com', 'Gaurav Pandey');
   $mail->addAddress('gaurav.pushkar@nykaa.com', 'Gaurav Pushkar');
+  $mail->addAddress('gaurav.sharma@nykaa.com', 'Gaurav Sharma');
   $mail->addAddress('niharika.bajpai@nykaa.com', 'Niharika Bajpai');
   $mail->addAddress('rahil.khan@nykaa.com', 'Rahil Khan');
   $mail->addAddress('vijay.gupta@nykaa.com', 'Vijay Gupta');
   $mail->addAddress('anil.kumar@nykaa.com', 'Anil Kumar');
+  $mail->addAddress('ashlesha.gawade@nykaa.com', 'Ashlesha Gawade');
   $mail->addAddress('oncall@nykaa.com', 'Oncall');
-  $mail->Subject = 'Price mismatch report';
+  $mail->Subject = 'Price and availability mismatch report';
   $mail->Body = $body;
 
   if($numMismatch > 0) {
