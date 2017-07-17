@@ -47,14 +47,14 @@ def generateMagentoOrders():
                   JOIN nykaalive1.`sales_flat_order_address` sfoa ON sfoa.parent_id=sfo.entity_id AND sfoa.address_type='shipping'
                   JOIN nykaalive1.sales_flat_order_payment sfop ON sfo.entity_id=sfop.parent_id 
                   JOIN nykaalive1.sales_flat_order_item sfoi ON sfoi.`order_id`=sfo.`entity_id`
-                  WHERE(((sfo.`status` IN ('processing','complete','confirmed','canceled')) OR (sfo.`status` = 'pending' AND sfop.`method` LIKE '%%cash%%')))
+                  WHERE(((sfo.`status` IN ('processing','complete','confirmed','canceled','pending')) OR (sfo.`status` = 'pending' AND sfop.`method` LIKE '%%cash%%')))
                        AND (sfo.created_at BETWEEN '%s' AND '%s') AND sfoi.product_type='simple')a
                   LEFT JOIN 
                  (SELECT sfo.increment_id, sfoi.`sku`,sfoi.product_type, sfoi.`name`, sfoi.item_id, sfoi.qty_ordered AS q_c
                   FROM nykaalive1.sales_flat_order sfo
                   JOIN nykaalive1.sales_flat_order_payment sfop ON sfo.entity_id=sfop.parent_id 
                   JOIN nykaalive1.sales_flat_order_item sfoi ON sfoi.`order_id`=sfo.`entity_id`
-                  WHERE (((sfo.`status` IN ('processing','complete','confirmed','canceled')) OR (sfo.`status` = 'pending' AND sfop.`method` LIKE '%%cash%%')))
+                  WHERE (((sfo.`status` IN ('processing','complete','confirmed','canceled','pending')) OR (sfo.`status` = 'pending' AND sfop.`method` LIKE '%%cash%%')))
                         AND (sfo.created_at BETWEEN '%s' AND '%s') AND sfoi.product_type='configurable'
                  )b ON a.parent_item_id=b.item_id
              )f
@@ -157,6 +157,7 @@ def generate_gludo_orders():
           print(date_search_str + ".*Quantity decreased for sku ([^ ]+) by ([0-9]+)")
           print(line)
 
+        print(line)
         sku = m.group(1)
         qty = m.group(2)
         csv.write("%s,%s\n" % (sku, qty))

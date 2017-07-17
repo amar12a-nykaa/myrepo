@@ -13,7 +13,7 @@ function getPWSConnection() {
   return $pwsConnection;
 }
 
-function fetchNykaaProducts() {
+function fetchNykaaProducts($offset, $limit) {
   global $enabledOnly, $nykaaConnection, $skuClause, $limitClause;
 
   $query = "SELECT e.sku, e.type_id, cpevn.value as name, cddisc.value as discount, 
@@ -32,7 +32,7 @@ function fetchNykaaProducts() {
       ) AS special_price,
       csi.qty, csi.is_in_stock, IF(csi.use_config_backorders=0 AND csi.backorders=1, '1','0') AS backorders
 
-      FROM catalog_product_entity as e 
+      FROM (select * from catalog_product_entity order by sku limit $offset, $limit)as e 
       LEFT JOIN catalog_product_entity_varchar cpevn on cpevn.entity_id = e.entity_id AND cpevn.attribute_id = 56 AND cpevn.store_id = 0 
       LEFT JOIN catalog_product_entity_decimal AS cpedp ON cpedp.entity_id = e.entity_id AND cpedp.attribute_id = 60 AND cpedp.store_id = 0
       LEFT JOIN catalog_product_entity_decimal AS cpedsp ON cpedsp.entity_id = e.entity_id AND cpedsp.attribute_id = 61 AND cpedsp.store_id = 0
@@ -43,6 +43,7 @@ function fetchNykaaProducts() {
 
       WHERE $skuClause (cpeistl.value IS NULL OR cpeistl.value = 0) AND (cpeisd.value IS NULL OR cpeisd.value = 0) $limitClause";
 
+  
   if($enabledOnly) {
     $query = "SELECT e.sku, e.type_id, cpevn.value as name, cddisc.value as discount,
       (CASE WHEN e.type_id = 'bundle' THEN
@@ -60,7 +61,7 @@ function fetchNykaaProducts() {
       ) AS special_price,
       csi.qty, csi.is_in_stock, IF(csi.use_config_backorders=0 AND csi.backorders=1, '1','0') AS backorders
 
-      FROM catalog_product_entity as e 
+      FROM (select * from catalog_product_entity order by sku limit $offset, $limit)as e 
       INNER JOIN catalog_product_entity_int AS at_status_default ON ( at_status_default.entity_id = e.entity_id ) 
            AND (at_status_default.attribute_id = '80' ) AND at_status_default.store_id = 0
       LEFT JOIN catalog_product_entity_varchar cpevn on cpevn.entity_id = e.entity_id AND cpevn.attribute_id = 56 AND cpevn.store_id = 0 
@@ -73,11 +74,13 @@ function fetchNykaaProducts() {
 
       WHERE $skuClause (cpeistl.value IS NULL OR cpeistl.value = 0) AND (cpeisd.value IS NULL OR cpeisd.value = 0) and at_status_default.value = 1 $limitClause";
   }
-
+  echo($query);
   $stm = $nykaaConnection->prepare($query);
   $stm->execute();
   return $stm;
 }
+
+
 
 function processNykaaProduct($product) {
   global $skuClause;
@@ -322,6 +325,7 @@ function sendReportEmail() {
   $mail->addAddress('anil.kumar@nykaa.com', 'Anil Kumar');
   $mail->addAddress('ashlesha.gawade@nykaa.com', 'Ashlesha Gawade');
   $mail->addAddress('oncall@nykaa.com', 'Oncall');
+  $mail->addAddress('cataloging@nykaa.com', 'Cataloging');
   $mail->Subject = 'Price and availability mismatch report';
   $mail->Body = $body;
 
@@ -376,22 +380,54 @@ function printReport() {
   print("Negative quantity products without backorders: $numNegativeWithoutBackorders\n");
 }
 
+
+
+
+$query = "select count(*) as count from catalog_product_entity ;";
+#echo($query);
+$stm = getNykaaConnection()->prepare($query);
+$stm->execute();
+$res = $stm->fetch(PDO::FETCH_ASSOC);
+#print_r($res);
+$nRows = $res['count'];
+echo("Total products to be looped: ".$nRows. "\n");
+
 init();
+$offset = 0;
+$limit = 100;
+while(True)
+{
+  #echo("offset: " .$offset."\n");
+  $stm = fetchNykaaProducts($offset, $limit);
+  $offset += 100;
+#  if($offset > 5000)
+#  {
+#    echo("Offset break\n");
+#    break;
+#  }
+  while($result1 = $stm->fetchall(PDO::FETCH_ASSOC)) {
+    
+    print_r($result1);
+    exit();
+    if(shouldSkipMatching($result1)) continue;
+    $result1 = processNykaaProduct($result1);
 
-$stm = fetchNykaaProducts();
-while($result1 = $stm->fetch(PDO::FETCH_ASSOC)) {
-  if(shouldSkipMatching($result1)) continue;
-  $result1 = processNykaaProduct($result1);
+    $sku = $result1['sku'];
+    $type = $result1['type_id'];
 
-  $sku = $result1['sku'];
-  $type = $result1['type_id'];
+    $result2 = fetchPWSProduct($sku, $type);
+    $result2 = processPWSProduct($result2);
+    logIfMissing($result2, $sku, $type);
+    logIfMismatch($result1, $result2, $sku, $type);
 
-  $result2 = fetchPWSProduct($sku, $type);
-  $result2 = processPWSProduct($result2);
-  logIfMissing($result2, $sku, $type);
-  logIfMismatch($result1, $result2, $sku, $type);
-
-  printProgress();
+    printProgress();
+  }
+  if($offset > $nRows)
+  {
+    echo("breaking ... ");
+    break;
+  }
+  #echo("end of loop");
 }
 
 cleanup();
