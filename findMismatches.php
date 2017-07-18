@@ -1,4 +1,3 @@
-#!/usr/bin/php
 <?php
 
 function getNykaaConnection() {
@@ -74,7 +73,8 @@ function fetchNykaaProducts($offset, $limit) {
 
       WHERE $skuClause (cpeistl.value IS NULL OR cpeistl.value = 0) AND (cpeisd.value IS NULL OR cpeisd.value = 0) and at_status_default.value = 1 $limitClause";
   }
-  echo($query);
+  echo("Hello");
+  echo($query."\n\n");
   $stm = $nykaaConnection->prepare($query);
   $stm->execute();
   return $stm;
@@ -206,28 +206,68 @@ function shouldSkipMatching($product) {
   return false;
 }
 
-function fetchPWSProduct($sku, $type) {
-  $sku = strtoupper($sku);
-  $host = "priceapi.nyk00-int.network";
-  $url = "http://$host/apis/v1/pas.get?sku=" . urlencode($sku) . "&type=$type";
-  $content = file_get_contents($url);
-  if($content === FALSE) {
-    print("Failed to fetch URL: $url. Retrying 1..\n");
-    $content = file_get_contents($url);
-    if($content === FALSE) {
-      print("Failed to fetch URL: $url. Retrying 2..\n");
-      $content = file_get_contents($url);
-      if($content === FALSE) {
-        print("Failed to fetch URL: $url. Skipping..\n");
-      }
-    }
+function fetchPWSProduct($products, $type) {
+  $skus = Array();
+  foreach($products as $product)
+  {
+    $product['sku'] = strtoupper($product['sku']);
+    array_push($skus, $product['sku']);
   }
-  $data = json_decode($content, true);
+  #$sku = strtoupper($sku);
+  $skus_str = join(',', $skus);
+  print_r($skus_str);
+  $body = Array();
+  foreach($skus as $sku)
+  {
+    array_push($body, Array("sku"=>$sku, "type"=>$type));
+  }
+	$body = Array("products"=> $body);
+  #print_r($body);
+  $js = json_encode($body);
+  echo("\n". $js. "\n\n");
+
+  $host = "priceapi.nyk00-int.network";
+
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL,"http://$host/apis/v1/pas.get");
+	curl_setopt($ch, CURLOPT_POST, 1);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $js);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type" => "application/json"));
+
+	$response = curl_exec($ch);
+	curl_close($ch);
+
+
+#  $url = "http://$host/apis/v1/pas.get?sku=" . urlencode($skus_str) . "&type=$type";
+#  $content = file_get_contents($url);
+#  if($content === FALSE) {
+#    print("Failed to fetch URL: $url. Retrying 1..\n");
+#    $content = file_get_contents($url);
+#    if($content === FALSE) {
+#      print("Failed to fetch URL: $url. Retrying 2..\n");
+#      $content = file_get_contents($url);
+#      if($content === FALSE) {
+#        print("Failed to fetch URL: $url. Skipping..\n");
+#      }
+#    }
+#  }
+	echo("\nresponse:\n");
+	print_r($response);
+	return json_decode($response, True);
+
+  $data = json_encode($response);
+	echo("\ndata:\n");
+	print_r($data);
+	exit();
   if(!isset($data['skus'][$sku])) return null;
   return $data['skus'][$sku];
 }
 
-function logIfMissing($product, $sku, $type) {
+#function logIfMissing($product, $sku, $type) {
+function logIfMissing($result1_processed, $result2_processed)
+{
   global $numMissing, $skuClause, $missingFile;
 
   if(empty($product)) {
@@ -394,31 +434,52 @@ echo("Total products to be looped: ".$nRows. "\n");
 
 init();
 $offset = 0;
-$limit = 100;
+$limit = 10;
 while(True)
 {
   #echo("offset: " .$offset."\n");
   $stm = fetchNykaaProducts($offset, $limit);
   $offset += 100;
-#  if($offset > 5000)
-#  {
-#    echo("Offset break\n");
-#    break;
-#  }
+  if($offset > 500)
+  {
+    echo("Offset break\n");
+    break;
+  }
   while($result1 = $stm->fetchall(PDO::FETCH_ASSOC)) {
     
+    echo("result1:");
     print_r($result1);
-    exit();
-    if(shouldSkipMatching($result1)) continue;
-    $result1 = processNykaaProduct($result1);
+    $result1_processed = Array();
+    foreach( $result1 as $result)
+    {
+      if(shouldSkipMatching($result)) continue;
+      $processed = processNykaaProduct($result);
+      if(!array_key_exists($processed['type_id'], $result1_processed))
+      {
+        $result1_processed[$processed['type_id']] = Array();
+      }
+      array_push($result1_processed[$processed['type_id']], $processed);
+    }
+    echo("result1_processed:");
+    print_r($result1_processed);
+    #$sku = $result1['sku'];
+    #$type = $result1['type_id'];
 
-    $sku = $result1['sku'];
-    $type = $result1['type_id'];
-
-    $result2 = fetchPWSProduct($sku, $type);
-    $result2 = processPWSProduct($result2);
-    logIfMissing($result2, $sku, $type);
-    logIfMismatch($result1, $result2, $sku, $type);
+    foreach($result1_processed as $type => $products)
+    {
+      $result2 = fetchPWSProduct($products, $type);
+      $result2_processed = Array();
+      echo("\nresult2:\n");
+      print_r($result2);
+      foreach($result2['skus'] as $sku=>$result)
+      {
+        #$result2 = processPWSProduct($result2);
+        $result2_processed[$sku] = processPWSProduct($result) ;
+      }
+    }
+    print_r($result2_processed);
+    logIfMissing($result1_processed, $result2_processed);
+    logIfMismatch($result1_processed, $result2_processed);
 
     printProgress();
   }
