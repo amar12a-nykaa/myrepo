@@ -254,7 +254,7 @@ class CatalogIndexer:
               for product_sku in doc.get('product_skus', []):
                 prod_obj = bundle_products.get(product_sku) 
                 if prod_obj:
-                  product_qty_map[product_sku] = prod_obj.get('quantity', 0)
+                  product_qty_map[product_sku] = prod_obj.get('quantity_in_bundle', 0)
               doc['product_qty_map'] = product_qty_map  
 
             if missing_fields:
