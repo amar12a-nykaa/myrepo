@@ -1,4 +1,6 @@
 <?php
+  
+$GLUDO_API_HOST = "priceapi.nyk00-int.network";
 
 function getNykaaConnection() {
   $nykaaConnection = new PDO("mysql:host=reports-read-replica.nyk00-int.network;dbname=nykaalive1", "anik", "slATy:2Rl9Me5mR");
@@ -73,8 +75,8 @@ function fetchNykaaProducts($offset, $limit) {
 
       WHERE $skuClause (cpeistl.value IS NULL OR cpeistl.value = 0) AND (cpeisd.value IS NULL OR cpeisd.value = 0) and at_status_default.value = 1 $limitClause";
   }
-  echo("Hello");
-  echo($query."\n\n");
+  #echo("Hello");
+  #echo($query."\n\n");
   $stm = $nykaaConnection->prepare($query);
   $stm->execute();
   return $stm;
@@ -121,6 +123,8 @@ function processNykaaProduct($product) {
 
 function processPWSProduct($product) {
   global $skuClause;
+  #print("product:");
+  #print_r($product);
 
   if(empty($product)) return null;
 
@@ -198,122 +202,127 @@ function init() {
   $nykaaConnection = getNykaaConnection();
 }
 
-function shouldSkipMatching($product) {
-  if($product['type_id'] == 'configurable') return true;
-  if((float)$product['price'] < 1) return true;
-  if(empty($product['sku'])) return true;
-  if($product['type_id'] == 'bundle' && $product['discount'] == 0) return true;
-  return false;
+function isGoodForMatching($product) {
+  if($product['type_id'] == 'configurable') return false;
+  if((float)$product['price'] < 1) return false;
+  if(empty($product['sku'])) return false;
+  if($product['type_id'] == 'bundle' && $product['discount'] == 0) return false;
+  return true;
 }
 
-function fetchPWSProduct($products, $type) {
-  $skus = Array();
+function fetchPWSProducts($products) {
+  global $GLUDO_API_HOST;
+  if(count($products) == 0) { return Array(); }
+  $body = Array("products" => Array());
   foreach($products as $product)
   {
-    $product['sku'] = strtoupper($product['sku']);
-    array_push($skus, $product['sku']);
+    $sku = strtoupper($product['sku']);
+    array_push($body["products"], Array("sku"=>$sku, "type"=>$product['type_id']));
   }
-  #$sku = strtoupper($sku);
-  $skus_str = join(',', $skus);
-  print_r($skus_str);
-  $body = Array();
-  foreach($skus as $sku)
-  {
-    array_push($body, Array("sku"=>$sku, "type"=>$type));
-  }
-	$body = Array("products"=> $body);
-  #print_r($body);
-  $js = json_encode($body);
-  echo("\n". $js. "\n\n");
-
-  $host = "priceapi.nyk00-int.network";
+#  echo("body:\n");
+#  print_r($body);
 
 	$ch = curl_init();
-
-	curl_setopt($ch, CURLOPT_URL,"http://$host/apis/v1/pas.get");
+	curl_setopt($ch, CURLOPT_URL,"http://$GLUDO_API_HOST/apis/v1/pas.get");
 	curl_setopt($ch, CURLOPT_POST, 1);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $js);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 	curl_setopt($ch, CURLOPT_HTTPHEADER, Array("Content-Type" => "application/json"));
-
-	$response = curl_exec($ch);
+	$response = json_decode(curl_exec($ch), True);
 	curl_close($ch);
 
-
-#  $url = "http://$host/apis/v1/pas.get?sku=" . urlencode($skus_str) . "&type=$type";
-#  $content = file_get_contents($url);
-#  if($content === FALSE) {
-#    print("Failed to fetch URL: $url. Retrying 1..\n");
-#    $content = file_get_contents($url);
-#    if($content === FALSE) {
-#      print("Failed to fetch URL: $url. Retrying 2..\n");
-#      $content = file_get_contents($url);
-#      if($content === FALSE) {
-#        print("Failed to fetch URL: $url. Skipping..\n");
-#      }
-#    }
-#  }
-	echo("\nresponse:\n");
-	print_r($response);
-	return json_decode($response, True);
-
-  $data = json_encode($response);
-	echo("\ndata:\n");
-	print_r($data);
-	exit();
-  if(!isset($data['skus'][$sku])) return null;
-  return $data['skus'][$sku];
+  if($response['status'] != "OK" && count($body['products']) > 0 || ! array_key_exists("skus", $response))
+  {
+    echo("[ERROR] Some problem in fetching data from Gludo APIs.");
+    echo("\nresponse:\n");
+    print_r($response);
+    exit();
+  }
+  return array_values($response['skus']);
 }
 
-#function logIfMissing($product, $sku, $type) {
-function logIfMissing($result1_processed, $result2_processed)
+function logIfMissing($result1, $result2)
 {
   global $numMissing, $skuClause, $missingFile;
+  $skus1 = array_map(function ($a) { return $a['sku']; },$result1);
+  $skus2 = array_map(function ($a) { return $a['sku']; },$result2);
+  $missing = array_diff($skus1, $skus2);
 
-  if(empty($product)) {
+  
+  $arr1 = Array();
+  foreach($result1 as $product)
+  {
+    $arr1[$product['sku']] = $product;
+  }
+#  echo("logIfMissing");
+#  print_r($skus1);
+#  print_r($skus2);
+#  print_r($missing);
+
+  foreach($missing as $sku)
+  {
+    $type = $arr1[$sku]['type_id'];
     $numMissing++;
     if(empty($skuClause)) {
       fwrite($missingFile, "$sku,$type\n");
     }
-    return true;
   }
-
-  return false;
 }
 
-function logIfMismatch($result1, $result2, $sku, $type) {
+function logIfMismatch($result1, $result2) {
+  #print("logIfMismatch\n");
   global $numMismatch, $mismatchFile, $qtyMismatchFile, $skuClause;
   global $numAvailabilityMismatch, $numNegativeWithoutBackorders;
 
-  if(empty($result2)) return;
+  $arr2 = Array();
+  foreach($result2 as $product)
+  {
+    $arr2[$product['sku']] = $product;
+  }
+#  print("arr2:\n");
+#  print_r($arr2);
+  foreach($result1 as $prod)
+  {
+    $sku = $prod['sku'];
+    $type = $prod['type_id'];
+    if(array_key_exists($sku, $arr2))
+    {
+      $prod1 = $prod;
+      $prod2 = $arr2[$sku];
+#      print("prod1:\n");
+#      print_r($prod1);
+#      print("prod2:\n");
+#      print_r($prod2);
+      if(($prod1['price'] != $prod2['mrp']) || ($prod1['special_price'] != $prod2['sp'])) {
+        $numMismatch++;
+        //print("Mismatch found for SKU - $sku\n");
+        if(empty($skuClause)) {
+          fwrite($mismatchFile, "$sku,$type," . $prod1['price'] . "," . $prod2['mrp'] . "," .
+            $prod1['special_price'] . "," . $prod2['sp'] . "," . $prod1['discount'] . "," .
+            $prod2['discount'] . "\n");
+        }
+      }
 
-  if(($result1['price'] != $result2['mrp']) || ($result1['special_price'] != $result2['sp'])) {
-    $numMismatch++;
-    //print("Mismatch found for SKU - $sku\n");
-    if(empty($skuClause)) {
-      fwrite($mismatchFile, "$sku,$type," . $result1['price'] . "," . $result2['mrp'] . "," .
-        $result1['special_price'] . "," . $result2['sp'] . "," . $result1['discount'] . "," .
-        $result2['discount'] . "\n");
+      if($prod2['type'] !== 'bundle') {
+        if(($prod1['quantity'] !== $prod2['quantity']) || 
+           ($prod1['backorders'] !== $prod2['backorders'])) {
+          if(($prod1['quantity'] < 0) && ($prod1['backorders'] == 0)) {
+            $numNegativeWithoutBackorders++;
+          }
+
+          if(($prod1['quantity'] < 0) && ($prod1['backorders'] == 0) && 
+             ($prod2['quantity'] == 0) && ($prod2['backorders'] == 0)) {
+            //Ignore the case where magento quantity < 0 while pws quantity = 0
+          } else {
+            $numAvailabilityMismatch++;
+            fwrite($qtyMismatchFile, "$sku,$type," . $prod1['quantity'] . "," . $prod2['quantity'] . "," .
+                $prod1['backorders'] . "," . $prod2['backorders'] . "\n");
+          }
+        }
+      }
     }
   }
 
-  if($result2['type'] !== 'bundle') {
-    if(($result1['quantity'] !== $result2['quantity']) || 
-       ($result1['backorders'] !== $result2['backorders'])) {
-      if(($result1['quantity'] < 0) && ($result1['backorders'] == 0)) {
-        $numNegativeWithoutBackorders++;
-      }
-
-      if(($result1['quantity'] < 0) && ($result1['backorders'] == 0) && 
-         ($result2['quantity'] == 0) && ($result2['backorders'] == 0)) {
-        //Ignore the case where magento quantity < 0 while pws quantity = 0
-      } else {
-        $numAvailabilityMismatch++;
-        fwrite($qtyMismatchFile, "$sku,$type," . $result1['quantity'] . "," . $result2['quantity'] . "," .
-            $result1['backorders'] . "," . $result2['backorders'] . "\n");
-      }
-    }
-  }
 }
 
 function cleanup() {
@@ -391,17 +400,17 @@ function sendReportEmail() {
   echo "\n";
 }
 
-function logProducts($result1, $result2) {
-  global $skuClause;
-  if(!empty($skuClause)) {
-    print("==Magento Price==\n");
-    print_r($result1);
-    echo "\n";
-    print("==PWS Price==\n");
-    print_r($result2);
-    echo "\n";
-  }
-}
+#function logProducts($result1, $result2) {
+#  global $skuClause;
+#  if(!empty($skuClause)) {
+#    print("==Magento Price==\n");
+#    print_r($result1);
+#    echo "\n";
+#    print("==PWS Price==\n");
+#    print_r($result2);
+#    echo "\n";
+#  }
+#}
 
 function printProgress() {
   global $counter, $numMismatch, $numMissing, $numAvailabilityMismatch, $numNegativeWithoutBackorders;
@@ -437,52 +446,34 @@ $offset = 0;
 $limit = 10;
 while(True)
 {
-  #echo("offset: " .$offset."\n");
   $stm = fetchNykaaProducts($offset, $limit);
-  $offset += 100;
-  if($offset > 500)
-  {
-    echo("Offset break\n");
-    break;
-  }
-  while($result1 = $stm->fetchall(PDO::FETCH_ASSOC)) {
-    
-    echo("result1:");
-    print_r($result1);
-    $result1_processed = Array();
-    foreach( $result1 as $result)
-    {
-      if(shouldSkipMatching($result)) continue;
-      $processed = processNykaaProduct($result);
-      if(!array_key_exists($processed['type_id'], $result1_processed))
-      {
-        $result1_processed[$processed['type_id']] = Array();
-      }
-      array_push($result1_processed[$processed['type_id']], $processed);
-    }
-    echo("result1_processed:");
-    print_r($result1_processed);
-    #$sku = $result1['sku'];
-    #$type = $result1['type_id'];
+  $offset += $limit;
+  $counter += $limit;
+#  if($offset > 500)
+#  {
+#    echo("Offset break\n");
+#    break;
+#  }
+  $result1 = $stm->fetchall(PDO::FETCH_ASSOC);
+  #echo("result1:");
+  #print_r($result1);
+  #$result1 = Array();
 
-    foreach($result1_processed as $type => $products)
-    {
-      $result2 = fetchPWSProduct($products, $type);
-      $result2_processed = Array();
-      echo("\nresult2:\n");
-      print_r($result2);
-      foreach($result2['skus'] as $sku=>$result)
-      {
-        #$result2 = processPWSProduct($result2);
-        $result2_processed[$sku] = processPWSProduct($result) ;
-      }
-    }
-    print_r($result2_processed);
-    logIfMissing($result1_processed, $result2_processed);
-    logIfMismatch($result1_processed, $result2_processed);
+  $result1 = array_filter($result1, "isGoodForMatching");
+  $result1 = array_map("processNykaaProduct", $result1);
+#  echo("result1:");
+#  print_r($result1);
 
-    printProgress();
-  }
+  $result2 = fetchPWSProducts($result1);
+  $result2 = array_map("processPWSProduct", $result2);
+#  echo("\nresult2:\n");
+#  print_r($result2);
+
+  logIfMissing($result1, $result2);
+  logIfMismatch($result1, $result2);
+
+  printProgress();
+  
   if($offset > $nRows)
   {
     echo("breaking ... ");
