@@ -51,7 +51,7 @@ if url:
 # Import attributes from Nykaa DBs
 if import_attrs:
   print("Importing attributes from Nykaa DB....")
-  NykaaImporter.importAttrs()
+  NykaaImporter.importData()
   
 # fetch the inactive collection
 active_collection = ''

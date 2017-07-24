@@ -7,7 +7,7 @@ from pas.v1.utils import Utils, MemcacheUtils
 
 class NykaaImporter:
 
-  def importAttrs():
+  def importData():
     # DB handlers for nykaa and pws DBs
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     pws_mysql_conn = Utils.mysqlConnection('w')
@@ -54,6 +54,7 @@ class NykaaImporter:
           print("[Attribute Import ERROR]problem with %s: %s"%(option_id, str(e)))
     print("==== Imported %s attributes ===="%count)
 
+
     #Import Brand-Category level info like app_sorting, featured_products
     default_sorting_map = {'1': 'popularity', '2': 'discount', '3': 'name', '4': 'price_asc', '5': 'price_desc', '6': 'customer_top_rated', '7': 'new_arrival' }
     query = "SELECT cat_id, app_sorting, custom_sort FROM category_information"
@@ -83,9 +84,30 @@ class NykaaImporter:
         print("[Brand-Category Info Import ERROR]problem with %s: %s"%(item['cat_id'], str(e)))
     print("==== Imported %s brand-category items ===="%count)
 
+
+    # Import category meta information
+    query = """SELECT e.entity_id AS category_id, CONCAT(ccevt.value, ' | Nykaa') AS meta_title, REPLACE(REPLACE(ccetk.value, '\r', ''), '\n', '') AS meta_keywords, 
+               REPLACE(REPLACE(ccetd.value, '\r', ''), '\n', '') AS meta_description FROM catalog_category_entity e
+               LEFT JOIN catalog_category_entity_varchar ccevt ON ccevt.entity_id = e.entity_id AND ccevt.attribute_id = 36
+               LEFT JOIN catalog_category_entity_text ccetk ON ccetk.entity_id = e.entity_id AND ccetk.attribute_id = 37
+               LEFT JOIN catalog_category_entity_text ccetd ON ccetd.entity_id = e.entity_id AND ccetd.attribute_id = 38
+               WHERE ccevt.value IS NOT NULL OR ccetk.value IS NOT NULL OR ccetd.value IS NOT NULL;"""    
+    results = Utils.fetchResults(nykaa_mysql_conn, query)
+    for result in results:
+      try:
+        query = "INSERT INTO categories_meta (category_id, meta_title, meta_description, meta_keywords) VALUES (%s, %s, %s, %s) "
+        query += "ON DUPLICATE KEY UPDATE meta_title=%s, meta_description=%s, meta_keywords=%s"
+
+        values = (result['category_id'], result['meta_title'], result['meta_description'], result['meta_keywords'], result['meta_title'], result['meta_description'], result['meta_keywords'])
+        pws_cursor.execute(query, values)
+        pws_mysql_conn.commit()
+      except Exception as e:
+        print("[Category Meta Import ERROR]problem with %s: %s"%(result['category_id'], str(e)))
+
+
     pws_cursor.close()
     pws_mysql_conn.close()
 
 if __name__ == "__main__":
-  NykaaImporter.importAttrs()
+  NykaaImporter.importData()
 

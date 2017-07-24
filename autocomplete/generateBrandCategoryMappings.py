@@ -104,7 +104,7 @@ def getProducts():
 
   print("Fetching products from Nykaa DB..")
   query = "SELECT sl.entity_id AS simple_id, sl.sku AS simple_sku,\
-           sl.key AS parent_id, sl.key_sku AS parent_sku, cd.brand, sl.l2 AS category_l1, sl.l3 AS category_l2, sl.l4 AS category_l3, sl.l4_id AS category_l3_id \
+           sl.key AS parent_id, sl.key_sku AS parent_sku, sl.l2 AS category_l1, sl.l3 AS category_l2, sl.l4 AS category_l3, sl.l4_id AS category_l3_id, cd.brand \
            FROM analytics.sku_l4_updated_final sl\
            JOIN analytics.catalog_dump cd ON cd.entity_id=sl.entity_id\
            WHERE sl.l2 NOT LIKE '%Luxe%'\
@@ -136,11 +136,11 @@ def getMappings(products):
     if category_id not in categories:
       categories[category_id] = 0
 
-    product['simple_id'] = str(product['simple_id'])
+    product_simple_id = str(product['simple_id'])
 
-    categories[category_id] += popularity_index.get(product['simple_id'], 0)
-    brand_popularity[brand] += popularity_index.get(product['simple_id'], 0)
-    category_popularity[category_id] += popularity_index.get(product['simple_id'], 0)
+    categories[category_id] += popularity_index.get(product_simple_id, 0)
+    brand_popularity[brand] += popularity_index.get(product_simple_id, 0)
+    category_popularity[category_id] += popularity_index.get(product_simple_id, 0)
     brand_category_mappings[brand] = categories
   return brand_category_mappings
 
