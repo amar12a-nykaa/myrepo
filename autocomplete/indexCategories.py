@@ -10,7 +10,7 @@ docs = []
 collection='autocomplete'
 
 mysql_conn = Utils.mysqlConnection()
-query = "SELECT id as category_id, name as category_name, url, category_popularity FROM categories"
+query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories"
 results = Utils.fetchResults(mysql_conn, query)
 for row in results:
   docs.append({"_id": "category_" + re.sub('[^A-Za-z0-9]+', '_', row['category_name']) + '_' + row['category_id'],

@@ -67,7 +67,7 @@ def update_category_table():
   mysql_conn = Utils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
 
-  query = "REPLACE INTO categories(id, name, url, category_popularity) VALUES (%s, %s, %s, %s) "
+  query = "REPLACE INTO l3_categories(id, name, url, category_popularity) VALUES (%s, %s, %s, %s) "
 
   print("cat_id_index: %s" % cat_id_index)
   for _id, d in cat_id_index.items():
