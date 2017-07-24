@@ -43,7 +43,7 @@ if url:
     urllib.request.urlretrieve(url, FEED_LOCATION)
     file_path = FEED_LOCATION
 
-    print("Feed downlaod finished!")
+    print("Feed download finished!")
   except Exception as e:
     print(traceback.format_exc())
     raise
@@ -103,5 +103,4 @@ if docs_ratio < 0.95 and not force_run:
 # and do basic verification
 resp = Utils.createSolrCollectionAlias(inactive_collection, CATALOG_COLLECTION_ALIAS)
 
-
-print("\n\nFinished running catalog pipeline")
+print("\n\nFinished running catalog pipeline. NEW ACTIVE COLLECTION: %s"%inactive_collection)
