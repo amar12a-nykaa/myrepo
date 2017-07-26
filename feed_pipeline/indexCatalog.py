@@ -332,7 +332,7 @@ class CatalogIndexer:
         input_docs.append(doc)
 
         #index to solr in batches of 300
-        if ((index+1) % 300 == 0) or (index+1 >= count):
+        if ((index+1) % 300 == 0):
           Utils.indexCatalog(input_docs, collection=collection)
           input_docs = []
       except SolrError as e:
@@ -340,6 +340,10 @@ class CatalogIndexer:
       except Exception as e:
         print(traceback.format_exc())
         print("Error with %s: %s"% (row['sku'], str(e)))
+
+    # index the last remaining docs
+    if input_docs:
+      Utils.indexCatalog(input_docs, collection=collection)
 
 
 if __name__ == "__main__": 
