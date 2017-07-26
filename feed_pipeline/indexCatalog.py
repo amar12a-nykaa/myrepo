@@ -345,7 +345,9 @@ class CatalogIndexer:
 if __name__ == "__main__": 
   parser = argparse.ArgumentParser()
   parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
+  parser.add_argument("-c", "--collection", required=True, help='name of collection to index to')
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
+  collection = argv['collection']
 
-  CatalogIndexer.index(file_path)
+  CatalogIndexer.index(file_path, collection)
