@@ -23,7 +23,6 @@ from pas.v1.utils import Utils
 
 embed = IPython.embed
 
-
 client = MongoClient()
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
@@ -88,17 +87,17 @@ if argv['dump_metrics']:
   print("Dumping metrics in files:" )
   filename = os.path.join(dir_path, "analytics.suites.txt")
   with open(filename, 'w') as f:
-    f.write("%s" % suite)
+    f.write("%s" % suites['mobile'])
   f1 = filename
 
   filename = os.path.join(dir_path, "metrics.txt")
   with open(filename, 'w') as f:
-    f.write("%s" % suite.metrics)
+    f.write("%s" % suites['mobile'].metrics)
   f2 = filename
 
   filename = os.path.join(dir_path, "elements.txt")
   with open(filename, 'w') as f:
-    f.write("%s" % suite.elements)
+    f.write("%s" % suites['mobile'].elements)
   f3 = filename
 
   print('{f1}\n{f2}\n{f3}'.format(f1=f1,f2=f2, f3=f3))

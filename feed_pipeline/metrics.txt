@@ -1,0 +1,289 @@
+ID activityconversions       | Name: Activity Conversions 
+ID activityimpressions       | Name: Activity Impressions 
+ID averagepagedepth          | Name: Average Page Depth 
+ID averagetimespentonpage    | Name: Average Time Spent on Page 
+ID averagetimespentonsite    | Name: Average Time Spent on Site 
+ID averagevisitdepth         | Name: Average Visit Depth 
+ID bots                      | Name: Bots 
+ID bouncerate                | Name: Bounce Rate 
+ID bounces                   | Name: Bounces 
+ID cartadditions             | Name: Cart Additions 
+ID cartremovals              | Name: Cart Removals 
+ID carts                     | Name: Carts 
+ID cartviews                 | Name: Cart Views 
+ID checkouts                 | Name: Checkouts 
+ID customersdaily            | Name: Daily Unique Customers 
+ID customersloyal            | Name: Loyal Customers 
+ID customersmonthly          | Name: Monthly Unique Customers 
+ID customersnew              | Name: New Customers 
+ID customersquarterly        | Name: Quarterly Unique Customers 
+ID customersreturn           | Name: Return Customers 
+ID customersweekly           | Name: Weekly Unique Customers 
+ID customersyearly           | Name: Yearly Unique Customers 
+ID entries                   | Name: Entries 
+ID event10                   | Name: Product Discount Amount 
+ID event11                   | Name: Tax Amount 
+ID event12                   | Name: Voucher Discount Amount 
+ID event13                   | Name: Points Used 
+ID event14                   | Name: Points Discount Amount 
+ID event15                   | Name: Cash On Delivery Charges 
+ID event16                   | Name: Add to wishlist 
+ID event25                   | Name: Internal Campaign Clickthrough 
+ID event26                   | Name: Successful Login 
+ID event27                   | Name: Successful Logout 
+ID event28                   | Name: Registration Start 
+ID event29                   | Name: Registration Complete 
+ID event3                    | Name: Internal Searches 
+ID event32                   | Name: Brand Page View 
+ID event35                   | Name: Lifetime Value 
+ID event36                   | Name: Custom Link Click 
+ID event37                   | Name: Checkout Step 3: Select Payment 
+ID event38                   | Name: Checkout Step 4 : Payment 
+ID event40                   | Name: Add-to-Bag Button Click 
+ID event41                   | Name: Total Order Value 
+ID event5                    | Name: Custom Product View 
+ID event55                   | Name: Products Shared 
+ID event56                   | Name: Transaction Cancelled 
+ID event57                   | Name: Profile Picture Updated 
+ID event58                   | Name: Profile Picture Removed 
+ID event59                   | Name: Product Quantity Updated 
+ID event6                    | Name: Cart Value 
+ID event60                   | Name: Sort Product Review 
+ID event61                   | Name: Review Posted 
+ID event62                   | Name: Try It On Clicks 
+ID event63                   | Name: Gift Card Used 
+ID event64                   | Name: Gift Card Value 
+ID event65                   | Name: Has try it on 
+ID event66                   | Name: No search results 
+ID event67                   | Name: Server Error 
+ID event8                    | Name: Checkout Step 2 : Shipping 
+ID event9                    | Name: Shipping Charges 
+ID exits                     | Name: Exits 
+ID experienceconfidence      | Name: Experience Confidence 
+ID experiencelift            | Name: Experience Lift 
+ID instances                 | Name: Instances 
+ID mobileactioninapptime     | Name: Action Time In App 
+ID mobileactiontotaltime     | Name: Action Time Total 
+ID mobileavgprevsessionlength | Name: Average Session Length (Mobile) 
+ID mobilecrashes             | Name: Crashes 
+ID mobilecrashrate           | Name: Crash Rate (Mobile) 
+ID mobileinstalls            | Name: First Launches 
+ID mobilelaunches            | Name: Launches 
+ID mobileltvtotal            | Name: Lifetime Value (event) 
+ID mobileprevsessionlength   | Name: Total Session Length 
+ID mobileupgrades            | Name: Upgrades 
+ID mobileviews               | Name: Mobile Views 
+ID mobilevisitorsdaily       | Name: Mobile Daily Unique Visitors 
+ID mobilevisits              | Name: Mobile Visits 
+ID orders                    | Name: Orders 
+ID pageviews                 | Name: Page Views 
+ID participationcartadditions | Name: Cart Additions Participation 
+ID participationcartremovals | Name: Cart Removals Participation 
+ID participationcarts        | Name: Carts Participation 
+ID participationcartviews    | Name: Cart Views Participation 
+ID participationcheckouts    | Name: Checkouts Participation 
+ID participationevent10      | Name: Product Discount Amount Participation 
+ID participationevent11      | Name: Tax Amount Participation 
+ID participationevent12      | Name: Voucher Discount Amount Participation 
+ID participationevent13      | Name: Points Used Participation 
+ID participationevent14      | Name: Points Discount Amount Participation 
+ID participationevent15      | Name: Cash On Delivery Charges Participation 
+ID participationevent16      | Name: Add to wishlist Participation 
+ID participationevent25      | Name: Internal Campaign Clickthrough Participation 
+ID participationevent26      | Name: Successful Login Participation 
+ID participationevent27      | Name: Successful Logout Participation 
+ID participationevent28      | Name: Registration Start Participation 
+ID participationevent29      | Name: Registration Complete Participation 
+ID participationevent3       | Name: Internal Searches Participation 
+ID participationevent32      | Name: Brand Page View Participation 
+ID participationevent35      | Name: Lifetime Value Participation 
+ID participationevent36      | Name: Custom Link Click Participation 
+ID participationevent37      | Name: Checkout Step 3: Select Payment Participation 
+ID participationevent38      | Name: Checkout Step 4 : Payment Participation 
+ID participationevent40      | Name: Add-to-Bag Button Click Participation 
+ID participationevent41      | Name: Total Order Value Participation 
+ID participationevent5       | Name: Custom Product View Participation 
+ID participationevent55      | Name: Products Shared Participation 
+ID participationevent56      | Name: Transaction Cancelled Participation 
+ID participationevent57      | Name: Profile Picture Updated Participation 
+ID participationevent58      | Name: Profile Picture Removed Participation 
+ID participationevent59      | Name: Product Quantity Updated Participation 
+ID participationevent6       | Name: Cart Value Participation 
+ID participationevent60      | Name: Sort Product Review Participation 
+ID participationevent61      | Name: Review Posted Participation 
+ID participationevent62      | Name: Try It On Clicks Participation 
+ID participationevent63      | Name: Gift Card Used Participation 
+ID participationevent64      | Name: Gift Card Value Participation 
+ID participationevent65      | Name: Has try it on Participation 
+ID participationevent66      | Name: No search results Participation 
+ID participationevent67      | Name: Server Error Participation 
+ID participationevent8       | Name: Checkout Step 2 : Shipping Participation 
+ID participationevent9       | Name: Shipping Charges Participation 
+ID participationorders       | Name: Orders Participation 
+ID participationrevenue      | Name: Revenue Participation 
+ID participationunits        | Name: Units Participation 
+ID reloads                   | Name: Reloads 
+ID returnvisits              | Name: Return Visits 
+ID returnvisitsdaily         | Name: Daily Return Visits 
+ID revenue                   | Name: Revenue 
+ID singleaccess              | Name: Single Access 
+ID totalcartadditions        | Name: Total Cart Additions 
+ID totalcartremovals         | Name: Total Cart Removals 
+ID totalcarts                | Name: Total Carts 
+ID totalcartviews            | Name: Total Cart Views 
+ID totalcheckouts            | Name: Total Checkouts 
+ID totalevent10              | Name: Total Product Discount Amount 
+ID totalevent11              | Name: Total Tax Amount 
+ID totalevent12              | Name: Total Voucher Discount Amount 
+ID totalevent13              | Name: Total Points Used 
+ID totalevent14              | Name: Total Points Discount Amount 
+ID totalevent15              | Name: Total Cash On Delivery Charges 
+ID totalevent16              | Name: Total Add to wishlist 
+ID totalevent25              | Name: Total Internal Campaign Clickthrough 
+ID totalevent26              | Name: Total Successful Login 
+ID totalevent27              | Name: Total Successful Logout 
+ID totalevent28              | Name: Total Registration Start 
+ID totalevent29              | Name: Total Registration Complete 
+ID totalevent3               | Name: Total Internal Searches 
+ID totalevent32              | Name: Total Brand Page View 
+ID totalevent35              | Name: Total Lifetime Value 
+ID totalevent36              | Name: Total Custom Link Click 
+ID totalevent37              | Name: Total Checkout Step 3: Select Payment 
+ID totalevent38              | Name: Total Checkout Step 4 : Payment 
+ID totalevent40              | Name: Total Add-to-Bag Button Click 
+ID totalevent41              | Name: Total Order Value 
+ID totalevent5               | Name: Total Custom Product View 
+ID totalevent55              | Name: Total Products Shared 
+ID totalevent56              | Name: Total Transaction Cancelled 
+ID totalevent57              | Name: Total Profile Picture Updated 
+ID totalevent58              | Name: Total Profile Picture Removed 
+ID totalevent59              | Name: Total Product Quantity Updated 
+ID totalevent6               | Name: Total Cart Value 
+ID totalevent60              | Name: Total Sort Product Review 
+ID totalevent61              | Name: Total Review Posted 
+ID totalevent62              | Name: Total Try It On Clicks 
+ID totalevent63              | Name: Total Gift Card Used 
+ID totalevent64              | Name: Total Gift Card Value 
+ID totalevent65              | Name: Total Has try it on 
+ID totalevent66              | Name: Total No search results 
+ID totalevent67              | Name: Total Server Error 
+ID totalevent8               | Name: Total Checkout Step 2 : Shipping 
+ID totalevent9               | Name: Total Shipping Charges 
+ID totalorders               | Name: Total Orders 
+ID totalpageviews            | Name: Total Page Views 
+ID totalrevenue              | Name: Total Revenue 
+ID totaltimespent            | Name: Total Time Spent 
+ID totalunits                | Name: Total Units 
+ID totalvisitorsdaily        | Name: Total Daily Unique Visitors 
+ID totalvisitorshourly       | Name: Total Hourly Unique Visitors 
+ID totalvisitorsmonthly      | Name: Total Monthly Unique Visitors 
+ID totalvisitorsquarterly    | Name: Total Quarterly Unique Visitors 
+ID totalvisitorsweekly       | Name: Total Weekly Unique Visitors 
+ID totalvisitorsyearly       | Name: Total Yearly Unique Visitors 
+ID totalvisits               | Name: Total Visits 
+ID uniquevisitors            | Name: Unique Visitors 
+ID units                     | Name: Units 
+ID visitors                  | Name: Visitors 
+ID visitorsdaily             | Name: Daily Unique Visitors 
+ID visitorshourly            | Name: Hourly Unique Visitors 
+ID visitorsmonthly           | Name: Monthly Unique Visitors 
+ID visitorsnew               | Name: New Visitors 
+ID visitorsquarterly         | Name: Quarterly Unique Visitors 
+ID visitorsweekly            | Name: Weekly Unique Visitors 
+ID visitorsyearly            | Name: Yearly Unique Visitors 
+ID visits                    | Name: Visits 
+ID cm200000815_5672a632e4b02db7e6495d4f | Name: Conversion Rate 
+ID cm200000815_56727905e4b07083b1a06f3a | Name: Add to Cart % 
+ID cm200000815_5672b418e4b02db7e6495d50 | Name: Cart Success % 
+ID cm200000815_5673d122e4b04c2a92f620f3 | Name: Visits with Search 
+ID cm200000815_56cc09aae16ac077d5f99b60 | Name: Add to Cart to Checkout % 
+ID cm200000815_56cd5d473b991251e3549aab | Name: Unique Add to Cart 
+ID cm200000815_56d164a341c44bd7e07dbc62 | Name: Home Page CTR 
+ID cm200000815_56d411c3a1bfa270f1fc62b3 | Name: Unique Checkout 
+ID cm200000815_56d692403b991251e3549ae1 | Name: Offer Page Views 
+ID cm200000815_56d6d56edac38c48cdf32534 | Name: Summer Sale Views 
+ID cm200000815_56d6d83aa1bfa270f1fc62c7 | Name: Unique Offer Page 
+ID cm200000815_56e69d9441c44bd7e07dbcd3 | Name: Checkout % 
+ID cm200000815_572b25631a444f0bf65e7602 | Name: Home Page Views 
+ID cm200000815_57345673a1bfa24c30d218b4 | Name: Banner add to cart 
+ID cm200000815_578cb7773916f67287ccb382 | Name: Bounce Rate 
+ID cm200000815_57a9afd541c44b7686049697 | Name: Searches per Visit 
+ID cm200000815_57d91388e16ac00647ff0dc7 | Name: Exit Rate 
+ID cm200000815_57e2b5494f278f08f16cbd66 | Name: Unique Orders 
+ID cm200000815_57e2b5d91a444f0dcffd2fef | Name: Visitor with Order 
+ID cm200000815_57e7b9f5dac38c640116fbd2 | Name: Unique Product Views 
+ID cm200000815_57e7bf8841c44b2607add204 | Name: Cart Addition(Product Page) 
+ID cm200000815_57ea1ed93916f66fac72f9b7 | Name: Product View % 
+ID cm200000815_57ea1f04a1bfa20cfb855dbb | Name: Product View to AddCart % 
+ID cm200000815_57eb73e21a444f0dcffd30ba | Name: Unique Add to Cart(Product Page) 
+ID cm200000815_57eb75cbdac38c640116fc63 | Name: Add to Cart(List Page) % 
+ID cm200000815_5809e5731a444f51c5181a22 | Name: New Visitors 
+ID cm200000815_5809e6a1dac38c20d0f096c5 | Name: New Visits % 
+ID cm200000815_5809ec8a3b99124034306ecf | Name: New Visitors APP % 
+ID cm200000815_581064d11a444f51c54cae48 | Name: Add to Cart (Product Page App) 
+ID cm200000815_5811e7cfa1bfa201d3d6329c | Name: Add to Cart (PP Ratio) 
+ID cm200000815_5811e8073916f656458e2725 | Name: Add to Cart (LP Ratio) 
+ID cm200000815_58256f433916f64717db11f0 | Name: Products Viewed per Visit 
+ID cm200000815_583c053faae9ea6d15f7e048 | Name: Product Conv Rate 
+ID cm200000815_583fecc4311b65661d9c79dc | Name: Push Notifications 
+ID cm200000815_584e56ca98ca3a717ce72472 | Name: Conversion Rate (Search Visits) 
+ID cm200000815_584e584e311b65661d9c7b1a | Name: Search Usage % 
+ID cm200000815_586368a53b99123f0035497d | Name: offer and sale page views 
+ID cm200000815_586b72fa4f278f7e206f87d8 | Name: Lakme Searches 
+ID cm200000815_586f0734311b65661d9c7d7b | Name: Home Page Views(App) 
+ID cm200000815_5881d3bd506c8f4ea856de4a | Name: Offer Page Views non-sale (App) 
+ID cm200000815_5881f2604f278f7e20c6fdfa | Name: Offers Page Sale (App) 
+ID cm200000815_5881fb8e1a444f35c488f22b | Name: Loreal Brand Page Views 
+ID cm200000815_5881fc284f278f7e20c6fdfb | Name: Loreal Brand Product Views 
+ID cm200000815_5881fd49a1bfa257083daf18 | Name: Loreal Brand Searches 
+ID cm200000815_5881fef93916f6706d693efc | Name: Loreal Brand Filter Usage 
+ID cm200000815_58820460506c8f4ea856de52 | Name: Loreal Searches Web 
+ID cm200000815_58820490aae9ea6d15bee066 | Name: Loreal Filter Web 
+ID cm200000815_588206f33b99123f00c2ef1c | Name: Loreal Search Page Views 
+ID cm200000815_5885eea2dac38c502858ef29 | Name: Sale Day 
+ID cm200000815_5885f289e16ac03fd91c1dc5 | Name: lakme slider banner clicks (incorrect) 
+ID cm200000815_5885f34ae16ac03fd91c1dc6 | Name: lakme slider banner live 
+ID cm200000815_5885f4081a444f35c488f274 | Name: lakme slider banner impressions 
+ID cm200000815_5885f48898ca3a717c8f91ac | Name: lakme slider banner clicks 
+ID cm200000815_5885f4d5dac38c502858ef2d | Name: lakme slider banner CTR 
+ID cm200000815_589dba2aaae9ea6d15bee4e1 | Name: Luxury Page Views 
+ID cm200000815_589dba2be16ac03fd91c21c6 | Name: Luxury Page Views 
+ID cm200000815_589e1fac1a444f35c488f6b1 | Name: Clinique Brand Page Views 
+ID cm200000815_589e22e91a444f35c488f6b2 | Name: MAC Brand Page Views 
+ID cm200000815_589e2304aae9ea6d15bee4e6 | Name: Bobbi Brown Brand Page Views 
+ID cm200000815_589e2333506c8f4ea856e2ef | Name: Estee Lauder Brand Page Views 
+ID cm200000815_56672017e4b04c2a92f620cb | Name: Total Order Value 
+ID cm200000815_56e6aa09dac38c48cdf32569 | Name: Average Page Load Time 
+ID cm200000815_571da7bda1bfa24c30d21824 | Name: AMO Avg. Quality Score 
+ID cm200000815_571da7be3b991236c272c330 | Name: AMO Avg. Position 
+ID cm200000815_571da7bee16ac003acdcc1d3 | Name: AMO ROAS 
+ID cm200000815_571da7bf41c44bb9b430080c | Name: AMO CPC 
+ID cm200000815_571da7bfdac38c35619342fa | Name: AMO CTR 
+ID cm200000815_57987c3ee16ac04fa1b59686 | Name: Overall Conversion 
+ID cm200000815_58655980aae9ea6d15f7e413 | Name: Desktop Product Views 
+ID cm200000815_58655a633b99123f00354989 | Name: Mobile Product Views 
+ID cm200000815_58656a46aae9ea6d15f7e414 | Name: IOS App Product Views 
+ID cm200000815_58656a973b99123f0035498a | Name: Android App Product Views 
+ID cm200000815_58942e6e311b65661d46aa22 | Name: Product Views (iOS App) 
+ID cm200000815_58942f2a41c44bf51eec82d9 | Name: Cart Additions (iOS App) 
+ID cm200000815_58942f67311b65661d46aa23 | Name: Add to Wishlist (iOS App) 
+ID cm200000815_58942fa93916f6706d69424e | Name: Orders (iOS App) 
+ID cm200000815_58942ff5311b65661d46aa24 | Name: Product Views (Android App) 
+ID cm200000815_589430563b99123f00c2f27f | Name: Cart Additions (Android App) 
+ID cm200000815_5894308b506c8f4ea856e19f | Name: Add to Wishlist (Android App) 
+ID cm200000815_589430b7506c8f4ea856e1a0 | Name: Orders (Android App) 
+ID cm200000815_5894315e98ca3a717c8f94b9 | Name: Product Views (Desktop) 
+ID cm200000815_58943190aae9ea6d15bee3b8 | Name: Cart Additions (Desktop) 
+ID cm200000815_589431dc41c44bf51eec82e0 | Name: Add to Wishlist (Desktop) 
+ID cm200000815_5894322b3b99123f00c2f288 | Name: Orders (Desktop) 
+ID cm200000815_58943298b9b6c37440556bad | Name: Product Views (Mobile) 
+ID cm200000815_589432c541c44bf51eec82e1 | Name: Cart Additions (Mobile) 
+ID cm200000815_5894330641c44bf51eec82e2 | Name: Add to Wishlist (Mobile) 
+ID cm200000815_5894332a98ca3a717c8f94bc | Name: Orders (Mobile) 
+ID cm200000815_58a583784f278f7e20c703b7 | Name: checkout(value<500) 
+ID cm200000815_58a583b2dac38c502858f4f0 | Name: checkout(500-700) 
+ID cm200000815_58a583ef506c8f4ea856e43b | Name: checkout(700-900) 
+ID cm200000815_58a5846caae9ea6d15bee655 | Name: checkout(900-1100) 
+ID cm200000815_58a584c31a444f35c488f80e | Name: checkout(1100-1300) 
+ID cm200000815_58a5850f2778f8651b6bfc15 | Name: checkout(1300-1500) 
+ID cm200000815_58a58542311b65661d46acd0 | Name: checkout(>1500) 
