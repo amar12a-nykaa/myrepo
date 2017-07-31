@@ -1,3 +1,13 @@
+alias ga='git add '
+alias gc='git commit'
+alias gco='git checkout'
+alias gd='git diff'
+alias gdt='git difftool'
+alias got='git '
+alias gs='git status '
+alias pull='git pull'
+alias push='git push'
+
 alias api='cd /home/apis/nykaa'
 
 alias nykaaproddb="mysql -h dbmaster-qa.cjmplqztt198.ap-southeast-1.rds.amazonaws.com -uapi -paU%v#sq1 -D nykaalive1"
@@ -11,4 +21,3 @@ alias solrup='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:
 alias solrdown='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:9983 -cmd downconfig  -confname autocomplete -confdir /home/ubuntu/conf/'
 alias solrconf='cd /home/ubuntu/conf/'
 alias solrreload='curl "http://localhost:8983/solr/admin/collections?action=RELOAD&name=autocomplete"'
-
