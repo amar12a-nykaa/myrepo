@@ -22,8 +22,8 @@ from stemming.porter2 import stem
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
-sys.path.append("/nykaa/scripts/utils")
-from omnitureutils import OmnitureUtils
+#sys.path.append("/nykaa/scripts/utils")
+#from omnitureutils import OmnitureUtils
 
 client = MongoClient()
 search_terms = client['search']['search_terms']
@@ -86,8 +86,8 @@ for row in res:
     else:
       terms_not_found.append(term)
 
-  if row['_id'] == 'loreal hair colour':
-    IPython.embed()
+#  if row['_id'] == 'loreal hair colour':
+#    IPython.embed()
   if not terms_not_found:
     continue
 

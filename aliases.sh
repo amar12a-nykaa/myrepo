@@ -21,3 +21,5 @@ alias solrup='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:
 alias solrdown='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:9983 -cmd downconfig  -confname autocomplete -confdir /home/ubuntu/conf/'
 alias solrconf='cd /home/ubuntu/conf/'
 alias solrreload='curl "http://localhost:8983/solr/admin/collections?action=RELOAD&name=autocomplete"'
+
+python /nykaa/scripts/shortcuts.py
