@@ -2,7 +2,7 @@
 import re
 import sys
 import json
-
+from pymongo import MongoClient
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
@@ -14,23 +14,25 @@ from utils import createId
 docs = []
 collection='autocomplete'
 
-mysql_conn = Utils.mysqlConnection()
-query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories"
-results = Utils.fetchResults(mysql_conn, query)
+search_terms_normalized = MongoClient()['search']['search_terms_normalized']
+
 ctr = LoopCounter(name='Products Indexing')
-for row in results:
+for row in search_terms_normalized.find():
   ctr += 1
   if ctr.should_print():
     print(ctr.summary)
+  if not row['_id']:
+    continue
 
   docs.append({
-      #"_id": "category_" + re.sub('[^A-Za-z0-9]+', '_', row['category_name']) + '_' + row['category_id'],
-      "_id": createId(row['category_name']),
-      "entity": row['category_name'],
-      "weight": row['category_popularity'],
-      "type": "category",
-      "data": json.dumps({"url": row['url'], "type": "category"})
+      "_id": row['_id'],
+      #"_id": "search_" + row['_id'], 
+      "entity": row['query'],
+      "weight": row['popularity'], 
+      "type": "search_query",
+      "data": json.dumps({"type": "search_query", "url": "http://www.nykaa.com/search/result/?q=" + row['query'].replace(" ", "+")})
     })
+
   if len(docs) == 10:
     Utils.indexCatalog(docs, collection)
     docs = []

@@ -33,6 +33,8 @@ def create_popularity_index():
   client = MongoClient("52.221.96.159")
   global popularity_index
   popularity_table = client['search']['popularity']
+  #max_popularity = popularity_table.aggregate([{"$group":{ "_id": "max", "max":{"$max": "$popularity"}}}])
+
   for prod in popularity_table.find():
     popularity_index[prod['_id']] = prod['popularity']
 
@@ -54,7 +56,7 @@ def get_category_details():
 
   #Category name-url mapping
   query = "SELECT DISTINCT category_id, request_path AS url FROM nykaalive1.core_url_rewrite WHERE product_id IS NULL AND category_id IS NOT NULL"
-  results = Utils.fetchResults(nykaa_analytics_db_conn, query)
+  results = Utils.fetchResults(nykaa_replica_db_conn, query)
   for row in results:
     _id = str(row['category_id'])
     url = "http://www.nykaa.com/" + row['url']
@@ -142,6 +144,23 @@ def getMappings(products):
     brand_popularity[brand] += popularity_index.get(product_simple_id, 0)
     category_popularity[category_id] += popularity_index.get(product_simple_id, 0)
     brand_category_mappings[brand] = categories
+
+    #Normalize category_popularity
+    max_category_popularity = 0
+    for k,v in category_popularity.items():
+      max_category_popularity = max(max_category_popularity, v)
+    for k,v in category_popularity.items():
+      category_popularity[k] = category_popularity[k] / max_category_popularity * 100 + 100
+
+    #Normalize brand_popularity
+    max_brand_popularity = 0
+    for k,v in brand_popularity.items():
+      if k =='Nykaa Cosmetics':
+        continue
+      max_brand_popularity = max(max_brand_popularity, v)
+    for k,v in brand_popularity.items():
+      brand_popularity[k] = brand_popularity[k] / max_brand_popularity * 100 + 200
+
   return brand_category_mappings
 
 
@@ -186,6 +205,11 @@ create_popularity_index()
 get_category_details()
 products = getProducts()
 brand_category_mappings = getMappings(products)
+
+print(brand_popularity)
+#sys.exit()
+import IPython
+IPython.embed()
 print("brand_category_mappings: %s" % brand_category_mappings)
 saveMappings(brand_category_mappings)
 update_category_table()

@@ -1,0 +1,1 @@
+dev.nykaa.com:8983/solr/autocomplete/update?stream.body=<delete><query>*:*</query></delete>&commit=true
