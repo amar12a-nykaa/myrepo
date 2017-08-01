@@ -29,10 +29,12 @@ client = MongoClient()
 search_terms = client['search']['search_terms']
 search_terms_normalized = client['search']['search_terms_normalized']
 
+current_month = arrow.now().format("YYYY-MM")
 res = search_terms.aggregate(
   [
     #{"$limit" :1000},
-    {"$project": {"term": { "$toLower": "$term"}, "count": "$count"}},
+    {"$match": {"month": {"$lt": current_month}, "count": {"$gt": 200 }}},
+    {"$project": {"term": { "$toLower": "$term"}, "month":"$month", "count": "$count"}},
     {"$group": {"_id": "$term", "count": {"$sum": "$count"}}}, 
     {"$sort":{ "count": -1}},
     #{"$limit" :100},
