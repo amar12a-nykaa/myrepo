@@ -69,6 +69,7 @@ def update_category_table():
   mysql_conn = Utils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
 
+  Utils.mysql_write("delete from l3_categories", connection = mysql_conn)
   query = "REPLACE INTO l3_categories(id, name, url, category_popularity) VALUES (%s, %s, %s, %s) "
 
   print("cat_id_index: %s" % cat_id_index)
@@ -168,6 +169,8 @@ def saveMappings(brand_category_mappings):
   print("Saving brand category mappings in DB..")
   mysql_conn = Utils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
+
+  Utils.mysql_write("delete from brands", connection = mysql_conn)
 
   query = "INSERT INTO brands (brand, brand_id, brands_v1, brand_popularity, top_categories, brand_url) VALUES (%s, %s, %s, %s, %s, %s) "
   query += "ON DUPLICATE KEY UPDATE top_categories = %s, brands_v1 = %s"
