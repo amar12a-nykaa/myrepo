@@ -70,7 +70,7 @@ class NykaaImporter:
     #Import Brand-Category level info like app_sorting, featured_products
     default_sorting_map = {'1': 'popularity', '2': 'discount', '3': 'name', '4': 'price_asc', '5': 'price_desc', '6': 'customer_top_rated', '7': 'new_arrival' }
     query = """SELECT DISTINCT(cce.entity_id) AS category_id, ci.app_sorting, ci.custom_sort,
-             (cce.level-1) AS level, (CASE WHEN nkb.brand_id > 0 THEN 'brand' ELSE 'category' END) AS type
+             (cce.level-2) AS level, (CASE WHEN nkb.brand_id > 0 THEN 'brand' ELSE 'category' END) AS type
              FROM `catalog_category_entity` AS cce
              LEFT JOIN `category_information` AS ci ON ci.cat_id = cce.entity_id
              LEFT JOIN nk_brands AS nkb ON nkb.brand_id = cce.entity_id;"""

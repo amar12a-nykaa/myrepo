@@ -75,7 +75,8 @@ class CatalogIndexer:
     'variant_type', 'offer_name', 'offer_id', 'product_expiry', 'created_at', 'category_id', 'category', 'brand_v1', 'brand', 'shop_the_look_product', 'style_divas',
     'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern', 'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
     'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
-    'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku']
+    'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
+    'old_brand']
 
     all_rows = read_csv_from_file(file_path)
     columns = all_rows[0].keys()
@@ -301,7 +302,7 @@ class CatalogIndexer:
             doc[field_prefix + '_ids'] = facet_ids
             doc[field_prefix + '_values'] = facet_values
             facets = []
-            if field_prefix == 'brand':
+            if field_prefix in ['brand', 'old_brand']:
               for i, brand_id in enumerate(facet_ids):
                 brand_facet = OrderedDict()
                 brand_facet['id'] = brand_id
