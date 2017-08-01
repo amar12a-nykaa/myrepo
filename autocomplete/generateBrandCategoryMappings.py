@@ -1,4 +1,6 @@
 #!/usr/bin/python
+import IPython
+import pprint
 import traceback
 import sys
 import json
@@ -14,8 +16,8 @@ popularity_index = {}
 cat_name_id = {}
 cat_id_index = defaultdict(dict)
 brand_name_id = {}
-brand_popularity = defaultdict(int)
-category_popularity = defaultdict(int)
+brand_popularity = defaultdict(float)
+category_popularity = defaultdict(float)
 
 ## MySQL Connections 
 host = "nykaa-analytics.nyk00-int.network"
@@ -29,7 +31,7 @@ nykaa_replica_db_conn = Utils.nykaaMysqlConnection()
 
 
 
-def create_popularity_index():
+def build_product_popularity_index():
   client = MongoClient("52.221.96.159")
   global popularity_index
   popularity_table = client['search']['popularity']
@@ -64,14 +66,33 @@ def get_category_details():
       cat_id_index[_id]['url'] = url
 
 
-def update_category_table():
+def update_category_table(products):
+  """
+    Creates category popularity and stores in a global variable "category_popularity"
+    Stores the category popularity in database as well.
+  """
   print("Populating categories table ... ")
+
+  # Add up popularity of products per category
+  for product in products:
+    category_id = str(product.get('category_l3_id', ""))
+    if not category_id:
+      continue
+    product_simple_id = str(product['simple_id'])
+    category_popularity[category_id] += popularity_index.get(product_simple_id, 0)
+
+  #Normalize category_popularity
+  max_category_popularity = 0
+  for k,v in category_popularity.items():
+    max_category_popularity = max(max_category_popularity, v)
+  for k,v in category_popularity.items():
+    category_popularity[k] = category_popularity[k] / max_category_popularity * 100  + 100
+
   mysql_conn = Utils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
 
   Utils.mysql_write("delete from l3_categories", connection = mysql_conn)
   query = "REPLACE INTO l3_categories(id, name, url, category_popularity) VALUES (%s, %s, %s, %s) "
-
   print("cat_id_index: %s" % cat_id_index)
   for _id, d in cat_id_index.items():
     cat_name = d.get('name')
@@ -83,7 +104,7 @@ def update_category_table():
 
   cursor.close()
   mysql_conn.close()
-
+  
 
 def getProducts():
   products = []
@@ -103,7 +124,6 @@ def getProducts():
     brands_v1 = brand['brands_v1']
     if brand_name is not None:
       brand_name_id[brand_name.strip()] = {'brand_id': brand_id, 'brand_url': brand_url, 'brands_v1': brands_v1}
-  print("brand_name_id: %s" % sorted(list(brand_name_id.keys())))
 
   print("Fetching products from Nykaa DB..")
   query = "SELECT sl.entity_id AS simple_id, sl.sku AS simple_sku,\
@@ -143,24 +163,17 @@ def getMappings(products):
 
     categories[category_id] += popularity_index.get(product_simple_id, 0)
     brand_popularity[brand] += popularity_index.get(product_simple_id, 0)
-    category_popularity[category_id] += popularity_index.get(product_simple_id, 0)
     brand_category_mappings[brand] = categories
 
-    #Normalize category_popularity
-    max_category_popularity = 0
-    for k,v in category_popularity.items():
-      max_category_popularity = max(max_category_popularity, v)
-    for k,v in category_popularity.items():
-      category_popularity[k] = category_popularity[k] / max_category_popularity * 100 + 100
 
-    #Normalize brand_popularity
-    max_brand_popularity = 0
-    for k,v in brand_popularity.items():
-      if k =='Nykaa Cosmetics':
-        continue
-      max_brand_popularity = max(max_brand_popularity, v)
-    for k,v in brand_popularity.items():
-      brand_popularity[k] = brand_popularity[k] / max_brand_popularity * 100 + 200
+  #Normalize brand_popularity
+  max_brand_popularity = 0
+  for k,v in brand_popularity.items():
+    if k =='Nykaa Cosmetics':
+      continue
+    max_brand_popularity = max(max_brand_popularity, v)
+  for k,v in brand_popularity.items():
+    brand_popularity[k] = brand_popularity[k] / max_brand_popularity * 100  + 200
 
   return brand_category_mappings
 
@@ -204,15 +217,10 @@ def saveMappings(brand_category_mappings):
   mysql_conn.close()
 
 
-create_popularity_index()
-get_category_details()
+build_product_popularity_index()
 products = getProducts()
+get_category_details()
+update_category_table(products)
 brand_category_mappings = getMappings(products)
-
-print(brand_popularity)
-#sys.exit()
-import IPython
-IPython.embed()
 print("brand_category_mappings: %s" % brand_category_mappings)
 saveMappings(brand_category_mappings)
-update_category_table()
