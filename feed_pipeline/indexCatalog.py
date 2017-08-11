@@ -8,6 +8,7 @@ import dateparser
 import urllib.request
 import urllib.parse
 from datetime import datetime
+from urllib.parse import urlparse
 sys.path.append('/home/apis/nykaa/')
 from pas.v1.utils import Utils
 from collections import OrderedDict
@@ -168,11 +169,13 @@ class CatalogIndexer:
         # media stuff
         doc['media'] = []
         main_image = row['main_image']
+        main_image_path = urlparse(main_image).path
         images = row['image_url'].split('|') if row['image_url'] else []
         if main_image and images:
           for image in images:
             image = image.strip()
-            if image != main_image:
+            image_path = urlparse(image).path
+            if image_path != main_image_path:
               doc['media'].append({'type': 'image', 'url': image})
           doc['media'].insert(0, {'type': 'image', 'url': main_image})
 
