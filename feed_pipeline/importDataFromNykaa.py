@@ -11,6 +11,8 @@ class NykaaImporter:
   pws_mysql_conn = None
   pws_cursor = None
 
+  default_sorting_map = {'1': 'popularity', '2': 'discount', '3': 'name', '4': 'price_asc', '5': 'price_desc', '6': 'customer_top_rated', '7': 'new_arrival' }
+
   def importData():
     # DB handlers for nykaa and pws DBs
     NykaaImporter.nykaa_mysql_conn = Utils.nykaaMysqlConnection()
@@ -19,6 +21,7 @@ class NykaaImporter:
 
     NykaaImporter.importAttributes()
     NykaaImporter.importBrandCategoryAttributes()
+    NykaaImporter.importOfferAttributes()
     NykaaImporter.importMetaInformation()
 
     NykaaImporter.pws_cursor.close()
@@ -68,7 +71,6 @@ class NykaaImporter:
 
   def importBrandCategoryAttributes():
     #Import Brand-Category level info like app_sorting, featured_products
-    default_sorting_map = {'1': 'popularity', '2': 'discount', '3': 'name', '4': 'price_asc', '5': 'price_desc', '6': 'customer_top_rated', '7': 'new_arrival' }
     query = """SELECT DISTINCT(cce.entity_id) AS category_id, ci.app_sorting, ci.custom_sort,
              (cce.level-2) AS level, (CASE WHEN nkb.brand_id > 0 THEN 'brand' ELSE 'category' END) AS type
              FROM `catalog_category_entity` AS cce
@@ -89,11 +91,11 @@ class NykaaImporter:
         cat_info = {}
         memcache_key = 'brand-category-%s' % item['category_id']
         app_sorting = item['app_sorting']
-        if not (app_sorting and app_sorting in default_sorting_map.keys()):
+        if not (app_sorting and app_sorting in NykaaImporter.default_sorting_map.keys()):
           app_sorting = '1'
         else:
           app_sorting = str(app_sorting)
-        cat_info['sort'] = default_sorting_map[app_sorting]
+        cat_info['sort'] = NykaaImporter.default_sorting_map[app_sorting]
         cat_info['featured_products'] = item['custom_sort'].split(',') if item['custom_sort'] else []
         cat_info['level'] = item['level']
         cat_info['type'] = item['type']
@@ -101,6 +103,35 @@ class NykaaImporter:
       except Exception as e:
         print("[Brand-Category Info Import ERROR]problem with %s: %s"%(item['category_id'], str(e)))
     print("==== Imported %s brand-category items ===="%count)
+
+  def importOfferAttributes():
+    # Import offer attributes: featured_products and app_sorting
+    query = "SELECT entity_id AS offer_id, app_sorting, custom_sort FROM `nykaa_offers`"
+    results = Utils.fetchResults(NykaaImporter.nykaa_mysql_conn, query)
+    count = 0
+    for item in results:
+      try:
+        # Write to PWS DB
+        query = """INSERT INTO offer_information (id, sorting, featured_products) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE 
+                   sorting=VALUES(sorting), featured_products=VALUES(featured_products)"""
+        NykaaImporter.pws_cursor.execute(query, (item['offer_id'], item['app_sorting'], item['custom_sort']))
+        NykaaImporter.pws_mysql_conn.commit()
+        count += 1
+
+        #Update in memcache
+        offer_info = {}
+        memcache_key = 'offer-%s' % item['offer_id']
+        app_sorting = item['app_sorting']
+        if not (app_sorting and app_sorting in NykaaImporter.default_sorting_map.keys()):
+          app_sorting = '1'
+        else:
+          app_sorting = str(app_sorting)
+        offer_info['sort'] = NykaaImporter.default_sorting_map[app_sorting]
+        offer_info['featured_products'] = item['custom_sort'].split(',') if item['custom_sort'] else []
+        MemcacheUtils.set(memcache_key, json.dumps(offer_info))
+      except Exception as e:
+        print("[Offer Info Import ERROR]problem with %s: %s"%(item['offer_id'], str(e)))
+    print("==== Imported %s offer items ===="%count)
 
   def importMetaInformation():
     # Import category meta information
