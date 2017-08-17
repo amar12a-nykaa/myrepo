@@ -1,9 +1,13 @@
 #!/usr/bin/python
 import sys
+import time
+import timeit
+import requests
 import argparse
 import traceback
 import subprocess
 import urllib.request
+from pipelineUtils import SolrUtils
 from importDataFromNykaa import NykaaImporter
 from indexCatalog import CatalogIndexer
 sys.path.append('/home/apis/nykaa/')
@@ -35,6 +39,8 @@ elif (file_path and url):
   print(msg)
   raise Exception(msg)
 
+script_start = timeit.default_timer()
+
 # If url given, download the feed first
 if url:
   try:
@@ -48,17 +54,22 @@ if url:
     print(traceback.format_exc())
     raise
 
+import_start = timeit.default_timer()
+
 # Import attributes from Nykaa DBs
 if import_attrs:
   print("Importing attributes from Nykaa DB....")
   NykaaImporter.importData()
+
+import_stop = timeit.default_timer()
+import_duration = import_stop - import_start
   
 # fetch the inactive collection
 active_collection = ''
 inactive_collection = ''
 
 # fetch solr cluster status to find out which collection default alias points to
-cluster_status = Utils.solrClusterStatus()
+cluster_status = SolrUtils.solrClusterStatus()
 cluster_status = cluster_status.get('cluster')
 if cluster_status:
   aliases = cluster_status.get('aliases')
@@ -79,10 +90,19 @@ print("Active collection: %s"%active_collection)
 print("Inactive collection: %s"%inactive_collection)
 
 #clear inactive collection
-resp = Utils.clearSolrCollection(inactive_collection)
+resp = SolrUtils.clearSolrCollection(inactive_collection)
+
+index_start = timeit.default_timer()
 
 print("\n\nIndexing documents from csv file '%s' to collection '%s'."%(file_path, inactive_collection))
 CatalogIndexer.index(file_path, inactive_collection)
+
+print("Committing all remaining docs")
+base_url = Utils.solrBaseURL(collection=inactive_collection)
+requests.get(base_url + "update?commit=true")
+
+index_stop = timeit.default_timer()
+index_duration = index_stop - index_start
 
 # Verify correctness of indexing by comparing total number of documents in both active and inactive collections
 params = {'q': '*:*', 'rows': '0'}
@@ -101,6 +121,12 @@ if docs_ratio < 0.95 and not force_run:
 
 # Update alias CATALOG_COLLECTION_ALIAS to point to freshly indexed collection(inactive_collection)
 # and do basic verification
-resp = Utils.createSolrCollectionAlias(inactive_collection, CATALOG_COLLECTION_ALIAS)
+resp = SolrUtils.createSolrCollectionAlias(inactive_collection, CATALOG_COLLECTION_ALIAS)
 
-print("\n\nFinished running catalog pipeline. NEW ACTIVE COLLECTION: %s"%inactive_collection)
+script_stop = timeit.default_timer()
+script_duration = script_stop - script_start
+
+print("\n\nFinished running catalog pipeline. NEW ACTIVE COLLECTION: %s\n\n"%inactive_collection)
+print("Time taken to import data from Nykaa: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(import_duration)))
+print("Time taken to index data to Solr: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
+print("Total time taken for the script to run: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(script_duration)))

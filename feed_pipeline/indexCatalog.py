@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 sys.path.append('/home/apis/nykaa/')
 from pas.v1.utils import Utils
 from collections import OrderedDict
-from pipelineUtils import PipelineUtils
+from pipelineUtils import PipelineUtils, SolrUtils
 from pas.v1.exceptions import SolrError
 from pas.v1.csvutils import read_csv_from_file
 from popularity_api import get_popularity_for_ids
@@ -337,7 +337,7 @@ class CatalogIndexer:
 
         #index to solr in batches of 300
         if ((index+1) % 300 == 0):
-          Utils.indexCatalog(input_docs, collection=collection)
+          SolrUtils.indexCatalog(input_docs, collection=collection)
           input_docs = []
       except SolrError as e:
         raise Exception(str(e))
@@ -347,7 +347,7 @@ class CatalogIndexer:
 
     # index the last remaining docs
     if input_docs:
-      Utils.indexCatalog(input_docs, collection=collection)
+      SolrUtils.indexCatalog(input_docs, collection=collection)
 
 
 if __name__ == "__main__": 

@@ -3,6 +3,9 @@ import re
 import sys
 import json
 
+sys.path.append("/nykaa/scripts/feed_pipeline")
+from pipelineUtils import SolrUtils
+
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
@@ -32,10 +35,10 @@ for row in results:
       "data": json.dumps({"url": row['url'], "type": "category"})
     })
   if len(docs) == 10:
-    Utils.indexCatalog(docs, collection)
+    SolrUtils.indexCatalog(docs, collection)
     docs = []
 
-Utils.indexCatalog(docs, collection)
+SolrUtils.indexCatalog(docs, collection)
 
 import requests
 print("Building suggester .. ")
