@@ -2,7 +2,8 @@ import IPython
 import os
 import os.path
 shortcuts = [
-  ("/nykaa/scripts/mysqlremote.py", "/usr/local/bin/mysqlremote")
+  ("/nykaa/scripts/mysqlremote.py", "/usr/local/bin/mysqlremote"),
+  ("/nykaa/scripts/mysqlnykaa.py", "/usr/local/bin/mysqlnykaa"),
 ]
 
 def ensure_symlink(addr, ptr):
