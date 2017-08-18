@@ -4,6 +4,10 @@ import os.path
 shortcuts = [
   ("/nykaa/scripts/mysqlremote.py", "/usr/local/bin/mysqlremote"),
   ("/nykaa/scripts/mysqlnykaa.py", "/usr/local/bin/mysqlnykaa"),
+  ("/nykaa/scripts/bin/solrup.py", "/usr/local/bin/solrup"),
+  ("/nykaa/scripts/bin/solrdown.py", "/usr/local/bin/solrdown"),
+  #("/nykaa/scripts/bin/solrconf.py", "/usr/local/bin/solrconf"),
+  ("/nykaa/scripts/bin/solrreload.py", "/usr/local/bin/solrreload"),
 ]
 
 def ensure_symlink(addr, ptr):
@@ -19,6 +23,7 @@ def ensure_symlink(addr, ptr):
     
     if to_create:
       os.symlink(addr, ptr)
+      os.system("chmod 777 " + ptr)
       print("Created a new symlink: %s -> %s" % (ptr, addr))
       
 for addr, ptr in shortcuts:

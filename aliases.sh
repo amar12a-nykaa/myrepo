@@ -17,9 +17,9 @@ alias nyscripts='cd /home/ubuntu/nykaa_scripts/'
 alias nyapi='cd /home/apis/nykaa'
 
 alias solrhome='cd /opt/solr/server/scripts/cloud-scripts'
-alias solrup='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:9983 -cmd upconfig -confdir /home/ubuntu/conf/autocomplete -confname autocomplete'
-alias solrdown='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:9983 -cmd downconfig  -confname autocomplete -confdir /home/ubuntu/conf/autocomplete'
-alias solrconf='cd /home/ubuntu/conf/autocomplete'
-alias solrreload='curl "http://localhost:8983/solr/admin/collections?action=RELOAD&name=autocomplete"'
+alias solrconf='cd /home/ubuntu/nykaa_solrconf'
+#alias solrup='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:9983 -cmd upconfig -confdir /home/ubuntu/nykaa_solrconf/autocomplete -confname autocomplete'
+#alias solrdown='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:9983 -cmd downconfig  -confname autocomplete -confdir /home/ubuntu/nykaa_solrconf/autocomplete'
+#alias solrreload='curl "http://localhost:8983/solr/admin/collections?action=RELOAD&name=autocomplete"'
 
 python /nykaa/scripts/shortcuts.py
