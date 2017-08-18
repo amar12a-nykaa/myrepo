@@ -13,9 +13,9 @@ from pymongo import MongoClient
 from collections import defaultdict
 
 popularity_index = {}
-cat_name_id = {}
 cat_id_index = defaultdict(dict)
 brand_name_id = {}
+brand_name_name = {}
 brand_popularity = defaultdict(float)
 category_popularity = defaultdict(float)
 
@@ -41,7 +41,6 @@ def build_product_popularity_index():
     popularity_index[prod['_id']] = prod['popularity']
 
 def get_category_details():
-  global cat_name_id
   global cat_id_index
 
   #Category id - name mapping
@@ -51,10 +50,7 @@ def get_category_details():
     _id = str(row['l4_id'])
     name = row['l4'].strip()
 
-    cat_name_id[_id] = name
     cat_id_index[_id]['name'] = name
-
-  #print("cat_name_id: %s" % sorted(list(cat_name_id.keys())))
 
   #Category name-url mapping
   query = "SELECT DISTINCT category_id, request_path AS url FROM nykaalive1.core_url_rewrite WHERE product_id IS NULL AND category_id IS NOT NULL"
@@ -109,6 +105,7 @@ def update_category_table(products):
 def getProducts():
   products = []
   global brand_name_id
+  global brand_name_name
 
   #Brand id - name mapping
   query = """SELECT nkb.name AS name, nkb.brand_id AS id, cur.request_path AS url, ci.brand_id AS brands_v1 
@@ -123,7 +120,11 @@ def getProducts():
     brand_url = "http://www.nykaa.com/" + brand['url']
     brands_v1 = brand['brands_v1']
     if brand_name is not None:
-      brand_name_id[brand_name.strip()] = {'brand_id': brand_id, 'brand_url': brand_url, 'brands_v1': brands_v1}
+      brand_upper = brand_name.strip()
+      brand_lower = brand_upper.lower()
+      brand_name_name[brand_lower] = brand_upper
+
+      brand_name_id[brand_lower] = {'brand_id': brand_id, 'brand_url': brand_url, 'brands_v1': brands_v1}
 
   print("Fetching products from Nykaa DB..")
   query = "SELECT sl.entity_id AS simple_id, sl.sku AS simple_sku,\
@@ -147,7 +148,7 @@ def getMappings(products):
       print("cont1")
       continue
 
-    brand = product['brand'].strip()
+    brand = product['brand'].strip().lower()
     category_id = str(product.get('category_l3_id', ""))
     if not category_id:
       continue
@@ -185,8 +186,7 @@ def saveMappings(brand_category_mappings):
 
   Utils.mysql_write("delete from brands", connection = mysql_conn)
 
-  query = "INSERT INTO brands (brand, brand_id, brands_v1, brand_popularity, top_categories, brand_url) VALUES (%s, %s, %s, %s, %s, %s) "
-  query += "ON DUPLICATE KEY UPDATE top_categories = %s, brands_v1 = %s"
+  query = "REPLACE INTO brands (brand, brand_id, brands_v1, brand_popularity, top_categories, brand_url) VALUES (%s, %s, %s, %s, %s, %s) "
 
   for brand, categories in brand_category_mappings.items():
     sortkey = operator.itemgetter(1)
@@ -195,10 +195,12 @@ def saveMappings(brand_category_mappings):
     top_categories_str = ""
     try:
       for k in sorted_categories:
-        if cat_name_id.get(k[0]):
-          top_categories.append({"category": cat_name_id[k[0]], "category_id": k[0], "category_url": brand_name_id[brand]['brand_url'] + "?cat=%s" % k[0]})
-        if len(top_categories) == 5:
+        if cat_id_index.get(k[0]):
+          top_categories.append({"category": cat_id_index[k[0]]['name'], "category_id": k[0], "category_url": brand_name_id[brand]['brand_url'] + "?cat=%s" % k[0]})
+
+        if len(top_categories) <= 5:
           top_categories_str = json.dumps(top_categories)
+        if len(top_categories) == 5:
           break
     except:
       #print(traceback.format_exc())
@@ -209,7 +211,7 @@ def saveMappings(brand_category_mappings):
       print("Skipping %s"% brand)
       continue
 
-    values = (brand, brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'], brand_popularity[brand], top_categories_str, brand_name_id[brand]['brand_url'], top_categories_str, brand_name_id[brand]['brands_v1'])
+    values = (brand_name_name[brand], brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'], brand_popularity[brand], top_categories_str, brand_name_id[brand]['brand_url'])
     cursor.execute(query, values)
     mysql_conn.commit()
 
@@ -222,5 +224,5 @@ products = getProducts()
 get_category_details()
 update_category_table(products)
 brand_category_mappings = getMappings(products)
-print("brand_category_mappings: %s" % brand_category_mappings)
+#print("brand_category_mappings: %s" % sorted(list(brand_category_mappings.keys())))
 saveMappings(brand_category_mappings)

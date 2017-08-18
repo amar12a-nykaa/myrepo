@@ -38,9 +38,11 @@ for row in search_terms_normalized.find():
 
   if len(docs) == 10:
     SolrUtils.indexCatalog(docs, collection)
+    requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
     docs = []
 
 SolrUtils.indexCatalog(docs, collection)
+requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
 
 import requests
 print("Building suggester .. ")

@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import requests
 import re
 import sys
 import json
@@ -41,14 +42,14 @@ for row in results:
     })
   if len(docs) == 10:
     SolrUtils.indexCatalog(docs, collection)
+    requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
     docs = []
 
 SolrUtils.indexCatalog(docs, collection)
+requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
 
 import requests
 print("Building suggester .. ")
 base_url = Utils.solrBaseURL(collection=collection)
-if argv['qa']:
-  base_url = re.sub("localhost", "52.221.205.33", base_url)
 requests.get(base_url + "suggest?wt=json&suggest.q=la&suggest.build=true")
 print("Done")

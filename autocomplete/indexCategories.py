@@ -2,6 +2,7 @@
 import re
 import sys
 import json
+import requests 
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from pipelineUtils import SolrUtils
@@ -36,9 +37,11 @@ for row in results:
     })
   if len(docs) == 10:
     SolrUtils.indexCatalog(docs, collection)
+    requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
     docs = []
 
 SolrUtils.indexCatalog(docs, collection)
+requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
 
 import requests
 print("Building suggester .. ")
