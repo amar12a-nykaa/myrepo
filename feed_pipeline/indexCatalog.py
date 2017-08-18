@@ -21,6 +21,7 @@ from popularity_api import get_popularity_for_ids
 class CatalogIndexer:
   PRODUCT_TYPES = ['simple', 'configurable', 'bundle']
   VISIBILITY_TYPES = ['visible', 'not_visible']
+  DOCS_BATCH_SZIE = 1000
 
   def validate_catalog_feed_row(row):
     for key, value in row.items():
@@ -77,7 +78,7 @@ class CatalogIndexer:
     'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern', 'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
     'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
     'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
-    'old_brand']
+    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls']
 
     all_rows = read_csv_from_file(file_path)
     columns = all_rows[0].keys()
@@ -97,7 +98,10 @@ class CatalogIndexer:
         doc['title'] = row['name']
         doc['title_text_split'] = row['name']
         doc['description'] = row['description']
-        doc['tags'] = row['tag'].split(',')
+        doc['tags'] = row['tag'].split('|')
+        doc['highlights'] = row['highlights'].split('|')
+        doc['featured_in_titles'] = row['featured_in_titles'].split('|')
+        doc['featured_in_urls'] = row['featured_in_urls'].split('|')
         doc['star_rating_count'] = row['rating']
         if row['rating_num'] and row['rating_percentage']:
           doc['star_rating'] = row['rating_num']
@@ -154,7 +158,7 @@ class CatalogIndexer:
           for info in cat_info:
             cat_facet = OrderedDict()
             for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
-              cat_facet[key] = info.get(key)
+              cat_facet[key] = str(info.get(key))
             doc['category_facet'].append(cat_facet)
         elif len(category_ids)!=len(category_names):
           #with open("/data/inconsistent_cat.txt", "a") as f:
@@ -335,8 +339,8 @@ class CatalogIndexer:
         doc['object_type'] = "product"
         input_docs.append(doc)
 
-        #index to solr in batches of 300
-        if ((index+1) % 300 == 0):
+        #index to solr in batches of DOCS_BATCH_SZIE
+        if ((index+1) % CatalogIndexer.DOCS_BATCH_SZIE == 0):
           SolrUtils.indexCatalog(input_docs, collection=collection)
           input_docs = []
       except SolrError as e:

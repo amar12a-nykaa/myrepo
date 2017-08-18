@@ -34,7 +34,7 @@ class NykaaImporter:
 
     count = 0
     for option in results:
-      option_id = option['option_id']
+      option_id = str(option['option_id'])
       name = option['value']
 
       if name and name.strip():
