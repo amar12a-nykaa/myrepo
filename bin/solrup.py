@@ -1,9 +1,10 @@
 #!/usr/bin/python
-from solrargparser import read_config_as_first_arg
 import os 
+from solrhost import get_zk_host
+from solrargparser import read_config_as_first_arg
 
 
 config = read_config_as_first_arg()
-cmd = "/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:9983 -cmd upconfig -confdir /home/ubuntu/nykaa_solrconf/{config} -confname {config}".format(config=config)
+cmd = "/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost " + get_zk_host() + " -cmd upconfig -confdir /home/ubuntu/nykaa_solrconf/{config} -confname {config}".format(config=config)
 print(cmd)
 os.system(cmd)
