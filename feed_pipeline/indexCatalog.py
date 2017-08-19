@@ -5,9 +5,8 @@ import socket
 import argparse
 import traceback
 import dateparser
-import urllib.request
-import urllib.parse
 from datetime import datetime
+from urllib.request import urlopen, Request
 from urllib.parse import urlparse
 sys.path.append('/home/apis/nykaa/')
 from pas.v1.utils import Utils
@@ -22,6 +21,10 @@ class CatalogIndexer:
   PRODUCT_TYPES = ['simple', 'configurable', 'bundle']
   VISIBILITY_TYPES = ['visible', 'not_visible']
   DOCS_BATCH_SZIE = 1000
+
+  def print_errors(errors):
+    for err in errors:
+      print("[ERROR]: " + err)
 
   def validate_catalog_feed_row(row):
     for key, value in row.items():
@@ -70,6 +73,67 @@ class CatalogIndexer:
 
       row[key] = value
 
+  def fetch_price_availability(input_docs, pws_fetch_products):
+    request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.get"
+    request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
+    req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
+
+    pas_object = json.loads(urlopen(req).read().decode('utf-8'))
+    pas_object = pas_object['skus']
+
+    pws_input_docs = []
+    errors = []
+    for doc in input_docs:
+      if doc.get('mrp') is None:   # Isn't a dummy product
+        if pas_object.get(doc['sku']):
+          pas = pas_object[doc['sku']]
+          missing_fields = []
+          swap_keys = {'sp': 'price', 'discount': 'discount', 'mrp': 'mrp', 'is_in_stock': 'in_stock'}
+          for key in swap_keys.keys():
+            if pas.get(key) is None:
+              missing_fields.append(key)
+            else:
+              doc[swap_keys[key]] = pas[key]
+
+          if pas.get('quantity') is not None:
+            doc['quantity'] = pas.get('quantity')
+
+          if pas.get('backorders') is not None:
+            doc['backorders'] = pas.get('backorders') == True
+
+          if pas.get('disabled') is not None:
+            doc['disabled'] = pas.get('disabled')
+
+          # if bundle, get qty of each product also
+          if doc['type']=='bundle':
+            bundle_products = pas.get('products', {})
+            product_qty_map = {}
+            for product_sku in doc.get('product_skus', []):
+              prod_obj = bundle_products.get(product_sku) 
+              if prod_obj:
+                product_qty_map[product_sku] = prod_obj.get('quantity_in_bundle', 0)
+            doc['product_qty_map'] = product_qty_map  
+
+          if missing_fields:
+            #if doc['type']=='configurable':
+            #  line = doc['sku'] + "  " + ",".join(row['parent_sku'].split("|"))
+            #  with open("no_child_configurables.txt", "a") as f:
+            #    f.write("%s\n"%line)
+            errors.append("%s: Missing PAS fields: %s" % (doc['sku'], missing_fields))
+            continue
+            #raise Exception("Missing PAS fields: %s"%missing_fields)
+        else:
+          #r = json.loads(urllib.request.urlopen("http://priceapi.nyk00-int.network/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
+          #if not r['skus'].get(doc['sku']):
+            #with open("/data/missing_skus.txt", "a") as f:
+              #f.write("%s\n"%doc['sku'])
+          errors.append("%s: sku not found in Price DB." % doc['sku'])
+          continue    
+          #raise Exception("sku not found in Price DB.")
+      doc['is_saleable'] = doc['in_stock']
+      pws_input_docs.append(doc)
+    return (pws_input_docs, errors)
+
   def index(file_path, collection):
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
@@ -86,6 +150,7 @@ class CatalogIndexer:
 
     count = len(all_rows)
     input_docs = []
+    pws_fetch_products = []
     for index, row in enumerate(all_rows):
       try:
         CatalogIndexer.validate_catalog_feed_row(row)
@@ -235,49 +300,7 @@ class CatalogIndexer:
         else:
           # get price and availability from PAS
           params = {'sku': doc['sku'], 'type': doc['type']}
-          pas_object = json.loads(urllib.request.urlopen("http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))['skus'] 
-          if pas_object.get(doc['sku']):
-            pas = pas_object[doc['sku']]
-            missing_fields = []
-            swap_keys = {'sp': 'price', 'discount': 'discount', 'mrp': 'mrp', 'is_in_stock': 'in_stock'}
-            for key in swap_keys.keys():
-              if pas.get(key) is None:
-                missing_fields.append(key)
-              else:
-                doc[swap_keys[key]] = pas[key]
-
-            if pas.get('quantity') is not None:
-              doc['quantity'] = pas.get('quantity')
-
-            if pas.get('backorders') is not None:
-              doc['backorders'] = pas.get('backorders') == True
-
-            if pas.get('disabled') is not None:
-              doc['disabled'] = pas.get('disabled')
-
-            # if bundle, get qty of each product also
-            if doc['type']=='bundle':
-              bundle_products = pas.get('products', {})
-              product_qty_map = {}
-              for product_sku in doc.get('product_skus', []):
-                prod_obj = bundle_products.get(product_sku) 
-                if prod_obj:
-                  product_qty_map[product_sku] = prod_obj.get('quantity_in_bundle', 0)
-              doc['product_qty_map'] = product_qty_map  
-
-            if missing_fields:
-              #if doc['type']=='configurable':
-              #  line = doc['sku'] + "  " + ",".join(row['parent_sku'].split("|"))
-              #  with open("no_child_configurables.txt", "a") as f:
-              #    f.write("%s\n"%line)
-              raise Exception("Missing PAS fields: %s"%missing_fields)
-          else:
-            #r = json.loads(urllib.request.urlopen("http://priceapi.nyk00-int.network/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
-            #if not r['skus'].get(doc['sku']):
-              #with open("/data/missing_skus.txt", "a") as f:
-                #f.write("%s\n"%doc['sku'])
-            raise Exception("sku not found in Price DB.")
-        doc['is_saleable'] = doc['in_stock']
+          pws_fetch_products.append(params)
 
         # offers stuff
         offer_ids = row['offer_id'].split("|") if row['offer_id'] else []
@@ -341,8 +364,11 @@ class CatalogIndexer:
 
         #index to solr in batches of DOCS_BATCH_SZIE
         if ((index+1) % CatalogIndexer.DOCS_BATCH_SZIE == 0):
+          (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
           SolrUtils.indexCatalog(input_docs, collection=collection)
           input_docs = []
+          pws_fetch_products = []
+          CatalogIndexer.print_errors(errors)
       except SolrError as e:
         raise Exception(str(e))
       except Exception as e:
@@ -351,7 +377,9 @@ class CatalogIndexer:
 
     # index the last remaining docs
     if input_docs:
+      (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
       SolrUtils.indexCatalog(input_docs, collection=collection)
+      CatalogIndexer.print_errors(errors)
 
 
 if __name__ == "__main__": 
