@@ -156,8 +156,7 @@ class SolrUtils:
     return response
 
   def indexCatalog(docs, collection=CATALOG_COLLECTION_ALIAS):
-    # Doesn't force commit the docs
-    url = Utils.solrBaseURL(collection) + "update/json/docs"
+    url = Utils.solrBaseURL(collection) + "update/json/docs?commit=true"
     upload_docs = []
     for doc in docs:
       for key, value in doc.items():

@@ -97,9 +97,9 @@ index_start = timeit.default_timer()
 print("\n\nIndexing documents from csv file '%s' to collection '%s'."%(file_path, inactive_collection))
 CatalogIndexer.index(file_path, inactive_collection)
 
-print("Committing all remaining docs")
-base_url = Utils.solrBaseURL(collection=inactive_collection)
-requests.get(base_url + "update?commit=true")
+#print("Committing all remaining docs")
+#base_url = Utils.solrBaseURL(collection=inactive_collection)
+#requests.get(base_url + "update?commit=true")
 
 index_stop = timeit.default_timer()
 index_duration = index_stop - index_start
