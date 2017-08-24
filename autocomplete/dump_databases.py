@@ -3,7 +3,7 @@ import os
 import argparse
 import socket
 
-hostname socket.gethostname()
+hostname = socket.gethostname()
 
 
 

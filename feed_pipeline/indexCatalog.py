@@ -201,8 +201,11 @@ class CatalogIndexer:
         popularity_obj = get_popularity_for_ids([doc['product_id']]) 
         popularity_obj = popularity_obj.get(doc['product_id'])
         doc['popularity'] = 0 
+        doc['viewcount_i'] = 0
         if popularity_obj:
           doc['popularity'] = popularity_obj['popularity']
+          #View based Popularity
+          doc['viewcount_i'] = popularity_obj.get('views', 0)
             
         # Product URL and slug
         product_url = row['product_url']
