@@ -27,14 +27,14 @@ for filename in reversed([
     spamreader = csv.DictReader(csvfile,)
     for row in spamreader:
       cnt +=1 
-      if cnt %1000 == 0 :
+      if cnt %10 == 0 :
         print("%s rows processed"  % cnt)
       d = dict(row)
-      print(d)
+      #print(d)
       date = arrow.get(d['\ufeffDate'], 'MMM D YYYY').datetime
       filt = {"date": date, "productid": d['Products']}
       update = {"views": int(d["Product Views"]), "cart_additions": int(d['Cart Additions']), "orders": int(d['Orders'])}
-      print("--")
-      print(filt)
-      print(update)
+      #print("--")
+      #print(filt)
+      #print(update)
       raw_data.update_one(filt, {"$set": update}, upsert=True) 
