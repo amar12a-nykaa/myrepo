@@ -58,6 +58,13 @@ class CatalogIndexer:
             value = float(value)
           except Exception as e:
             raise Exception('Bad value - %s' % str(e))
+      
+      elif key=='bucket_discount_percent':
+        if value:
+          try:
+            value = float(value)
+          except Exception as e:
+            raise Exception('Bad value - %s' % str(e))
 
       elif key=='created_at':
         assert value, 'created_at cannot be empty'
@@ -142,7 +149,7 @@ class CatalogIndexer:
     'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern', 'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
     'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
     'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
-    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls']
+    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent']
 
     all_rows = read_csv_from_file(file_path)
     columns = all_rows[0].keys()
@@ -179,6 +186,8 @@ class CatalogIndexer:
         doc['pack_size'] = row['pack_size']
         doc['is_luxe'] = row.get('is_luxe') == '1'
         doc['can_subscribe'] = row.get('is_subscribable') == '1'
+        if doc['can_subscribe']:
+          doc['bucket_discount_percent'] = row['bucket_discount_percent'] 
         doc['can_try'] = row.get('try_it_on') == '1'
         if doc['can_try']:
           doc['can_try_type'] = row.get('try_it_on_type')
@@ -201,8 +210,11 @@ class CatalogIndexer:
         popularity_obj = get_popularity_for_ids([doc['product_id']]) 
         popularity_obj = popularity_obj.get(doc['product_id'])
         doc['popularity'] = 0 
+        doc['viewcount_i'] = 0
         if popularity_obj:
           doc['popularity'] = popularity_obj['popularity']
+          #View based Popularity
+          doc['viewcount_i'] = popularity_obj.get('views', 0)
             
         # Product URL and slug
         product_url = row['product_url']
