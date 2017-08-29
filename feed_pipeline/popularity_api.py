@@ -9,9 +9,9 @@ def get_popularity_for_ids(product_ids):
   res = list(popularity_table.find({"_id": {"$in": product_ids}}))
   ret = {}
   for obj in res:
-    if obj['views']:
-      conversion =  1.0 * obj['cart_additions'] / obj['views'] * 100 
-      views = 0 if conversion < 0.05 else conversion
+    if obj.get('views'):
+      conversion =  1.0 * obj.get('cart_additions', 0) / obj['views'] * 100 
+      views = 0 if conversion < 0.05 else views
     else:
       views = 0
     ret[obj['_id']] = {"popularity":obj['popularity'], "views": views}
