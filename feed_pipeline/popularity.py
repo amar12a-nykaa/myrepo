@@ -21,6 +21,9 @@ from pymongo import MongoClient
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
+sys.path.append("/nykaa/scripts/utils")
+from loopcounter import LoopCounter
+
 embed = IPython.embed
 
 client = MongoClient()
@@ -179,21 +182,23 @@ def write_report_data_to_db():
 def preprocess_data():
   print("preprocess_data")
   print(argv)
-  count = raw_data.count({"date": {"$gte": startdatetime, "$lte": enddatetime}})
-  print("count: %s" % count)
+  total = raw_data.count({"date": {"$gte": startdatetime, "$lte": enddatetime}})
+
+  ctr = LoopCounter(name='Preprocessing: ', total = total)
   for product in raw_data.find({"date": {"$gte": startdatetime, "$lte": enddatetime}}, no_cursor_timeout=True):
-    print(product)
-#TODO preprocessing 
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
+
     p = product
-    processed_data.update({"date": p['date'], "productid": p['productid'], 
-      #'platform': p['platform']
-      }, p, upsert=True)
+    processed_data.update({"date": p['date'], "productid": p['productid']}, p, upsert=True)
 
 def normalize(a):
   return (a-min(a))/(max(a)-min(a))
 
 def calculate_popularity():
   results = []
+  ctr = LoopCounter(name='Popularity: ')
   for p in processed_data.aggregate([{"$group": {"_id": "$productid" , "views": {"$sum": "$views"}, "cart_additions": {"$sum": "$cart_additions"}, "orders": {"$sum": "$orders"}}},\
       #{"$limit": 10},\
       ]):
@@ -207,7 +212,7 @@ def calculate_popularity():
   df['On'] = normalize(df['orders'])
   df['popularity'] = normalize(numpy.log(1 + df['Vn'] + 2*df['Cn'] + 3*df['On'])) * 100
 
-  print(df)
+  #print(df)
   for i, row in df.iterrows():
     row = dict(row)
     popularity_table.update({"_id": row['productid'], "productid": row['productid']}, row, upsert=True)

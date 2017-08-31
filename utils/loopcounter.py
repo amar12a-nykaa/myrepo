@@ -11,7 +11,7 @@ NAME = '{NAME}'
 
 class LoopCounter(object):
 
-  def __init__(self, name=None, start=None, flush=False, total=None):
+  def __init__(self, name=None, start=None, total=None):
     self.name = name if name else ""
     self.count = start if start else 0
     self.startts = datetime.datetime.now()
