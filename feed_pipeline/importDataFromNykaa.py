@@ -38,7 +38,7 @@ class NykaaImporter:
       name = option['value']
 
       if name and name.strip():
-        color_codes = []
+        color_codes = ['#FFFFFF']
         color_query = "SELECT * FROM colorfamily_codes WHERE color_id=%s"
         color_results = Utils.fetchResults(NykaaImporter.nykaa_mysql_conn, color_query, (option_id,))
         if color_results:
