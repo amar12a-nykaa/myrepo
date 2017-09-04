@@ -1,6 +1,7 @@
 import collections
 import datetime
 import sys
+import time 
 
 __all__ = ["LoopCounter", "LoopCounterGroup"]
 SPEED = '{SPEED}'
@@ -16,6 +17,7 @@ class LoopCounter(object):
     self.count = start if start else 0
     self.startts = datetime.datetime.now()
     self.total = total if total else None
+    self.last_print_time = None
 
   def __str__(self):
     str = ""
@@ -62,8 +64,20 @@ class LoopCounter(object):
     return self.formatted(formatstr)
 
   def should_print(self, threshold=100, low_interval=10, high_interval=100):
-    return (self.count % low_interval == 0 and self.count <= threshold) or (self.count % threshold == 0 and self.count > high_interval)
+    ret = False
+    if not self.last_print_time:
+      self.last_print_time = time.time()
 
+    delta = time.time() - self.last_print_time
+
+    if self.count > high_interval and delta < 1:
+      ret = False
+    else:
+      ret = (self.count % low_interval == 0 and self.count <= threshold) or (self.count % threshold == 0 and self.count > high_interval)
+  
+    if ret:
+      self.last_print_time = time.time()
+    return ret
 
 class LoopCounterGroup(object):
 
