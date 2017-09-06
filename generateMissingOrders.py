@@ -21,7 +21,7 @@ from pas.v1.utils import Utils
 parser = argparse.ArgumentParser()
 parser.add_argument('--sku')
 argv = vars(parser.parse_args())
-print(argv)
+#print(argv)
 
 
 # Time Calculations
@@ -33,68 +33,64 @@ time_to = end.format('YYYY-MM-DD HH:mm:ss')
 
 def generateMagentoOrders():
   with open('magento_orders.csv', 'w') as csvfile:
-    fieldnames = ['sku', 'quantity']
+    fieldnames = ['sku', 'quantity', 'quote_id']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
 
-    #sys.exit()
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
-    query = """SELECT f.sku, ROUND(SUM(f.qty)) AS 'quantity'
-             FROM(SELECT a.increment_id, a.sku, a.name, a.parent_item_id,  a.item_id, IFNULL(b.q_c,a.q_s) AS qty
-             FROM(SELECT sfo.increment_id, sfoi.`sku`,sfoi.product_type, sfoi.`name`, sfoi.`mrp`, sfo.created_at, sfoi.qty_ordered AS q_s, 
-                         sfoi.parent_item_id, sfoi.item_id, sfo.total_qty_ordered
-                  FROM nykaalive1.sales_flat_order sfo
-                  JOIN nykaalive1.`sales_flat_order_address` sfoa ON sfoa.parent_id=sfo.entity_id AND sfoa.address_type='shipping'
-                  JOIN nykaalive1.sales_flat_order_payment sfop ON sfo.entity_id=sfop.parent_id 
-                  JOIN nykaalive1.sales_flat_order_item sfoi ON sfoi.`order_id`=sfo.`entity_id`
-                  WHERE(((sfo.`status` IN ('processing','complete','confirmed','canceled','pending')) OR (sfo.`status` = 'pending' AND sfop.`method` LIKE '%%cash%%')))
-                       AND (sfo.created_at BETWEEN '%s' AND '%s') AND sfoi.product_type='simple')a
-                  LEFT JOIN 
-                 (SELECT sfo.increment_id, sfoi.`sku`,sfoi.product_type, sfoi.`name`, sfoi.item_id, sfoi.qty_ordered AS q_c
-                  FROM nykaalive1.sales_flat_order sfo
-                  JOIN nykaalive1.sales_flat_order_payment sfop ON sfo.entity_id=sfop.parent_id 
-                  JOIN nykaalive1.sales_flat_order_item sfoi ON sfoi.`order_id`=sfo.`entity_id`
-                  WHERE (((sfo.`status` IN ('processing','complete','confirmed','canceled','pending')) OR (sfo.`status` = 'pending' AND sfop.`method` LIKE '%%cash%%')))
-                        AND (sfo.created_at BETWEEN '%s' AND '%s') AND sfoi.product_type='configurable'
-                 )b ON a.parent_item_id=b.item_id
-             )f
-             GROUP BY 1
-          """ % (time_from, time_to, time_from, time_to)
+    query = """SELECT sku, qty_ordered AS quantity, quote_id
+               FROM sales_flat_order_item sfoi JOIN sales_flat_order sfo 
+               ON (sfoi.order_id = sfo.entity_id)
+               WHERE sfo.created_at BETWEEN '%s' AND '%s'
+                     AND sfoi.product_type = 'simple'
+          """ % (time_from, time_to)
 
     if argv['sku']:
       query = "select * from (%s)A where sku = '%s'" % (query, argv['sku'])
       print(query)
     results = Utils.fetchResults(nykaa_mysql_conn, query)
     for row in results:
-#      if argv['sku']:
-#        print("row..")
-#        print(row)
-      writer.writerow({'sku': row['sku'], 'quantity': int(row['quantity'])})
+      writer.writerow({'sku': row['sku'], 'quantity': int(row['quantity']), 'quote_id': int(row['quote_id'])})
 
 
 def readOrdersData(filename):
-  gludo_orders = {}
+  orders = {'skus': {}, 'ids': {}}
   with open(filename, newline='') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
       sku = row['sku'].strip()
       quantity = int(row['quantity'].strip())
-      if sku not in gludo_orders:
-        gludo_orders[sku] = 0
-      gludo_orders[sku] += quantity
+      quote_id = int(row['quote_id'].strip())
 
-  return gludo_orders
+      if sku not in orders['skus']:
+        orders['skus'][sku] = 0
+      if quote_id not in orders['ids']:
+        orders['ids'][quote_id] = 0
+
+      orders['skus'][sku] += quantity
+      orders['ids'][quote_id] += quantity
+
+  return orders
 
 
 def getOrderMismatches(magento_orders, gludo_orders):
-  for sku, magento_quantity in magento_orders.items():
-    gludo_quantity = gludo_orders.get(sku, 0)
+  for sku, magento_quantity in magento_orders['skus'].items():
+    gludo_quantity = gludo_orders['skus'].get(sku, 0)
     if magento_quantity != gludo_quantity:
       diff = abs(magento_quantity - gludo_quantity)
-      print("%s quantity is off by %d. Magento quantity: %d, Gludo quantity: %d" % (sku, diff, magento_quantity, gludo_quantity))
+      print("%s quantity deducted is off by %d. Magento quantity deducted: %d, Gludo quantity deducted: %d" % (sku, diff, magento_quantity, gludo_quantity))
+
+  print("==============")
+  for quote_id, magento_quantity in magento_orders['ids'].items():
+    gludo_quantity = gludo_orders['ids'].get(quote_id)
+    if not gludo_quantity:
+      print("Gludo quantity not deducted for quote id: %d. Magento quantity deducted: %d" % (quote_id, magento_quantity))
+    elif magento_quantity != gludo_quantity:
+      diff = abs(magento_quantity - gludo_quantity)
+      print("Quote id %d quantity is off by %d. Magento quantity: %d, Gludo quantity: %d" % (quote_id, diff, magento_quantity, gludo_quantity))
 
 
-def generate_gludo_orders():
+def generateGludoOrders():
 
   DIR = "/tmp/error_logs_api_machines"
   machines = ['52.220.215.78' , '52.221.72.116', '52.221.34.173', '52.77.199.176']
@@ -108,67 +104,42 @@ def generate_gludo_orders():
     #print(machine)
     dir1 = DIR + "/" + machine
     os.system("mkdir -p %s" % dir1)
-    for datestr in datestrs:
-      #print("---")
-      try:
-        files = subprocess.check_output("ssh -i /root/.ssh/id_rsa ubuntu@%s 'ls /var/log/apache2/error.log'" % (machine,), shell=True)
-        files = files.decode().split("\n")
-        files = [f for f in files if f]
-        #print("files: %r" % files)
-        for f in files:
-          basename = os.path.basename(f) 
-          localpath = DIR + "/%s/%s" % (machine, basename)
-          cmd = "scp -i /root/.ssh/id_rsa ubuntu@%s:%s %s" % (machine, f, localpath)
-          #print(cmd)
-          os.system(cmd)
-          if re.search(".gz$",  localpath):
-            os.system(localpath)
 
-        #print(cmd)
-        os.system(cmd)
-      except Exception as e:
-        print("Exception .. ")
-        if 'No such file or directory' in str(e):
-          pass
-        else:
-          print(traceback.format_exc())
-        pass
-      localfiles = subprocess.check_output("ls -d -1 %s/%s/*.*" % (DIR, machine), shell=True).decode().split("\n")
-      for localfile in localfiles:
-        if not localfile:
-          continue
-        cmd = 'grep "Quantity decreased" %s >> %s' % (localfile, outfile)
-        if argv['sku']:
-          cmd = 'grep "Quantity decreased" %s | grep "%s" >> %s' % (localfile, argv['sku'], outfile)
-          print(cmd)
-        os.system(cmd)
+    remotefile = "/var/log/apache2/error.log"
+    basename = os.path.basename(remotefile)
+    localfile = DIR + "/%s/%s" % (machine, basename)
+    cmd = "scp -i /root/.ssh/id_rsa ubuntu@%s:%s %s" % (machine, remotefile, localfile)
+    print(cmd)
+    os.system(cmd)
+
+    cmd = 'grep "Quantity decreased" %s >> %s' % (localfile, outfile)
+    if argv['sku']:
+      cmd = 'grep "Quantity decreased" %s | grep "%s" >> %s' % (localfile, argv['sku'], outfile)
+      print(cmd)
+    os.system(cmd)
 
   os.system("rm -f /nykaa/scripts/gludo_orders.csv")
   with open(outfile, 'r') as f:
     with open("/nykaa/scripts/gludo_orders.csv", 'w') as csv:
-      csv.write("sku,quantity\n")
+      csv.write("sku,quantity,quote_id\n")
       for line in f:
         date_search_str = start.format("MMM DD HH")
-        m = re.search(date_search_str + ".*Quantity decreased for sku ([^ ]+) by ([0-9]+)", line) 
+        m = re.search(date_search_str + ".*Quantity decreased for sku ([^ ]+) by ([0-9]+)\. quote_id - ([0-9]+)", line) 
+        if argv['sku']:
+          m = re.search(date_search_str + ".*Quantity decreased for sku (%s) by ([0-9]+)\. quote_id - ([0-9]+)" % argv['sku'], line) 
+
         if not m:
           continue
 
-        if argv['sku']:
-          print(date_search_str + ".*Quantity decreased for sku ([^ ]+) by ([0-9]+)")
-          print(line)
-
-        print(line)
         sku = m.group(1)
         qty = m.group(2)
-        csv.write("%s,%s\n" % (sku, qty))
+        qid = m.group(3)
+        csv.write("%s,%s,%s\n" % (sku, qty, qid))
 
 generateMagentoOrders()
-generate_gludo_orders()
-if argv['sku']:
-  os.system("grep -r %s /tmp/error_logs_api_machines/" % argv['sku'])
-else:
-  magento_orders = readOrdersData('magento_orders.csv')
-  gludo_orders = readOrdersData('gludo_orders.csv')
-  getOrderMismatches(magento_orders, gludo_orders)
+generateGludoOrders()
+magento_orders = readOrdersData('magento_orders.csv')
+gludo_orders = readOrdersData('gludo_orders.csv')
+getOrderMismatches(magento_orders, gludo_orders)
 
-  print("\nTime range: %s to %s "% (time_from, time_to))
+print("\nTime range: %s to %s "% (time_from, time_to))

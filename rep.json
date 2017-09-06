@@ -1,0 +1,1329 @@
+{
+    "status": 1,
+    "message": "Result for product page",
+    "result": {
+        "qna_count": 2,
+        "eretailer": true,
+        "star_rating_count": 312,
+        "price": 179.0,
+        "discount": 0.0,
+        "seller_name": null,
+        "button_text": "ADD TO BAG",
+        "fbn": false,
+        "is_service": false,
+        "sku": "NYKAA_POPNPC",
+        "featured_in_urls": null,
+        "disabled": false,
+        "vendor_id": null,
+        "can_try": true,
+        "seller_rating": null,
+        "product_id": "28011",
+        "type": "configurable",
+        "options": [
+            {
+                "qna_count": 0,
+                "eretailer": true,
+                "star_rating_count": 3,
+                "price": 179.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollwildberry.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700515",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "5 Wild Berry",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "39427",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 214,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/w/i/wild-berry_1_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/_/1/_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/w/i/wild-berry.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Wild Berry, No.5",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><strong>Nykaa Pop Nail Enamel Collection</strong></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p> <p><strong>Wild Berry (Shade No. 5) -</strong>Plump, luscious, perfectly sinuous; are you ready to marry the exotic? Our Wild Berry takes you places with nails that spell wine-glory. Look no further for inspiration. Strut this one happy and loud!</p> <p><strong>What it does :</strong></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p> <p><strong>What is it formulated WITHOUT :</strong></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 67.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 2,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,3146,3385,3606,3613,3751,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 3.4,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Wild Berry, No.5 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 179.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/39427/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Wild Berry, No.5 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - wild berry, no.5, nykaa pop nail enamel - wild berry, no.5 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 0,
+                "eretailer": true,
+                "star_rating_count": 9,
+                "price": 179.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollgrapejelly.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700089",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "25 Grape Jelly",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "28022",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 271,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/g/r/grape-jelly_1_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700089-1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700089_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/g/r/grape-jelly.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Grape Jelly, No. 25",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Grape Jelly (Shade No. 25) -</b> Jiggle and wiggle, oh, the enigmas of jelly! Purple confections call for royal endeavors as you spruce up your nails for a regal high. Call in our Purple Jelly for drama!</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 69.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 2,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,3146,3385,3556,3606,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 3.5,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Grape Jelly, No. 25 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 179.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/28022/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Grape Jelly, No. 25 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - grape jelly, no. 25, nykaa pop nail enamel - grape jelly, no. 25 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 0,
+                "eretailer": true,
+                "star_rating_count": 16,
+                "price": 179.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollwhysoplum.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700096",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "26 Why so Plum?",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "28023",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 303,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/w/h/why-so-plum_1_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700096-1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700096_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/w/h/why-so-plum.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Why so Plum?, No. 26",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Why so Plum? (Shade No. 26) -</b> Deep loves and intimate conversations call for nails that speak of pink-orange sunsets and beachy afternoons. Set the tone with our Why so Plum, a shade of purple that conquers hearts and teases minds.</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 93.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 9,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,3146,3385,3556,3606,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 4.7,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Why so Plum?, No. 26 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 179.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/28023/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Why so Plum?, No. 26 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - why so plum?, no. 26, nykaa pop nail enamel - why so plum?, no. 26 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 0,
+                "eretailer": true,
+                "star_rating_count": 12,
+                "price": 149.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollspicedgingerbread.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700119",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "42 Spiced Gingerbread",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "28025",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 178,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/s/p/spiced-gingerbread_1_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700119-1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700119_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/s/p/spiced-gingerbread.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Spiced Gingerbread, No. 42",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Spiced Gingerbread (Shade No. 42) -</b> You'd be tempted to literally eat your nails out as you pamper them with the coral grace of Spiced Gingerbread. Christmas bells beckon you to turn up the music with some gorg coral nail love.</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 80.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 6,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,3146,3385,3606,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 4.0,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Spiced Gingerbread, No. 42 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 149.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/28025/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Spiced Gingerbread, No. 42 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - spiced gingerbread, no. 42, nykaa pop nail enamel - spiced gingerbread, no. 42 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 0,
+                "eretailer": true,
+                "star_rating_count": 11,
+                "price": 149.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollsunnysideup.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700157",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "46 Sunny Side Up",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "28026",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 0,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/s/u/sunny-side-up_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700157-1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700157_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/s/u/sunny-side-up.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Sunny Side Up, No. 46",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    },
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    }
+                ],
+                "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Sunny Side Up (Shade No. 46) -</b> Don?t you like your eggs the perfect sunny side up? Go cheery and bubbly with this yellow, mellow shade. Celebrate your summery, sunny side!</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 82.0,
+                "in_stock": false,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 5,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1937,3146,3385,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 4.1,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Sunny Side Up, No. 46 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 149.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/28026/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Sunny Side Up, No. 46 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": false,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - sunny side up, no. 46, nykaa pop nail enamel - sunny side up, no. 46 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 0,
+                "eretailer": true,
+                "star_rating_count": 22,
+                "price": 179.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollhawaainpunch.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700188",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "63 Hawaain Punch",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "28028",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 0,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/h/a/hawaain-punch_1_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700188-1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700188_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/h/a/hawaain-punch.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Hawaiian Punch, No. 63",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Hawaiian Punch (Shade No. 63) -</b> Aloha! A tizzy trip with a sip of turquoise Hawaiian Punch sets you spinning to tropical islands with puffy white clouds and exotic flowers. You know you want some turquoise!</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 86.0,
+                "in_stock": false,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 7,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1937,2170,2429,3146,3385,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 4.3,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Hawaiian Punch, No. 63 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 179.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/28028/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Hawaiian Punch, No. 63 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": false,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - hawaiian punch, no. 63, nykaa pop nail enamel - hawaiian punch, no. 63 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 0,
+                "eretailer": true,
+                "star_rating_count": 31,
+                "price": 179.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollstrawberrytart.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700072",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "24 Strawberry Tart",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "28021",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 248,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/s/t/strawberry-tart_1_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700072-1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700072_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/s/t/strawberry-tart.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Strawberry Tart, No. 24",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Strawberry Tart (Shade No. 24) -</b>Very berry pink conquers the pale blues and greys. Light and crumbly like the perfect pastry, the Strawberry Tart rains summer love even on insipid winter days. Let pink be your nail spouse!</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 90.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 18,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,2531,3146,3385,3606,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 4.5,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Strawberry Tart, No. 24 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 179.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/28021/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Strawberry Tart, No. 24 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - strawberry tart, no. 24, nykaa pop nail enamel - strawberry tart, no. 24 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 0,
+                "eretailer": true,
+                "star_rating_count": 12,
+                "price": 179.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollcranberrycrumble.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700508",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "6 Cranberry Crumble",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "36713",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 215,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/c/r/cranberry-crumble_1_2.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700508_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/c/r/cranberry-crumble_3.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Cranberry Crumble, No.6",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><strong>Nykaa Pop Nail Enamel Collection</strong></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p> <p><strong>Cranberry Crumble (Shade No. 6) -</strong> Humble the crumble gloats around until sassy Cranberry wears the crown. Lap your nails up with our scrumptious Cranberry Crumble that hood winks all the way through summer. Map new adventures and script some much-needed thrills.</p> <p><strong>What it does :</strong></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p> <p><strong>What is it formulated WITHOUT :</strong></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 93.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 6,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,3146,3385,3556,3606,3613,3751,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 4.7,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Cranberry Crumble, No.6 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 179.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/36713/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Cranberry Crumble, No.6 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - cranberry crumble, no.6, nykaa pop nail enamel - cranberry crumble, no.6 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 1,
+                "eretailer": true,
+                "star_rating_count": 12,
+                "price": 179.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncolltropicaltangerine.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700102",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "41 Tropical Tangerine",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "28024",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 113,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/t/r/tropical-tangerine_1_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700102-1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700102_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/t/r/tropical-tangerine.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Tropical Tangerine, No. 41",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Tropical Tangerine (Shade No. 41) -</b> Summer, surf and turf and of course, orange sunshine! Soak your nails in fruity, frolicking Tropicana Tangerine goodness. You know what they say, there is never too much orange!</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 82.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 3,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,3146,3175,3385,3606,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 4.1,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Tropical Tangerine, No. 41 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 179.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/28024/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Tropical Tangerine, No. 41 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "3175": "3",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - tropical tangerine, no. 41, nykaa pop nail enamel - tropical tangerine, no. 41 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 1,
+                "eretailer": true,
+                "star_rating_count": 13,
+                "price": 179.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollblueraspberry.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700171",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "62 Blue Raspberry",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "28027",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 244,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/b/l/blue-raspberry_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700171-1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700171_1__1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/b/l/blue-raspberry.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Blue Raspberry, No. 62",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Blue Raspberry (Shade No. 62) -</b> Tart magenta raspberries meet the cobalt of the ocean in our Blue Raspberry. Glide over aqua waves and gloat over your pinacoladas with this swanky blue number.</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 85.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 1,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,2170,3146,3385,3606,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 4.3,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Blue Raspberry, No. 62 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 179.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/28027/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Blue Raspberry, No. 62 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - blue raspberry, no. 62, nykaa pop nail enamel - blue raspberry, no. 62 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 0,
+                "eretailer": true,
+                "star_rating_count": 15,
+                "price": 179.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollmidnightcraving.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700577",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "67 Midnight Craving",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "36714",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 161,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/m/i/midnight-craving_1_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700577_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/m/i/midnight-craving_2.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel -  Midnight Craving, No.67",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><strong>Nykaa Pop Nail Enamel Collection</strong></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p> <p><strong>Midnight Craving (Shade No. 67) -</strong>Let the sighs of the inky night sky embrace you. As you dip your nails in our Midnight Craving, watch your dreams unfold with a blue that begets splendor. Tell the stars tales of gloried yesterdays and pristine tomorrows.</p> <p><strong>What it does :</strong></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p> <p><strong>What is it formulated WITHOUT :</strong></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 84.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 10,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,2170,3146,3385,3556,3606,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 4.2,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel -  Midnight Craving, No.67 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 179.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/36714/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel -  Midnight Craving, No.67 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel -  midnight craving, no.67, nykaa pop nail enamel -  midnight craving, no.67 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 1,
+                "eretailer": true,
+                "star_rating_count": 33,
+                "price": 149.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollwatermelonsorbet.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700010",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "2 Watermelon Sorbet",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "28017",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 421,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static1.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/w/a/watermelon-sorbet_1_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700010-1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700010_1_.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/w/a/watermelon-sorbet.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Watermelon Sorbet, No. 2",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Watermelon Sorbet (Shade No. 2) -</b> Imagine fresh, succulent watermelon triangles spreading their red in flaky shavings of ice. Amp up your red quotient with our Watermelon Sorbet and spread some love!</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 84.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 13,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,2520,2533,3146,3174,3385,3606,3613,3751,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 4.2,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Watermelon Sorbet, No. 2 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 149.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/28017/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Watermelon Sorbet, No. 2 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "3174": "3",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - watermelon sorbet, no. 2, nykaa pop nail enamel - watermelon sorbet, no. 2 online",
+                "psku": "NYKAA_POPNPC"
+            },
+            {
+                "qna_count": 1,
+                "eretailer": true,
+                "star_rating_count": 20,
+                "price": 179.0,
+                "discount": 0.0,
+                "seller_name": null,
+                "variant_icon": "http://www.nykaa.com/media/icons/nyk_pncollblacklicorice.jpg",
+                "fbn": false,
+                "is_service": false,
+                "sku": "8904245700249",
+                "featured_in_urls": null,
+                "disabled": false,
+                "vendor_id": null,
+                "variant_name": "84 Black Licorice",
+                "can_try": false,
+                "seller_rating": null,
+                "product_id": "28029",
+                "type": "simple",
+                "pack_size": "9ml",
+                "parent_id": "28011",
+                "variant_type": null,
+                "can_subscribe": false,
+                "slug": "nykaa-pop-nail-polish-collection.html",
+                "button_text": "ADD TO BAG",
+                "quantity": 160,
+                "shipping_quote": null,
+                "highlights": null,
+                "media": [
+                    {
+                        "type": "image",
+                        "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/b/l/black-licorice_1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700249-1.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/8/9/8904245700249-2.jpg"
+                    },
+                    {
+                        "type": "image",
+                        "url": "http://adn-static3.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/b/l/black-licorice.jpg"
+                    }
+                ],
+                "title": "Nykaa Pop Nail Enamel - Black Licorice, No. 84",
+                "vendor_sku": null,
+                "offers": [
+                    {
+                        "name": "Mobikwik Offer",
+                        "id": "1953",
+                        "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+                    },
+                    {
+                        "name": "Nykaa Cosmetics Offer",
+                        "id": "2145",
+                        "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+                    },
+                    {
+                        "name": "Citi Bank offer",
+                        "id": "2363",
+                        "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+                    }
+                ],
+                "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Black Liquorice (Shade No. 84) -</b> LBDs or the little red dress, paint the night black with your partner in crime the Black Liquorice. Bond girls are so pass?, you'd rather be rocking hell all black!</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+                "star_rating_percentage": 77.0,
+                "in_stock": true,
+                "featured_in_titles": null,
+                "tags": [
+                    "New"
+                ],
+                "review_count": 7,
+                "brand_ids": "1937",
+                "category_ids": "12,16,255,587,1162,1937,3146,3385,3606,4017,4071,4077,4109,4163,4937,5036,5076,5166,5229",
+                "star_rating": 3.9,
+                "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel - Black Licorice, No. 84 Online in India | Nykaa",
+                "product_ingredients": null,
+                "backorders": false,
+                "mrp": 179.0,
+                "add_to_cart_url": "http://www.nykaa.com/ajaxaddcart/index/add/product/28029/isAjax/1",
+                "show_wishlist_button": false,
+                "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel - Black Licorice, No. 84 at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+                "is_saleable": true,
+                "category_levels": {
+                    "3146": "0",
+                    "255": "2",
+                    "16": "1",
+                    "12": "0"
+                },
+                "is_luxe": false,
+                "how_to_use": null,
+                "meta_keywords": "nykaa pop nail enamel - black licorice, no. 84, nykaa pop nail enamel - black licorice, no. 84 online",
+                "psku": "NYKAA_POPNPC"
+            }
+        ],
+        "parent_id": "28011",
+        "pack_size": "13 Shades",
+        "can_subscribe": false,
+        "is_luxe": false,
+        "variant_type": "shade",
+        "quantity": 160,
+        "media": [
+            {
+                "type": "image",
+                "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/w/a/watermelon-sorbet_1_2.jpg"
+            },
+            {
+                "type": "image",
+                "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/n/y/nykaa_popnpc-1.jpg"
+            },
+            {
+                "type": "image",
+                "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/n/y/nykaa_popnpc-2.jpg"
+            },
+            {
+                "type": "image",
+                "url": "http://adn-static2.nykaa.com/media/catalog/product/tr:h-800,w-800,cm-pad_resize/w/a/watermelon-sorbet_2.jpg"
+            }
+        ],
+        "title": "Nykaa Pop Nail Enamel Collection",
+        "vendor_sku": null,
+        "highlights": null,
+        "add_to_cart_url": null,
+        "description": "<p><b>Nykaa Pop Nail Enamel Collection</b></p> <p>Want high impact color and super-shine? The Nykaa Pop Nail Enamel Collection is a superior nail lacquer with light reflecting pigments that deliver intense, long lasting color. Perfect for times when you DO want super shiny nails that last longer than regular polishes.</p> <p>Night out with friends, red carpet glam or breezy dinner date, Nykaa Pop Nail Enamel Collection is just what you need to reveal your beachy, fun bombshell avatar. Go girl, spread some sunshine!</p>  <p><b>Nykaa Pop Nail Enamel Collection includes :</b></p> <p><b>Watermelon Sorbet (Shade No. 2) -</b> Imagine fresh, succulent watermelon triangles spreading their red in flaky shavings of ice. Amp up your red quotient with our Watermelon Sorbet and spread some love!</p> <p><b>Red Velvet (Shade No. 3) -</b>Let this velvety, lustrous red, pretty up your pinkies. Allow yourself to bask in rich red hues that spell \"\"star power.\"\" It's time to be bold. It's time to brash. Smear some red.</p> <p><b>Very Cherry (Shade No. 4) -</b> Those cherry lips crave a little too much don't they? Glory to first dates and our Very Cherry, your go-to red trickster to spice up that much awaited evening. Don't say we didn't warn you!</p> <p><b>Strawberry Tart (Shade No. 24) -</b>Very berry pink conquers the pale blues and greys. Light and crumbly like the perfect pastry, the Strawberry Tart rains summer love even on insipid winter days. Let pink be your nail spouse!</p> <p><b>Grape Jelly (Shade No. 25) -</b> Jiggle and wiggle, oh, the enigmas of jelly! Purple confections call for royal endeavors as you spruce up your nails for a regal high. Call in our Purple Jelly for drama!</p> <p><b>Why so Plum? (Shade No. 26) -</b> Deep loves and intimate conversations call for nails that speak of pink-orange sunsets and beachy afternoons. Set the tone with our Why so Plum, a shade of purple that conquers hearts and teases minds.</p> <p><b>Tropical Tangerine (Shade No. 41) -</b> Summer, surf and turf and of course, orange sunshine! Soak your nails in fruity, frolicking Tropicana Tangerine goodness. You know what they say, there is never too much orange!</p> <p><b>Spiced Gingerbread (Shade No. 42) -</b> You'd be tempted to literally eat your nails out as you pamper them with the coral grace of Spiced Gingerbread. Christmas bells beckon you to turn up the music with some gorg coral nail love.</p> <p><b>Sunny Side Up (Shade No. 46) -</b> Don?t you like your eggs the perfect sunny side up? Go cheery and bubbly with this yellow, mellow shade. Celebrate your summery, sunny side!</p> <p><b>Blue Raspberry (Shade No. 62) -</b> Tart magenta raspberries meet the cobalt of the ocean in our Blue Raspberry. Glide over aqua waves and gloat over your pinacoladas with this swanky blue number.</p>  <p><b>Hawaiian Punch (Shade No. 63) -</b> Aloha! A tizzy trip with a sip of turquoise Hawaiian Punch sets you spinning to tropical islands with puffy white clouds and exotic flowers. You know you want some turquoise!</p> <p><b>Black Liquorice (Shade No. 84) -</b> LBDs or the little red dress, paint the night black with your partner in crime the Black Liquorice. Bond girls are so pass?, you'd rather be rocking hell all black!</p> <p><b>Midnight Craving (Shade No. 67) -</b>Let the sighs of the inky night sky embrace you. As you dip your nails in our Midnight Craving, watch your dreams unfold with a blue that begets splendour. Tell the stars tales of gloried yesterdays and pristine tomorrows.</p> <p><b>Cranberry Crumble (Shade No. 6) -</b> Humble the crumble gloats around until sassy Cranberry wears the crown. Lap your nails up with our scrumptious Cranberry Crumble that hood winks all the way through summer. Map new adventures and script some much-needed thrills.</p> <p><b>Wild Berry (Shade No. 5) - </b>Plump, luscious, perfectly sinuous; are you ready to marry the exotic? Our Wild Berry takes you places with nails that spell wine-glory. Look no further for inspiration. Strut this one happy and loud!</p> <p><b>What it does :</b></p> <p>The exclusive high-reflection nail polish formula guarantees one stroke, high gloss, gel-like perfection. The patented two-fold plasticizer prevents chipping. Contains a UV filter to prevent discoloration and yellowing. Smooth and gorgeous coverage in a single coat, stunning, plumping effect in two coats! Now love your nails with vibrant, fashion forward colors that last and last.</p>  <p><b>What is it formulated WITHOUT :</b></p> <p>The Nykaa Pop Nail Enamel Collection is FIVE FREE. The nail polish formulas are not only made without the three most common chemicals found in nail polishes (Toluene, DBP and Formaldehyde), but also without two other very dangerous chemicals (Formaldehyde Resin and Camphor).</p> <p>The Nykaa Pop Nail Enamel Collection is NOT tested on animals and contains no animal-derived ingredients.</p><p><b>Explore our entire range of <a href=\"http://www.nykaa.com/makeup/nails/nail-polish.html\" target=\"_blank\"><font color=\"Blue\"><u>Nail Polish</u></font></a> here.</b></p>",
+        "review_count": 77,
+        "in_stock": true,
+        "featured_in_titles": null,
+        "tags": [
+            "New"
+        ],
+        "star_rating_percentage": 84.0,
+        "brand_ids": "1937",
+        "category_ids": "12,16,255,587,1162,1937,2170,2267,2332,2520,3146,3606,4017,4071,4109,4163,5036,5076,5166,5229",
+        "star_rating": 4.2,
+        "meta_title": "Nykaa Cosmetics Nail Polish - Buy Nykaa Pop Nail Enamel Collection Online in India | Nykaa",
+        "product_ingredients": null,
+        "backorders": false,
+        "mrp": 179.0,
+        "offers": [
+            {
+                "name": "Mobikwik Offer",
+                "id": "1953",
+                "description": "Pay using Mobikwik Wallet and Get 10% SuperCash(Cashback). Maximum SuperCash is Rs.200 *T&Cs Apply"
+            },
+            {
+                "name": "Nykaa Cosmetics Offer",
+                "id": "2145",
+                "description": "Buy Nykaa Cosmetics worth Rs.1200 and get an Eyemblack Kajal worth Rs.375 Free (Free product will be added to your cart automatically)"
+            },
+            {
+                "name": "Citi Bank offer",
+                "id": "2363",
+                "description": "10% instant savings with Citi Cards. Use Coupon Code: NYKAACITI  *T&Cs Apply"
+            },
+            {
+                "name": "Nykaa Offer",
+                "id": "2435",
+                "description": "Complimentary Makeup Pouch on purchase of Rs.4000 & above (Not Valid on Luxury, Pop Ups, Fragrances & Wellness, Free product will be added to your cart automatically)"
+            }
+        ],
+        "show_wishlist_button": false,
+        "meta_description": "Nykaa Cosmetics Nail Polish Online - Buy Nykaa Pop Nail Enamel Collection at best price from Nykaa. Check out Nykaa Cosmetics Nail Polish reviews. \u2713COD \u2713Free Shipping",
+        "how_to_use": null,
+        "is_saleable": true,
+        "category_levels": {
+            "3146": "0",
+            "255": "2",
+            "16": "1",
+            "12": "0"
+        },
+        "slug": "nykaa-pop-nail-polish-collection.html",
+        "shipping_quote": null,
+        "meta_keywords": "nykaa pop nail enamel collection, nykaa pop nail enamel collection online",
+        "psku": "NYKAA_POPNPC"
+    }
+}
