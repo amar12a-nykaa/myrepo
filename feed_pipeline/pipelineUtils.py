@@ -103,7 +103,6 @@ class PipelineUtils:
     # check if product is part of bundle
     if product_type == 'simple':
       mysql_conn = Utils.mysqlConnection('r')
-      cursor = mysql_conn.cursor()
       query = "SELECT product_sku, bundle_sku FROM bundle_products_mappings WHERE product_sku=%s"
       results = Utils.fetchResults(mysql_conn, query, (sku,))
       for res in results:
