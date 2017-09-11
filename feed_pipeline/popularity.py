@@ -188,10 +188,9 @@ def preprocess_data():
     if ctr.should_print():
       print(ctr.summary)
 
+    p = product
     if not p['productid']:
       continue
-
-    p = product
     try:
       processed_data.update({"platform": p['platform'], "date": p['date'], "productid": p['productid']}, p, upsert=True)
     except:
@@ -216,7 +215,7 @@ def calculate_popularity():
     bucket_results = []
     for p in processed_data.aggregate([
         {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
-        {"$match": {"views": {"$ne": 0}}},
+        #{"$match": {"views": {"$ne": 0}}},
         #{"$match": {"cart_additions": {"$ne": 0}, "orders": {"$ne": 0}}},
         {"$group": {"_id": "$productid", "views": {"$sum": "$views"}, "cart_additions": {"$sum": "$cart_additions"}, "orders": {"$sum": "$orders"}}},\
       ]):
@@ -246,13 +245,11 @@ def calculate_popularity():
           pass
 
   final_df = dfs[0] 
-  #embed()
-  #exit()
   
   for i in range(1, len(dfs)):
     final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
 
-  final_df['recent_popularity'] = 100 * normalize(final_df['popularity'])
+  final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
   final_df.drop(['popularity'], axis = 1, inplace = True)
 
   for p in processed_data.aggregate([{"$group": {"_id": "$productid" , "views": {"$sum": "$views"}, "cart_additions": {"$sum": "$cart_additions"}, "orders": {"$sum": "$orders"}}},\
@@ -269,7 +266,16 @@ def calculate_popularity():
   df = df.set_index("productid") 
 
   a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
+  a.popularity_recent = a.popularity_recent.fillna(0)
+  a['popularity_total_recent'] = 100 * normalize(a['popularity'] + a['popularity_recent'])
+  a.popularity_total_recent = a.popularity_total_recent.fillna(0)
+
+  ctr = LoopCounter(name='Writing popularity to db: ', total = len(a.index))
   for i, row in a.iterrows():
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
+
     row = dict(row)
     if row.get('productid'):
       popularity_table.update({"_id": row['productid'], "productid": row['productid']}, row, upsert=True)
@@ -280,10 +286,10 @@ class SolrPostManager:
   BATCH_SIZE = 200
   docs = []
   ids = []
-  id_popularity = {}
+  id_object = {}
 
-  def post_to_solr(self, productid, popularity):
-    self.id_popularity[productid] = popularity
+  def post_to_solr(self, productid, obj):
+    self.id_object[productid] = obj 
     if productid and 'unspecified' not in productid:
       self.ids.append(productid)
 
@@ -304,12 +310,13 @@ class SolrPostManager:
     docs = response['docs']
     final_docs = []
     for i, doc in enumerate(docs):
-      doc['popularity'] = self.id_popularity[doc['product_id']]
+      _id = doc['product_id']
       doc = {k: v for k,v in doc.items() if k in required_fields}
-      doc.update({"popularity":  {"set": self.id_popularity[doc['product_id']]}})
+      doc.update({k:{"set": v} for k,v in self.id_object[_id].items()})
+
       final_docs.append(doc)
 
-    print("flushing... ")
+    #print("flushing... ")
     try:
       response = Utils.updateCatalog(final_docs)
     except:
@@ -317,23 +324,6 @@ class SolrPostManager:
     self.ids = []
     
 
-def post_to_solr(productid, popularity):
-  params = {}
-  params['q'] = "product_id:%s" % productid
-  try:
-    response = Utils.makeSolrRequest(params)
-    if not response['docs']:
-      print("productid not found: %s" % productid)
-      return
-    doc = response['docs'][0]
-    required_fields = ["create_time", "discount", "in_stock", "mrp", "popularity", "price", "product_id", "psku", "sku", "title", "type", "update_time", "visibility", 'product_id']
-    doc = {k: v for k,v in doc.items() if k in required_fields}
-
-    doc.update({"popularity":  {"set": popularity}})
-    response = Utils.updateCatalog([doc])
-    print(response)
-  except:
-    print("[ERROR] Could not update this product on Solr: %s" % productid)
 if argv['fetch_omniture']:
   print("fetch_omniture start: %s" % arrow.now())
   write_report_data_to_db()
@@ -352,5 +342,10 @@ if argv['popularity']:
 if argv['post_to_solr']:
   post_mgr = SolrPostManager()
   for p in popularity_table.find(no_cursor_timeout=True):
-    post_mgr.post_to_solr(productid=p['productid'], popularity=p['popularity'])
+    obj = {
+      "popularity":p['popularity'],
+      "popularity_conversion_total_recent_f":p.get('popularity_total_recent', 0),
+      "popularity_conversion_recent_f":p.get('popularity_recent',0),
+    }
+    post_mgr.post_to_solr(productid=p['productid'], obj=obj)
   post_mgr.flush()
