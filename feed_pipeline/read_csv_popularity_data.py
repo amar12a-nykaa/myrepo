@@ -1,3 +1,4 @@
+import subprocess
 import os
 import argparse
 import sys
@@ -19,6 +20,7 @@ client = MongoClient()
 raw_data = client['search']['raw_data']
 
 files = reversed([
+#  '/home/ubuntu/Product_feed_day_wise/product_data_201605.csv',
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201606.csv',
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201607.csv',
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201608.csv',
@@ -30,7 +32,7 @@ files = reversed([
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201702.csv',
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201703.csv',
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201704.csv',
-  '/tmp/gludo_app_20170501-20170823.csv'
+#  '/tmp/gludo_app_20170501-20170823.csv'
   ])
 
 files = [argv['file']]
@@ -40,7 +42,8 @@ for filename in files:
   os.system('sed -i "s/, 201/ 201/g" %s' % filename)
   os.system('sed -i "s/\\"//g" %s' % filename)
 
-  ctr = LoopCounter("Reading CSV: ")
+  nrows = int(subprocess.check_output('wc -l ' + fiilename, shell=True).decode().split()[0])
+  ctr = LoopCounter("Reading CSV: ", total =nrows)
   with open(filename, newline='') as csvfile:
 
     spamreader = csv.DictReader(csvfile,)
@@ -52,19 +55,42 @@ for filename in files:
         d = dict(row)
         date = None
 
-        try:
-          date = arrow.get(d['\ufeffDate'], 'MMM D YYYY').datetime
-        except:
-          pass
+        if '\ufeffDate' in d:
+          d['date'] = d.pop('\ufeffDate')
+        elif 'datetime' in d:
+          d['date'] = d.pop('datetime')
 
-        if not date:
-          date = arrow.get(d['\ufeffDate'], 'MMMM D YYYY').datetime
+        for _format in ['MMM D YYYY', 'MMMM D YYYY', 'YYYY-MM-DD']:
+          try:
+            date = arrow.get(d['date'], _format).datetime
+          except:
+            pass
+          else:
+            break
+
       except KeyError:
-        print(d)
+        print("KeyError", d)
         raise
+  
+      replace_keys = [
+        ('event5', 'views'),
+        ('Product Views', 'views'),
+        ('Products', 'productid'),
+        ('name', 'productid'),
+        ('Cart Additions', 'cart_additions'),
+        ('cartadditions', 'cart_additions'),
+        ('Orders', 'orders'),
+        ]
 
-      filt = {"date": date, "productid": d['Products'], "platform": argv['platform']}
-      update = {"views": int(d["Product Views"]), "cart_additions": int(d['Cart Additions']), "orders": int(d['Orders'])}
+      for k,v in replace_keys:
+        if k in d:
+          d[v] = d.pop(k)
+
+      for k in ['cart_additions', 'views', 'orders']:
+        d[k] = int(d[k])
+
+      filt = {"date": date, "productid": d['productid'], "platform": argv['platform']}
+      update = {k:v for k,v in d.items() if k in ['cart_additions', 'views', 'orders']}
       #print(filt)
       #print(update)
       ret = raw_data.update_one(filt, {"$set": update}, upsert=True) 
