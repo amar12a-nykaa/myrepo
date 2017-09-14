@@ -60,6 +60,7 @@ parser.add_argument("--from-file", help="Read report from file", type=str)
 parser.add_argument("--table", type=str, default='popularity')
 parser.add_argument("--print-popularity-ids", type=str)
 parser.add_argument("--debug", action='store_true')
+parser.add_argument("--id", help='id to process. Only works with post-to-solr')
 argv = vars(parser.parse_args())
 
 debug = argv['debug']
@@ -248,6 +249,7 @@ def calculate_popularity():
   
   for i in range(1, len(dfs)):
     final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
+  final_df.popularity = final_df.popularity.fillna(0)
 
   final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
   final_df.drop(['popularity'], axis = 1, inplace = True)
@@ -283,7 +285,7 @@ def calculate_popularity():
 
 class SolrPostManager:
   size = 0
-  BATCH_SIZE = 200
+  BATCH_SIZE = 10
   docs = []
   ids = []
   id_object = {}
@@ -319,7 +321,9 @@ class SolrPostManager:
     #print("flushing... ")
     try:
       response = Utils.updateCatalog(final_docs)
+      #print(response)
     except:
+      print(traceback.format_exc())
       print("[ERROR] Could not post to solr following ids: %s" % [x['product_id'] for x in final_docs])
     self.ids = []
     
@@ -341,7 +345,15 @@ if argv['popularity']:
 
 if argv['post_to_solr']:
   post_mgr = SolrPostManager()
-  for p in popularity_table.find(no_cursor_timeout=True):
+  query = {}
+  if argv['id']:
+    query = {"_id": argv['id']}
+    print("query: %s" % query)
+  ctr = LoopCounter(name='Post Popularity data to Solr: ', total = popularity_table.count())
+  for p in popularity_table.find(query,no_cursor_timeout=True):
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
     obj = {
       "popularity":p['popularity'],
       "popularity_conversion_total_recent_f":p.get('popularity_total_recent', 0),
