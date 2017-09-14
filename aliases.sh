@@ -9,6 +9,7 @@ alias pull='git pull'
 alias push='git push'
 
 alias api='cd /home/apis/nykaa'
+alias adminftp='cd /nykaa/adminftp"
 
 alias nykaaproddb="mysql -h dbmaster-qa.cjmplqztt198.ap-southeast-1.rds.amazonaws.com -uapi -paU%v#sq1 -D nykaalive1"
 alias nykaa_analytics=" mysql -h nykaa-analytics.nyk00-int.network -u analytics -pP1u8Sxh7kNr"
