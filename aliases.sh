@@ -23,4 +23,5 @@ alias solrconf='cd /home/ubuntu/nykaa_solrconf'
 #alias solrdown='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:9983 -cmd downconfig  -confname autocomplete -confdir /home/ubuntu/nykaa_solrconf/autocomplete'
 #alias solrreload='curl "http://localhost:8983/solr/admin/collections?action=RELOAD&name=autocomplete"'
 
+alias popularity="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py"
 python /nykaa/scripts/shortcuts.py

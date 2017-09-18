@@ -14,7 +14,7 @@ from collections import OrderedDict
 from pipelineUtils import PipelineUtils, SolrUtils
 from pas.v1.exceptions import SolrError
 from pas.v1.csvutils import read_csv_from_file
-from popularity_api import get_popularity_for_ids
+from popularity_api import get_popularity_for_id
 
 
 class CatalogIndexer:
@@ -207,7 +207,7 @@ class CatalogIndexer:
         doc['vendor_sku'] = row['vendor_sku']
 
         #Popularity
-        popularity_obj = get_popularity_for_ids([doc['product_id']]) 
+        popularity_obj = get_popularity_for_id(product_id=doc['product_id'], parent_id=doc['parent_id'] ) 
         popularity_obj = popularity_obj.get(doc['product_id'])
         doc['popularity'] = 0 
         doc['viewcount_i'] = 0
