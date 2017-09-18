@@ -12,6 +12,7 @@ from loopcounter import LoopCounter
 parser = argparse.ArgumentParser()
 parser.add_argument("--platform", '-p', required=True, help="app or web")
 parser.add_argument("--file", '-f', required=True,)
+parser.add_argument("--dryrun",  action='store_true')
 argv = vars(parser.parse_args())
 
 assert argv['platform'] in ['app', 'web']
@@ -42,8 +43,8 @@ for filename in files:
   os.system('sed -i "s/, 201/ 201/g" %s' % filename)
   os.system('sed -i "s/\\"//g" %s' % filename)
 
-  nrows = int(subprocess.check_output('wc -l ' + fiilename, shell=True).decode().split()[0])
-  ctr = LoopCounter("Reading CSV: ", total =nrows)
+  nrows = int(subprocess.check_output('wc -l ' + filename, shell=True).decode().split()[0])
+  ctr = LoopCounter("Reading CSV: ", total=nrows)
   with open(filename, newline='') as csvfile:
 
     spamreader = csv.DictReader(csvfile,)
@@ -89,8 +90,17 @@ for filename in files:
       for k in ['cart_additions', 'views', 'orders']:
         d[k] = int(d[k])
 
+      if not d['productid']:
+        print("Skipping empty productid.")
+        continue
+
       filt = {"date": date, "productid": d['productid'], "platform": argv['platform']}
       update = {k:v for k,v in d.items() if k in ['cart_additions', 'views', 'orders']}
-      #print(filt)
-      #print(update)
-      ret = raw_data.update_one(filt, {"$set": update}, upsert=True) 
+      if argv['dryrun']:
+        print("d: %s" % d)
+        print("filt: %s" % filt)
+        print("update: %s" % update)
+        sys.exit()
+
+      if not argv['dryrun']:
+        ret = raw_data.update_one(filt, {"$set": update}, upsert=True) 
