@@ -7,4 +7,5 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 0 0 * * * root /usr/bin/rsync -avzhe ssh /nykaa/adminftp/ ubuntu@52.77.36.71:/nykaa/adminftp
 0 0 * * * root /usr/bin/rsync -avzhe ssh /nykaa/adminftp/ ubuntu@13.228.118.41:/nykaa/adminftp
-* * * * * root cat /proc/meminfo >> /tmp/meminfo3
+
+0 0 * * * root /usr/bin/python /nykaa/scripts/feed_pipeline/cron_runner.py 
