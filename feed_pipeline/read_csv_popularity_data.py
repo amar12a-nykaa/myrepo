@@ -1,3 +1,4 @@
+import datetime
 import subprocess
 import os
 import argparse
@@ -9,18 +10,23 @@ from pymongo import MongoClient
 sys.path.append("/nykaa/scripts/utils")
 from loopcounter import LoopCounter
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--platform", '-p', required=True, help="app or web")
-parser.add_argument("--file", '-f', required=True,)
-parser.add_argument("--dryrun",  action='store_true')
-argv = vars(parser.parse_args())
+def read_file_by_date(date, platform, dryrun=False):
+  assert isinstance(date, datetime.datetime)
+  if platform == 'web':
+    filename = '/nykaa/adminftp/website_data_all_metrics_%s.csv' %  date.strftime("%Y%m%d")
+  elif platform == 'app':
+    filename = '/nykaa/adminftp/App_data_all_metrics_%s.zip' %  date.strftime("%Y%m%d")
 
-assert argv['platform'] in ['app', 'web']
+  print(filename)
+  return read_file(filename, platform, dryrun)
 
-client = MongoClient()
-raw_data = client['search']['raw_data']
+def read_file(filepath, platform, dryrun):
+  assert platform in ['app', 'web']
 
-files = reversed([
+  client = MongoClient()
+  raw_data = client['search']['raw_data']
+
+  #files = reversed([
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201605.csv',
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201606.csv',
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201607.csv',
@@ -34,18 +40,41 @@ files = reversed([
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201703.csv',
 #  '/home/ubuntu/Product_feed_day_wise/product_data_201704.csv',
 #  '/tmp/gludo_app_20170501-20170823.csv'
-  ])
+   # ])
 
-files = [argv['file']]
+  def unzip_file(path_to_zip_file):
+    import zipfile
+    import os
+    zip_ref = zipfile.ZipFile(path_to_zip_file, 'r')
+    zip_ref.extractall(os.path.dirname(path_to_zip_file))
+    zip_ref.close()
 
-for filename in files:
-  print(filename)
-  os.system('sed -i "s/, 201/ 201/g" %s' % filename)
-  os.system('sed -i "s/\\"//g" %s' % filename)
 
-  nrows = int(subprocess.check_output('wc -l ' + filename, shell=True).decode().split()[0])
+  #for filepath in files:
+  if not os.path.isfile(filepath):
+    print("[ERROR] File does not exist: %s" % filepath)
+    return
+  
+  extention = os.path.splitext(filepath)[1]
+  if extention == '.zip':
+    csvfilepath = os.path.splitext(filepath)[0] + '.csv'
+    os.system("rm %s")
+    try:
+      os.remove(csvfilepath)
+    except OSError:
+      pass
+    unzip_file(filepath)
+    assert  os.path.isfile(csvfilepath), 'Failed to extract CSV from %s' % filepath 
+    
+    filepath = csvfilepath 
+
+  print(filepath)
+  os.system('sed -i "s/, 201/ 201/g" %s' % filepath)
+  os.system('sed -i "s/\\"//g" %s' % filepath)
+
+  nrows = int(subprocess.check_output('wc -l ' + filepath, shell=True).decode().split()[0])
   ctr = LoopCounter("Reading CSV: ", total=nrows)
-  with open(filename, newline='') as csvfile:
+  with open(filepath, newline='') as csvfile:
 
     spamreader = csv.DictReader(csvfile,)
     for row in spamreader:
@@ -94,13 +123,23 @@ for filename in files:
         print("Skipping empty productid.")
         continue
 
-      filt = {"date": date, "productid": d['productid'], "platform": argv['platform']}
+      filt = {"date": date, "productid": d['productid'], "platform": platform}
       update = {k:v for k,v in d.items() if k in ['cart_additions', 'views', 'orders']}
-      if argv['dryrun']:
+      if dryrun:
         print("d: %s" % d)
         print("filt: %s" % filt)
         print("update: %s" % update)
         sys.exit()
 
-      if not argv['dryrun']:
+      if not dryrun:
         ret = raw_data.update_one(filt, {"$set": update}, upsert=True) 
+
+if __name__ == '__main__':
+
+  parser = argparse.ArgumentParser()
+  parser.add_argument("--platform", '-p', required=True, help="app or web")
+  parser.add_argument("--filepath", '-f', required=True,)
+  parser.add_argument("--dryrun",  action='store_true')
+  argv = vars(parser.parse_args())
+  read_file(filepath=argv['filepath'], platform=argv['platform'], dryrun=argv['dryrun'])
+
