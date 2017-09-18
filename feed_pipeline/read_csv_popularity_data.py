@@ -116,6 +116,14 @@ def read_file(filepath, platform, dryrun):
         if k in d:
           d[v] = d.pop(k)
 
+      required_keys = set(['views', 'productid', 'cart_additions', 'orders'])
+      missing_keys = required_keys - set(list(d.keys()))
+      if missing_keys:
+        print("Missing Keys: %s" % missing_keys)
+        raise Exception("Missing Keys in CSV")
+
+      if not d['productid']:
+        continue
       for k in ['cart_additions', 'views', 'orders']:
         d[k] = int(d[k])
 
