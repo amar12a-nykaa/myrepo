@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import pprint
 import sys
 import json
 import socket
@@ -20,7 +21,7 @@ from popularity_api import get_popularity_for_id
 class CatalogIndexer:
   PRODUCT_TYPES = ['simple', 'configurable', 'bundle']
   VISIBILITY_TYPES = ['visible', 'not_visible']
-  DOCS_BATCH_SZIE = 1000
+  DOCS_BATCH_SIZE = 1000
 
   def print_errors(errors):
     for err in errors:
@@ -213,6 +214,8 @@ class CatalogIndexer:
         doc['viewcount_i'] = 0
         if popularity_obj:
           doc['popularity'] = popularity_obj['popularity']
+          doc['popularity_conversion_total_recent_f'] = popularity_obj['popularity_conversion_total_recent_f']
+          doc['popularity_conversion_recent_f'] = popularity_obj['popularity_conversion_recent_f']
           #View based Popularity
           doc['viewcount_i'] = popularity_obj.get('views', 0)
             
@@ -374,8 +377,8 @@ class CatalogIndexer:
         doc['object_type'] = "product"
         input_docs.append(doc)
 
-        #index to solr in batches of DOCS_BATCH_SZIE
-        if ((index+1) % CatalogIndexer.DOCS_BATCH_SZIE == 0):
+        #index to solr in batches of DOCS_BATCH_SIZE
+        if ((index+1) % CatalogIndexer.DOCS_BATCH_SIZE == 0):
           (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
           SolrUtils.indexCatalog(input_docs, collection=collection)
           input_docs = []

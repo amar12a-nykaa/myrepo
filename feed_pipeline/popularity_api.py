@@ -14,13 +14,19 @@ def get_popularity_for_id(product_id, parent_id=None):
       conversion =  1.0 * obj.get('cart_additions', 0) / obj['views'] * 100 
       views = 0 if conversion < 0.05 else obj['views']
 
-    ret[obj['_id']] = {"popularity":obj['popularity'], "views": views}
+    ret[obj['_id']] = {
+      "popularity":obj['popularity'], 
+      "views": views,
+      "popularity_conversion_total_recent_f": obj.get("popularity_total_recent", 0),
+      "popularity_conversion_recent_f": obj.get("popularity_recent", 0),
+    }
 
   if parent_id and parent_id in ret:
     ret[product_id] = ret.pop(parent_id)
 
   return ret
 def get_popularity_for_ids(product_ids):
+  raise Exception("This is outdated")
   assert isinstance(product_ids, list)
   res = list(popularity_table.find({"_id": {"$in": product_ids}}))
   ret = {}
