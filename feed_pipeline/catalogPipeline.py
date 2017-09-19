@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import socket
 import sys
 import time
 import timeit
@@ -17,6 +18,7 @@ YIN_COLL ='yin'
 YANG_COLL = 'yang'
 FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
+hostname = socket.gethostname()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--filepath", help='path to csv file')
@@ -27,6 +29,13 @@ argv = vars(parser.parse_args())
 
 file_path = argv['filepath']
 url = argv['url']
+if not url and not file_path: 
+  if hostname.startswith('admin'):
+    url = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
+  elif hostname.startswith('preprod'):
+    url = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
+  if url:
+    print("Using default url for %s machine: %s" % (hostname, url))
 import_attrs = argv.get('importattrs', False)
 force_run = argv.get('force', False)
 
