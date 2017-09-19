@@ -8,6 +8,7 @@ shortcuts = [
   ("/nykaa/scripts/bin/solrdown.py", "/usr/local/bin/solrdown"),
   #("/nykaa/scripts/bin/solrconf.py", "/usr/local/bin/solrconf"),
   ("/nykaa/scripts/bin/solrreload.py", "/usr/local/bin/solrreload"),
+  ("/nykaa/scripts/bin/scpny.py", "/usr/local/bin/scpny"),
 ]
 
 def ensure_symlink(addr, ptr):
