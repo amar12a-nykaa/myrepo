@@ -5,7 +5,7 @@ import sys
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 conn_details = {}
-conn = Utils.mysqlConnection(connection_details = conn_details)
+conn = Utils.mysqlConnection(mode='w', connection_details = conn_details)
 print(conn_details)
 CD = conn_details;
 print("#" * 100)
