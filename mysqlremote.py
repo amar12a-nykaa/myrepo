@@ -38,6 +38,7 @@ elif argv['sendto']:
   cmd = "mysqldump -h {host} -u{user} -p{password} {args} > {DUUMPFILE}".format(user=CD['user'], host=CD['host'], password=CD['password'], args=args, DUUMPFILE=DUUMPFILE) 
   print(cmd)
   os.system(cmd)
+  os.system("chmod 777 %s" % DUUMPFILE)
   cmd = "/usr/local/bin/scpny {DUUMPFILE} ubuntu@{sendto}:{DUUMPFILE}".format(DUUMPFILE=DUUMPFILE, sendto=argv['sendto'])
   print(cmd)
   os.system(cmd)
