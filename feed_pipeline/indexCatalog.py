@@ -143,7 +143,7 @@ class CatalogIndexer:
       pws_input_docs.append(doc)
     return (pws_input_docs, errors)
 
-  def index(file_path, collection):
+  def index(file_path, collection, update_productids=False):
     if not collection:
       collections = SolrUtils.get_active_inactive_collections()
       collection = collections['inactive_collection']
@@ -214,8 +214,23 @@ class CatalogIndexer:
         doc['vendor_sku'] = row['vendor_sku']
 
         #Write productid in product datebase
-        #Utils
-    
+        try:
+          if update_productids:
+            set_clause_arr = []
+            if doc.get('parent_id'):
+              set_clause_arr.append("parent_id='%s'" % doc.get('parent_id'))
+            if doc.get('product_id'):
+              set_clause_arr.append("product_id='%s'" % doc.get('product_id'))
+
+            if set_clause_arr:
+              set_clause = " set " + ", ".join(set_clause_arr)
+              query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause, sku=doc['sku'])
+              #print(query)
+              Utils.mysql_write(query)
+        except:
+          print("[ERROR] Failed to update product_id and parent_id for sku: %s" % doc['sku'])
+          pass
+
         #Popularity
         popularity_obj = get_popularity_for_id(product_id=doc['product_id'], parent_id=doc['parent_id'] ) 
         popularity_obj = popularity_obj.get(doc['product_id'])
@@ -410,6 +425,7 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
   parser.add_argument("-c", "--collection", help='name of collection to index to')
+  parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
   collection = argv['collection']
