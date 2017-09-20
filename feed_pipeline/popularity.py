@@ -24,6 +24,9 @@ from pas.v1.utils import Utils
 sys.path.append("/nykaa/scripts/utils")
 from loopcounter import LoopCounter
 
+sys.path.append("/nykaa/scripts/feed_pipeline")
+from popularity_api import get_popularity_for_id  
+
 embed = IPython.embed
 
 client = MongoClient()
@@ -269,7 +272,7 @@ def calculate_popularity():
 
   a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
   a.popularity_recent = a.popularity_recent.fillna(0)
-  a['popularity_total_recent'] = 100 * normalize(a['popularity'] + a['popularity_recent'])
+  a['popularity_total_recent'] = 100 * normalize(0.7 * a['popularity'] + 0.3 * a['popularity_recent'])
   a.popularity_total_recent = a.popularity_total_recent.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db: ', total = len(a.index))

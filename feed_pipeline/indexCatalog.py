@@ -9,6 +9,7 @@ import dateparser
 from datetime import datetime
 from urllib.request import urlopen, Request
 from urllib.parse import urlparse
+
 sys.path.append('/home/apis/nykaa/')
 from pas.v1.utils import Utils
 from collections import OrderedDict
@@ -207,6 +208,9 @@ class CatalogIndexer:
         doc['vendor_id'] = row['vendor_id']
         doc['vendor_sku'] = row['vendor_sku']
 
+        #Write productid in product datebase
+        #Utils
+    
         #Popularity
         popularity_obj = get_popularity_for_id(product_id=doc['product_id'], parent_id=doc['parent_id'] ) 
         popularity_obj = popularity_obj.get(doc['product_id'])

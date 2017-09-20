@@ -12,7 +12,15 @@ raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity = client['search']['popularity']
 
+#Feed vs raw_data
+import csv
 
+#with open('/data/nykaa/master_feed_gludo.csv') as csvfile:
+#  spamreader = csv.DictReader(csvfile)
+#  for row in spamreader:
+#    print(row)
+#    break
+#exit()
 def enumerate_dates(startdate, enddate):
   lastdate = arrow.now().replace(days=enddate, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
   date =  arrow.now().replace(days=startdate, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
