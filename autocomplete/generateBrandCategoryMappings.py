@@ -44,7 +44,7 @@ def get_category_details():
   global cat_id_index
 
   #Category id - name mapping
-  query = "SELECT DISTINCT l4, l4_id FROM analytics.sku_l4_updated_final;"
+  query = "SELECT DISTINCT l4, l4_id FROM analytics.sku_l4;"
   results = Utils.fetchResults(nykaa_analytics_db_conn, query)
   for row in results:
     _id = str(row['l4_id'])
@@ -129,7 +129,7 @@ def getProducts():
   print("Fetching products from Nykaa DB..")
   query = "SELECT sl.entity_id AS simple_id, sl.sku AS simple_sku,\
            sl.key AS parent_id, sl.key_sku AS parent_sku, sl.l2 AS category_l1, sl.l3 AS category_l2, sl.l4 AS category_l3, sl.l4_id AS category_l3_id, cd.brand \
-           FROM analytics.sku_l4_updated_final sl\
+           FROM analytics.sku_l4 sl\
            JOIN analytics.catalog_dump cd ON cd.entity_id=sl.entity_id\
            WHERE sl.l2 NOT LIKE '%Luxe%'\
            "
@@ -145,7 +145,6 @@ def getMappings(products):
   brand_category_mappings = {}
   for product in products:
     if not product.get('brand'):
-      print("cont1")
       continue
 
     brand = product['brand'].strip().lower()
@@ -188,6 +187,8 @@ def saveMappings(brand_category_mappings):
 
   query = "REPLACE INTO brands (brand, brand_id, brands_v1, brand_popularity, top_categories, brand_url) VALUES (%s, %s, %s, %s, %s, %s) "
 
+  num_brands_skipped = 0
+  num_brands_processed= 0
   for brand, categories in brand_category_mappings.items():
     sortkey = operator.itemgetter(1)
     sorted_categories = sorted(categories.items(), key=sortkey, reverse=True)
@@ -205,18 +206,24 @@ def saveMappings(brand_category_mappings):
     except:
       #print(traceback.format_exc())
       print("Skipping brand %s"% brand)
+      num_brands_skipped += 1; 
       continue
 
     if brand not in brand_name_id:
       print("Skipping %s"% brand)
+      num_brands_skipped += 1; 
       continue
 
     values = (brand_name_name[brand], brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'], brand_popularity[brand], top_categories_str, brand_name_id[brand]['brand_url'])
     cursor.execute(query, values)
     mysql_conn.commit()
+    num_brands_processed += 1
 
   cursor.close()
   mysql_conn.close()
+
+  print("Number of Brands Skipped: %s" % num_brands_skipped)
+  print("Number of Brands processed successfully: %s" % num_brands_processed)
 
 
 build_product_popularity_index()
