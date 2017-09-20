@@ -39,6 +39,7 @@ elif argv['sendto']:
   print(cmd)
   os.system(cmd)
   os.system("chmod 777 %s" % DUUMPFILE)
+  os.system(" sed -i  '/INFORMATION_SCHEMA.SESSION_VARIABLES/d' %s" % DUUMPFILE)
   cmd = "/usr/local/bin/scpny {DUUMPFILE} ubuntu@{sendto}:{DUUMPFILE}".format(DUUMPFILE=DUUMPFILE, sendto=argv['sendto'])
   print(cmd)
   os.system(cmd)

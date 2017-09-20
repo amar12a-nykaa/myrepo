@@ -8,14 +8,12 @@ import argparse
 import traceback
 import subprocess
 import urllib.request
-from pipelineUtils import SolrUtils
+from pipelineUtils import SolrUtils, YIN_COLL, YANG_COLL
 from importDataFromNykaa import NykaaImporter
 from indexCatalog import CatalogIndexer
 sys.path.append('/home/apis/nykaa/')
 from pas.v1.utils import Utils, CATALOG_COLLECTION_ALIAS
 
-YIN_COLL ='yin'
-YANG_COLL = 'yang'
 FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
 hostname = socket.gethostname()
@@ -73,28 +71,9 @@ if import_attrs:
 import_stop = timeit.default_timer()
 import_duration = import_stop - import_start
   
-# fetch the inactive collection
-active_collection = ''
-inactive_collection = ''
-
-# fetch solr cluster status to find out which collection default alias points to
-cluster_status = SolrUtils.solrClusterStatus()
-cluster_status = cluster_status.get('cluster')
-if cluster_status:
-  aliases = cluster_status.get('aliases')
-  if aliases and aliases.get(CATALOG_COLLECTION_ALIAS):
-    active_collection = aliases.get(CATALOG_COLLECTION_ALIAS)
-    inactive_collection = YIN_COLL if active_collection==YANG_COLL else YANG_COLL 
-  else:
-    # first time
-    active_collection = YIN_COLL
-    inactive_collection = YANG_COLL
-    
-else:
-  msg = "[ERROR] Failed to fetch solr cluster status. Aborting.."
-  print(msg)
-  raise Exception(msg)
-
+collections = SolrUtils.get_active_inactive_collections()
+active_collection = collections['active_collection']
+inactive_collection = collections['inactive_collection']
 print("Active collection: %s"%active_collection)
 print("Inactive collection: %s"%inactive_collection)
 

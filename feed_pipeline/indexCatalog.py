@@ -9,6 +9,7 @@ import dateparser
 from datetime import datetime
 from urllib.request import urlopen, Request
 from urllib.parse import urlparse
+
 sys.path.append('/home/apis/nykaa/')
 from pas.v1.utils import Utils
 from collections import OrderedDict
@@ -143,6 +144,11 @@ class CatalogIndexer:
     return (pws_input_docs, errors)
 
   def index(file_path, collection):
+    if not collection:
+      collections = SolrUtils.get_active_inactive_collections()
+      collection = collections['inactive_collection']
+
+      print(" --> Indexing to inactive collection: %s" % collection)
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
     'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
@@ -207,6 +213,9 @@ class CatalogIndexer:
         doc['vendor_id'] = row['vendor_id']
         doc['vendor_sku'] = row['vendor_sku']
 
+        #Write productid in product datebase
+        #Utils
+    
         #Popularity
         popularity_obj = get_popularity_for_id(product_id=doc['product_id'], parent_id=doc['parent_id'] ) 
         popularity_obj = popularity_obj.get(doc['product_id'])
@@ -400,7 +409,7 @@ class CatalogIndexer:
 if __name__ == "__main__": 
   parser = argparse.ArgumentParser()
   parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
-  parser.add_argument("-c", "--collection", required=True, help='name of collection to index to')
+  parser.add_argument("-c", "--collection", help='name of collection to index to')
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
   collection = argv['collection']

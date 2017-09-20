@@ -9,6 +9,9 @@ sys.path.append('/home/apis/nykaa/')
 from pas.v1.exceptions import SolrError
 from pas.v1.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
 
+YIN_COLL ='yin'
+YANG_COLL = 'yang'
+hostname = socket.gethostname()
 
 class PipelineUtils:
 
@@ -172,3 +175,33 @@ class SolrUtils:
     if response.status_code != 200:
       raise SolrError(response_content['error']['msg'])
     return response_content
+
+  def get_active_inactive_collections():
+    # fetch the inactive collection
+    active_collection = ''
+    inactive_collection = ''
+
+    # fetch solr cluster status to find out which collection default alias points to
+    cluster_status = SolrUtils.solrClusterStatus()
+    cluster_status = cluster_status.get('cluster')
+    if cluster_status:
+      aliases = cluster_status.get('aliases')
+      if aliases and aliases.get(CATALOG_COLLECTION_ALIAS):
+        active_collection = aliases.get(CATALOG_COLLECTION_ALIAS)
+        inactive_collection = YIN_COLL if active_collection==YANG_COLL else YANG_COLL
+      else:
+        # first time
+        active_collection = YIN_COLL
+        inactive_collection = YANG_COLL
+
+    else:
+      msg = "[ERROR] Failed to fetch solr cluster status. Aborting.."
+      print(msg)
+      raise Exception(msg)
+
+    return {"active_collection": active_collection, "inactive_collection": inactive_collection}
+
+
+if __name__ == "__main__":
+	ret = SolrUtils.get_active_inactive_collections()
+	print(ret)
