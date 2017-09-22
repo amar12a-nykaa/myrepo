@@ -23,6 +23,7 @@ parser.add_argument("-p", "--filepath", help='path to csv file')
 parser.add_argument("-u", "--url", help='url to csv file')
 parser.add_argument("-i", "--importattrs", action='store_true', help='Flag to import attributes first')
 parser.add_argument("-f", "--force", action='store_true', help='Force run the indexing, without any restrictions')
+parser.add_argument("-g", "--generate-third-party-feeds", action='store_true')
 argv = vars(parser.parse_args())
 
 file_path = argv['filepath']
