@@ -430,4 +430,4 @@ if __name__ == "__main__":
   file_path = argv['filepath']
   collection = argv['collection']
 
-  CatalogIndexer.index(file_path, collection)
+  CatalogIndexer.index(file_path, collection, update_productids=argv['update_productids'])
