@@ -63,7 +63,20 @@ class NykaaAutoComplete extends Component {
   };
 
   handleSuccess (response) {
-    this.setState({suggestions: response['suggestions']});
+    var suggestions = [];
+    for(var i = 0; i < response['suggestions'].length; i++) {
+      var suggestion = response['suggestions'][i];
+      if (suggestion['type'] === 'brand') {
+        for (var j = 0; j < suggestion['categories'].length; j++) {
+          var brand_suggestion = suggestion['categories'][j];
+          brand_suggestion['q'] = suggestion['q'];
+          suggestions.push(brand_suggestion);
+        }
+      } else {
+        suggestions.push(suggestion);
+      }
+    }
+    this.setState({suggestions: suggestions});
   }
 
   handleFailure (err) {
