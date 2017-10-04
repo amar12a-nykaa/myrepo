@@ -18,6 +18,10 @@ from pas.v1.exceptions import SolrError
 from pas.v1.csvutils import read_csv_from_file
 from popularity_api import get_popularity_for_id
 
+sys.path.append("/nykaa/scripts/utils")
+from loopcounter import LoopCounter
+
+conn =  Utils.mysqlConnection()
 
 class CatalogIndexer:
   PRODUCT_TYPES = ['simple', 'configurable', 'bundle']
@@ -165,7 +169,12 @@ class CatalogIndexer:
     count = len(all_rows)
     input_docs = []
     pws_fetch_products = []
+
+    ctr = LoopCounter(name='Indexing')
     for index, row in enumerate(all_rows):
+      ctr += 1
+      if ctr.should_print():
+        print(ctr.summary)
       try:
         CatalogIndexer.validate_catalog_feed_row(row)
         doc = {}
@@ -225,8 +234,9 @@ class CatalogIndexer:
             if set_clause_arr:
               set_clause = " set " + ", ".join(set_clause_arr)
               query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause, sku=doc['sku'])
-              #print(query)
-              Utils.mysql_write(query)
+              print(query)
+              Utils.mysql_write(query, connection=conn)
+          continue
         except:
           print("[ERROR] Failed to update product_id and parent_id for sku: %s" % doc['sku'])
           pass
