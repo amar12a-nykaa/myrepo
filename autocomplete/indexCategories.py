@@ -19,13 +19,18 @@ docs = []
 collection='autocomplete'
 
 mysql_conn = Utils.mysqlConnection()
-query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories"
+query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories order by category_popularity desc"
 results = Utils.fetchResults(mysql_conn, query)
 ctr = LoopCounter(name='Products Indexing')
+prev_cat = None
 for row in results:
   ctr += 1
   if ctr.should_print():
     print(ctr.summary)
+
+  if prev_cat == row['category_name']:
+    continue
+  prev_cat = row['category_name']
 
   docs.append({
       #"_id": "category_" + re.sub('[^A-Za-z0-9]+', '_', row['category_name']) + '_' + row['category_id'],

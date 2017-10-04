@@ -82,7 +82,7 @@ def update_category_table(products):
   for k,v in category_popularity.items():
     max_category_popularity = max(max_category_popularity, v)
   for k,v in category_popularity.items():
-    category_popularity[k] = category_popularity[k] / max_category_popularity * 100  + 100
+    category_popularity[k] = category_popularity[k] / max_category_popularity * 100  
 
   mysql_conn = Utils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
@@ -137,6 +137,7 @@ def getProducts():
   for row in results:
     products.append(row)
 
+  print("# products found: %s" % len(products))
   return products
 
 
@@ -195,9 +196,15 @@ def saveMappings(brand_category_mappings):
     top_categories = []
     top_categories_str = ""
     try:
+      category_names_added_yet = set()
       for k in sorted_categories:
         if cat_id_index.get(k[0]):
-          top_categories.append({"category": cat_id_index[k[0]]['name'], "category_id": k[0], "category_url": brand_name_id[brand]['brand_url'] + "?cat=%s" % k[0]})
+          name = cat_id_index[k[0]]['name']
+          _id = k[0]
+          url = brand_name_id[brand]['brand_url'] + "?cat=%s" % _id
+          if name not in category_names_added_yet:
+            top_categories.append({"category": name, "category_id": _id, "category_url": url})
+          category_names_added_yet.add(name)
 
         if len(top_categories) <= 5:
           top_categories_str = json.dumps(top_categories)

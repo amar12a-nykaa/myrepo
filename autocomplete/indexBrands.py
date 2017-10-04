@@ -25,7 +25,7 @@ docs = []
 collection='autocomplete'
 
 mysql_conn = Utils.mysqlConnection()
-query = "select brand, brand_popularity, brand_url from brands"
+query = "SELECT brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC LIMIT 200"
 results = Utils.fetchResults(mysql_conn, query)
 ctr = LoopCounter(name='Products Indexing')
 for row in results:
