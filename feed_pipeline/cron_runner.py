@@ -11,7 +11,7 @@ print("missing_dates: %s" % missing_dates)
 last_5_dates = enumerate_dates(-5, -1)
 
 recent_missing_dates_raw = missing_dates & last_5_dates
-print(recent_missing_dates_raw)
+print("recent_missing_dates_raw: %s" % recent_missing_dates_raw)
 
 for date in recent_missing_dates_raw:
   print("\n\n\n")

@@ -60,7 +60,7 @@ def read_file_by_date(date, platform, dryrun=False):
   print(filename)
   return read_file(filename, platform, dryrun)
 
-def read_file(filepath, platform, dryrun, limit, product_id, debug):
+def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False):
   product_id_arg = product_id
   assert platform in ['app', 'web']
 
