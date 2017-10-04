@@ -71,19 +71,39 @@ class NykaaImporter:
 
   def importBrandCategoryAttributes():
     #Import Brand-Category level info like app_sorting, featured_products
-    query = """SELECT DISTINCT(cce.entity_id) AS category_id, ci.app_sorting, ci.custom_sort,
+    query = """SELECT DISTINCT(cce.entity_id) AS category_id, cur.request_path AS category_url, 
+             ci.app_sorting, ci.custom_sort, ci.art_banner_image, ci.art_banner_video, ci.art_banner_video_image, 
+             ci.font_color, ci.art_title, ci.art_content, ci.art_url, ci.art_link_text, ci.categories, ci.art_position,
              (cce.level-2) AS level, (CASE WHEN nkb.brand_id > 0 THEN 'brand' ELSE 'category' END) AS type
              FROM `catalog_category_entity` AS cce
              LEFT JOIN `category_information` AS ci ON ci.cat_id = cce.entity_id
-             LEFT JOIN nk_brands AS nkb ON nkb.brand_id = cce.entity_id;"""
+             LEFT JOIN `core_url_rewrite` AS cur ON cur.category_id = cce.entity_id
+             LEFT JOIN nk_brands AS nkb ON nkb.brand_id = cce.entity_id
+             WHERE cur.store_id = 0 AND cur.product_id IS NULL;"""
     results = Utils.fetchResults(NykaaImporter.nykaa_mysql_conn, query)
     count = 0
     for item in results:
       try:
         # Write to PWS DB
-        query = """INSERT INTO brand_category_information (id, sorting, featured_products, level, type) VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE 
-                   sorting=VALUES(sorting), featured_products=VALUES(featured_products), level=VALUES(level), type=VALUES(type)"""    
-        NykaaImporter.pws_cursor.execute(query, (item['category_id'], item['app_sorting'], item['custom_sort'], item['level'], item['type']))
+        field_list = ['id', 'sorting', 'featured_products', 'level', 'type', 'url', 'banner_image', 'banner_video', 'banner_video_image', 
+        'font_color', 'art_title', 'art_content', 'art_url', 'art_link_text', 'child_categories', 'art_pos']
+
+        fields = ''
+        values = ''
+        on_duplicate_values = ''
+        for index, field in enumerate(field_list):
+           fields += field
+           values += '%s'
+           on_duplicate_values += "%s=VALUES(%s)" % (field, field)
+           if index < len(field_list)-1:
+             fields += ', '
+             values += ', '
+             on_duplicate_values += ', '
+          
+        query = "INSERT INTO brand_category_information (" + fields + ") VALUES (" + values + ") ON DUPLICATE KEY UPDATE " + on_duplicate_values
+        NykaaImporter.pws_cursor.execute(query, (item['category_id'], item['app_sorting'], item['custom_sort'], item['level'], item['type'], item['category_url'],
+                                         item['art_banner_image'], item['art_banner_video'], item['art_banner_video_image'], item['font_color'],
+                                         item['art_title'], item['art_content'], item['art_url'], item['art_link_text'], item['categories'], item['art_position']))
         NykaaImporter.pws_mysql_conn.commit()
         count += 1
 
@@ -99,6 +119,17 @@ class NykaaImporter:
         cat_info['featured_products'] = item['custom_sort'].split(',') if item['custom_sort'] else []
         cat_info['level'] = item['level']
         cat_info['type'] = item['type']
+        cat_info['url'] = item['category_url']
+        cat_info['banner_image'] = item['art_banner_image']
+        cat_info['banner_video'] = item['art_banner_video']
+        cat_info['banner_video_image'] = item['art_banner_video_image']
+        cat_info['font_color'] = item['font_color']
+        cat_info['art_title'] = item['art_title']
+        cat_info['art_content'] = item['art_content']
+        cat_info['art_url'] = item['art_url']
+        cat_info['art_link_text'] = item['art_link_text']
+        cat_info['child_categories'] = item['categories']
+        cat_info['art_pos'] = item['art_position']
         MemcacheUtils.set(memcache_key, json.dumps(cat_info))    
       except Exception as e:
         print("[Brand-Category Info Import ERROR]problem with %s: %s"%(item['category_id'], str(e)))
