@@ -17,8 +17,6 @@ def get_popularity_for_id(product_id, parent_id=None):
     ret[obj['_id']] = {
       "popularity":obj['popularity'], 
       "views": views,
-      "popularity_conversion_total_recent_f": obj.get("popularity_total_recent", 0),
-      "popularity_conversion_recent_f": obj.get("popularity_recent", 0),
     }
 
   parent_obj = ret.pop(parent_id, None)

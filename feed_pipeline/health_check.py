@@ -1,8 +1,10 @@
 import argparse
+import csv
 import pprint
-import socket 
-from IPython import embed
+import socket
+
 import arrow
+from IPython import embed
 from pymongo import MongoClient
 
 host = socket.gethostname()
@@ -12,15 +14,7 @@ raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity = client['search']['popularity']
 
-#Feed vs raw_data
-import csv
 
-#with open('/data/nykaa/master_feed_gludo.csv') as csvfile:
-#  spamreader = csv.DictReader(csvfile)
-#  for row in spamreader:
-#    print(row)
-#    break
-#exit()
 def enumerate_dates(startdate, enddate):
   lastdate = arrow.now().replace(days=enddate, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
   date =  arrow.now().replace(days=startdate, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
@@ -31,7 +25,7 @@ def enumerate_dates(startdate, enddate):
   return all_dates
 
 
-def get_missing_dates(collname):
+def get_missing_dates(collname, filt=None):
   if collname == 'raw_data':
     coll = raw_data 
   elif collname == 'processed_data':
@@ -39,18 +33,16 @@ def get_missing_dates(collname):
   else:
     print("unknown collection")
     sys.exit()
-
-  res = list(coll.aggregate([{"$group": {"_id": "$date", "count": {"$sum": 1}}}, {"$sort": {"_id":1}}]))
+  
+  
+  pipe = []
+  if filt:
+    assert isinstance(filt, dict)
+    pipe.append({"$match": filt})
+  pipe += [{"$group": {"_id": "$date", "count": {"$sum": 1}}}, {"$sort": {"_id":1}}]
+  res = list(coll.aggregate(pipe))
 
   dates_with_data = {x['_id'] for x in res}
-  #embed()
-
-#  yesterday = arrow.now().replace(days=-1, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
-#  date = yesterday.replace(months=-6)
-#  all_dates = set()
-#  while date < yesterday:
-#    all_dates.add(date.datetime.replace(tzinfo=None) )
-#    date = date.replace(days=1)
 
   all_dates = enumerate_dates(-30*6, -1)
   missing_dates = all_dates - dates_with_data 
@@ -62,20 +54,22 @@ if __name__ == '__main__':
   parser.add_argument("-m", "--mail", help='Mail this report', action='store_true')
   argv = vars(parser.parse_args())
 
-  message = ""
-  missing_dates = get_missing_dates('raw_data')
-  if len(missing_dates) >= 1:
-    msg = "Data missing for following dates in raw_data:\n"
-    msg += pprint.pformat(missing_dates, indent=4)
+  msg = ""
+  for platform in ['web', 'app']:
+    message = ""
+    missing_dates = get_missing_dates('raw_data', filt={"platform": platform})
+    if len(missing_dates) >= 1:
+      msg += "Data missing for following dates in raw_data for %s:\n" % platform
+      msg += pprint.pformat(missing_dates, indent=4)
 
-  missing_dates = get_missing_dates('processed_data')
-  if len(missing_dates) >= 1:
-    msg += "\nData missing for following dates in processed_data:\n"
-    msg += pprint.pformat(missing_dates, indent=4)
+    missing_dates = get_missing_dates('processed_data', filt={"platform": platform})
+    if len(missing_dates) >= 1:
+      msg += "\nData missing for following dates in processed_data for %s:\n" % platform
+      msg += pprint.pformat(missing_dates, indent=4)
 
-  if popularity.count() < 60000:
-    msg += "\n"
-    msg += "[ERROR] Number of products in popularity is less than 60K.\n"
+    if popularity.count() < 60000:
+      msg += "\n"
+      msg += "[ERROR] Number of products in popularity is less than 60K.\n"
 
   print(msg)
 
@@ -95,4 +89,3 @@ if __name__ == '__main__':
 
     mailer.stop()
     print("Sent a mail")
-

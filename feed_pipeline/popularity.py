@@ -53,7 +53,6 @@ parser.add_argument("--num-prods", '-n', required=True, help="Number of products
 parser.add_argument("--yes", '-y', help="Pass this to avoid prompt and run full report", action='store_true')
 parser.add_argument("--startdate", help="startdate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-30).format('YYYY-MM-DD'))
 parser.add_argument("--enddate", help="enddate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace().format('YYYY-MM-DD'))
-parser.add_argument("--fetch-omniture", help="Only runs the report and prints.", action='store_true')
 parser.add_argument("--preprocess", help="Only runs the report and prints.", action='store_true')
 parser.add_argument("--popularity", help="Calculates popularity", action='store_true')
 parser.add_argument("--post-to-solr", help="Posts popularity to Solr", action='store_true')
@@ -64,6 +63,7 @@ parser.add_argument("--table", type=str, default='popularity')
 parser.add_argument("--print-popularity-ids", type=str)
 parser.add_argument("--debug", action='store_true')
 parser.add_argument("--id", help='id to process. Only works with post-to-solr')
+parser.add_argument("--platform", default='web,app')
 argv = vars(parser.parse_args())
 
 debug = argv['debug']
@@ -72,6 +72,8 @@ startdatetime = arrow.get(argv['startdate']).datetime
 enddatetime = arrow.get(argv['enddate']).datetime
 print(startdatetime)
 print(enddatetime)
+platforms = argv["platform"].split(",")
+
 if argv['num_prods'] == 0 and not argv['yes']:
   response = input("Are you sure you want to run full report? [Y/n]")
   if response == 'Y':
@@ -80,10 +82,10 @@ if argv['num_prods'] == 0 and not argv['yes']:
     print("Exiting")
     sys.exit()
 
-if argv['num_prods'] and argv['fetch_omniture']== 0:
+if argv['num_prods'] :
   print("=== Running full report. All data will be flushed. === ")
 
-if argv['fetch_omniture'] or argv['dump_metrics']:
+if argv['dump_metrics']:
   analytics = omniture.authenticate('soumen.seth:FSN E-Commerce', '770f388b78d019017d5e8bd7a63883fb')
   suites = {}
   suites['web'] = analytics.suites['fsnecommerceprod']
@@ -167,36 +169,35 @@ def fetch_data():
       startingWith += top
 
 
-def write_report_data_to_db():
-
-  for product in fetch_data():
-    d = {
-      "views": product['event5'],
-      "cart_additions": product['cartadditions'],
-      "orders": product['orders'],
-      "productid": product['product'],
-      "date" : product['datetime'],
-    }
-
-    raw_data.update({"date": d['date'], 'productid': d['productid'], 
-      }, d, upsert=True)
 
 def preprocess_data():
   print("preprocess_data")
   print(argv)
-  total = raw_data.count({"date": {"$gte": startdatetime, "$lte": enddatetime}})
 
-  ctr = LoopCounter(name='Preprocessing: ', total = total)
-  for product in raw_data.find({"date": {"$gte": startdatetime, "$lte": enddatetime}}, no_cursor_timeout=True):
+  ctr = LoopCounter(name='Preprocessing')
+  for product in raw_data.aggregate([
+      {"$match": {"date": {"$gte": startdatetime, "$lte": enddatetime}}}, 
+      {"$group": {
+          "_id": {"date": "$date", "parent_id": "$parent_id"},
+          "views": {"$sum": "$views"}, 
+          "cart_additions": {"$sum": "$cart_additions"}, 
+          "orders": {"$sum": "$orders"} ,
+          "revenue": {"$sum": "$revenue"},
+          "units": {"$sum": "$units"},
+      }}
+      ], allowDiskUse=True):
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
 
     p = product
-    if not p['productid']:
+    p['parent_id'] = p['_id'].get('parent_id')
+    p['date'] = p['_id']['date']
+    p.pop("_id")
+    if not p['parent_id']:
       continue
     try:
-      processed_data.update({"platform": p['platform'], "date": p['date'], "productid": p['productid']}, p, upsert=True)
+      processed_data.update({ "date": p['date'], "parent_id": p['parent_id']}, p, upsert=True)
     except:
       print("[ERROR] processed_data.update error %s " % p)
       raise
@@ -208,7 +209,7 @@ def calculate_popularity():
   results = []
   ctr = LoopCounter(name='Popularity: ')
 
-  date_buckets = [(0,30), (31,60), (61, 90), (91, 120), (121, 150), (151, 180)]
+  date_buckets = [(0,60), (61, 120), (121, 180)]
   dfs = []
   for bucket_id, date_bucket in enumerate(date_buckets):
     startday = date_bucket[1] * -1
@@ -221,9 +222,15 @@ def calculate_popularity():
         {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
         #{"$match": {"views": {"$ne": 0}}},
         #{"$match": {"cart_additions": {"$ne": 0}, "orders": {"$ne": 0}}},
-        {"$group": {"_id": "$productid", "views": {"$sum": "$views"}, "cart_additions": {"$sum": "$cart_additions"}, "orders": {"$sum": "$orders"}}},\
+        {"$group": {"_id": "$parent_id", 
+          "views": {"$sum": "$views"}, 
+          "cart_additions": {"$sum": "$cart_additions"}, 
+          "orders": {"$sum": "$orders"},
+          "revenue": {"$sum": "$revenue"},
+          "units": {"$sum": "$units"},
+        }},\
       ]):
-      p['productid'] = p.pop("_id")
+      p['parent_id'] = p.pop("_id")
       bucket_results.append(p)
 
     if not bucket_results:
@@ -236,8 +243,11 @@ def calculate_popularity():
       df['Vn'] = normalize(df['views'])
       df['Cn'] = normalize(df['cart_additions'])
       df['On'] = normalize(df['orders'])
-      df['popularity'] = (len(date_buckets) - bucket_id) *  normalize(numpy.log(1 + df['Vn'] + 2*df['Cn'] + 3*df['On'])) * 100
-      dfs.append(df.loc[:, ['productid', 'popularity']].set_index('productid'))
+      df['Rn'] = normalize(df['revenue'])
+      df['Un'] = normalize(df['units'])
+
+      df['popularity'] = (len(date_buckets) - bucket_id) *  normalize(numpy.log(1 + 4* df['Vn'] + 3*df['Un'] + 2*df['Cn'] + 1*df['Rn']  )) * 100
+      dfs.append(df.loc[:, ['parent_id', 'popularity']].set_index('parent_id'))
         
   if argv['print_popularity_ids']:
     ids = [x.strip() for x in argv['print_popularity_ids'].split(",") if x]
@@ -257,22 +267,33 @@ def calculate_popularity():
   final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
   final_df.drop(['popularity'], axis = 1, inplace = True)
 
-  for p in processed_data.aggregate([{"$group": {"_id": "$productid" , "views": {"$sum": "$views"}, "cart_additions": {"$sum": "$cart_additions"}, "orders": {"$sum": "$orders"}}},\
+  # Calculate total popularity
+  for p in processed_data.aggregate(
+      [{"$group": {
+        "_id": "$parent_id", 
+        "views": {"$sum": "$views"}, 
+        "cart_additions": {"$sum": "$cart_additions"}, 
+        "orders": {"$sum": "$orders"},
+        "revenue": {"$sum": "$revenue"},
+        "units": {"$sum": "$units"},
+        }},\
       #{"$limit": 10},\
       ]):
-    p['productid'] = p.pop("_id")
+    p['parent_id'] = p.pop("_id")
     results.append(p)
 
   df = pd.DataFrame(results)
   df['Vn'] = normalize(df['views'])
   df['Cn'] = normalize(df['cart_additions'])
   df['On'] = normalize(df['orders'])
-  df['popularity'] = normalize(numpy.log(1 + df['Vn'] + 2*df['Cn'] + 3*df['On'])) * 100
-  df = df.set_index("productid") 
+  df['Rn'] = normalize(df['revenue'])
+  df['Un'] = normalize(df['units'])
+  df['popularity_total'] = normalize(numpy.log(1 + 4* df['Vn'] + 3*df['Un'] + 2*df['Cn'] + 1*df['Rn'] )) * 100
+  df = df.set_index("parent_id") 
 
   a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
   a.popularity_recent = a.popularity_recent.fillna(0)
-  a['popularity_total_recent'] = 100 * normalize(0.7 * a['popularity'] + 0.3 * a['popularity_recent'])
+  a['popularity_total_recent'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
   a.popularity_total_recent = a.popularity_total_recent.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db: ', total = len(a.index))
@@ -282,8 +303,8 @@ def calculate_popularity():
       print(ctr.summary)
 
     row = dict(row)
-    if row.get('productid'):
-      popularity_table.update({"_id": row['productid'], "productid": row['productid']}, row, upsert=True)
+    if row.get('parent_id'):
+      popularity_table.update({"_id": row['parent_id'], "parent_id": row['parent_id']}, row, upsert=True)
 
 
 class SolrPostManager:
@@ -293,10 +314,10 @@ class SolrPostManager:
   ids = []
   id_object = {}
 
-  def post_to_solr(self, productid, obj):
-    self.id_object[productid] = obj 
-    if productid and 'unspecified' not in productid:
-      self.ids.append(productid)
+  def post_to_solr(self, product_id, obj):
+    self.id_object[product_id] = obj 
+    if product_id and 'unspecified' not in product_id:
+      self.ids.append(product_id)
 
     if len(self.ids) > self.BATCH_SIZE:
       self.flush()
@@ -331,11 +352,6 @@ class SolrPostManager:
     self.ids = []
     
 
-if argv['fetch_omniture']:
-  print("fetch_omniture start: %s" % arrow.now())
-  write_report_data_to_db()
-  print("fetch_omniture end: %s" % arrow.now())
-
 if argv['preprocess']:
   print("preprocess start: %s" % arrow.now())
   preprocess_data()
@@ -358,9 +374,7 @@ if argv['post_to_solr']:
     if ctr.should_print():
       print(ctr.summary)
     obj = {
-      "popularity":p['popularity'],
-      "popularity_conversion_total_recent_f":p.get('popularity_total_recent', 0),
-      "popularity_conversion_recent_f":p.get('popularity_recent',0),
+      "popularity":p.get('popularity_total_recent', 0),
     }
-    post_mgr.post_to_solr(productid=p['productid'], obj=obj)
+    post_mgr.post_to_solr(product_id=p['product_id'], obj=obj)
   post_mgr.flush()

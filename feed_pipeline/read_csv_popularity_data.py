@@ -1,3 +1,4 @@
+import time 
 import datetime
 import subprocess
 import os
@@ -6,9 +7,48 @@ import sys
 import arrow
 import csv
 from pymongo import MongoClient
+from IPython import embed
 
 sys.path.append("/nykaa/scripts/utils")
 from loopcounter import LoopCounter
+
+sys.path.append('/home/apis/nykaa/')
+from pas.v1.utils import Utils, MemcacheUtils
+
+
+def create_product_id_index():
+  start = time.time()
+  product_id_index = {}
+
+  nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+  query = """
+    SELECT a.entity_id as product_id, a.key_id as parent_id
+    FROM(
+      SELECT cpe.entity_id,cpe.sku, CASE WHEN cpsl.parent_id IS NOT NULL THEN cpsl.parent_id ELSE cpe.entity_id END AS 'key_id'
+      FROM nykaalive1.catalog_product_entity cpe
+      LEFT JOIN nykaalive1.catalog_product_super_link cpsl 
+      ON cpsl.product_id = cpe.entity_id
+      WHERE cpe.sku IS NOT NULL
+    )a
+    JOIN 
+    nykaalive1.catalog_product_entity cpe 
+    ON cpe.entity_id=a.key_id
+    JOIN 
+    nykaalive1.`catalog_product_entity_varchar` c 
+    ON c.`entity_id`=a.key_id AND c.`attribute_id`=56
+    """
+  
+  delta = time.time() - start 
+  for p in Utils.mysql_read(query, connection=nykaa_mysql_conn):
+    p = {k:str(v) for k,v in p.items()}
+    product_id_index[p['product_id']] = p
+
+  print("Time taken to create product_id index: %s seconds" % round(delta))
+  if len(product_id_index.keys()) < 50000:
+    print("Failed to create product_id_index. Master feed might be missing.")
+  return product_id_index
+
+product_id_index = create_product_id_index()
 
 def read_file_by_date(date, platform, dryrun=False):
   assert isinstance(date, datetime.datetime)
@@ -20,27 +60,13 @@ def read_file_by_date(date, platform, dryrun=False):
   print(filename)
   return read_file(filename, platform, dryrun)
 
-def read_file(filepath, platform, dryrun):
+def read_file(filepath, platform, dryrun, limit, product_id, debug):
+  product_id_arg = product_id
   assert platform in ['app', 'web']
 
   client = MongoClient()
   raw_data = client['search']['raw_data']
 
-  #files = reversed([
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201605.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201606.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201607.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201608.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201609.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201610.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201611.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201612.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201701.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201702.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201703.csv',
-#  '/home/ubuntu/Product_feed_day_wise/product_data_201704.csv',
-#  '/tmp/gludo_app_20170501-20170823.csv'
-   # ])
 
   def unzip_file(path_to_zip_file):
     import zipfile
@@ -75,12 +101,14 @@ def read_file(filepath, platform, dryrun):
   nrows = int(subprocess.check_output('wc -l ' + filepath, shell=True).decode().split()[0])
   ctr = LoopCounter("Reading CSV: ", total=nrows)
   with open(filepath, newline='') as csvfile:
-
     spamreader = csv.DictReader(csvfile,)
     for row in spamreader:
+      if limit and ctr.count > limit:
+        break
       ctr += 1
       if ctr.should_print():
-        print(ctr.summary)
+        if not product_id:
+          print(ctr.summary)
       try:
         d = dict(row)
         date = None
@@ -105,49 +133,67 @@ def read_file(filepath, platform, dryrun):
       replace_keys = [
         ('event5', 'views'),
         ('Product Views', 'views'),
-        ('Products', 'productid'),
-        ('name', 'productid'),
+        ('Products', 'product_id'),
+        ('name', 'product_id'),
         ('Cart Additions', 'cart_additions'),
         ('cartadditions', 'cart_additions'),
         ('Orders', 'orders'),
+        ('Revenue', 'revenue'),
+        ('Units', 'units'),
         ]
 
       for k,v in replace_keys:
         if k in d:
           d[v] = d.pop(k)
 
-      required_keys = set(['views', 'productid', 'cart_additions', 'orders'])
+      required_keys = set(['views', 'product_id', 'cart_additions', 'orders'])
       missing_keys = required_keys - set(list(d.keys()))
       if missing_keys:
         print("Missing Keys: %s" % missing_keys)
         raise Exception("Missing Keys in CSV")
 
-      if not d['productid']:
-        continue
-      for k in ['cart_additions', 'views', 'orders']:
-        d[k] = int(d[k])
-
-      if not d['productid']:
-        print("Skipping empty productid.")
+      if not d['product_id']:
         continue
 
-      filt = {"date": date, "productid": d['productid'], "platform": platform}
-      update = {k:v for k,v in d.items() if k in ['cart_additions', 'views', 'orders']}
-      if dryrun:
+      if product_id_arg:
+        #embed()
+        #exit()
+        if d['product_id'] != product_id_arg:
+          continue
+        
+      for k in ['cart_additions', 'views', 'orders', 'revenue', 'units']:
+        if k == 'revenue':
+          d[k] = float(d[k])
+        else:
+          d[k] = int(d[k])
+
+      if not d['product_id']:
+        print("Skipping empty product_id.")
+        continue
+      
+      if d['product_id'] in product_id_index:
+        d.update(product_id_index[d['product_id']])
+
+      filt = {"date": date, "product_id": d['product_id'], "platform": platform}
+      update = {k:v for k,v in d.items() if k in ['cart_additions', 'views', 'orders', 'revenue', 'units', 'parent_id']}
+      if debug:
         print("d: %s" % d)
         print("filt: %s" % filt)
         print("update: %s" % update)
-        sys.exit()
 
       if not dryrun:
         ret = raw_data.update_one(filt, {"$set": update}, upsert=True) 
-
+        if debug:
+          print("Mongo response: %s" % ret.raw_result)
 if __name__ == '__main__':
 
   parser = argparse.ArgumentParser()
   parser.add_argument("--platform", '-p', required=True, help="app or web")
   parser.add_argument("--filepath", '-f', required=True,)
   parser.add_argument("--dryrun",  action='store_true')
+  parser.add_argument("--debug",  action='store_true')
+  parser.add_argument("--limit", type=int, default=0)
+  parser.add_argument("--id", default=0)
   argv = vars(parser.parse_args())
-  read_file(filepath=argv['filepath'], platform=argv['platform'], dryrun=argv['dryrun'])
+  read_file(filepath=argv['filepath'], platform=argv['platform'], dryrun=argv['dryrun'], limit=argv['limit'], product_id=argv['id'], debug=argv['debug'])
 

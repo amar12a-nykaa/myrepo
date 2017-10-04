@@ -40,8 +40,6 @@ res = search_terms.aggregate(
     #{"$limit" :100},
   ])
 
-#print(res)
-#max_query_count = res[0]['count']
 def normalize_term(term):
   term = term.lower()
   term = re.sub('[^A-Za-z0-9 ]', "", term) 
@@ -56,13 +54,6 @@ def normalize_array(query):
       term = normalize_term(term)
       index.add(term)
   return index
-
-#
-#  terms = [normalize_term(x['term']) for x in Utils.mysql_read(query)]
-#  return set(terms)
-#  terms_index = {k:1 for k in terms}
-#  return terms_index
-
 
 brand_index = normalize_array("select brand as term from nykaa.brands where brand like 'l%'")
 category_index = normalize_array("select name as term from nykaa.l3_categories")
@@ -88,10 +79,7 @@ for row in res:
     else:
       terms_not_found.append(term)
 
-#  if row['_id'] == 'loreal hair colour':
-#    IPython.embed()
   if not terms_not_found:
     continue
 
   search_terms_normalized.update({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['_id'].lower())}, {"query": row['_id'].lower(), "count": row['count'], 'popularity': popularity}, upsert=True)
-
