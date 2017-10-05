@@ -62,14 +62,14 @@ if __name__ == '__main__':
       msg += "Data missing for following dates in raw_data for %s:\n" % platform
       msg += pprint.pformat(missing_dates, indent=4)
 
-    missing_dates = get_missing_dates('processed_data', filt={"platform": platform})
-    if len(missing_dates) >= 1:
-      msg += "\nData missing for following dates in processed_data for %s:\n" % platform
-      msg += pprint.pformat(missing_dates, indent=4)
+  missing_dates = get_missing_dates('processed_data')
+  if len(missing_dates) >= 1:
+    msg += "\nData missing for following dates in processed_data for %s:\n" % platform
+    msg += pprint.pformat(missing_dates, indent=4)
 
-    if popularity.count() < 60000:
-      msg += "\n"
-      msg += "[ERROR] Number of products in popularity is less than 60K.\n"
+  if popularity.count() < 60000:
+    msg += "\n"
+    msg += "[ERROR] Number of products in popularity is less than 60K.\n"
 
   print(msg)
 
