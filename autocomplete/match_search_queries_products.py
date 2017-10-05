@@ -40,6 +40,8 @@ search_terms_normalized = client['search']['search_terms_normalized']
 
 map_search_product = {}
 
+match_found = 0
+match_not_found = 0
 for query in [p['query'] for p in search_terms_normalized.find()]:
   #print(query)
   base_url = "http://localhost:8983/solr/yang/select"
@@ -58,6 +60,7 @@ for query in [p['query'] for p in search_terms_normalized.find()]:
   js = resp.json()
   docs = js['response']['docs']
   if docs:
+    match_found += 1
     max_score = max([x['score'] for x in docs])
     docs = [x for x in docs if x['score'] == max_score]
     for doc in docs:
@@ -66,13 +69,16 @@ for query in [p['query'] for p in search_terms_normalized.find()]:
     docs.sort(key=lambda x:x['editdistance'] )
 
     map_search_product[query] = docs[0]['title']
+  else:
+    match_not_found += 1 
 
   #print(docs)
   #embed()
   #exit()
 #pprint.pprint(map_search_product)
 write_dict_to_csv(map_search_product, '/tmp/map_search_product.csv')
-
+print("match_found: %s" % match_found)
+print("match_not_found: %s" % match_not_found)
 
 
   

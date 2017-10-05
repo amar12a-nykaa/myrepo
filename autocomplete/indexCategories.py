@@ -40,7 +40,7 @@ for row in results:
       "type": "category",
       "data": json.dumps({"url": row['url'], "type": "category"})
     })
-  if len(docs) == 10:
+  if len(docs) == 100:
     SolrUtils.indexCatalog(docs, collection)
     requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
     docs = []
