@@ -8,7 +8,8 @@ import argparse
 import traceback
 import subprocess
 import urllib.request
-from pipelineUtils import SolrUtils, YIN_COLL, YANG_COLL
+from solrutils import SolrUtils
+
 from importDataFromNykaa import NykaaImporter
 from indexCatalog import CatalogIndexer
 sys.path.append('/home/apis/nykaa/')
@@ -72,7 +73,7 @@ if import_attrs:
 import_stop = timeit.default_timer()
 import_duration = import_stop - import_start
   
-collections = SolrUtils.get_active_inactive_collections()
+collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
 active_collection = collections['active_collection']
 inactive_collection = collections['inactive_collection']
 print("Active collection: %s"%active_collection)
