@@ -25,9 +25,6 @@ from stemming.porter2 import stem
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
-#sys.path.append("/nykaa/scripts/utils")
-#from omnitureutils import OmnitureUtils
-
 def write_dict_to_csv(dictname, filename):
 	with open(filename, 'w') as csv_file:
 			writer = csv.writer(csv_file)

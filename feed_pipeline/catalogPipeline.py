@@ -8,6 +8,8 @@ import argparse
 import traceback
 import subprocess
 import urllib.request
+
+sys.path.append('/nykaa/scripts/sharedutils/')
 from solrutils import SolrUtils
 
 from importDataFromNykaa import NykaaImporter

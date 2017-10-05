@@ -4,14 +4,13 @@ import sys
 import json
 import requests 
 
-sys.path.append("/nykaa/scripts/feed_pipeline")
-from pipelineUtils import SolrUtils
+sys.path.append('/nykaa/scripts/sharedutils/')
+from solrutils import SolrUtils
+from loopcounter import LoopCounter
 
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
-sys.path.append("/nykaa/scripts/utils")
-from loopcounter import LoopCounter
 
 from utils import createId
 
@@ -41,11 +40,11 @@ for row in results:
       "data": json.dumps({"url": row['url'], "type": "category"})
     })
   if len(docs) == 100:
-    SolrUtils.indexCatalog(docs, collection)
+    SolrUtils.indexDocs(docs, collection)
     requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
     docs = []
 
-SolrUtils.indexCatalog(docs, collection)
+SolrUtils.indexDocs(docs, collection)
 requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
 
 import requests

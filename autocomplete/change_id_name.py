@@ -3,7 +3,7 @@ import time
 from pymongo import MongoClient 
 import sys
 
-sys.path.append("/nykaa/scripts/utils")
+sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 def create_product_id_index():
   start = time.time()

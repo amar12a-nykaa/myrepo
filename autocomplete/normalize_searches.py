@@ -22,9 +22,6 @@ from stemming.porter2 import stem
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
-#sys.path.append("/nykaa/scripts/utils")
-#from omnitureutils import OmnitureUtils
-
 client = MongoClient()
 search_terms = client['search']['search_terms']
 search_terms_normalized = client['search']['search_terms_normalized']

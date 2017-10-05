@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 import dateparser
 
 sys.path.append('/home/apis/nykaa/')
-sys.path.append("/nykaa/scripts/utils")
+sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
 from pas.v1.csvutils import read_csv_from_file
 from pas.v1.exceptions import SolrError

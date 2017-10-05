@@ -27,11 +27,10 @@ from stemming.porter2 import stem
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
-sys.path.append("/nykaa/scripts/feed_pipeline")
-sys.path.append("/nykaa/scripts/utils")
+sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
-from pipelineUtils import SolrUtils
 from utils import createId
+from solrutils import SolrUtils
 
 
 collection='autocomplete'
@@ -73,7 +72,11 @@ def create_map_search_product():
         #print(doc)
         doc['editdistance'] = editdistance.eval(doc['title'], query) 
       docs.sort(key=lambda x:x['editdistance'] )
-      
+     
+      editdistance_threshold = 0.2 * len(query)
+      docs = [x for x in docs if abs(x['editdistance'] - len(query)) <= editdistance_threshold]
+      if not docs:
+        continue
       doc = docs[0]
       image = ""
       try:
@@ -133,14 +136,14 @@ def index_search_terms():
       })
 
     if len(docs) >= 100:
-      SolrUtils.indexCatalog(docs, collection)
+      SolrUtils.indexDocs(docs, collection)
       requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
       docs = []
 
   print("cnt_product: %s" % cnt_product)
   print("cnt_search: %s" % cnt_search)
 
-  SolrUtils.indexCatalog(docs, collection)
+  SolrUtils.indexDocs(docs, collection)
   requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
 
 #parser = argparse.ArgumentParser()

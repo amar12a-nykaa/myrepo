@@ -21,7 +21,7 @@ from pymongo import MongoClient
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
-sys.path.append("/nykaa/scripts/utils")
+sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
