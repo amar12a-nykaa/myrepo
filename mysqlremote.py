@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("unnamed", nargs="*")
 group = parser.add_mutually_exclusive_group(required=True)
 group.add_argument("--login", action="store_true")
+parser.add_argument("--root", action="store_true", help="When passed with --login, uses root account")
 group.add_argument("--sendto")
 group.add_argument("--import", action='store_true', help="Imports %s" % DUUMPFILE)
 argv = vars(parser.parse_args())
@@ -28,7 +29,9 @@ print("")
 print(argv)
 args = " ".join(argv['unnamed'])
 
-
+if argv['root']:
+  CD['user'] = 'root'
+  CD['password'] = 'spsdb4nykaa'
 if argv['login']:
   cmd = "mysql -h {host} -u{user} -p{password}".format(user=CD['user'], host=CD['host'], password=CD['password'])
   if conn_details['database']:
