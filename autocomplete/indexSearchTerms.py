@@ -75,14 +75,15 @@ def create_map_search_product():
       docs.sort(key=lambda x:x['editdistance'] )
       
       doc = docs[0]
+      image = ""
       try:
-        img = doc['media'][0]['url']
-        img = re.sub("w-[0-9]*", "w-200", img)
-        img = re.sub("h-[0-9]*", "h-200", img)
+        image = doc['media'][0]['url']
+        image = re.sub("w-[0-9]*", "w-200", image)
+        image = re.sub("h-[0-9]*", "h-200", image)
       except:
         print("[ERROR] Could not index query '%s' as product because image is missing for product_id: %s" % (query, doc['product_id']))
 
-      doc['thumbnail'] = img 
+      doc['image'] = image 
       doc = {k:v for k,v in doc.items() if k in ['thumbnail', 'title', 'product_url']}
       map_search_product[query] = docs[0]
       #print(doc)
@@ -109,19 +110,26 @@ def index_search_terms():
     if query in map_search_product:
       _type = 'product'
       url = map_search_product[query]['product_url']
+      image = map_search_product[query]['image']
+
+      data = json.dumps({"type": _type, "url": url, "image": image})
       cnt_product += 1 
+      entity = map_search_product[query]['title']
+      #embed()
+      #exit()
     else:
       _type = 'search_query'
       url = "http://www.nykaa.com/search/result/?q=" + row['query'].replace(" ", "+")
-      #data = json.dumps({"type": "search_query", "url": "http://www.nykaa.com/search/result/?q=" + row['query'].replace(" ", "+")})
+      data = json.dumps({"type": _type, "url": url})
+      entity = query 
       cnt_search += 1 
 
     docs.append({
         "_id": row['_id'],
-        "entity": row['query'],
+        "entity": entity, 
         "weight": row['popularity'], 
         "type": _type,
-        "data": json.dumps({"type": _type, "url": url})
+        "data": data,
       })
 
     if len(docs) >= 100:
