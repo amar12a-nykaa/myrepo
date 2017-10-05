@@ -8,7 +8,6 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--qa', help='Index to QA', action='store_true')
 argv = vars(parser.parse_args())
-print(argv)
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from pipelineUtils import SolrUtils
@@ -40,7 +39,7 @@ for row in results:
       "type": "brand",
       "data": json.dumps({"url": row['brand_url'], "type": "brand"})
     })
-  if len(docs) == 10:
+  if len(docs) >= 100:
     SolrUtils.indexCatalog(docs, collection)
     requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
     docs = []
