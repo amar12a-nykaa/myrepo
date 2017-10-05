@@ -14,9 +14,10 @@ conn_details = {}
 conn = Utils.mysqlConnection(mode='w', connection_details = conn_details)
 parser = argparse.ArgumentParser()
 parser.add_argument("unnamed", nargs="*")
-parser.add_argument("--login", action="store_true")
-parser.add_argument("--sendto")
-parser.add_argument("--import", action='store_true', help="Imports %s" % DUUMPFILE)
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument("--login", action="store_true")
+group.add_argument("--sendto")
+group.add_argument("--import", action='store_true', help="Imports %s" % DUUMPFILE)
 argv = vars(parser.parse_args())
 print(conn_details)
 CD = conn_details;
