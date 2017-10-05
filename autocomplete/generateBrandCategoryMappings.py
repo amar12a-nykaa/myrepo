@@ -1,16 +1,18 @@
 #!/usr/bin/python
 import IPython
-import pprint
-import traceback
-import sys
 import json
-import operator
 import mysql.connector
+import operator
+import pprint
+import sys
+import traceback
+
+from IPython import embed
+from collections import defaultdict
+from pymongo import MongoClient 
 
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
-from pymongo import MongoClient 
-from collections import defaultdict
 
 popularity_index = {}
 cat_id_index = defaultdict(dict)
@@ -125,6 +127,14 @@ def getProducts():
       brand_name_name[brand_lower] = brand_upper
 
       brand_name_id[brand_lower] = {'brand_id': brand_id, 'brand_url': brand_url, 'brands_v1': brands_v1}
+
+  query = "show indexes in analytics.sku_l4"
+  index_on_entity_id__sku_l4 = [ x for x in Utils.mysql_read(query, connection=nykaa_analytics_db_conn) if x['Column_name'] == 'entity_id']
+  assert index_on_entity_id__sku_l4, "Index missing on sku_l4"
+
+  query = "show indexes in analytics.catalog_dump"
+  index_on_entity_id__catalog_dump = [ x for x in Utils.mysql_read(query, connection=nykaa_analytics_db_conn) if x['Column_name'] == 'entity_id']
+  assert index_on_entity_id__catalog_dump, "Index Missing on catalog_dump"
 
   print("Fetching products from Nykaa DB..")
   query = "SELECT sl.entity_id AS simple_id, sl.sku AS simple_sku,\
