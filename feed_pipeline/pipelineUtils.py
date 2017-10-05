@@ -9,10 +9,6 @@ sys.path.append('/home/apis/nykaa/')
 from pas.v1.exceptions import SolrError
 from pas.v1.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
 
-YIN_COLL ='yin'
-YANG_COLL = 'yang'
-hostname = socket.gethostname()
-
 class PipelineUtils:
 
   def getAPIHost():
@@ -116,92 +112,9 @@ class PipelineUtils:
       Utils.updateCatalog(update_docs)
     return len(update_docs)
 
-class SolrUtils:
-
-  def solrClusterStatus():
-    url = Utils.solrHostName() + "/solr/admin/collections?action=CLUSTERSTATUS&wt=json"
-    try:
-      response = requests.get(url)
-      response = json.loads(response.content.decode('utf-8'))
-    except Exception as e:
-      print(traceback.format_exc())
-      raise
-    return response 
-
-  def clearSolrCollection(coll_name):
-    if coll_name==CATALOG_COLLECTION_ALIAS:
-      raise Exception("[ERROR] You are about to clear currently active collection. Please double-check and clear it manually if needed.")
-
-    url = Utils.solrBaseURL(collection=coll_name) + 'update?commit=true&stream.body=<delete><query>*:*</query></delete>&wt=json'
-    try:
-      response = requests.get(url)
-      response = json.loads(response.content.decode('utf-8'))
-      response_header = response.get('responseHeader', {})
-      if response_header.get('status')!=0:
-        raise Exception("[ERROR] There was an error clearing the collection '%s': %s"%(coll_name, response['error']['msg']))
-    except Exception as e:
-      print(traceback.format_exc())
-      raise
-    return response
-
-  def createSolrCollectionAlias(collection, alias):
-    url = Utils.solrHostName() + "/solr/admin/collections?action=CREATEALIAS&wt=json&name=%s&collections=%s"%(alias, collection)
-    try:
-      response = requests.get(url)
-      response = json.loads(response.content.decode('utf-8'))
-      response_header = response.get('responseHeader', {})
-      if response_header.get('status')!=0:
-        raise Exception("[ERROR] There was an error creating alias '%s' for collection %s: %s"%(alias, collection, response['error']['msg']))
-    except Exception as e:
-      print(traceback.format_exc())
-      raise
-    return response
-
-  def indexCatalog(docs, collection=CATALOG_COLLECTION_ALIAS):
-    url = Utils.solrBaseURL(collection) + "update/json/docs?commit=true"
-    upload_docs = []
-    for doc in docs:
-      for key, value in doc.items():
-        if isinstance(value, dict):
-          doc[key] = json.dumps(value)
-        elif isinstance(value, list):
-          if value and isinstance(value[0], dict):
-            flattened_value = [json.dumps(item) for item in value]
-            doc[key] = flattened_value
-      upload_docs.append(doc)
-
-    response = requests.post(url, json=upload_docs)
-    response_content = json.loads(response.content.decode("utf-8"))
-    if response.status_code != 200:
-      raise SolrError(response_content['error']['msg'])
-    return response_content
-
-  def get_active_inactive_collections():
-    # fetch the inactive collection
-    active_collection = ''
-    inactive_collection = ''
-
-    # fetch solr cluster status to find out which collection default alias points to
-    cluster_status = SolrUtils.solrClusterStatus()
-    cluster_status = cluster_status.get('cluster')
-    if cluster_status:
-      aliases = cluster_status.get('aliases')
-      if aliases and aliases.get(CATALOG_COLLECTION_ALIAS):
-        active_collection = aliases.get(CATALOG_COLLECTION_ALIAS)
-        inactive_collection = YIN_COLL if active_collection==YANG_COLL else YANG_COLL
-      else:
-        # first time
-        active_collection = YIN_COLL
-        inactive_collection = YANG_COLL
-
-    else:
-      msg = "[ERROR] Failed to fetch solr cluster status. Aborting.."
-      print(msg)
-      raise Exception(msg)
-
-    return {"active_collection": active_collection, "inactive_collection": inactive_collection}
 
 
 if __name__ == "__main__":
-	ret = SolrUtils.get_active_inactive_collections()
-	print(ret)
+	#ret = SolrUtils.get_active_inactive_collections()
+	#print(ret)
+  pass

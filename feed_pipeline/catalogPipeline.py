@@ -8,7 +8,10 @@ import argparse
 import traceback
 import subprocess
 import urllib.request
-from pipelineUtils import SolrUtils, YIN_COLL, YANG_COLL
+
+sys.path.append('/nykaa/scripts/sharedutils/')
+from solrutils import SolrUtils
+
 from importDataFromNykaa import NykaaImporter
 from indexCatalog import CatalogIndexer
 sys.path.append('/home/apis/nykaa/')
@@ -29,7 +32,7 @@ argv = vars(parser.parse_args())
 file_path = argv['filepath']
 url = argv['url']
 if not url and not file_path: 
-  if hostname.startswith('admin'):
+  if hostname.startswith('admin') or hostname.startswith('dev'):
     url = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
   elif hostname.startswith('preprod'):
     url = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
@@ -72,7 +75,7 @@ if import_attrs:
 import_stop = timeit.default_timer()
 import_duration = import_stop - import_start
   
-collections = SolrUtils.get_active_inactive_collections()
+collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
 active_collection = collections['active_collection']
 inactive_collection = collections['inactive_collection']
 print("Active collection: %s"%active_collection)

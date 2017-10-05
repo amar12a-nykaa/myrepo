@@ -27,11 +27,10 @@ from stemming.porter2 import stem
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
-sys.path.append("/nykaa/scripts/feed_pipeline")
-sys.path.append("/nykaa/scripts/utils")
+sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
-from pipelineUtils import SolrUtils
 from utils import createId
+from solrutils import SolrUtils
 
 
 collection='autocomplete'
@@ -49,20 +48,25 @@ def create_map_search_product():
 
   map_search_product = {}
 
+# http://dev.nykaa.com:8983/solr/yang/select?defType=dismax&fl=type&fq=type:"simple" OR type:"configurable"&indent=on&q=lakme&qf=title_text_split&wt=json
+#http://dev.nykaa.com:8983/solr/yang/select?bf=popularity&defType=dismax&fl=type,title,price&fq=price: [1 TO *]&fq=type:"simple" OR type:"configurable"&indent=on&q=lakme&qf=title_text_split&wt=json
   for query in [p['query'] for p in search_terms_normalized.find()]:
     #print(query)
     base_url = "http://localhost:8983/solr/yang/select"
+    #base_url = "http://qa.nykaa.com:8983/solr/yang/select"
     f = furl(base_url) 
     f.args['defType'] = 'dismax'
     f.args['indent'] = 'on'
     f.args['mm'] = 80
     f.args['qf'] = 'title_text_split'
-    f.args['type'] = 'simple'
+    f.args['type'] = 'simple,configurable'
     f.args['bf'] = 'popularity'
-    f.args['price'] = '[1 TO *]'
     f.args['q'] = str(query)
-    f.args['fl'] = 'title,score,media:[json],product_url,product_id'
+    f.args['fq'] = ['type:"simple" OR type:"configurable"', 'price:[500 TO *]']
+    f.args['fl'] = 'title,score,media:[json],product_url,product_id,price,type'
     f.args['wt'] = 'json'
+    #print(f.url)
+    #exit()
     resp = requests.get(f.url)
     js = resp.json()
     docs = js['response']['docs']
@@ -71,10 +75,22 @@ def create_map_search_product():
       docs = [x for x in docs if x['score'] == max_score]
       for doc in docs:
         #print(doc)
-        doc['editdistance'] = editdistance.eval(doc['title'], query) 
+        doc['editdistance'] = editdistance.eval(doc['title'].lower(), query.lower()) 
       docs.sort(key=lambda x:x['editdistance'] )
-      
+     
+      if not docs:
+        continue
+
       doc = docs[0]
+      editdistance_threshold = 0.4
+      if doc['editdistance'] / len(query) > editdistance_threshold:
+        continue
+
+      #print(query)
+      #print(doc['title'])
+      #print(doc['editdistance'], len(query), doc['editdistance'] / len(query))
+      #print("===========")
+
       image = ""
       try:
         image = doc['media'][0]['url']
@@ -133,14 +149,14 @@ def index_search_terms():
       })
 
     if len(docs) >= 100:
-      SolrUtils.indexCatalog(docs, collection)
+      SolrUtils.indexDocs(docs, collection)
       requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
       docs = []
 
   print("cnt_product: %s" % cnt_product)
   print("cnt_search: %s" % cnt_search)
 
-  SolrUtils.indexCatalog(docs, collection)
+  SolrUtils.indexDocs(docs, collection)
   requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
 
 #parser = argparse.ArgumentParser()

@@ -9,7 +9,7 @@ import csv
 from pymongo import MongoClient
 from IPython import embed
 
-sys.path.append("/nykaa/scripts/utils")
+sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 
 sys.path.append('/home/apis/nykaa/')

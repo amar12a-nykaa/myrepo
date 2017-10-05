@@ -21,8 +21,6 @@ from pymongo import MongoClient
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
-sys.path.append("/nykaa/scripts/utils")
-from omnitureutils import OmnitureUtils
 import requests
 import IPython
 

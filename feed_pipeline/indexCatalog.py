@@ -1,25 +1,27 @@
 #!/usr/bin/python
-import pprint
-import sys
-import json
-import socket
 import argparse
+import json
+import pprint
+import socket
+import sys
 import traceback
-import dateparser
+from collections import OrderedDict
 from datetime import datetime
-from urllib.request import urlopen, Request
 from urllib.parse import urlparse
+from urllib.request import Request, urlopen
+
+import dateparser
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils
-from collections import OrderedDict
-from pipelineUtils import PipelineUtils, SolrUtils
-from pas.v1.exceptions import SolrError
-from pas.v1.csvutils import read_csv_from_file
-from popularity_api import get_popularity_for_id
-
-sys.path.append("/nykaa/scripts/utils")
+sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
+from pas.v1.csvutils import read_csv_from_file
+from pas.v1.exceptions import SolrError
+from pas.v1.utils import CATALOG_COLLECTION_ALIAS, Utils
+from pipelineUtils import PipelineUtils
+from popularity_api import get_popularity_for_id
+from solrutils import SolrUtils
+
 
 conn =  Utils.mysqlConnection()
 
@@ -149,7 +151,7 @@ class CatalogIndexer:
 
   def index(file_path, collection, update_productids=False):
     if not collection:
-      collections = SolrUtils.get_active_inactive_collections()
+      collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
       collection = collections['inactive_collection']
 
       print(" --> Indexing to inactive collection: %s" % collection)
@@ -236,7 +238,6 @@ class CatalogIndexer:
               query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause, sku=doc['sku'])
               print(query)
               Utils.mysql_write(query, connection=conn)
-          continue
         except:
           print("[ERROR] Failed to update product_id and parent_id for sku: %s" % doc['sku'])
           pass
@@ -248,8 +249,6 @@ class CatalogIndexer:
         doc['viewcount_i'] = 0
         if popularity_obj:
           doc['popularity'] = popularity_obj['popularity']
-          doc['popularity_conversion_total_recent_f'] = popularity_obj['popularity_conversion_total_recent_f']
-          doc['popularity_conversion_recent_f'] = popularity_obj['popularity_conversion_recent_f']
           #View based Popularity
           doc['viewcount_i'] = popularity_obj.get('views', 0)
             
@@ -414,7 +413,7 @@ class CatalogIndexer:
         #index to solr in batches of DOCS_BATCH_SIZE
         if ((index+1) % CatalogIndexer.DOCS_BATCH_SIZE == 0):
           (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
-          SolrUtils.indexCatalog(input_docs, collection=collection)
+          SolrUtils.indexDocs(input_docs, collection=collection)
           input_docs = []
           pws_fetch_products = []
           CatalogIndexer.print_errors(errors)
@@ -427,7 +426,7 @@ class CatalogIndexer:
     # index the last remaining docs
     if input_docs:
       (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
-      SolrUtils.indexCatalog(input_docs, collection=collection)
+      SolrUtils.indexDocs(input_docs, collection=collection)
       CatalogIndexer.print_errors(errors)
 
 

@@ -21,7 +21,7 @@ from pymongo import MongoClient
 sys.path.append("/nykaa/api")
 from pas.v1.utils import Utils
 
-sys.path.append("/nykaa/scripts/utils")
+sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
@@ -49,8 +49,6 @@ def valid_date(s):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--num-prods", '-n', required=True, help="Number of products to be fetched from omniture. Pass 0 for fetching all.", default=0, type=int)
-parser.add_argument("--yes", '-y', help="Pass this to avoid prompt and run full report", action='store_true')
 parser.add_argument("--startdate", help="startdate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-30).format('YYYY-MM-DD'))
 parser.add_argument("--enddate", help="enddate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace().format('YYYY-MM-DD'))
 parser.add_argument("--preprocess", help="Only runs the report and prints.", action='store_true')
@@ -64,6 +62,8 @@ parser.add_argument("--print-popularity-ids", type=str)
 parser.add_argument("--debug", action='store_true')
 parser.add_argument("--id", help='id to process. Only works with post-to-solr')
 parser.add_argument("--platform", default='web,app')
+parser.add_argument("--num-prods", '-n', help="obsolete", default=0, type=int)
+parser.add_argument("--yes", '-y', help="obsolete", action='store_true')
 argv = vars(parser.parse_args())
 
 debug = argv['debug']
@@ -74,16 +74,6 @@ print(startdatetime)
 print(enddatetime)
 platforms = argv["platform"].split(",")
 
-if argv['num_prods'] == 0 and not argv['yes']:
-  response = input("Are you sure you want to run full report? [Y/n]")
-  if response == 'Y':
-    print("Running full report .. ")
-  else:
-    print("Exiting")
-    sys.exit()
-
-if argv['num_prods'] :
-  print("=== Running full report. All data will be flushed. === ")
 
 if argv['dump_metrics']:
   analytics = omniture.authenticate('soumen.seth:FSN E-Commerce', '770f388b78d019017d5e8bd7a63883fb')
@@ -110,64 +100,7 @@ if argv['dump_metrics']:
   f3 = filename
 
   print('{f1}\n{f2}\n{f3}'.format(f1=f1,f2=f2, f3=f3))
-
   sys.exit()
-
-
-def fetch_data():
-  if argv['from_file']:
-    with open(argv['from_file'],  'r') as f:
-      for line in f:
-        print(line)
-        yield json.loads(line)
-    return
-
-  print("Running report .. ")
-  total_rows = argv['num_prods'] or 0
-  if not total_rows:
-    top = 50000
-  else:
-    top = min(total_rows, 50000)
-
-  for platform in ['web', 'mobile']:
-    print("== %s ==" % platform)
-    startingWith = 0 
-    report_cnt = 1
-    while(True):
-      print("== report  %d ==" % report_cnt)
-      report_cnt += 1
-      MAX_ATTEMPTS = 3 
-      for attempt in range(0,MAX_ATTEMPTS):
-        print("Attempt %r to fetch omniture data" % attempt)
-        try:
-          report = suites[platform].report \
-              .metric('event5') \
-              .metric('cartadditions') \
-              .metric('orders') \
-              .element('product', top=top, startingWith=startingWith)\
-              .element('category')\
-              .range(argv['startdate'], argv['enddate'])\
-              .granularity("day")\
-              .run()
-        except:
-          print("[ERROR] Attempt %r to fetch omniture data failed!" % attempt)
-          print(traceback.format_exc())
-          pass
-        else:
-          break
-
-      print(" --- ")
-      data = report.data
-      for product in data:
-        if 'datetime' in product:
-          product['date'] = datetime.datetime.strftime(product['datetime'], '%Y-%m-%d')
-          product[platform] = platform
-        yield product
-
-      if len(data) < top or (total_rows and top * report_cnt > total_rows):
-        break
-      startingWith += top
-
 
 
 def preprocess_data():
@@ -206,6 +139,7 @@ def normalize(a):
   return (a-min(a))/(max(a)-min(a))
 
 def calculate_popularity():
+  timestamp = arrow.now().datetime
   results = []
   ctr = LoopCounter(name='Popularity: ')
 
@@ -220,8 +154,6 @@ def calculate_popularity():
     bucket_results = []
     for p in processed_data.aggregate([
         {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
-        #{"$match": {"views": {"$ne": 0}}},
-        #{"$match": {"cart_additions": {"$ne": 0}, "orders": {"$ne": 0}}},
         {"$group": {"_id": "$parent_id", 
           "views": {"$sum": "$views"}, 
           "cart_additions": {"$sum": "$cart_additions"}, 
@@ -234,11 +166,9 @@ def calculate_popularity():
       bucket_results.append(p)
 
     if not bucket_results:
-      print("Skipping :")
-      print(date_bucket)
+      print("Skipping :", date_bucket)
     else:
-      print("Processing:")
-      print(date_bucket)
+      print("Processing:", date_bucket)
       df = pd.DataFrame(bucket_results)
       df['Vn'] = normalize(df['views'])
       df['Cn'] = normalize(df['cart_additions'])
@@ -277,7 +207,6 @@ def calculate_popularity():
         "revenue": {"$sum": "$revenue"},
         "units": {"$sum": "$units"},
         }},\
-      #{"$limit": 10},\
       ]):
     p['parent_id'] = p.pop("_id")
     results.append(p)
@@ -293,8 +222,8 @@ def calculate_popularity():
 
   a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
   a.popularity_recent = a.popularity_recent.fillna(0)
-  a['popularity_total_recent'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
-  a.popularity_total_recent = a.popularity_total_recent.fillna(0)
+  a['popularity'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
+  a.popularity= a.popularity.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db: ', total = len(a.index))
   for i, row in a.iterrows():
@@ -303,9 +232,13 @@ def calculate_popularity():
       print(ctr.summary)
 
     row = dict(row)
-    if row.get('parent_id'):
-      popularity_table.update({"_id": row['parent_id'], "parent_id": row['parent_id']}, row, upsert=True)
+    row = {k:v for k,v in row.items() if k in ['cart_additions', 'last_calculated', 'orders', 'parent_id', 'popularity', 'revenue', 'units', 'views']}
+    row['last_calculated'] = timestamp
 
+    if row.get('parent_id'):
+      popularity_table.replace_one({"_id": row['parent_id'], "parent_id": row['parent_id']}, row, upsert=True)
+
+  popularity_table.remove({"last_calculated": {"$ne": timestamp}})
 
 class SolrPostManager:
   size = 0
