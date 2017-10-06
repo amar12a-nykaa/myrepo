@@ -172,7 +172,7 @@ class CatalogIndexer:
     input_docs = []
     pws_fetch_products = []
 
-    ctr = LoopCounter(name='Indexing')
+    ctr = LoopCounter(name='Indexing', total=len(all_rows))
     for index, row in enumerate(all_rows):
       ctr += 1
       if ctr.should_print():
