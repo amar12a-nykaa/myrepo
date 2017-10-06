@@ -184,7 +184,7 @@ def getMappings(products):
       continue
     max_brand_popularity = max(max_brand_popularity, v)
   for k,v in brand_popularity.items():
-    brand_popularity[k] = brand_popularity[k] / max_brand_popularity * 100  + 200
+    brand_popularity[k] = brand_popularity[k] / max_brand_popularity * 100  * 1.5
 
   return brand_category_mappings
 

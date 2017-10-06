@@ -180,7 +180,7 @@ def index_categories(collection):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories order by category_popularity desc"
+  query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories order by name, category_popularity desc"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing')
   prev_cat = None
@@ -215,9 +215,9 @@ def build_suggester(collection):
   print("Done")
 
 def index_all(collection):
+  index_search_queries(collection)
   index_categories(collection)
   index_brands(collection)
-  index_search_queries(collection)
   build_suggester(collection)
 
 if __name__ == '__main__':
@@ -248,10 +248,10 @@ if __name__ == '__main__':
     collection = SolrUtils.get_active_inactive_collections('autocomplete')['inactive_collection']
 
   print("Indexing to collection: %s" % collection)
+  if argv['search_query'] or index_all:
+    index_search_queries(collection)
   if argv['category'] or index_all:
     index_categories(collection)
   if argv['brand'] or index_all:
     index_brands(collection)
-  if argv['search_query'] or index_all:
-    index_search_queries(collection)
   build_suggester(collection)
