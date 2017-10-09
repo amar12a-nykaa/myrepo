@@ -52,8 +52,11 @@ print('Number of documents in active collection(%s): %s'%(active_collection, num
 print('Number of documents in inactive collection(%s): %s'%(inactive_collection, num_docs_inactive))
 
 # if it decreased more than 5% of current, abort and throw an error
-if not num_docs_inactive or not num_docs_active:
-  docs_ratio = 0
+if not num_docs_active:
+  if num_docs_inactive:
+    docs_ratio = 1
+  else:
+    docs_ratio = 0
 else:
   docs_ratio = num_docs_inactive/num_docs_active
 if docs_ratio < 0.95 and not force_run:
