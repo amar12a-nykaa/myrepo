@@ -130,7 +130,7 @@ class NykaaImporter:
         cat_info['art_link_text'] = item['art_link_text']
         cat_info['child_categories'] = item['categories']
         cat_info['art_pos'] = item['art_position']
-        MemcacheUtils.set(memcache_key, json.dumps(cat_info))    
+        MemcacheUtils.set(memcache_key, json.dumps(cat_info), update_prod_memcache=True)    
       except Exception as e:
         print("[Brand-Category Info Import ERROR]problem with %s: %s"%(item['category_id'], str(e)))
     print("==== Imported %s brand-category items ===="%count)
@@ -159,7 +159,7 @@ class NykaaImporter:
           app_sorting = str(app_sorting)
         offer_info['sort'] = NykaaImporter.default_sorting_map[app_sorting]
         offer_info['featured_products'] = item['custom_sort'].split(',') if item['custom_sort'] else []
-        MemcacheUtils.set(memcache_key, json.dumps(offer_info))
+        MemcacheUtils.set(memcache_key, json.dumps(offer_info), update_prod_memcache=True)
       except Exception as e:
         print("[Offer Info Import ERROR]problem with %s: %s"%(item['offer_id'], str(e)))
     print("==== Imported %s offer items ===="%count)
