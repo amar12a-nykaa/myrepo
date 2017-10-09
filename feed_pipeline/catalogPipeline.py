@@ -32,9 +32,9 @@ argv = vars(parser.parse_args())
 file_path = argv['filepath']
 url = argv['url']
 if not url and not file_path: 
-  if hostname.startswith('admin') or hostname.startswith('dev'):
+  if hostname.startswith('admin'):
     url = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
-  elif hostname.startswith('preprod'):
+  elif hostname.startswith('preprod') or hostname.startswith('dev'):
     url = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
   if url:
     print("Using default url for %s machine: %s" % (hostname, url))
