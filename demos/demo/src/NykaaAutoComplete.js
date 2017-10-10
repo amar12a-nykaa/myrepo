@@ -66,7 +66,7 @@ class NykaaAutoComplete extends Component {
     var suggestions = [];
     for(var i = 0; i < response['suggestions'].length; i++) {
       var suggestion = response['suggestions'][i];
-      if (suggestion['type'] === 'brand') {
+      if (suggestion['type'] === 'brand' && typeof suggestion['categories'] !== 'undefined') {
         for (var j = 0; j < suggestion['categories'].length; j++) {
           var brand_suggestion = suggestion['categories'][j];
           brand_suggestion['q'] = suggestion['q'];

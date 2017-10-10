@@ -11,7 +11,7 @@ from collections import OrderedDict, defaultdict
 from contextlib import closing
 
 import arrow
-import IPython
+from IPython import embed
 import mysql.connector
 import numpy
 import omniture
@@ -27,7 +27,15 @@ from loopcounter import LoopCounter
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from popularity_api import get_popularity_for_id  
 
-embed = IPython.embed
+WEIGHT_VIEWS = 35
+WEIGHT_UNITS = 35
+WEIGHT_CART_ADDITIONS = 10
+WEIGHT_REVENUE = 20
+
+#WEIGHT_VIEWS = 10
+#WEIGHT_UNITS = 10
+#WEIGHT_CART_ADDITIONS = 10
+#WEIGHT_REVENUE = 70
 
 client = MongoClient()
 raw_data = client['search']['raw_data']
@@ -65,6 +73,7 @@ parser.add_argument("--platform", default='web,app')
 parser.add_argument("--num-prods", '-n', help="obsolete", default=0, type=int)
 parser.add_argument("--yes", '-y', help="obsolete", action='store_true')
 argv = vars(parser.parse_args())
+
 
 debug = argv['debug']
 TABLE = argv['table']
@@ -176,7 +185,8 @@ def calculate_popularity():
       df['Rn'] = normalize(df['revenue'])
       df['Un'] = normalize(df['units'])
 
-      df['popularity'] = (len(date_buckets) - bucket_id) *  normalize(numpy.log(1 + 4* df['Vn'] + 3*df['Un'] + 2*df['Cn'] + 1*df['Rn']  )) * 100
+      df['popularity'] = (len(date_buckets) - bucket_id) *\
+        normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
       dfs.append(df.loc[:, ['parent_id', 'popularity']].set_index('parent_id'))
         
   if argv['print_popularity_ids']:
@@ -217,7 +227,7 @@ def calculate_popularity():
   df['On'] = normalize(df['orders'])
   df['Rn'] = normalize(df['revenue'])
   df['Un'] = normalize(df['units'])
-  df['popularity_total'] = normalize(numpy.log(1 + 4* df['Vn'] + 3*df['Un'] + 2*df['Cn'] + 1*df['Rn'] )) * 100
+  df['popularity_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
   df = df.set_index("parent_id") 
 
   a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
@@ -225,14 +235,14 @@ def calculate_popularity():
   a['popularity'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
   a.popularity= a.popularity.fillna(0)
 
-  ctr = LoopCounter(name='Writing popularity to db: ', total = len(a.index))
+  ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
   for i, row in a.iterrows():
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
 
     row = dict(row)
-    row = {k:v for k,v in row.items() if k in ['cart_additions', 'last_calculated', 'orders', 'parent_id', 'popularity', 'revenue', 'units', 'views']}
+    #row = {k:v for k,v in row.items() if k in ['cart_additions', 'last_calculated', 'orders', 'parent_id', 'popularity', 'revenue', 'units', 'views']}
     row['last_calculated'] = timestamp
 
     if row.get('parent_id'):
