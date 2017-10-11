@@ -84,7 +84,7 @@ def update_category_table(products):
   for k,v in category_popularity.items():
     max_category_popularity = max(max_category_popularity, v)
   for k,v in category_popularity.items():
-    category_popularity[k] = category_popularity[k] / max_category_popularity * 100  
+    category_popularity[k] = category_popularity[k] / max_category_popularity * 100 + 100
 
   mysql_conn = Utils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
@@ -184,7 +184,7 @@ def getMappings(products):
       continue
     max_brand_popularity = max(max_brand_popularity, v)
   for k,v in brand_popularity.items():
-    brand_popularity[k] = brand_popularity[k] / max_brand_popularity * 100  * 1.5
+    brand_popularity[k] = brand_popularity[k] / max_brand_popularity * 100 * 2 + 100
 
   return brand_category_mappings
 
