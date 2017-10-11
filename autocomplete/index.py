@@ -153,7 +153,7 @@ def index_brands(collection):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC LIMIT 200"
+  query = "SELECT brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Indexing')
   for row in results:
@@ -165,7 +165,7 @@ def index_brands(collection):
         "entity": row['brand'], 
         "weight": row['brand_popularity'], 
         "type": "brand",
-        "data": json.dumps({"url": row['brand_url'], "type": "brand"})
+        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count})
       })
     if len(docs) >= 100:
       SolrUtils.indexDocs(docs, collection)
