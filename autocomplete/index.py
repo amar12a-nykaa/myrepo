@@ -21,8 +21,8 @@ from pymongo import MongoClient
 from stemming.porter2 import stem
 
 sys.path.append('/nykaa/scripts/sharedutils/')
-from solrutils import SolrUtils
 from loopcounter import LoopCounter
+from solrutils import SolrUtils
 from utils import createId
 
 sys.path.append("/nykaa/api")
@@ -91,7 +91,7 @@ def create_map_search_product():
         print("[ERROR] Could not index query '%s' as product because image is missing for product_id: %s" % (query, doc['product_id']))
 
       doc['image'] = image 
-      doc = {k:v for k,v in doc.items() if k in ['thumbnail', 'title', 'product_url']}
+      doc = {k:v for k,v in doc.items() if k in ['image', 'title', 'product_url']}
       map_search_product[query] = docs[0]
   return map_search_product
 
@@ -104,7 +104,7 @@ def index_search_queries(collection):
   cnt_product = 0
   cnt_search = 0
 
-  ctr = LoopCounter(name='Search Queries/Product Indexing')
+  ctr = LoopCounter(name='Search Queries')
   for row in search_terms_normalized.find():
     ctr += 1
     if ctr.should_print():
@@ -114,6 +114,7 @@ def index_search_queries(collection):
 
     query = row['query']
     if query in map_search_product:
+      _id = map_search_product[query]['product_id']
       _type = 'product'
       url = map_search_product[query]['product_url']
       image = map_search_product[query]['image']
@@ -122,6 +123,7 @@ def index_search_queries(collection):
       cnt_product += 1 
       entity = map_search_product[query]['title']
     else:
+      _id = row['_id']
       _type = 'search_query'
       url = "http://www.nykaa.com/search/result/?q=" + row['query'].replace(" ", "+")
       data = json.dumps({"type": _type, "url": url})
@@ -129,7 +131,7 @@ def index_search_queries(collection):
       cnt_search += 1 
 
     docs.append({
-        "_id": row['_id'],
+        "_id": _id,
         "entity": entity, 
         "weight": row['popularity'], 
         "type": _type,
@@ -209,6 +211,70 @@ def index_categories(collection):
   SolrUtils.indexDocs(docs, collection)
   requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
 
+def index_products(collection):
+
+  docs = []
+
+  popularity = MongoClient()['search']['popularity']
+
+  cnt_product = 0
+  cnt_search = 0
+  cnt_missing_solr = 0 
+  cnt_missing_keys = 0 
+
+  ctr = LoopCounter(name='Product Indexing')
+  for row in popularity.find():
+    parent_id = row['parent_id']
+    #print(parent_id)
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
+    if not row['_id']:
+      continue
+
+    product = fetch_product_by_parentid(parent_id)
+    if not product:
+      #print("[ERROR] Product missing in solr yin yang: %s" % parent_id)
+      cnt_missing_solr += 1
+      continue
+    required_keys = set(["product_url", 'image', 'title'])
+    missing_keys = required_keys - set(list(product.keys())) 
+    if missing_keys:
+      #print("[ERROR] Required keys missing for %s: %s" % (parent_id, missing_keys))
+      cnt_missing_keys+= 1
+      continue
+
+
+    _type = 'product'
+    url = product['product_url']
+    image = product['image']
+
+    data = json.dumps({"type": _type, "url": url, "image": image})
+    cnt_product += 1 
+
+    docs.append({
+        "_id": parent_id,
+        "entity": product['title'], 
+        "weight": row['popularity'], 
+        "type": _type,
+        "data": data,
+      })
+    #print(docs)
+    #exit()
+
+    if len(docs) >= 100:
+      SolrUtils.indexDocs(docs, collection)
+      requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+      docs = []
+
+  print("cnt_product: %s" % cnt_product)
+  print("cnt_search: %s" % cnt_search)
+  print("cnt_missing_solr: %s" % cnt_missing_solr)
+  print("cnt_missing_keys: %s" % cnt_missing_keys)
+
+  SolrUtils.indexDocs(docs, collection)
+  requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+
 def build_suggester(collection):
   print("Building suggester .. ")
   base_url = Utils.solrBaseURL(collection=collection)
@@ -219,15 +285,58 @@ def index_all(collection):
   index_search_queries(collection)
   index_categories(collection)
   index_brands(collection)
+  index_products(collection)
   build_suggester(collection)
 
+def fetch_product_by_parentid(parent_id):
+  DEBUG = False 
+  product = {}
+  base_url = "http://localhost:8983/solr/yang/select"
+  f = furl(base_url) 
+  f.args['q'] = 'parent_id:%s AND product_id:%s' % (parent_id,parent_id)
+  f.args['fq'] = 'type:"simple" OR type:"configurable"'
+  f.args['fl'] = 'title,score,media:[json],product_url,product_id,price,type'
+  f.args['wt'] = 'json'
+  resp = requests.get(f.url)
+  js = resp.json()
+  docs = js['response']['docs']
+  if docs:
+    assert len(docs) == 1, "More than 1 docs foud for query %s" % parent_id
+    
+    doc = docs[0]
+
+    if DEBUG:
+      print(parent_id)
+      print(doc['title'])
+      print("===========")
+
+    image = ""
+    try:
+      image = doc['media'][0]['url']
+      image = re.sub("w-[0-9]*", "w-200", image)
+      image = re.sub("h-[0-9]*", "h-200", image)
+    except:
+      print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
+
+    doc['image'] = image 
+    doc = {k:v for k,v in doc.items() if k in ['image', 'title', 'product_url']}
+    return doc
+  return None
+
+
 if __name__ == '__main__':
+
+  #print(fetch_product_by_parentid("7723"))
+  #map=create_map_search_product()
+  #embed()
+  #exit()
   parser = argparse.ArgumentParser()
 
   group = parser.add_argument_group('group')
   group.add_argument("-c", "--category", action='store_true')
   group.add_argument("-b", "--brand", action='store_true')
   group.add_argument("-s", "--search-query", action='store_true')
+  group.add_argument("-p", "--product", action='store_true')
 
 
   collection_state = parser.add_mutually_exclusive_group(required=True)
@@ -238,7 +347,7 @@ if __name__ == '__main__':
 
   argv = vars(parser.parse_args())
 
-  required_args = ['category', 'brand', 'search_query']
+  required_args = ['category', 'brand', 'search_query', 'product']
   index_all = not any([argv[x] for x in required_args])
  
   if argv['collection']:
@@ -258,4 +367,6 @@ if __name__ == '__main__':
     index_categories(collection)
   if argv['brand'] or index_all:
     index_brands(collection)
+  if argv['product'] or index_all:
+    index_products(collection)
   build_suggester(collection)
