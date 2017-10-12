@@ -172,6 +172,7 @@ def index_brands(collection):
       requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
       docs = []
 
+    print(row['brand'], ctr.count)
   SolrUtils.indexDocs(docs, collection)
   requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
 
@@ -228,12 +229,12 @@ if __name__ == '__main__':
   group.add_argument("-b", "--brand", action='store_true')
   group.add_argument("-s", "--search-query", action='store_true')
 
-  parser.add_argument("--swap", action='store_true', help="Swap the Core")
 
   collection_state = parser.add_mutually_exclusive_group(required=True)
   collection_state.add_argument("--inactive", action='store_true')
   collection_state.add_argument("--active", action='store_true')
   collection_state.add_argument("--collection")
+  collection_state.add_argument("--swap", action='store_true', help="Swap the Core")
 
   argv = vars(parser.parse_args())
 
@@ -246,6 +247,9 @@ if __name__ == '__main__':
     collection = SolrUtils.get_active_inactive_collections('autocomplete')['active_collection']
   elif argv['inactive']:
     collection = SolrUtils.get_active_inactive_collections('autocomplete')['inactive_collection']
+  elif argv['swap']:
+    SolrUtils.swap_core('autocomplete')
+    exit()
 
   print("Indexing to collection: %s" % collection)
   if argv['search_query'] or index_all:
