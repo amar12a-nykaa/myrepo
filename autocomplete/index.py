@@ -128,6 +128,8 @@ def index_search_queries(collection):
       entity = query 
       cnt_search += 1 
 
+    if entity == "argan oil":
+      row['popularity'] = 200
     docs.append({
         "_id": createId(row['_id']),
         "entity": entity, 
@@ -336,7 +338,6 @@ if __name__ == '__main__':
   group.add_argument("-s", "--search-query", action='store_true')
   group.add_argument("-p", "--product", action='store_true')
 
-  parser.add_argument("--swap", action='store_true', help="Swap the Core")
   parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
 
   collection_state = parser.add_mutually_exclusive_group(required=True)

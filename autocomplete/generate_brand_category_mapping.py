@@ -114,8 +114,14 @@ def getProducts():
           select distinct name, id, url, brands_v1 
           FROM(
              SELECT nkb.name AS name, nkb.brand_id AS id, cur.request_path AS url, ci.brand_id AS brands_v1 
-             FROM nk_brands nkb INNER JOIN nykaalive1.core_url_rewrite cur ON nkb.brand_id=cur.category_id 
-             INNER JOIN nykaalive1.category_information ci ON cur.category_id=ci.cat_id
+             FROM nk_brands nkb 
+
+             INNER JOIN nykaalive1.core_url_rewrite cur 
+             ON nkb.brand_id=cur.category_id 
+
+             INNER JOIN nykaalive1.category_information ci 
+             ON cur.category_id=ci.cat_id
+
              WHERE cur.product_id IS NULL
           )A
           """
