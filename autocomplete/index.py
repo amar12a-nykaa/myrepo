@@ -12,8 +12,7 @@ import editdistance
 import IPython
 import mysql.connector
 import numpy
-import omniture
-import pandas as pd
+import os
 import requests
 from furl import furl
 from IPython import embed
@@ -375,3 +374,8 @@ if __name__ == '__main__':
 
   if argv['buildonly']:
     build_suggester(collection)
+
+  print("Restarting Apache and Memcached")
+  os.system("/etc/init.d/apache2 restart")
+  os.system("/etc/init.d/memcached restart")
+  
