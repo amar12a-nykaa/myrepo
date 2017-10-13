@@ -10,5 +10,19 @@ def strip_accents(text):
 
 def createId(s):
   s = strip_accents(s)
-  return re.sub('[^A-Za-z0-9]+', '_', s).lower()
+  s = re.sub('[^A-Za-z0-9 ]+', '', s).lower()
+  s = re.sub(' +', '_', s).lower()
+  return s
 
+if __name__ == '__main__':
+  terms = [
+    "kiehl's",
+    "M.A.C",
+    "L'Oreal Paris",
+    "Loreal     Paris",
+    "Estée Lauder",
+    "Estee Lauder",
+  ]
+
+  for term in terms:
+    print(term, "->", createId(term))

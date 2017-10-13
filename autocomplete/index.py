@@ -114,7 +114,6 @@ def index_search_queries(collection):
 
     query = row['query']
     if query in map_search_product:
-      _id = map_search_product[query]['product_id']
       _type = 'product'
       url = map_search_product[query]['product_url']
       image = map_search_product[query]['image']
@@ -123,7 +122,6 @@ def index_search_queries(collection):
       cnt_product += 1 
       entity = map_search_product[query]['title']
     else:
-      _id = row['_id']
       _type = 'search_query'
       url = "http://www.nykaa.com/search/result/?q=" + row['query'].replace(" ", "+")
       data = json.dumps({"type": _type, "url": url})
@@ -131,7 +129,7 @@ def index_search_queries(collection):
       cnt_search += 1 
 
     docs.append({
-        "_id": _id,
+        "_id": createId(row['_id']),
         "entity": entity, 
         "weight": row['popularity'], 
         "type": _type,
@@ -252,7 +250,7 @@ def index_products(collection):
     cnt_product += 1 
 
     docs.append({
-        "_id": parent_id,
+        "_id": createId(product['title']),
         "entity": product['title'], 
         "weight": row['popularity'], 
         "type": _type,
@@ -278,13 +276,13 @@ def build_suggester(collection):
   print("Building suggester .. ")
   base_url = Utils.solrBaseURL(collection=collection)
   requests.get(base_url + "suggest?wt=json&suggest.q=la&suggest.build=true")
-  print("Done")
+  r = requests.get(base_url + "suggestsmall?wt=json&suggest.q=la&suggest.build=true")
 
 def index_all(collection):
   index_search_queries(collection)
+  index_products(collection)
   index_categories(collection)
   index_brands(collection)
-  index_products(collection)
   build_suggester(collection)
 
 def fetch_product_by_parentid(parent_id):
@@ -338,6 +336,7 @@ if __name__ == '__main__':
   group.add_argument("-p", "--product", action='store_true')
 
   parser.add_argument("--swap", action='store_true', help="Swap the Core")
+  parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
 
   collection_state = parser.add_mutually_exclusive_group(required=True)
   collection_state.add_argument("--inactive", action='store_true')
@@ -347,7 +346,7 @@ if __name__ == '__main__':
   argv = vars(parser.parse_args())
 
   required_args = ['category', 'brand', 'search_query', 'product']
-  index_all = not any([argv[x] for x in required_args])
+  index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
  
   if argv['collection']:
     collection = argv['collection']
@@ -359,10 +358,14 @@ if __name__ == '__main__':
   print("Indexing to collection: %s" % collection)
   if argv['search_query'] or index_all:
     index_search_queries(collection)
+  if argv['product'] or index_all:
+    index_products(collection)
   if argv['category'] or index_all:
     index_categories(collection)
   if argv['brand'] or index_all:
     index_brands(collection)
-  if argv['product'] or index_all:
-    index_products(collection)
   build_suggester(collection)
+
+
+  if argv['buildonly']:
+    build_suggester(collection)
