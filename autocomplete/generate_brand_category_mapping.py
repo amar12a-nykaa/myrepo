@@ -110,14 +110,18 @@ def getProducts():
   global brand_name_name
 
   #Brand id - name mapping
-  query = """SELECT nkb.name AS name, nkb.brand_id AS id, cur.request_path AS url, ci.brand_id AS brands_v1 
+  query = """
+          select distinct name, id, url, brands_v1 
+          FROM(
+             SELECT nkb.name AS name, nkb.brand_id AS id, cur.request_path AS url, ci.brand_id AS brands_v1 
              FROM nk_brands nkb INNER JOIN nykaalive1.core_url_rewrite cur ON nkb.brand_id=cur.category_id 
              INNER JOIN nykaalive1.category_information ci ON cur.category_id=ci.cat_id
              WHERE cur.product_id IS NULL
+          )A
           """
   results = Utils.fetchResults(nykaa_replica_db_conn, query)
   for brand in results:
-    brand_name = brand['name']
+    brand_name = brand['name'].replace("’", "'")
     brand_id = brand['id']
     brand_url = "http://www.nykaa.com/" + brand['url']
     brands_v1 = brand['brands_v1']
@@ -145,6 +149,8 @@ def getProducts():
            "
   results = Utils.fetchResults(nykaa_analytics_db_conn, query)
   for row in results:
+    if row['brand']:
+      row['brand'] = row['brand'].replace("’", "'")
     products.append(row)
 
   print("# products found: %s" % len(products))
@@ -201,6 +207,7 @@ def saveMappings(brand_category_mappings):
   num_brands_skipped = 0
   num_brands_processed= 0
   for brand, categories in brand_category_mappings.items():
+    brand = brand.replace("’", "'")
     sortkey = operator.itemgetter(1)
     sorted_categories = sorted(categories.items(), key=sortkey, reverse=True)
     top_categories = []
@@ -248,9 +255,9 @@ def generate_brand_category_mapping():
   get_category_details()
   update_category_table(products)
   brand_category_mappings = getMappings(products)
-#print("brand_category_mappings: %s" % sorted(list(brand_category_mappings.keys())))
   saveMappings(brand_category_mappings)
 
 
 if __name__ == "__main__":
   generate_brand_category_mapping()
+  #embed()
