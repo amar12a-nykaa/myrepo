@@ -26,10 +26,10 @@ host = "nykaa-analytics.nyk00-int.network"
 user = "analytics"
 password = "P1u8Sxh7kNr"
 db = "analytics" 
-nykaa_analytics_db_conn = mysql.connector.connect(host=host, user=user, password=password, database=db)  
+nykaa_analytics_db_conn = mysql.connector.connect(host=host, user=user, password=password, database=db)
 
 #Connection to 'read-replica' host
-nykaa_replica_db_conn = Utils.nykaaMysqlConnection()
+nykaa_replica_db_conn = Utils.nykaaMysqlConnection(force_production=True)
 
 
 
