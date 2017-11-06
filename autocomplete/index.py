@@ -154,7 +154,7 @@ def index_brands(collection):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
+  query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Indexing')
   for row in results:
@@ -166,7 +166,8 @@ def index_brands(collection):
         "entity": row['brand'], 
         "weight": row['brand_popularity'], 
         "type": "brand",
-        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count})
+        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id']}),
+        "id": row['brand_id'],
       })
     if len(docs) >= 100:
       SolrUtils.indexDocs(docs, collection)
@@ -200,7 +201,8 @@ def index_categories(collection):
         "entity": row['category_name'],
         "weight": row['category_popularity'],
         "type": "category",
-        "data": json.dumps({"url": row['url'], "type": "category"})
+        "data": json.dumps({"url": row['url'], "type": "category", "id": row['category_id']}),
+        "id": row['category_id']
       })
     if len(docs) == 100:
       SolrUtils.indexDocs(docs, collection)
@@ -248,15 +250,15 @@ def index_products(collection):
     url = product['product_url']
     image = product['image']
 
-    data = json.dumps({"type": _type, "url": url, "image": image})
+    data = json.dumps({"type": _type, "url": url, "image": image, "id": parent_id})
     cnt_product += 1 
-
     docs.append({
         "_id": createId(product['title']),
         "entity": product['title'], 
         "weight": row['popularity'], 
         "type": _type,
         "data": data,
+        "id": parent_id
       })
     #print(docs)
     #exit()
