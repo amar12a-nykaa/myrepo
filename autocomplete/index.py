@@ -44,7 +44,9 @@ def create_map_search_product():
   map_search_product = {}
 
   for query in [p['query'] for p in search_terms_normalized.find()]:
-    base_url = "http://localhost:8983/solr/yang/select"
+    base_url = Utils.solrHostName() + "/solr/yang/select"
+    #embed()
+    #exit()
     f = furl(base_url) 
     f.args['defType'] = 'dismax'
     f.args['indent'] = 'on'
@@ -196,6 +198,8 @@ def index_categories(collection):
       continue
     prev_cat = row['category_name']
 
+    if row['category_name'].lower() in ['concealer', 'lipstick', 'nail polish', 'eyeliner', 'kajal']:
+      continue
     docs.append({
         "_id": createId(row['category_name']),
         "entity": row['category_name'],
@@ -292,7 +296,7 @@ def index_all(collection):
 def fetch_product_by_parentid(parent_id):
   DEBUG = False 
   product = {}
-  base_url = "http://localhost:8983/solr/yang/select"
+  base_url = Utils.solrHostName() + "/solr/yang/select"
   f = furl(base_url) 
   f.args['q'] = 'parent_id:%s AND product_id:%s' % (parent_id,parent_id)
   f.args['fq'] = 'type:"simple" OR type:"configurable"'
