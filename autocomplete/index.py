@@ -133,6 +133,7 @@ def index_search_queries(collection):
       row['popularity'] = 200
     docs.append({
         "_id": createId(row['_id']),
+        "id": createId(row['_id']),
         "entity": entity, 
         "weight": row['popularity'], 
         "type": _type,
