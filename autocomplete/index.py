@@ -84,15 +84,19 @@ def create_map_search_product():
         print("===========")
 
       image = ""
+      image_base = ""
       try:
         image = doc['media'][0]['url']
-        image = re.sub("w-[0-9]*", "w-200", image)
-        image = re.sub("h-[0-9]*", "h-200", image)
+        image = re.sub("w-[0-9]*", "w-60", image)
+        image = re.sub("h-[0-9]*", "h-60", image)
+        
+        image_base = re.sub("\/tr[^\/]*", "",  image) 
       except:
         print("[ERROR] Could not index query '%s' as product because image is missing for product_id: %s" % (query, doc['product_id']))
 
       doc['image'] = image 
-      doc = {k:v for k,v in doc.items() if k in ['image', 'title', 'product_url']}
+      doc['image_base'] = image_base 
+      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url']}
       map_search_product[query] = docs[0]
   return map_search_product
 
@@ -118,8 +122,9 @@ def index_search_queries(collection):
       _type = 'product'
       url = map_search_product[query]['product_url']
       image = map_search_product[query]['image']
+      image_base = map_search_product[query]['image_base']
 
-      data = json.dumps({"type": _type, "url": url, "image": image})
+      data = json.dumps({"type": _type, "url": url, "image": image, "image_base": image_base})
       cnt_product += 1 
       entity = map_search_product[query]['title']
     else:
@@ -243,7 +248,7 @@ def index_products(collection):
       #print("[ERROR] Product missing in solr yin yang: %s" % parent_id)
       cnt_missing_solr += 1
       continue
-    required_keys = set(["product_url", 'image', 'title'])
+    required_keys = set(["product_url", 'image', 'title', 'image_base'])
     missing_keys = required_keys - set(list(product.keys())) 
     if missing_keys:
       #print("[ERROR] Required keys missing for %s: %s" % (parent_id, missing_keys))
@@ -254,8 +259,9 @@ def index_products(collection):
     _type = 'product'
     url = product['product_url']
     image = product['image']
+    image_base = product['image_base']
 
-    data = json.dumps({"type": _type, "url": url, "image": image, "id": parent_id})
+    data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id})
     cnt_product += 1 
     docs.append({
         "_id": createId(product['title']),
@@ -317,15 +323,18 @@ def fetch_product_by_parentid(parent_id):
       print("===========")
 
     image = ""
+    image_base = ""
     try:
       image = doc['media'][0]['url']
-      image = re.sub("w-[0-9]*", "w-200", image)
-      image = re.sub("h-[0-9]*", "h-200", image)
+      image = re.sub("w-[0-9]*", "w-60", image)
+      image = re.sub("h-[0-9]*", "h-60", image)
+      image_base = re.sub("\/tr[^\/]*", "",  image) 
     except:
       print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
 
     doc['image'] = image 
-    doc = {k:v for k,v in doc.items() if k in ['image', 'title', 'product_url']}
+    doc['image_base'] = image_base 
+    doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url']}
     return doc
   return None
 
