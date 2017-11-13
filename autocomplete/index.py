@@ -96,7 +96,7 @@ def create_map_search_product():
 
       doc['image'] = image 
       doc['image_base'] = image_base 
-      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url']}
+      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'product_id']}
       map_search_product[query] = docs[0]
   return map_search_product
 
@@ -123,8 +123,9 @@ def index_search_queries(collection):
       url = map_search_product[query]['product_url']
       image = map_search_product[query]['image']
       image_base = map_search_product[query]['image_base']
+      product_id = map_search_product[query]['product_id']
 
-      data = json.dumps({"type": _type, "url": url, "image": image, "image_base": image_base})
+      data = json.dumps({"type": _type, "url": url, "image": image, "image_base": image_base, "id": product_id })
       cnt_product += 1 
       entity = map_search_product[query]['title']
     else:
