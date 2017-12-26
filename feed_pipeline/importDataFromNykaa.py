@@ -7,7 +7,6 @@ from pas.v1.utils import Utils, MemcacheUtils
 
 class NykaaImporter:
 
-  nykaa_mysql_conn = None
   pws_mysql_conn = None
   pws_cursor = None
 
@@ -15,7 +14,6 @@ class NykaaImporter:
 
   def importData():
     # DB handlers for nykaa and pws DBs
-    NykaaImporter.nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     NykaaImporter.pws_mysql_conn = Utils.mysqlConnection('w')
     NykaaImporter.pws_cursor = NykaaImporter.pws_mysql_conn.cursor()
 
@@ -29,8 +27,9 @@ class NykaaImporter:
 
   def importAttributes():
     # Import attributes
+    nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     query = "SELECT option_id, value FROM eav_attribute_option_value GROUP BY option_id"
-    results = Utils.fetchResults(NykaaImporter.nykaa_mysql_conn, query)
+    results = Utils.fetchResults(nykaa_mysql_conn, query)
 
     count = 0
     for option in results:
@@ -40,7 +39,7 @@ class NykaaImporter:
       if name and name.strip():
         color_codes = []
         color_query = "SELECT * FROM colorfamily_codes WHERE color_id=%s"
-        color_results = Utils.fetchResults(NykaaImporter.nykaa_mysql_conn, color_query, (option_id,))
+        color_results = Utils.fetchResults(nykaa_mysql_conn, color_query, (option_id,))
         if color_results:
           color_codes = color_results[0]['color_code'].split(',') if color_results[0]['color_code'].strip() else []
 
@@ -71,16 +70,18 @@ class NykaaImporter:
 
   def importBrandCategoryAttributes():
     #Import Brand-Category level info like app_sorting, featured_products
+    nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     query = """SELECT DISTINCT(cce.entity_id) AS category_id, cur.request_path AS category_url, 
-             ci.app_sorting, ci.custom_sort, ci.art_banner_image, ci.art_banner_video, ci.art_banner_video_image, 
-             ci.font_color, ci.art_title, ci.art_content, ci.art_url, ci.art_link_text, ci.categories, ci.art_position,
-             (cce.level-2) AS level, (CASE WHEN nkb.brand_id > 0 THEN 'brand' ELSE 'category' END) AS type
-             FROM `catalog_category_entity` AS cce
-             LEFT JOIN `category_information` AS ci ON ci.cat_id = cce.entity_id
-             LEFT JOIN `core_url_rewrite` AS cur ON cur.category_id = cce.entity_id
-             LEFT JOIN nk_brands AS nkb ON nkb.brand_id = cce.entity_id
-             WHERE cur.store_id = 0 AND cur.product_id IS NULL;"""
-    results = Utils.fetchResults(NykaaImporter.nykaa_mysql_conn, query)
+            ci.app_sorting, ci.custom_sort, ci.art_banner_image, ci.art_banner_video, ci.art_banner_video_image, 
+            ci.font_color, ci.art_title, ci.art_content, ci.art_url, ci.art_link_text, ci.categories, ci.art_position,
+            (cce.level-2) AS level, (CASE WHEN nkb.brand_id > 0 THEN 'brand' ELSE 'category' END) AS type 
+            FROM `catalog_category_entity` AS cce
+            LEFT JOIN `category_information` AS ci ON ci.cat_id = cce.entity_id
+            LEFT JOIN `core_url_rewrite` AS cur ON cur.category_id = cce.entity_id
+            LEFT JOIN nk_brands AS nkb ON nkb.brand_id = cce.entity_id
+            WHERE cur.store_id = 0 AND cur.product_id IS NULL
+            GROUP BY category_id;"""
+    results = Utils.fetchResults(nykaa_mysql_conn, query)
     count = 0
     for item in results:
       try:
@@ -137,8 +138,9 @@ class NykaaImporter:
 
   def importOfferAttributes():
     # Import offer attributes: featured_products and app_sorting
+    nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     query = "SELECT entity_id AS offer_id, app_sorting, custom_sort FROM `nykaa_offers`"
-    results = Utils.fetchResults(NykaaImporter.nykaa_mysql_conn, query)
+    results = Utils.fetchResults(nykaa_mysql_conn, query)
     count = 0
     for item in results:
       try:
@@ -166,13 +168,14 @@ class NykaaImporter:
 
   def importMetaInformation():
     # Import category meta information
+    nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     query = """SELECT e.entity_id AS category_id, CONCAT(ccevt.value, ' | Nykaa') AS meta_title, REPLACE(REPLACE(ccetk.value, '\r', ''), '\n', '') AS meta_keywords, 
                REPLACE(REPLACE(ccetd.value, '\r', ''), '\n', '') AS meta_description FROM catalog_category_entity e
                LEFT JOIN catalog_category_entity_varchar ccevt ON ccevt.entity_id = e.entity_id AND ccevt.attribute_id = 36
                LEFT JOIN catalog_category_entity_text ccetk ON ccetk.entity_id = e.entity_id AND ccetk.attribute_id = 37
                LEFT JOIN catalog_category_entity_text ccetd ON ccetd.entity_id = e.entity_id AND ccetd.attribute_id = 38
                WHERE ccevt.value IS NOT NULL OR ccetk.value IS NOT NULL OR ccetd.value IS NOT NULL;"""    
-    results = Utils.fetchResults(NykaaImporter.nykaa_mysql_conn, query)
+    results = Utils.fetchResults(nykaa_mysql_conn, query)
     count = 0
     for result in results:
       try:

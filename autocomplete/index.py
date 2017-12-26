@@ -12,8 +12,7 @@ import editdistance
 import IPython
 import mysql.connector
 import numpy
-import omniture
-import pandas as pd
+import os
 import requests
 from furl import furl
 from IPython import embed
@@ -45,7 +44,9 @@ def create_map_search_product():
   map_search_product = {}
 
   for query in [p['query'] for p in search_terms_normalized.find()]:
-    base_url = "http://localhost:8983/solr/yang/select"
+    base_url = Utils.solrHostName() + "/solr/yang/select"
+    #embed()
+    #exit()
     f = furl(base_url) 
     f.args['defType'] = 'dismax'
     f.args['indent'] = 'on'
@@ -83,15 +84,19 @@ def create_map_search_product():
         print("===========")
 
       image = ""
+      image_base = ""
       try:
         image = doc['media'][0]['url']
-        image = re.sub("w-[0-9]*", "w-200", image)
-        image = re.sub("h-[0-9]*", "h-200", image)
+        image = re.sub("w-[0-9]*", "w-60", image)
+        image = re.sub("h-[0-9]*", "h-60", image)
+        
+        image_base = re.sub("\/tr[^\/]*", "",  image) 
       except:
         print("[ERROR] Could not index query '%s' as product because image is missing for product_id: %s" % (query, doc['product_id']))
 
       doc['image'] = image 
-      doc = {k:v for k,v in doc.items() if k in ['image', 'title', 'product_url']}
+      doc['image_base'] = image_base 
+      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'product_id']}
       map_search_product[query] = docs[0]
   return map_search_product
 
@@ -117,8 +122,10 @@ def index_search_queries(collection):
       _type = 'product'
       url = map_search_product[query]['product_url']
       image = map_search_product[query]['image']
+      image_base = map_search_product[query]['image_base']
+      product_id = map_search_product[query]['product_id']
 
-      data = json.dumps({"type": _type, "url": url, "image": image})
+      data = json.dumps({"type": _type, "url": url, "image": image, "image_base": image_base, "id": product_id })
       cnt_product += 1 
       entity = map_search_product[query]['title']
     else:
@@ -132,6 +139,7 @@ def index_search_queries(collection):
       row['popularity'] = 200
     docs.append({
         "_id": createId(row['_id']),
+        "id": createId(row['_id']),
         "entity": entity, 
         "weight": row['popularity'], 
         "type": _type,
@@ -155,7 +163,7 @@ def index_brands(collection):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
+  query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Indexing')
   for row in results:
@@ -167,7 +175,8 @@ def index_brands(collection):
         "entity": row['brand'], 
         "weight": row['brand_popularity'], 
         "type": "brand",
-        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count})
+        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id']}),
+        "id": row['brand_id'],
       })
     if len(docs) >= 100:
       SolrUtils.indexDocs(docs, collection)
@@ -196,12 +205,15 @@ def index_categories(collection):
       continue
     prev_cat = row['category_name']
 
+    if row['category_name'].lower() in ['concealer', 'lipstick', 'nail polish', 'eyeliner', 'kajal']:
+      continue
     docs.append({
         "_id": createId(row['category_name']),
         "entity": row['category_name'],
         "weight": row['category_popularity'],
         "type": "category",
-        "data": json.dumps({"url": row['url'], "type": "category"})
+        "data": json.dumps({"url": row['url'], "type": "category", "id": row['category_id']}),
+        "id": row['category_id']
       })
     if len(docs) == 100:
       SolrUtils.indexDocs(docs, collection)
@@ -237,7 +249,7 @@ def index_products(collection):
       #print("[ERROR] Product missing in solr yin yang: %s" % parent_id)
       cnt_missing_solr += 1
       continue
-    required_keys = set(["product_url", 'image', 'title'])
+    required_keys = set(["product_url", 'image', 'title', 'image_base'])
     missing_keys = required_keys - set(list(product.keys())) 
     if missing_keys:
       #print("[ERROR] Required keys missing for %s: %s" % (parent_id, missing_keys))
@@ -248,16 +260,17 @@ def index_products(collection):
     _type = 'product'
     url = product['product_url']
     image = product['image']
+    image_base = product['image_base']
 
-    data = json.dumps({"type": _type, "url": url, "image": image})
+    data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id})
     cnt_product += 1 
-
     docs.append({
         "_id": createId(product['title']),
         "entity": product['title'], 
         "weight": row['popularity'], 
         "type": _type,
         "data": data,
+        "id": parent_id
       })
     #print(docs)
     #exit()
@@ -291,7 +304,7 @@ def index_all(collection):
 def fetch_product_by_parentid(parent_id):
   DEBUG = False 
   product = {}
-  base_url = "http://localhost:8983/solr/yang/select"
+  base_url = Utils.solrHostName() + "/solr/yang/select"
   f = furl(base_url) 
   f.args['q'] = 'parent_id:%s AND product_id:%s' % (parent_id,parent_id)
   f.args['fq'] = 'type:"simple" OR type:"configurable"'
@@ -311,15 +324,18 @@ def fetch_product_by_parentid(parent_id):
       print("===========")
 
     image = ""
+    image_base = ""
     try:
       image = doc['media'][0]['url']
-      image = re.sub("w-[0-9]*", "w-200", image)
-      image = re.sub("h-[0-9]*", "h-200", image)
+      image = re.sub("w-[0-9]*", "w-60", image)
+      image = re.sub("h-[0-9]*", "h-60", image)
+      image_base = re.sub("\/tr[^\/]*", "",  image) 
     except:
       print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
 
     doc['image'] = image 
-    doc = {k:v for k,v in doc.items() if k in ['image', 'title', 'product_url']}
+    doc['image_base'] = image_base 
+    doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url']}
     return doc
   return None
 
@@ -375,3 +391,8 @@ if __name__ == '__main__':
 
   if argv['buildonly']:
     build_suggester(collection)
+
+  print("Restarting Apache and Memcached")
+  os.system("/etc/init.d/apache2 restart")
+  os.system("/etc/init.d/memcached restart")
+  

@@ -10,3 +10,7 @@ mongodump --gzip --db search --archive=/tmp/search.gz
 scpny /tmp/search.gz ubuntu@admin:/tmp/search.gz
 # MongoRestore DB
 mongorestore --gzip --db search --archive=/tmp/search.gz 
+
+#Sum of mrp of top products
+curl http://localhost/apis/v1/category.list?category_id=18 | jq '.result.products' | jq '.[0:10]' | jq 'map(.mrp)' | jq 'add'
+
