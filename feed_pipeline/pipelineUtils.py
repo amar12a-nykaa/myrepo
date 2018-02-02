@@ -74,21 +74,33 @@ class PipelineUtils:
       raise Exception("Missing Fields: %s" % missing_fields)
 
   def getProductsToIndex(products):
-    params = json.dumps({"products": products}).encode('utf8')
-    req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.get", data=params, headers={'content-type': 'application/json'})
-    pas_object = json.loads(urllib.request.urlopen(req, params).read().decode('utf-8'))['skus']
-   
-    update_docs = []
-    swap_keys = {'sp': 'price', 'discount': 'discount', 'mrp': 'mrp', 'is_in_stock': 'in_stock', 'quantity': 'quantity', 'backorders': 'backorders', 'disabled': 'disabled'}
+    # Check if to-be-updated skus are actually present in solr, ignore skus not present
+    final_products_to_update = []
+    product_skus = [product['sku'].upper() for product in products]
+    solr_params = {}
+    if product_skus:
+      solr_params['q'] = ' OR '.join(['(sku:'+sku+')' for sku in product_skus])
+      solr_params['fl'] = 'sku,type'
+      solr_response = Utils.makeSolrRequest(solr_params)
+      docs = solr_response.get("docs", [])
+      for doc in docs:
+        final_products_to_update.append({'sku': doc['sku'], 'type': doc['type']})
 
-    for sku, pas in pas_object.items():
-      update_fields = {}
-      for key in swap_keys.keys():
-        if pas.get(key) is not None:
-          update_fields[swap_keys[key]] = {'set': pas[key]}
-      update_fields.update({'sku': sku})
-      update_fields['update_time'] = {'set': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')}
-      update_docs.append(update_fields)
+    update_docs = []
+    if final_products_to_update:
+      params = json.dumps({"products": final_products_to_update}).encode('utf8')
+      req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.get", data=params, headers={'content-type': 'application/json'})
+      pas_object = json.loads(urllib.request.urlopen(req, params).read().decode('utf-8')).get('skus', {})
+      swap_keys = {'sp': 'price', 'discount': 'discount', 'mrp': 'mrp', 'is_in_stock': 'in_stock', 'quantity': 'quantity', 'backorders': 'backorders', 'disabled': 'disabled'}
+
+      for sku, pas in pas_object.items():
+        update_fields = {}
+        for key in swap_keys.keys():
+          if pas.get(key) is not None:
+            update_fields[swap_keys[key]] = {'set': pas[key]}
+        update_fields.update({'sku': sku})
+        update_fields['update_time'] = {'set': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')}
+        update_docs.append(update_fields)
 
     return update_docs
 
@@ -115,6 +127,6 @@ class PipelineUtils:
 
 
 if __name__ == "__main__":
-	#ret = SolrUtils.get_active_inactive_collections()
-	#print(ret)
+  #ret = SolrUtils.get_active_inactive_collections()
+  #print(ret)
   pass
