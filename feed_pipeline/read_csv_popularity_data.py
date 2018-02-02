@@ -1,3 +1,5 @@
+import re
+from datetime import timedelta, date
 import time 
 import datetime
 import subprocess
@@ -14,6 +16,19 @@ from loopcounter import LoopCounter
 
 sys.path.append('/home/apis/nykaa/')
 from pas.v1.utils import Utils, MemcacheUtils
+
+def valid_date(s):
+  try:
+    if re.search("^-?[0-9]+$", s):
+      adddays = int(s)
+      assert abs(adddays) < 500, "Reports can be fetched only 500 days in past."
+      now = arrow.utcnow()
+      return now.replace(days=adddays).format('YYYY-MM-DD')
+    else:
+      return arrow.get(s, 'YYYY-MM-DD').format('YYYY-MM-DD')
+  except ValueError:
+    msg = "Not a valid date: '{0}'.".format(s)
+    raise argparse.ArgumentTypeError(msg)
 
 
 def create_product_id_index():
@@ -50,18 +65,46 @@ def create_product_id_index():
 
 product_id_index = create_product_id_index()
 
-def read_file_by_date(date, platform, dryrun=False):
-  assert isinstance(date, datetime.datetime)
+
+def read_file_by_dates(startdate, enddate, platform, dryrun=False, limit=0, product_id=None, debug=False):
+
+  startdate = datetime.datetime.strptime(startdate,  "%Y-%m-%d") if isinstance(startdate, str) else startdate
+  enddate = datetime.datetime.strptime(enddate,  "%Y-%m-%d") if isinstance(enddate, str) else enddate
+
+  startdate = startdate.date() if isinstance(startdate, datetime.datetime) else startdate
+  enddate = enddate.date() if isinstance(enddate, datetime.datetime) else enddate
+
+  assert isinstance(startdate, datetime.date)
+  assert isinstance(enddate, datetime.date)
+  def daterange(start_date, end_date):
+      for n in range(int ((end_date - start_date).days) + 1):
+          yield start_date + timedelta(n)
+
+  for single_date in daterange(startdate, enddate):
+    print(single_date.strftime("%Y-%m-%d"))
+    read_file_by_date(single_date, platform, dryrun=dryrun, limit=limit, product_id=product_id, debug=debug)
+
+def read_file_by_date(date, platform, dryrun=False, limit=0, product_id=None, debug=False):
+  date = datetime.datetime.strptime(date,  "%Y-%m-%d") if isinstance(date, str) else date
+  assert isinstance(date, datetime.datetime) or  isinstance(date, datetime.date), "Bad date format"
   if platform == 'web':
     filename = '/nykaa/adminftp/website_data_all_metrics_%s.csv' %  date.strftime("%Y%m%d")
+    if not os.path.exists(filename):
+      filename = '/nykaa/adminftp/website_data_all_metrics_%s.zip' %  date.strftime("%Y%m%d")
+
   elif platform == 'app':
-    filename = '/nykaa/adminftp/App_data_all_metrics_%s.zip' %  date.strftime("%Y%m%d")
+    filename = '/nykaa/adminftp/App_data_all_metrics_%s.csv' %  date.strftime("%Y%m%d")
+    if not os.path.exists(filename):
+      filename = '/nykaa/adminftp/App_data_all_metrics_%s.zip' %  date.strftime("%Y%m%d")
 
   print(filename)
-  return read_file(filename, platform, dryrun)
+  return read_file(filename, platform, dryrun, limit=limit, product_id=product_id, debug=debug)
 
 def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False):
+  if not limit:
+    limit = 0
   product_id_arg = product_id
+
   assert platform in ['app', 'web']
 
   client = MongoClient()
@@ -189,11 +232,19 @@ if __name__ == '__main__':
 
   parser = argparse.ArgumentParser()
   parser.add_argument("--platform", '-p', required=True, help="app or web")
-  parser.add_argument("--filepath", '-f', required=True,)
+  parser.add_argument("--filepath", '-f',)
   parser.add_argument("--dryrun",  action='store_true')
   parser.add_argument("--debug",  action='store_true')
   parser.add_argument("--limit", type=int, default=0)
   parser.add_argument("--id", default=0)
+
+  parser.add_argument("--startdate", help="startdate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-30).format('YYYY-MM-DD'))
+  parser.add_argument("--enddate", help="enddate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace().format('YYYY-MM-DD'))
+
   argv = vars(parser.parse_args())
-  read_file(filepath=argv['filepath'], platform=argv['platform'], dryrun=argv['dryrun'], limit=argv['limit'], product_id=argv['id'], debug=argv['debug'])
+  if argv['filepath']:
+    read_file(filepath=argv['filepath'], platform=argv['platform'], dryrun=argv['dryrun'], limit=argv['limit'], product_id=argv['id'], debug=argv['debug'])
+  else:
+    read_file_by_dates(startdate=argv['startdate'], enddate=argv['enddate'], platform=argv['platform'], dryrun=argv['dryrun'], limit=argv['limit'], product_id=argv['id'], debug=argv['debug'])
+      
 
