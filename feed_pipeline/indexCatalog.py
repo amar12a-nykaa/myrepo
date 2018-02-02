@@ -162,7 +162,7 @@ class CatalogIndexer:
     'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern', 'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
     'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
     'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
-    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id']
+    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1', 'beauty_partner']
 
     all_rows = read_csv_from_file(file_path)
     columns = all_rows[0].keys()
@@ -223,6 +223,7 @@ class CatalogIndexer:
         doc['shipping_quote'] = row.get('shipping_quote')
         doc['vendor_id'] = row['vendor_id']
         doc['vendor_sku'] = row['vendor_sku']
+        doc['brand_tags'] = row['brand_tags'].split('|')
 
         #Write productid in product datebase
         try:
@@ -307,32 +308,40 @@ class CatalogIndexer:
           variant_ids = row['parent_id'].split('|') if row['parent_id'] else []
           variant_name_key = ''
           variant_icon_key = ''
+          variant_attr_id_key = ''
           if variant_type == 'shade':
             variant_name_key = 'shade_name'
             variant_icon_key = 'variant_icon'
+            variant_attr_id_key = 'shade_id'
           elif variant_type == 'size':
             variant_name_key = 'size'
+            variant_attr_id_key = 'size_id'
 
           variant_names = row[variant_name_key].split('|') if variant_name_key and row[variant_name_key] else []
           variant_icons = row[variant_icon_key].split('|') if variant_icon_key and row[variant_icon_key] else []
-          if variant_type and variant_skus and len(variant_skus)==len(variant_names) and len(variant_skus)==len(variant_ids):
+          variant_attr_ids = row[variant_attr_id_key].split('|') if variant_attr_id_key and row[variant_attr_id_key] else []
+          if variant_type and variant_skus and len(variant_skus)==len(variant_names) and len(variant_skus)==len(variant_ids) and len(variant_skus)==len(variant_attr_ids):
             if variant_icons and len(variant_icons) != len(variant_skus):
               variant_icons = []
             variants_arr = []
             if not variant_icons:
               variant_icons = [""]*len(variant_skus)
             for i, sku in enumerate(variant_skus):
-              variants_arr.append({'sku': variant_skus[i], 'id': variant_ids[i], 'name': variant_names[i], 'icon': variant_icons[i]})
+              variants_arr.append({'sku': variant_skus[i], 'id': variant_ids[i], 'name': variant_names[i], 'icon': variant_icons[i], 'variant_id': variant_attr_ids[i]})
             doc['variants'] = {variant_type: variants_arr}
           doc['variant_type'] = variant_type
           doc['option_count'] = len(variant_skus)
         elif doc['type'] == 'simple':
           variant_name = row['shade_name'] or row['size']
+          variant_attr_id = row['shade_id'] or row['size_id']
           variant_icon = row['variant_icon']
           if variant_name:
+            doc['variant_type'] = variant_type
             doc['variant_name'] = variant_name
             if variant_icon:
               doc['variant_icon'] = variant_icon
+            if variant_attr_id:
+              doc['variant_id_i'] = variant_attr_id
         elif doc['type'] == 'bundle':
           doc['product_ids'] = row['parent_id'].split('|') if row['parent_id'] else []
           doc['product_skus'] = row['parent_sku'].split('|') if row['parent_sku'] else []
@@ -406,6 +415,9 @@ class CatalogIndexer:
           doc[field] = row.get(field, "")
 
         doc['list_offer_ids'] = row['list_offer_id'].split('|')
+        doc['max_allowed_qty_i'] = row['max_allowed_qty'] or 5
+        doc['is_free_sample_i'] = row['is_free_sample'] or 0
+
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
