@@ -19,7 +19,7 @@ from pas.v1.csvutils import read_csv_from_file
 from pas.v1.exceptions import SolrError
 from pas.v1.utils import CATALOG_COLLECTION_ALIAS, Utils
 from pipelineUtils import PipelineUtils
-from popularity_api import get_popularity_for_id
+from popularity_api import get_popularity_for_id, validate_popularity_data_health
 from solrutils import SolrUtils
 
 
@@ -156,6 +156,8 @@ class CatalogIndexer:
 
       print(" --> Indexing to inactive collection: %s" % collection)
 
+    validate_popularity_data_health()
+
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
     'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
     'variant_type', 'offer_name', 'offer_id', 'product_expiry', 'created_at', 'category_id', 'category', 'brand_v1', 'brand', 'shop_the_look_product', 'style_divas',
@@ -223,7 +225,6 @@ class CatalogIndexer:
         doc['shipping_quote'] = row.get('shipping_quote')
         doc['vendor_id'] = row['vendor_id']
         doc['vendor_sku'] = row['vendor_sku']
-        doc['brand_tags'] = row['brand_tags'].split('|')
 
         #Write productid in product datebase
         try:

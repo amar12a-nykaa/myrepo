@@ -1,5 +1,6 @@
 import sys
 from pymongo import MongoClient
+from IPython import embed
 
 client = MongoClient()
 popularity_table = client['search']['popularity']
@@ -28,10 +29,23 @@ def get_popularity_for_id(product_id, parent_id=None):
 
   return ret
 
+def validate_popularity_data_health():
+  count = popularity_table.count()
+  assert count > 55000, "Number of products is less than 55000." 
+
+  count_non_zero_popularity = popularity_table.count({"popularity": {"$gt": 0}})
+  assert count_non_zero_popularity > 55000, "Number of products is less than 55000." 
+
+  print("Popularity data looks good. Validation successful")
+  
 if __name__ == '__main__':
   print(get_popularity_for_id('111405', parent_id='111417'))
   
   print(get_popularity_for_id('7410', parent_id='7412'))
   print(get_popularity_for_id('157885', parent_id='157885'))
+<<<<<<< HEAD
   print(get_popularity_for_id('157885', parent_id='157885'))
   print(get_popularity_for_id('31074', parent_id='31074'))
+=======
+  validate_popularity_data_health()
+>>>>>>> 913c57726207ad3cf419bdc5c8c8cbe9310c996d
