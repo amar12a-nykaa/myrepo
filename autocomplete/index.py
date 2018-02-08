@@ -205,8 +205,8 @@ def index_categories(collection):
       continue
     prev_cat = row['category_name']
 
-    if row['category_name'].lower() in ['concealer', 'lipstick', 'nail polish', 'eyeliner', 'kajal']:
-      continue
+#    if row['category_name'].lower() in ['concealer', 'lipstick', 'nail polish', 'eyeliner', 'kajal']:
+#      continue
     docs.append({
         "_id": createId(row['category_name']),
         "entity": row['category_name'],
