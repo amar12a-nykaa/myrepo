@@ -40,12 +40,7 @@ def validate_popularity_data_health():
   
 if __name__ == '__main__':
   print(get_popularity_for_id('111405', parent_id='111417'))
-  
   print(get_popularity_for_id('7410', parent_id='7412'))
   print(get_popularity_for_id('157885', parent_id='157885'))
-<<<<<<< HEAD
-  print(get_popularity_for_id('157885', parent_id='157885'))
   print(get_popularity_for_id('31074', parent_id='31074'))
-=======
   validate_popularity_data_health()
->>>>>>> 913c57726207ad3cf419bdc5c8c8cbe9310c996d
