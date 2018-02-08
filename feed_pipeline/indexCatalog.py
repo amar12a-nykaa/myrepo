@@ -331,6 +331,7 @@ class CatalogIndexer:
           doc['variant_type'] = variant_type
           doc['option_count'] = len(variant_skus)
         elif doc['type'] == 'simple':
+          variant_type = row['variant_type']
           variant_name = row['shade_name'] or row['size']
           variant_attr_id = row['shade_id'] or row['size_id']
           variant_icon = row['variant_icon']
