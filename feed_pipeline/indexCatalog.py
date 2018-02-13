@@ -225,6 +225,7 @@ class CatalogIndexer:
         doc['shipping_quote'] = row.get('shipping_quote')
         doc['vendor_id'] = row['vendor_id']
         doc['vendor_sku'] = row['vendor_sku']
+        doc['catalog_tag'] = row['catalog_tag'].split('|')
 
         #Write productid in product datebase
         try:
