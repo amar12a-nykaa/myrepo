@@ -21,7 +21,7 @@ from pas.v1.utils import CATALOG_COLLECTION_ALIAS, Utils
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
 from solrutils import SolrUtils
-
+from esutils import EsUtils
 
 conn =  Utils.mysqlConnection()
 
@@ -145,17 +145,34 @@ class CatalogIndexer:
           errors.append("%s: sku not found in Price DB." % doc['sku'])
           continue    
           #raise Exception("sku not found in Price DB.")
+      doc['in_stock'] = bool(doc['in_stock'])
       doc['is_saleable'] = doc['in_stock']
       pws_input_docs.append(doc)
     return (pws_input_docs, errors)
 
-  def index(file_path, collection, update_productids=False):
-    if not collection:
-      collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
-      collection = collections['inactive_collection']
+  def indexSolr(docs, collection):
+    try:
+      if not collection:
+        collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
+        collection = collections['inactive_collection']
+        print(" --> Indexing to inactive solr collection: %s" % collection)
 
-      print(" --> Indexing to inactive collection: %s" % collection)
+      SolrUtils.indexDocs(docs, collection)
+    except SolrError as e:
+      raise Exception(str(e))
 
+  def indexES(docs, index):
+    try:
+      if not index:
+        indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+        index = indexes['active_index']
+        print(" --> Indexing data to inactive elastic search index : %s" % index)
+
+      EsUtils.indexDocs(docs, index)
+    except SolrError as e:
+      raise Exception(str(e))
+
+  def index(search_engine, file_path, collection, update_productids=False):
     validate_popularity_data_health()
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
@@ -428,12 +445,18 @@ class CatalogIndexer:
         #index to solr in batches of DOCS_BATCH_SIZE
         if ((index+1) % CatalogIndexer.DOCS_BATCH_SIZE == 0):
           (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
-          SolrUtils.indexDocs(input_docs, collection=collection)
+
+          # index solr
+          if search_engine == 'solr':
+            CatalogIndexer.indexSolr(input_docs, collection=collection)
+
+          # index elastic search
+          if search_engine == 'elasticsearch':
+            CatalogIndexer.indexES(input_docs, collection=collection)
+
           input_docs = []
           pws_fetch_products = []
           CatalogIndexer.print_errors(errors)
-      except SolrError as e:
-        raise Exception(str(e))
       except Exception as e:
         print(traceback.format_exc())
         print("Error with %s: %s"% (row['sku'], str(e)))
@@ -441,17 +464,26 @@ class CatalogIndexer:
     # index the last remaining docs
     if input_docs:
       (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
-      SolrUtils.indexDocs(input_docs, collection=collection)
-      CatalogIndexer.print_errors(errors)
+      
+      # index solr
+      if search_engine == 'solr':
+        CatalogIndexer.indexSolr(input_docs, collection=collection)
 
+      # index elastic search
+      if search_engine == 'elasticsearch':
+        CatalogIndexer.indexES(input_docs, collection=collection)
+
+      CatalogIndexer.print_errors(errors)
 
 if __name__ == "__main__": 
   parser = argparse.ArgumentParser()
   parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
   parser.add_argument("-c", "--collection", help='name of collection to index to')
+  parser.add_argument("-s", "--searchengine", help='name of search engine you want to update. Enter "solr" or "elasticsearch"')
   parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
   collection = argv['collection']
+  searchengine = argv['collection']
 
   CatalogIndexer.index(file_path, collection, update_productids=argv['update_productids'])
