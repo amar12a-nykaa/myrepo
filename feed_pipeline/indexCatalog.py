@@ -484,6 +484,6 @@ if __name__ == "__main__":
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
   collection = argv['collection']
-  searchengine = argv['collection']
+  searchengine = argv['searchengine']
 
   CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'])
