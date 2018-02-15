@@ -448,11 +448,11 @@ class CatalogIndexer:
 
           # index solr
           if search_engine == 'solr':
-            CatalogIndexer.indexSolr(input_docs, collection=collection)
+            CatalogIndexer.indexSolr(input_docs, collection)
 
           # index elastic search
           if search_engine == 'elasticsearch':
-            CatalogIndexer.indexES(input_docs, collection=collection)
+            CatalogIndexer.indexES(input_docs, collection)
 
           input_docs = []
           pws_fetch_products = []
@@ -467,11 +467,11 @@ class CatalogIndexer:
       
       # index solr
       if search_engine == 'solr':
-        CatalogIndexer.indexSolr(input_docs, collection=collection)
+        CatalogIndexer.indexSolr(input_docs, collection)
 
       # index elastic search
       if search_engine == 'elasticsearch':
-        CatalogIndexer.indexES(input_docs, collection=collection)
+        CatalogIndexer.indexES(input_docs, collection)
 
       CatalogIndexer.print_errors(errors)
 
