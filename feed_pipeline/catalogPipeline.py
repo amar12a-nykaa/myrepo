@@ -154,7 +154,7 @@ import_duration = import_stop - import_start
 print("Time taken to import data from Nykaa: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(import_duration)))
 
 # Index Solr Data
-#indexSolrData(file_path, force_run)
+indexSolrData(file_path, force_run)
 
 # Index Elastic Search Data
 indexESData(file_path, force_run)
