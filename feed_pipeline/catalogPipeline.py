@@ -70,7 +70,7 @@ def indexESData(file_path, force_run):
   print("Inactive Index: %s"%inactive_index)
 
   #clear inactive index
-  resp = EsUtils.clearIndexData(inactive_index)
+  resp = EsUtils.clear_index_data(inactive_index)
 
   index_start = timeit.default_timer()
 
@@ -79,7 +79,19 @@ def indexESData(file_path, force_run):
 
   index_stop = timeit.default_timer()
   index_duration = index_stop - index_start
-  print("Time taken to index data to Solr: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
+  print("Time taken to index data to ElasticSearch: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
+
+  # Verify correctness of indexing by comparing total number of documents in both active and inactive collections
+  body = {"query": {"match_all": {}}, "size" : 0}
+  num_docs_active = Utils.makeESRequest(body, active_index)['hits']['total']
+  num_docs_inactive = Utils.makeESRequest(body, inactive_index)['hits']['total']
+  print('Number of documents in active index(%s): %s'%(active_index, num_docs_active))
+  print('Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
+
+  # Update alias CATALOG_COLLECTION_ALIAS to point to freshly generated index
+  # and do basic verification
+  resp = EsUtils.switch_index_alias(CATALOG_COLLECTION_ALIAS, active_index, inactive_index)
+  print("\n\nFinished running catalog pipeline for ElasticSearch. NEW ACTIVE INDEX: %s\n\n"%inactive_index)
 
 
 FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"

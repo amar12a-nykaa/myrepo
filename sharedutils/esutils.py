@@ -33,11 +33,67 @@ index_alias_config = {
 }
 
 class EsUtils:
-  def get_active_inactive_indexes(index_alias):
-    return {'active_index' : 'yin', 'inactive_index' : 'yang'}
+  def get_index_from_alias(alias):
+    response = {}
+    try:
+      es = Utils.esConn()
+      response = es.indices.get_alias(
+        index=alias
+      )
 
-  def clearIndexData(index):
-    return 'All Clear'
+      for index, index_aliases in response.items():
+        return index
+    except Exception as e:
+      print(traceback.format_exc())
+      raise 
+    return response
+
+  def get_active_inactive_indexes(index_alias):
+    for alias, settings in index_alias_config.items():
+      if alias == index_alias:
+        active_index = EsUtils.get_index_from_alias(alias)
+        for index in settings['collections']:
+          if index != active_index:
+            return {'active_index'  : active_index, 'inactive_index' : index}
+
+    return None
+
+  def switch_index_alias(alias, from_index, to_index):
+    response = {}
+    try:
+      es = Utils.esConn()
+      response = es.indices.update_aliases(
+        body={
+          "actions" : [
+            { "add":  { "index": to_index, "alias": alias } },
+            { "remove": { "index": from_index, "alias": alias } }  
+          ]
+        }
+      )
+
+      for index, index_aliases in response.items():
+        return index
+    except Exception as e:
+      print(traceback.format_exc())
+      raise 
+    return response
+
+  def clear_index_data(index):
+    response = {}
+    try:
+      es = Utils.esConn()
+      response = es.delete_by_query(
+        index=index,
+        body={
+          "query": {
+            "match_all": {}
+          }
+        }
+      )
+    except Exception as e:
+      print(traceback.format_exc())
+      raise 
+    return response
 
   def get_index_data(index):
     for key, value in index_alias_config.items():
@@ -83,6 +139,6 @@ class EsUtils:
     return response
 
 if __name__ == "__main__":
-  ret = SolrUtils.get_active_inactive_indexes('livecore')
+  ret = EsUtils.get_active_inactive_indexes('livecore')
   print(ret)
   embed()
