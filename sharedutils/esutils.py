@@ -27,8 +27,11 @@ index_alias_config = {
     { 
       "collections": ['autocomplete_yin', 'autocomplete_yang'],
       "config" : "autocomplete",
-      "unique_field" : "entity",
-      "type" : "entity"
+      "unique_field" : "_id",
+      "type" : "entity",
+      "copy_fields" : {
+        "entity" : "entity_ngram"
+      }
     },
 }
 
@@ -121,8 +124,16 @@ class EsUtils:
             flattened_value = [json.dumps(item) for item in value]
             doc[key] = flattened_value
 
+      if 'copy_fields' in indexData:
+        for field_src, field_name in indexData['copy_fields'].items():
+          doc[field_name] = doc[field_src]
+
+      uniqueValue = doc[uniqueField]
+      if '_id' in doc:
+        doc.pop('_id', None)
+
       doc_to_insert = {
-        '_id' : doc[uniqueField],
+        '_id' : uniqueValue,
         '_type' : doctype,
         '_index' : index,
         '_source' : doc
