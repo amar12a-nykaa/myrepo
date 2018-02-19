@@ -1,19 +1,12 @@
-import sys
-sys.path.append("/nykaa/scripts/feed_third_party/feed.py")
-from feed import *
+from feed import create_feed_index
 create_feed_index()
-sys.path.append("/nykaa/scripts/feed_third_party/feed_update.py")
-from feed import *
+from feed_update import update_feed3
 update_feed3()
-sys.path.append("/nykaa/scripts/feed_third_party/feed_updateAttribute.py")
-from feed import *
+from feed_updateAttribute import updateAtrribute_feed3
 updateAtrribute_feed3()
-sys.path.append("/nykaa/scripts/feed_third_party/feed_updateFields.py")
-from feed import *
+from feed_updateFields import updateFields_feed3
 updateFields_feed3()
-sys.path.append("/nykaa/scripts/feed_third_party/feed4_updateFields.py")
-from feed import *
+from feed4_updateFields import updateFields_feed4
 updateFields_feed4()
-sys.path.append("/nykaa/scripts/feed_third_party/feed_new4_updateWishlist.py")
-from feed import *
+from feed_new4_updateWishlist import updatewislist_feed4
 updatewislist_feed4()
