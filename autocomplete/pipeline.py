@@ -67,7 +67,7 @@ if docs_ratio < 0.95 and not force_run:
 
 # Update alias SOLR_GROUP to point to freshly indexed collection(inactive_collection)
 # and do basic verification
-#resp = SolrUtils.createSolrCollectionAlias(inactive_collection, SOLR_GROUP)
+resp = SolrUtils.createSolrCollectionAlias(inactive_collection, SOLR_GROUP)
 
 script_stop = timeit.default_timer()
 script_duration = script_stop - script_start
