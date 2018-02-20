@@ -22,6 +22,7 @@ from stemming.porter2 import stem
 sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
 from solrutils import SolrUtils
+from esutils import EsUtils
 from utils import createId
 
 sys.path.append("/nykaa/api")
