@@ -18,7 +18,7 @@ if argv['export']:
   cmds = [ "/tmp/mongodump_search",
           "mongodump --db search -o /tmp/mongodump_search",
           "zip /tmp/mongodump_search.zip -r /tmp/mongodump_search",
-          "scp -i ~/.ssh/gludonykaa /tmp/mongodump_search.zip ubuntu@52.221.205.33:/home/ubuntu/mongodump_search.zip",
+          "scp -i ~/.ssh/gludonykaa /tmp/mongodump_search.zip ubuntu@admin.nyk00-int.network/:/home/ubuntu/mongodump_search.zip",
         ]
 
   for cmd in cmds:

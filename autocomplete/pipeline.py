@@ -28,8 +28,8 @@ argv = vars(parser.parse_args())
 force_run = argv['force_run']
 script_start = timeit.default_timer()
 
-normalize_search_terms()
-#generate_brand_category_mapping()
+#normalize_search_terms()
+generate_brand_category_mapping()
 
 collections = SolrUtils.get_active_inactive_collections(SOLR_GROUP)
 active_collection = collections['active_collection']
@@ -67,7 +67,7 @@ if docs_ratio < 0.95 and not force_run:
 
 # Update alias SOLR_GROUP to point to freshly indexed collection(inactive_collection)
 # and do basic verification
-resp = SolrUtils.createSolrCollectionAlias(inactive_collection, SOLR_GROUP)
+#resp = SolrUtils.createSolrCollectionAlias(inactive_collection, SOLR_GROUP)
 
 script_stop = timeit.default_timer()
 script_duration = script_stop - script_start

@@ -30,10 +30,10 @@ from pas.v1.utils import Utils
 collection='autocomplete'
 
 def write_dict_to_csv(dictname, filename):
-	with open(filename, 'w') as csv_file:
-			writer = csv.writer(csv_file)
-			for key, value in dictname.items():
-				 writer.writerow([key, value])
+  with open(filename, 'w') as csv_file:
+      writer = csv.writer(csv_file)
+      for key, value in dictname.items():
+         writer.writerow([key, value])
 
 def create_map_search_product():
   DEBUG = False 
@@ -110,6 +110,8 @@ def index_search_queries(collection):
   cnt_search = 0
 
   ctr = LoopCounter(name='Search Queries')
+  num_errors_searchquery_to_product_mapping = 0
+  num_search_queries_that_should_map_to_products = 0
   for row in search_terms_normalized.find():
     ctr += 1
     if ctr.should_print():
@@ -118,17 +120,27 @@ def index_search_queries(collection):
       continue
 
     query = row['query']
+    is_query_mapped_to_a_product_successfully = False
     if query in map_search_product:
+      num_search_queries_that_should_map_to_products += 1
       _type = 'product'
-      url = map_search_product[query]['product_url']
-      image = map_search_product[query]['image']
-      image_base = map_search_product[query]['image_base']
-      product_id = map_search_product[query]['product_id']
+      try:
+        url = map_search_product[query]['product_url']
+        image = map_search_product[query]['image']
+        image_base = map_search_product[query]['image_base']
+        product_id = map_search_product[query]['product_id']
 
-      data = json.dumps({"type": _type, "url": url, "image": image, "image_base": image_base, "id": product_id })
-      cnt_product += 1 
-      entity = map_search_product[query]['title']
-    else:
+        data = json.dumps({"type": _type, "url": url, "image": image, "image_base": image_base, "id": product_id })
+        cnt_product += 1 
+        entity = map_search_product[query]['title']
+        is_query_mapped_to_a_product_successfully = True
+
+      except:
+        #print("map_search_product[%s]: %s" %(query, map_search_product[query]))
+        print("ERROR: Error in mapping  productid: %s to search term '%s'" % (product_id, query))
+        num_errors_searchquery_to_product_mapping += 1
+
+    if not is_query_mapped_to_a_product_successfully:
       _type = 'search_query'
       url = "http://www.nykaa.com/search/result/?q=" + row['query'].replace(" ", "+")
       data = json.dumps({"type": _type, "url": url})
@@ -150,6 +162,15 @@ def index_search_queries(collection):
       SolrUtils.indexDocs(docs, collection)
       requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
       docs = []
+  
+  total_search_queries = search_terms_normalized.count()
+  if num_errors_searchquery_to_product_mapping/num_search_queries_that_should_map_to_products * 100  > 2:
+    raise Exception("Too many search queries failed to get mapped to products. Expected: %s. Failed: %s" % \
+      (num_search_queries_that_should_map_to_products, num_errors_searchquery_to_product_mapping))
+
+  #print("fail percentage:")
+  #print(num_errors_searchquery_to_product_mapping/num_search_queries_that_should_map_to_products * 100)
+
 
   print("cnt_product: %s" % cnt_product)
   print("cnt_search: %s" % cnt_search)
