@@ -8,14 +8,91 @@ import argparse
 import traceback
 import subprocess
 import urllib.request
+import csv
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from solrutils import SolrUtils
+from esutils import EsUtils
 
 from importDataFromNykaa import NykaaImporter
 from indexCatalog import CatalogIndexer
 sys.path.append('/home/apis/nykaa/')
 from pas.v1.utils import Utils, CATALOG_COLLECTION_ALIAS
+
+def indexSolrData(file_path, force_run):
+  collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
+  active_collection = collections['active_collection']
+  inactive_collection = collections['inactive_collection']
+  print("Active collection: %s"%active_collection)
+  print("Inactive collection: %s"%inactive_collection)
+
+  #clear inactive collection
+  resp = SolrUtils.clearSolrCollection(inactive_collection)
+
+  index_start = timeit.default_timer()
+
+  print("\n\nIndexing documents from csv file '%s' to collection '%s'."%(file_path, inactive_collection))
+  CatalogIndexer.index('solr', file_path, inactive_collection)
+
+  #print("Committing all remaining docs")
+  #base_url = Utils.solrBaseURL(collection=inactive_collection)
+  #requests.get(base_url + "update?commit=true")
+
+  index_stop = timeit.default_timer()
+  index_duration = index_stop - index_start
+
+  # Verify correctness of indexing by comparing total number of documents in both active and inactive collections
+  params = {'q': '*:*', 'rows': '0'}
+  num_docs_active = Utils.makeSolrRequest(params, collection=active_collection)['numFound']
+  num_docs_inactive = Utils.makeSolrRequest(params, collection=inactive_collection)['numFound']
+  print('Number of documents in active collection(%s): %s'%(active_collection, num_docs_active))
+  print('Number of documents in inactive collection(%s): %s'%(inactive_collection, num_docs_inactive))
+
+  # if it decreased more than 5% of current, abort and throw an error
+  docs_ratio = num_docs_inactive/num_docs_active
+  if docs_ratio < 0.95 and not force_run:
+    msg = "[ERROR] Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."
+    print(msg)
+    raise Exception(msg)
+
+  # Update alias CATALOG_COLLECTION_ALIAS to point to freshly indexed collection(inactive_collection)
+  # and do basic verification
+  resp = SolrUtils.createSolrCollectionAlias(inactive_collection, CATALOG_COLLECTION_ALIAS)
+
+  print("\n\nFinished running catalog pipeline for Solr. NEW ACTIVE COLLECTION: %s\n\n"%inactive_collection)
+  print("Time taken to index data to Solr: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
+
+def indexESData(file_path, force_run):
+  indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+  active_index = indexes['active_index']
+  inactive_index = indexes['inactive_index']
+  print("Active Index: %s"%active_index)
+  print("Inactive Index: %s"%inactive_index)
+
+  #clear inactive index
+  resp = EsUtils.clear_index_data(inactive_index)
+
+  index_start = timeit.default_timer()
+
+  print("\n\nIndexing documents from csv file '%s' to index '%s'."%(file_path, inactive_index))
+  CatalogIndexer.index('elasticsearch', file_path, inactive_index)
+
+  index_stop = timeit.default_timer()
+  index_duration = index_stop - index_start
+  print("Time taken to index data to ElasticSearch: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
+
+  # Verify correctness of indexing by comparing total number of documents in both active and inactive collections
+  body = {"query": {"match_all": {}}, "size" : 0}
+  num_docs_active = Utils.makeESRequest(body, active_index)['hits']['total']
+  num_docs_inactive = Utils.makeESRequest(body, inactive_index)['hits']['total']
+  print('Number of documents in active index(%s): %s'%(active_index, num_docs_active))
+  print('Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
+
+  # Update alias CATALOG_COLLECTION_ALIAS to point to freshly generated index
+  # and do basic verification
+  resp = EsUtils.switch_index_alias(CATALOG_COLLECTION_ALIAS, active_index, inactive_index)
+  print("\n\nFinished running catalog pipeline for ElasticSearch. NEW ACTIVE INDEX: %s\n\n"%inactive_index)
+
 
 FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
@@ -74,51 +151,14 @@ if import_attrs:
 
 import_stop = timeit.default_timer()
 import_duration = import_stop - import_start
-  
-collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
-active_collection = collections['active_collection']
-inactive_collection = collections['inactive_collection']
-print("Active collection: %s"%active_collection)
-print("Inactive collection: %s"%inactive_collection)
+print("Time taken to import data from Nykaa: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(import_duration)))
 
-#clear inactive collection
-resp = SolrUtils.clearSolrCollection(inactive_collection)
+# Index Solr Data
+indexSolrData(file_path, force_run)
 
-index_start = timeit.default_timer()
-
-print("\n\nIndexing documents from csv file '%s' to collection '%s'."%(file_path, inactive_collection))
-CatalogIndexer.index(file_path, inactive_collection)
-
-#print("Committing all remaining docs")
-#base_url = Utils.solrBaseURL(collection=inactive_collection)
-#requests.get(base_url + "update?commit=true")
-
-index_stop = timeit.default_timer()
-index_duration = index_stop - index_start
-
-# Verify correctness of indexing by comparing total number of documents in both active and inactive collections
-params = {'q': '*:*', 'rows': '0'}
-num_docs_active = Utils.makeSolrRequest(params, collection=active_collection)['numFound']
-num_docs_inactive = Utils.makeSolrRequest(params, collection=inactive_collection)['numFound']
-print('Number of documents in active collection(%s): %s'%(active_collection, num_docs_active))
-print('Number of documents in inactive collection(%s): %s'%(inactive_collection, num_docs_inactive))
-
-# if it decreased more than 5% of current, abort and throw an error
-docs_ratio = num_docs_inactive/num_docs_active
-if docs_ratio < 0.95 and not force_run:
-  msg = "[ERROR] Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."
-  print(msg)
-  raise Exception(msg)
-
-
-# Update alias CATALOG_COLLECTION_ALIAS to point to freshly indexed collection(inactive_collection)
-# and do basic verification
-resp = SolrUtils.createSolrCollectionAlias(inactive_collection, CATALOG_COLLECTION_ALIAS)
+# Index Elastic Search Data
+indexESData(file_path, force_run)
 
 script_stop = timeit.default_timer()
 script_duration = script_stop - script_start
-
-print("\n\nFinished running catalog pipeline. NEW ACTIVE COLLECTION: %s\n\n"%inactive_collection)
-print("Time taken to import data from Nykaa: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(import_duration)))
-print("Time taken to index data to Solr: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
 print("Total time taken for the script to run: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(script_duration)))

@@ -35,6 +35,13 @@ def write_dict_to_csv(dictname, filename):
       for key, value in dictname.items():
          writer.writerow([key, value])
 
+def index_docs(searchengine, docs, collection):
+  if searchengine == 'solr':
+    SolrUtils.indexDocs(docs, collection)
+    requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+  if searchengine == 'elasticsearch':
+    EsUtils.indexDocs(docs, collection)
+
 def create_map_search_product():
   DEBUG = False 
   client = MongoClient()
@@ -100,7 +107,7 @@ def create_map_search_product():
       map_search_product[query] = docs[0]
   return map_search_product
 
-def index_search_queries(collection):
+def index_search_queries(collection, searchengine):
   map_search_product = create_map_search_product()
 
   docs = []
@@ -149,18 +156,18 @@ def index_search_queries(collection):
 
     if entity == "argan oil":
       row['popularity'] = 200
+
     docs.append({
-        "_id": createId(row['_id']),
-        "id": createId(row['_id']),
-        "entity": entity, 
-        "weight": row['popularity'], 
-        "type": _type,
-        "data": data,
-      })
+      "_id" : createId(row['_id']),
+      "id": createId(row['_id']),
+      "entity": entity,
+      "weight": row['popularity'],
+      "type": _type,
+      "data": data,
+    })
 
     if len(docs) >= 100:
-      SolrUtils.indexDocs(docs, collection)
-      requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+      index_docs(searchengine, docs, collection)
       docs = []
   
   total_search_queries = search_terms_normalized.count()
@@ -175,12 +182,9 @@ def index_search_queries(collection):
   print("cnt_product: %s" % cnt_product)
   print("cnt_search: %s" % cnt_search)
 
-  SolrUtils.indexDocs(docs, collection)
-  requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+  index_docs(searchengine, docs, collection)
 
-
-
-def index_brands(collection):
+def index_brands(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
@@ -200,16 +204,14 @@ def index_brands(collection):
         "id": row['brand_id'],
       })
     if len(docs) >= 100:
-      SolrUtils.indexDocs(docs, collection)
-      requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+      index_docs(searchengine, docs, collection)
       docs = []
 
     print(row['brand'], ctr.count)
-  SolrUtils.indexDocs(docs, collection)
-  requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
 
+  index_docs(searchengine, docs, collection)
 
-def index_categories(collection):
+def index_categories(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
@@ -237,14 +239,12 @@ def index_categories(collection):
         "id": row['category_id']
       })
     if len(docs) == 100:
-      SolrUtils.indexDocs(docs, collection)
-      requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+      index_docs(searchengine, docs, collection)
       docs = []
 
-  SolrUtils.indexDocs(docs, collection)
-  requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+  index_docs(searchengine, docs, collection)
 
-def index_products(collection):
+def index_products(collection, searchengine):
 
   docs = []
 
@@ -293,12 +293,9 @@ def index_products(collection):
         "data": data,
         "id": parent_id
       })
-    #print(docs)
-    #exit()
 
     if len(docs) >= 100:
-      SolrUtils.indexDocs(docs, collection)
-      requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+      index_docs(searchengine, docs, collection)
       docs = []
 
   print("cnt_product: %s" % cnt_product)
@@ -306,8 +303,7 @@ def index_products(collection):
   print("cnt_missing_solr: %s" % cnt_missing_solr)
   print("cnt_missing_keys: %s" % cnt_missing_keys)
 
-  SolrUtils.indexDocs(docs, collection)
-  requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+  index_docs(searchengine, docs, collection)
 
 def build_suggester(collection):
   print("Building suggester .. ")
@@ -388,6 +384,7 @@ if __name__ == '__main__':
   required_args = ['category', 'brand', 'search_query', 'product']
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
  
+  # solr
   if argv['collection']:
     collection = argv['collection']
   elif argv['active']:
@@ -400,18 +397,42 @@ if __name__ == '__main__':
 
   print("Indexing to collection: %s" % collection)
   if argv['search_query'] or index_all:
-    index_search_queries(collection)
+    index_search_queries(collection, 'solr')
   if argv['product'] or index_all:
-    index_products(collection)
+    index_products(collection, 'solr')
   if argv['category'] or index_all:
-    index_categories(collection)
+    index_categories(collection, 'solr')
   if argv['brand'] or index_all:
-    index_brands(collection)
+    index_brands(collection, 'solr')
   build_suggester(collection)
 
 
   if argv['buildonly']:
     build_suggester(collection)
+
+  # elastic search
+  print('Done processing Solr')
+  print('Starting ElasticSearch Processing')
+  if argv['collection']:
+    index = argv['collection']
+  elif argv['active']:
+    index = EsUtils.get_active_inactive_indexes('autocomplete')['active_index']
+  elif argv['inactive']:
+    index = EsUtils.get_active_inactive_indexes('autocomplete')['inactive_index']
+  elif argv['swap']:
+    indexes = EsUtils.get_active_inactive_indexes('autocomplete')
+    EsUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
+    exit()
+
+  print("Indexing: %s" % index)
+  if argv['search_query'] or index_all:
+    index_search_queries(index, 'elasticsearch')
+  if argv['product'] or index_all:
+    index_products(index, 'elasticsearch')
+  if argv['category'] or index_all:
+    index_categories(index, 'elasticsearch')
+  if argv['brand'] or index_all:
+    index_brands(index, 'elasticsearch')
 
   print("Restarting Apache and Memcached")
   os.system("/etc/init.d/apache2 restart")
