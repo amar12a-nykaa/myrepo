@@ -1,13 +1,17 @@
 """ CLI are such powerful tools. This module provides utility routines so that you can create CLIs with least effort and more consistency. """
 import argparse
-import os
+import csv
+import datetime
 import json
+import os
 import re
+import subprocess
 import sys
+import time
+from datetime import date, timedelta
 
-with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.js"), 'r') as f:
-  config = json.loads(f.read())
-STORES = config['stores'] + ['gsmarena']
+import arrow
+from IPython import embed
 
 
 class CliUtils(object):
@@ -106,6 +110,20 @@ class CliUtils(object):
     else:
       raise Exception("Unsupported standard option: %s" % standard_option)
 
+  @staticmethod
+  def valid_date(s):
+    try:
+      if re.search("^-?[0-9]+$", s):
+        adddays = int(s)
+        now = arrow.utcnow()
+        return now.replace(days=adddays).format('YYYY-MM-DD')
+      else:
+        return arrow.get(s, 'YYYY-MM-DD').format('YYYY-MM-DD')
+    except ValueError:
+      msg = "Not a valid date: '{0}'.".format(s)
+      raise argparse.ArgumentTypeError(msg)
+
+
   class MongoQueryAction(argparse.Action):
     def __call__(self, parser, args, values, option_string=None):
       assert isinstance(values, str), 'query string was expected. Received ' + str(type(query))
@@ -134,4 +152,3 @@ if __name__ == "__main__":
   argv = vars(parser.parse_args())
   print("=== === ")
   print("Parsed Arguments: %s" % argv)
-

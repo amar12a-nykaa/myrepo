@@ -41,7 +41,6 @@ def create_feed_index():
     print(str(j))
     print(str(k))
     print(sqlquery)
-    exit();
 		
     cursor.execute(sqlquery)
     columns = cursor.description

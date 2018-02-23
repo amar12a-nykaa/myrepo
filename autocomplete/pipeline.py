@@ -28,8 +28,8 @@ argv = vars(parser.parse_args())
 force_run = argv['force_run']
 script_start = timeit.default_timer()
 
-normalize_search_terms()
-#generate_brand_category_mapping()
+#normalize_search_terms()
+generate_brand_category_mapping()
 
 collections = SolrUtils.get_active_inactive_collections(SOLR_GROUP)
 active_collection = collections['active_collection']
