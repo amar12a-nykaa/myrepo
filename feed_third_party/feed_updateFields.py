@@ -24,7 +24,7 @@ sys.path.append('/home/apis/nykaa/')
 
 from pas.v1.utils import Utils, MemcacheUtils
 
-client = MongoClient("54.255.208.130")
+client = MongoClient("mongofeed.nyk00-int.network")
 data = client['local']['feed3']
 
 

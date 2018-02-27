@@ -32,7 +32,7 @@ def indexSolrData(file_path, force_run):
   index_start = timeit.default_timer()
 
   print("\n\nIndexing documents from csv file '%s' to collection '%s'."%(file_path, inactive_collection))
-  CatalogIndexer.index('solr', file_path, inactive_collection)
+  CatalogIndexer.index(search_engine='solr', file_path=file_path, collection=inactive_collection)
 
   #print("Committing all remaining docs")
   #base_url = Utils.solrBaseURL(collection=inactive_collection)
@@ -45,8 +45,8 @@ def indexSolrData(file_path, force_run):
   params = {'q': '*:*', 'rows': '0'}
   num_docs_active = Utils.makeSolrRequest(params, collection=active_collection)['numFound']
   num_docs_inactive = Utils.makeSolrRequest(params, collection=inactive_collection)['numFound']
-  print('Number of documents in active collection(%s): %s'%(active_collection, num_docs_active))
-  print('Number of documents in inactive collection(%s): %s'%(inactive_collection, num_docs_inactive))
+  print('Solr: Number of documents in active collection(%s): %s'%(active_collection, num_docs_active))
+  print('Solr: Number of documents in inactive collection(%s): %s'%(inactive_collection, num_docs_inactive))
 
   # if it decreased more than 5% of current, abort and throw an error
   docs_ratio = num_docs_inactive/num_docs_active
@@ -75,7 +75,7 @@ def indexESData(file_path, force_run):
   index_start = timeit.default_timer()
 
   print("\n\nIndexing documents from csv file '%s' to index '%s'."%(file_path, inactive_index))
-  CatalogIndexer.index('elasticsearch', file_path, inactive_index)
+  CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index)
 
   index_stop = timeit.default_timer()
   index_duration = index_stop - index_start
@@ -85,8 +85,8 @@ def indexESData(file_path, force_run):
   body = {"query": {"match_all": {}}, "size" : 0}
   num_docs_active = Utils.makeESRequest(body, active_index)['hits']['total']
   num_docs_inactive = Utils.makeESRequest(body, inactive_index)['hits']['total']
-  print('Number of documents in active index(%s): %s'%(active_index, num_docs_active))
-  print('Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
+  print('ES Number of documents in active index(%s): %s'%(active_index, num_docs_active))
+  print('ES Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
 
   # Update alias CATALOG_COLLECTION_ALIAS to point to freshly generated index
   # and do basic verification

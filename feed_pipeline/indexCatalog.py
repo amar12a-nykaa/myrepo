@@ -36,57 +36,61 @@ class CatalogIndexer:
 
   def validate_catalog_feed_row(row):
     for key, value in row.items():
-      value = value.strip()
-      value = '' if value.lower() == 'null' else value
+      try:
+        value = value.strip()
+        value = '' if value.lower() == 'null' else value
 
-      if key=='sku':
-        assert value, 'sku cannot be empty'
-        value = value.upper()
+        if key=='sku':
+          assert value, 'sku cannot be empty'
+          value = value.upper()
 
-      elif key=='parent_sku':
-        value = value.upper()             
+        elif key=='parent_sku':
+          value = value.upper()             
 
-      elif key in ['product_id', 'name']:
-        assert value, '%s cannot be empty'%key
-  
-      elif key=='type_id':
-        value = value.lower()
-        assert value in CatalogIndexer.PRODUCT_TYPES, "Invalid type: '%s'. Allowed are %s" %(value, CatalogIndexer.PRODUCT_TYPES)
+        elif key in ['product_id', 'name']:
+          assert value, '%s cannot be empty'%key
+    
+        elif key=='type_id':
+          value = value.lower()
+          assert value in CatalogIndexer.PRODUCT_TYPES, "Invalid type: '%s'. Allowed are %s" %(value, CatalogIndexer.PRODUCT_TYPES)
 
-      elif key in ['rating', 'review_count', 'qna_count']:
-        if value:
+        elif key in ['rating', 'review_count', 'qna_count']:
+          if value:
+            try:
+              value = int(value)
+            except Exception as e:
+              raise Exception('Bad value - %s' % str(e)) 
+
+        elif key=='rating_num':
+          if value:
+            try:
+              value = float(value)
+            except Exception as e:
+              raise Exception('Bad value - %s' % str(e))
+        
+        elif key=='bucket_discount_percent':
+          if value:
+            try:
+              value = float(value)
+            except Exception as e:
+              raise Exception('Bad value - %s' % str(e))
+
+        elif key=='created_at':
+          assert value, 'created_at cannot be empty'
           try:
-            value = int(value)
+            datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
           except Exception as e:
-            raise Exception('Bad value - %s' % str(e)) 
+            raise Exception("Incorrect created_at date format - %s" % str(e))        
 
-      elif key=='rating_num':
-        if value:
-          try:
-            value = float(value)
-          except Exception as e:
-            raise Exception('Bad value - %s' % str(e))
-      
-      elif key=='bucket_discount_percent':
-        if value:
-          try:
-            value = float(value)
-          except Exception as e:
-            raise Exception('Bad value - %s' % str(e))
+        elif key=='visibility':
+          assert value, 'visibility cannot be empty'
+          value = value.lower()
+          assert value in CatalogIndexer.VISIBILITY_TYPES, "Invalid type: '%s'. Allowed are %s" %(value, CatalogIndexer.VISIBILITY_TYPES)
 
-      elif key=='created_at':
-        assert value, 'created_at cannot be empty'
-        try:
-          datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
-        except Exception as e:
-          raise Exception("Incorrect created_at date format - %s" % str(e))        
+        row[key] = value
+      except:
+        print("[ERROR] Could not process row: %s" % row)
 
-      elif key=='visibility':
-        assert value, 'visibility cannot be empty'
-        value = value.lower()
-        assert value in CatalogIndexer.VISIBILITY_TYPES, "Invalid type: '%s'. Allowed are %s" %(value, CatalogIndexer.VISIBILITY_TYPES)
-
-      row[key] = value
 
   def fetch_price_availability(input_docs, pws_fetch_products):
     request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.get"
@@ -196,7 +200,7 @@ class CatalogIndexer:
     input_docs = []
     pws_fetch_products = []
 
-    ctr = LoopCounter(name='Indexing', total=len(all_rows))
+    ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
     for index, row in enumerate(all_rows):
       ctr += 1
       if ctr.should_print():

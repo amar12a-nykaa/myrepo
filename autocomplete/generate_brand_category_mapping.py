@@ -154,6 +154,8 @@ def getProducts():
            WHERE sl.l2 NOT LIKE '%Luxe%'\
            "
   results = Utils.fetchResults(nykaa_analytics_db_conn, query)
+  if not results:
+    raise Exception("Could not fetch data from magento databases")
   for row in results:
     if row['brand']:
       row['brand'] = row['brand'].replace("’", "'")
