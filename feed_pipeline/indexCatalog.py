@@ -203,9 +203,9 @@ class CatalogIndexer:
         if row['product_expiry']:
           doc['expiry_date'] = dateparser.parse(row['product_expiry'], ['%d-%m-%Y %H:%M', '%Y-%m-%d %H:%M:%S']).strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['is_service'] = row.get('d_sku') == '1'
-        if(row['d_sku'] == 2):
+        if(row['d_sku'] == '2'):
           doc['d_sku_s'] = 'giftcard'
-        elif(row['d_sku'] == 1):
+        elif(row['d_sku'] == '1'):
           doc['d_sku_s'] = 'beauty_service'
         else:
           doc['d_sku_s'] = 'none'
