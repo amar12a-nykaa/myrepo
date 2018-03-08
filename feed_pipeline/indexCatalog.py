@@ -176,6 +176,11 @@ class CatalogIndexer:
     except SolrError as e:
       raise Exception(str(e))
 
+  def formatESDoc(doc):
+    for key, value in doc.items():
+      if isinstance(value, list) and value == ['']:
+        doc[key] = []
+
   def index(search_engine, file_path, collection, update_productids=False):
     validate_popularity_data_health()
 
@@ -444,6 +449,10 @@ class CatalogIndexer:
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
+
+        if search_engine == 'elasticsearch':
+          CatalogIndexer.formatESDoc(doc)
+
         input_docs.append(doc)
 
         #index to solr in batches of DOCS_BATCH_SIZE
