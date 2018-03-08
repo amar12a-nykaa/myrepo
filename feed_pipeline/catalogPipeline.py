@@ -23,15 +23,15 @@ def indexSolrData(file_path, force_run):
   collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
   active_collection = collections['active_collection']
   inactive_collection = collections['inactive_collection']
-  print("Active collection: %s"%active_collection)
-  print("Inactive collection: %s"%inactive_collection)
+  print("Solr: Active collection: %s"%active_collection)
+  print("Solr: Inactive collection: %s"%inactive_collection)
 
   #clear inactive collection
   resp = SolrUtils.clearSolrCollection(inactive_collection)
 
   index_start = timeit.default_timer()
 
-  print("\n\nIndexing documents from csv file '%s' to collection '%s'."%(file_path, inactive_collection))
+  print("\n\nSolr: Indexing documents from csv file '%s' to collection '%s'."%(file_path, inactive_collection))
   CatalogIndexer.index(search_engine='solr', file_path=file_path, collection=inactive_collection)
 
   #print("Committing all remaining docs")
@@ -51,7 +51,7 @@ def indexSolrData(file_path, force_run):
   # if it decreased more than 5% of current, abort and throw an error
   docs_ratio = num_docs_inactive/num_docs_active
   if docs_ratio < 0.95 and not force_run:
-    msg = "[ERROR] Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."
+    msg = "[ERROR]Solr: Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."
     print(msg)
     raise Exception(msg)
 
@@ -66,15 +66,15 @@ def indexESData(file_path, force_run):
   indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
   active_index = indexes['active_index']
   inactive_index = indexes['inactive_index']
-  print("Active Index: %s"%active_index)
-  print("Inactive Index: %s"%inactive_index)
+  print("ES Active Index: %s"%active_index)
+  print("ES Inactive Index: %s"%inactive_index)
 
   #clear inactive index
   resp = EsUtils.clear_index_data(inactive_index)
 
   index_start = timeit.default_timer()
 
-  print("\n\nIndexing documents from csv file '%s' to index '%s'."%(file_path, inactive_index))
+  print("\n\nES: Indexing documents from csv file '%s' to index '%s'."%(file_path, inactive_index))
   CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index)
 
   index_stop = timeit.default_timer()
