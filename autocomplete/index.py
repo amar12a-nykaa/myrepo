@@ -191,7 +191,7 @@ def index_brands(collection, searchengine):
   mysql_conn = Utils.mysqlConnection()
   query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
   results = Utils.fetchResults(mysql_conn, query)
-  ctr = LoopCounter(name='Brand Indexing')
+  ctr = LoopCounter(name='Brand Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
     if ctr.should_print():
@@ -218,7 +218,7 @@ def index_categories(collection, searchengine):
   mysql_conn = Utils.mysqlConnection()
   query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories order by name, category_popularity desc"
   results = Utils.fetchResults(mysql_conn, query)
-  ctr = LoopCounter(name='Category Indexing')
+  ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   prev_cat = None
   for row in results:
     ctr += 1
@@ -256,7 +256,7 @@ def index_products(collection, searchengine):
   cnt_missing_solr = 0 
   cnt_missing_keys = 0 
 
-  ctr = LoopCounter(name='Product Indexing')
+  ctr = LoopCounter(name='Product Indexinig - ' + searchengine)
   for row in popularity.find():
     parent_id = row['parent_id']
     #print(parent_id)

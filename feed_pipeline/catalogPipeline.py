@@ -157,8 +157,7 @@ print("Time taken to import data from Nykaa: %s seconds" % time.strftime("%M min
 indexSolrData(file_path, force_run)
 
 # Index Elastic Search Data
-if not hostname.startswith('admin'):
-  indexESData(file_path, force_run)
+indexESData(file_path, force_run)
 
 script_stop = timeit.default_timer()
 script_duration = script_stop - script_start
