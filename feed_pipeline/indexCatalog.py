@@ -15,9 +15,9 @@ import dateparser
 sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
-from pas.v1.csvutils import read_csv_from_file
-from pas.v1.exceptions import SolrError
-from pas.v1.utils import CATALOG_COLLECTION_ALIAS, Utils
+from pas.v2.csvutils import read_csv_from_file
+from pas.v2.exceptions import SolrError
+from pas.v2.utils import CATALOG_COLLECTION_ALIAS, Utils
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
 from solrutils import SolrUtils
@@ -36,60 +36,64 @@ class CatalogIndexer:
 
   def validate_catalog_feed_row(row):
     for key, value in row.items():
-      value = value.strip()
-      value = '' if value.lower() == 'null' else value
+      try:
+        value = value.strip()
+        value = '' if value.lower() == 'null' else value
 
-      if key=='sku':
-        assert value, 'sku cannot be empty'
-        value = value.upper()
+        if key=='sku':
+          assert value, 'sku cannot be empty'
+          value = value.upper()
 
-      elif key=='parent_sku':
-        value = value.upper()             
+        elif key=='parent_sku':
+          value = value.upper()             
 
-      elif key in ['product_id', 'name']:
-        assert value, '%s cannot be empty'%key
-  
-      elif key=='type_id':
-        value = value.lower()
-        assert value in CatalogIndexer.PRODUCT_TYPES, "Invalid type: '%s'. Allowed are %s" %(value, CatalogIndexer.PRODUCT_TYPES)
+        elif key in ['product_id', 'name']:
+          assert value, '%s cannot be empty'%key
+    
+        elif key=='type_id':
+          value = value.lower()
+          assert value in CatalogIndexer.PRODUCT_TYPES, "Invalid type: '%s'. Allowed are %s" %(value, CatalogIndexer.PRODUCT_TYPES)
 
-      elif key in ['rating', 'review_count', 'qna_count']:
-        if value:
+        elif key in ['rating', 'review_count', 'qna_count']:
+          if value:
+            try:
+              value = int(value)
+            except Exception as e:
+              raise Exception('Bad value - %s' % str(e)) 
+
+        elif key=='rating_num':
+          if value:
+            try:
+              value = float(value)
+            except Exception as e:
+              raise Exception('Bad value - %s' % str(e))
+        
+        elif key=='bucket_discount_percent':
+          if value:
+            try:
+              value = float(value)
+            except Exception as e:
+              raise Exception('Bad value - %s' % str(e))
+
+        elif key=='created_at':
+          assert value, 'created_at cannot be empty'
           try:
-            value = int(value)
+            datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
           except Exception as e:
-            raise Exception('Bad value - %s' % str(e)) 
+            raise Exception("Incorrect created_at date format - %s" % str(e))        
 
-      elif key=='rating_num':
-        if value:
-          try:
-            value = float(value)
-          except Exception as e:
-            raise Exception('Bad value - %s' % str(e))
-      
-      elif key=='bucket_discount_percent':
-        if value:
-          try:
-            value = float(value)
-          except Exception as e:
-            raise Exception('Bad value - %s' % str(e))
+        elif key=='visibility':
+          assert value, 'visibility cannot be empty'
+          value = value.lower()
+          assert value in CatalogIndexer.VISIBILITY_TYPES, "Invalid type: '%s'. Allowed are %s" %(value, CatalogIndexer.VISIBILITY_TYPES)
 
-      elif key=='created_at':
-        assert value, 'created_at cannot be empty'
-        try:
-          datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
-        except Exception as e:
-          raise Exception("Incorrect created_at date format - %s" % str(e))        
+        row[key] = value
+      except:
+        print("[ERROR] Could not process row: %s" % row)
 
-      elif key=='visibility':
-        assert value, 'visibility cannot be empty'
-        value = value.lower()
-        assert value in CatalogIndexer.VISIBILITY_TYPES, "Invalid type: '%s'. Allowed are %s" %(value, CatalogIndexer.VISIBILITY_TYPES)
-
-      row[key] = value
 
   def fetch_price_availability(input_docs, pws_fetch_products):
-    request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.get"
+    request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
     request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
     req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
 
@@ -151,7 +155,6 @@ class CatalogIndexer:
     return (pws_input_docs, errors)
 
   def indexSolr(docs, collection):
-    return
     try:
       if not collection:
         collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
@@ -173,8 +176,13 @@ class CatalogIndexer:
     except SolrError as e:
       raise Exception(str(e))
 
+  def formatESDoc(doc):
+    for key, value in doc.items():
+      if isinstance(value, list) and value == ['']:
+        doc[key] = []
+
   def index(search_engine, file_path, collection, update_productids=False):
-    #validate_popularity_data_health()
+    validate_popularity_data_health()
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
     'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
@@ -195,7 +203,7 @@ class CatalogIndexer:
     input_docs = []
     pws_fetch_products = []
 
-    ctr = LoopCounter(name='Indexing', total=len(all_rows))
+    ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
     for index, row in enumerate(all_rows):
       ctr += 1
       if ctr.should_print():
@@ -444,6 +452,10 @@ class CatalogIndexer:
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
+
+        if search_engine == 'elasticsearch':
+          CatalogIndexer.formatESDoc(doc)
+
         input_docs.append(doc)
 
         #index to solr in batches of DOCS_BATCH_SIZE
@@ -488,6 +500,6 @@ if __name__ == "__main__":
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
   collection = argv['collection']
-  searchengine = argv['collection']
+  searchengine = argv['searchengine']
 
   CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'])

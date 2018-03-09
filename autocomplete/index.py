@@ -31,10 +31,17 @@ from pas.v1.utils import Utils
 collection='autocomplete'
 
 def write_dict_to_csv(dictname, filename):
-	with open(filename, 'w') as csv_file:
-			writer = csv.writer(csv_file)
-			for key, value in dictname.items():
-				 writer.writerow([key, value])
+  with open(filename, 'w') as csv_file:
+      writer = csv.writer(csv_file)
+      for key, value in dictname.items():
+         writer.writerow([key, value])
+
+def index_docs(searchengine, docs, collection):
+  if searchengine == 'solr':
+    SolrUtils.indexDocs(docs, collection)
+    requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
+  if searchengine == 'elasticsearch':
+    EsUtils.indexDocs(docs, collection)
 
 def index_docs(searchengine, docs, collection):
   if searchengine == 'solr':
@@ -118,6 +125,8 @@ def index_search_queries(collection, searchengine):
   cnt_search = 0
 
   ctr = LoopCounter(name='Search Queries')
+  num_errors_searchquery_to_product_mapping = 0
+  num_search_queries_that_should_map_to_products = 0
   for row in search_terms_normalized.find():
     ctr += 1
     if ctr.should_print():
@@ -126,17 +135,27 @@ def index_search_queries(collection, searchengine):
       continue
 
     query = row['query']
+    is_query_mapped_to_a_product_successfully = False
     if query in map_search_product:
+      num_search_queries_that_should_map_to_products += 1
       _type = 'product'
-      url = map_search_product[query]['product_url']
-      image = map_search_product[query]['image']
-      image_base = map_search_product[query]['image_base']
-      product_id = map_search_product[query]['product_id']
+      try:
+        url = map_search_product[query]['product_url']
+        image = map_search_product[query]['image']
+        image_base = map_search_product[query]['image_base']
+        product_id = map_search_product[query]['product_id']
 
-      data = json.dumps({"type": _type, "url": url, "image": image, "image_base": image_base, "id": product_id })
-      cnt_product += 1 
-      entity = map_search_product[query]['title']
-    else:
+        data = json.dumps({"type": _type, "url": url, "image": image, "image_base": image_base, "id": product_id })
+        cnt_product += 1 
+        entity = map_search_product[query]['title']
+        is_query_mapped_to_a_product_successfully = True
+
+      except:
+        #print("map_search_product[%s]: %s" %(query, map_search_product[query]))
+        print("ERROR: Error in mapping  productid: %s to search term '%s'" % (product_id, query))
+        num_errors_searchquery_to_product_mapping += 1
+
+    if not is_query_mapped_to_a_product_successfully:
       _type = 'search_query'
       url = "http://www.nykaa.com/search/result/?q=" + row['query'].replace(" ", "+")
       data = json.dumps({"type": _type, "url": url})
@@ -158,6 +177,14 @@ def index_search_queries(collection, searchengine):
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
       docs = []
+  
+  total_search_queries = search_terms_normalized.count()
+  if num_errors_searchquery_to_product_mapping/num_search_queries_that_should_map_to_products * 100  > 2:
+    raise Exception("Too many search queries failed to get mapped to products. Expected: %s. Failed: %s" % \
+      (num_search_queries_that_should_map_to_products, num_errors_searchquery_to_product_mapping))
+
+  #print("fail percentage:")
+  #print(num_errors_searchquery_to_product_mapping/num_search_queries_that_should_map_to_products * 100)
 
   print("cnt_product: %s" % cnt_product)
   print("cnt_search: %s" % cnt_search)
@@ -170,7 +197,7 @@ def index_brands(collection, searchengine):
   mysql_conn = Utils.mysqlConnection()
   query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
   results = Utils.fetchResults(mysql_conn, query)
-  ctr = LoopCounter(name='Brand Indexing')
+  ctr = LoopCounter(name='Brand Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
     if ctr.should_print():
@@ -197,7 +224,7 @@ def index_categories(collection, searchengine):
   mysql_conn = Utils.mysqlConnection()
   query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories order by name, category_popularity desc"
   results = Utils.fetchResults(mysql_conn, query)
-  ctr = LoopCounter(name='Category Indexing')
+  ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   prev_cat = None
   for row in results:
     ctr += 1
@@ -235,7 +262,7 @@ def index_products(collection, searchengine):
   cnt_missing_solr = 0 
   cnt_missing_keys = 0 
 
-  ctr = LoopCounter(name='Product Indexing')
+  ctr = LoopCounter(name='Product Indexinig - ' + searchengine)
   for row in popularity.find():
     parent_id = row['parent_id']
     #print(parent_id)
@@ -364,6 +391,36 @@ if __name__ == '__main__':
   required_args = ['category', 'brand', 'search_query', 'product']
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
  
+  # solr
+  print('Starting Solr Processing')
+  if argv['collection']:
+    index = argv['collection']
+  elif argv['active']:
+    index = SolrUtils.get_active_inactive_indexes('autocomplete')['active_index']
+  elif argv['inactive']:
+    index = SolrUtils.get_active_inactive_indexes('autocomplete')['inactive_index']
+  elif argv['swap']:
+    indexes = SolrUtils.get_active_inactive_indexes('autocomplete')
+    SolrUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
+    exit()
+
+  print("Indexing: %s" % index)
+  if argv['search_query'] or index_all:
+    index_search_queries(collection, 'solr')
+  if argv['product'] or index_all:
+    index_products(collection, 'solr')
+  if argv['category'] or index_all:
+    index_categories(collection, 'solr')
+  if argv['brand'] or index_all:
+    index_brands(collection, 'solr')
+  build_suggester(collection)
+
+
+  if argv['buildonly']:
+    build_suggester(collection)
+  print('Done processing Solr')
+
+  # elastic search
   print('Starting ElasticSearch Processing')
   if argv['collection']:
     index = argv['collection']
