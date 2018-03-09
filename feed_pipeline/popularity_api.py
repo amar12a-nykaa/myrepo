@@ -44,3 +44,4 @@ if __name__ == '__main__':
   print(get_popularity_for_id('157885', parent_id='157885'))
   print(get_popularity_for_id('157885', parent_id='157885'))
   print(get_popularity_for_id('31074', parent_id='31074'))
+  validate_popularity_data_health()

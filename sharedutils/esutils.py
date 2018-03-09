@@ -153,4 +153,3 @@ if __name__ == "__main__":
   ret = EsUtils.get_active_inactive_indexes('livecore')
   print(ret)
   embed()
-

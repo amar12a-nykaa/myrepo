@@ -1,0 +1,30 @@
+from pymongo import MongoClient
+from pprint import pprint
+import json
+import string
+from datetime import datetime
+import socket
+import sys
+import time
+import timeit
+import requests
+import argparse
+import urllib.request
+from bson import json_util
+
+sys.path.append("/home/ubuntu/nykaa_scripts/sharedutils")
+
+sys.path.append('/home/apis/nykaa/')
+
+from pas.v1.utils import Utils, MemcacheUtils
+
+client = MongoClient("54.255.208.130")
+data = client['local']['feed3']
+
+
+def create_feed_to_json():
+  f = open('/data/nykaa/feed.json','w')
+  json.dump(list(data.find({},{"_id":0,"created_at":0})), f,default=json_util.default)
+  f.close()
+
+create_feed_to_json = create_feed_to_json()
