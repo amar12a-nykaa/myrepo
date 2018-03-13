@@ -385,6 +385,7 @@ if __name__ == '__main__':
   group.add_argument("-b", "--brand", action='store_true')
   group.add_argument("-s", "--search-query", action='store_true')
   group.add_argument("-p", "--product", action='store_true')
+  group.add_argument("-e", "--searchengine", default="solr,elasticsearch")
 
   parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
 
@@ -395,6 +396,10 @@ if __name__ == '__main__':
   collection_state.add_argument("--swap", action='store_true', help="Swap the Core")
 
   argv = vars(parser.parse_args())
+
+  argv['searchengine'] = argv['searchengine'].split(",")
+  print(argv['searchengine'])
+  assert all([x in ['elasticsearch', 'solr'] for x in argv['searchengine']])
 
   required_args = ['category', 'brand', 'search_query', 'product']
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
@@ -442,7 +447,9 @@ if __name__ == '__main__':
     elif argv['swap']:
       indexes = EsUtils.get_active_inactive_indexes('autocomplete')
       EsUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
-      exit()
+      return
+    else:
+      raise Exception("Dont know wha to do!!!")
 
     print("Indexing: %s" % index)
     if argv['search_query'] or index_all:
@@ -466,7 +473,7 @@ if __name__ == '__main__':
     elif argv['swap']:
       indexes = EsUtils.get_active_inactive_indexes('autocomplete')
       EsUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
-      exit()
+      return
 
     print("Indexing: %s" % index)
     if argv['search_query'] or index_all:
@@ -479,6 +486,7 @@ if __name__ == '__main__':
       index_brands(index, 'elasticsearch')
     restart_apache_memcached()
 
-  
-  index_es()
-  index_solr()
+  if 'solr' in argv['searchengine']:
+    index_solr()
+  if 'elasticsearch' in argv['searchengine']:
+    index_es()
