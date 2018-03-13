@@ -11,8 +11,8 @@ from IPython import embed
 from elasticsearch import helpers, Elasticsearch
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.exceptions import SolrError
-from pas.v1.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
+from pas.v2.exceptions import SolrError
+from pas.v2.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
 
 
 index_alias_config = {

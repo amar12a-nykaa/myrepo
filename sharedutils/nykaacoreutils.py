@@ -13,7 +13,7 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils, MemcacheUtils
+from pas.v2.utils import Utils, MemcacheUtils
 
 __all__ = ['create_product_id_index']
 
