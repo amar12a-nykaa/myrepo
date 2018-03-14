@@ -17,7 +17,7 @@ from esutils import EsUtils
 from importDataFromNykaa import NykaaImporter
 from indexCatalog import CatalogIndexer
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils, CATALOG_COLLECTION_ALIAS
+from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
 
 def indexSolrData(file_path, force_run):
   collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
@@ -111,7 +111,7 @@ url = argv['url']
 if not url and not file_path: 
   if hostname.startswith('admin'):
     url = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
-  elif hostname.startswith('preprod') or hostname.startswith('dev'):
+  elif hostname.startswith('preprod') or hostname.startswith('qa') or hostname.startswith('dev'):
     url = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
   if url:
     print("Using default url for %s machine: %s" % (hostname, url))
@@ -153,11 +153,11 @@ import_stop = timeit.default_timer()
 import_duration = import_stop - import_start
 print("Time taken to import data from Nykaa: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(import_duration)))
 
-# Index Solr Data
-indexSolrData(file_path, force_run)
-
 # Index Elastic Search Data
 indexESData(file_path, force_run)
+
+# Index Solr Data
+indexSolrData(file_path, force_run)
 
 script_stop = timeit.default_timer()
 script_duration = script_stop - script_start

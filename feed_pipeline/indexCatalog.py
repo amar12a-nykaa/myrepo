@@ -15,9 +15,9 @@ import dateparser
 sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
-from pas.v1.csvutils import read_csv_from_file
-from pas.v1.exceptions import SolrError
-from pas.v1.utils import CATALOG_COLLECTION_ALIAS, Utils
+from pas.v2.csvutils import read_csv_from_file
+from pas.v2.exceptions import SolrError
+from pas.v2.utils import CATALOG_COLLECTION_ALIAS, Utils
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
 from solrutils import SolrUtils
@@ -93,7 +93,7 @@ class CatalogIndexer:
 
 
   def fetch_price_availability(input_docs, pws_fetch_products):
-    request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.get"
+    request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
     request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
     req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
 
@@ -193,6 +193,9 @@ class CatalogIndexer:
     'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1', 'beauty_partner']
 
     all_rows = read_csv_from_file(file_path)
+
+    #delete this below line
+    #all_rows = all_rows[0:1000]
     columns = all_rows[0].keys()
     PipelineUtils.check_required_fields(columns, required_fields_from_csv)
 
