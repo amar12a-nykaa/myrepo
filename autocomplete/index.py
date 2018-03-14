@@ -46,14 +46,11 @@ def index_docs(searchengine, docs, collection):
     SolrUtils.indexDocs(docs, collection)
     requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
   if searchengine == 'elasticsearch':
-    EsUtils.indexDocs(docs, collection)
-
-def index_docs(searchengine, docs, collection):
-  if searchengine == 'solr':
-    SolrUtils.indexDocs(docs, collection)
-    requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
-  if searchengine == 'elasticsearch':
-    EsUtils.indexDocs(docs, collection)
+    try:
+      EsUtils.indexDocs(docs, collection)
+    except:
+      print(docs)
+      raise
 
 def create_map_search_product():
   DEBUG = False 
@@ -326,13 +323,6 @@ def build_suggester(collection):
   requests.get(base_url + "suggest?wt=json&suggest.q=la&suggest.build=true")
   r = requests.get(base_url + "suggestsmall?wt=json&suggest.q=la&suggest.build=true")
 
-def index_all(collection):
-  index_search_queries(collection)
-  index_products(collection)
-  index_categories(collection)
-  index_brands(collection)
-  build_suggester(collection)
-
 def fetch_product_by_parentid(parent_id):
   DEBUG = False 
   product = {}
@@ -393,7 +383,8 @@ if __name__ == '__main__':
   collection_state.add_argument("--inactive", action='store_true')
   collection_state.add_argument("--active", action='store_true')
   collection_state.add_argument("--collection")
-  collection_state.add_argument("--swap", action='store_true', help="Swap the Core")
+  
+  parser.add_argument("--swap", action='store_true', help="Swap the Core")
 
   argv = vars(parser.parse_args())
 
@@ -404,89 +395,50 @@ if __name__ == '__main__':
   required_args = ['category', 'brand', 'search_query', 'product']
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
 
-  def index_solr():
-    # solr
-    print('Starting Solr Processing')
-    if argv['collection']:
-      index = argv['collection']
-    elif argv['active']:
-      index = SolrUtils.get_active_inactive_indexes('autocomplete')['active_index']
-    elif argv['inactive']:
-      index = SolrUtils.get_active_inactive_indexes('autocomplete')['inactive_index']
-    elif argv['swap']:
-      indexes = SolrUtils.get_active_inactive_indexes('autocomplete')
-      SolrUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
+  def index_engine(engine, collection=None, active=None, inactive=None, swap=False ):
+    assert len([x for x in [collection, active, inactive] if x]) == 1, "Only one of the following should be true"
+
+    print(locals())
+    if engine == 'solr':
+      EngineUtils = SolrUtils
+    elif engine == 'elasticsearch':
+      EngineUtils = EsUtils
+    else:
+      raise Exception("Unknown Search Engine: %s" % engine)
+    #print(engine,   collection, active, inactive)
+    index = None
+    print('Starting %s Processing' % engine)
+    if collection: 
+      index = collection 
+    elif active:
+      index = EngineUtils.get_active_inactive_indexes('autocomplete')['active_index']
+    elif inactive:
+      index = EngineUtils.get_active_inactive_indexes('autocomplete')['inactive_index']
+    else:
+      index = None
+
+    print("Index: %s" % index)
+
+    if index:
+      print("Indexing: %s" % index)
+      if argv['search_query'] or index_all:
+        index_search_queries(index, engine)
+      if argv['product'] or index_all:
+        index_products(index, engine)
+      if argv['category'] or index_all:
+        index_categories(index, engine)
+      if argv['brand'] or index_all:
+        index_brands(index, engine)
+      build_suggester(index)
+
+      print('Done processing ',  engine)
+      restart_apache_memcached()
+    
+    if swap:
+      print("Swapping Index")
+      indexes = EngineUtils.get_active_inactive_indexes('autocomplete')
+      EngineUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
       exit()
 
-    print("Indexing: %s" % index)
-    if argv['search_query'] or index_all:
-      index_search_queries(collection, 'solr')
-    if argv['product'] or index_all:
-      index_products(collection, 'solr')
-    if argv['category'] or index_all:
-      index_categories(collection, 'solr')
-    if argv['brand'] or index_all:
-      index_brands(collection, 'solr')
-    build_suggester(collection)
-
-
-    if argv['buildonly']:
-      build_suggester(collection)
-    print('Done processing Solr')
-    restart_apache_memcached()
-
-  def index_es():
-    # elastic search
-    print('Starting ElasticSearch Processing')
-    if argv['collection']:
-      index = argv['collection']
-    elif argv['active']:
-      index = EsUtils.get_active_inactive_indexes('autocomplete')['active_index']
-    elif argv['inactive']:
-      index = EsUtils.get_active_inactive_indexes('autocomplete')['inactive_index']
-    elif argv['swap']:
-      indexes = EsUtils.get_active_inactive_indexes('autocomplete')
-      EsUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
-      return
-    else:
-      raise Exception("Dont know wha to do!!!")
-
-    print("Indexing: %s" % index)
-    if argv['search_query'] or index_all:
-      index_search_queries(index, 'elasticsearch')
-    if argv['product'] or index_all:
-      index_products(index, 'elasticsearch')
-    if argv['category'] or index_all:
-      index_categories(index, 'elasticsearch')
-    if argv['brand'] or index_all:
-      index_brands(index, 'elasticsearch')
-
-    # elastic search
-    print('Done processing Solr')
-    print('Starting ElasticSearch Processing')
-    if argv['collection']:
-      index = argv['collection']
-    elif argv['active']:
-      index = EsUtils.get_active_inactive_indexes('autocomplete')['active_index']
-    elif argv['inactive']:
-      index = EsUtils.get_active_inactive_indexes('autocomplete')['inactive_index']
-    elif argv['swap']:
-      indexes = EsUtils.get_active_inactive_indexes('autocomplete')
-      EsUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
-      return
-
-    print("Indexing: %s" % index)
-    if argv['search_query'] or index_all:
-      index_search_queries(index, 'elasticsearch')
-    if argv['product'] or index_all:
-      index_products(index, 'elasticsearch')
-    if argv['category'] or index_all:
-      index_categories(index, 'elasticsearch')
-    if argv['brand'] or index_all:
-      index_brands(index, 'elasticsearch')
-    restart_apache_memcached()
-
-  if 'solr' in argv['searchengine']:
-    index_solr()
-  if 'elasticsearch' in argv['searchengine']:
-    index_es()
+  for engine in argv['searchengine']:
+    index_engine(engine=engine, collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'])
