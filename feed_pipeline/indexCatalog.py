@@ -9,7 +9,7 @@ from collections import OrderedDict
 from datetime import datetime
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
-
+import re
 import dateparser
 
 sys.path.append('/home/apis/nykaa/')
@@ -29,6 +29,10 @@ class CatalogIndexer:
   PRODUCT_TYPES = ['simple', 'configurable', 'bundle']
   VISIBILITY_TYPES = ['visible', 'not_visible']
   DOCS_BATCH_SIZE = 1000
+
+  field_type_pattens = {
+    ".*_i$": int,
+    }
 
   def print_errors(errors):
     for err in errors:
@@ -455,6 +459,11 @@ class CatalogIndexer:
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
+
+        for k,v in doc.items():
+          for pattern, _type in CatalogIndexer.field_type_pattens.items():
+            if re.search(pattern, k):
+              doc[k] = _type(v)
 
         if search_engine == 'elasticsearch':
           CatalogIndexer.formatESDoc(doc)
