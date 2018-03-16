@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 import re
 import dateparser
+from IPython import embed
 
 sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
@@ -230,10 +231,10 @@ class CatalogIndexer:
         doc['highlights'] = (row['highlights'] or "").split('|')
         doc['featured_in_titles'] = (row['featured_in_titles'] or "").split('|')
         doc['featured_in_urls'] = (row['featured_in_urls'] or "").split('|')
-        doc['star_rating_count'] = row['rating']
+        doc['star_rating_count'] = int(row['rating'] or 0)
         if row['rating_num'] and row['rating_percentage']:
           doc['star_rating'] = row['rating_num']
-          doc['star_rating_percentage'] = row['rating_percentage']
+          doc['star_rating_percentage'] = float(row['rating_percentage'] or 0)
         doc['review_count'] = row['review_count'] or 0
         doc['qna_count'] = row['qna_count'] or 0
         if row['product_expiry']:
@@ -464,6 +465,10 @@ class CatalogIndexer:
           for pattern, _type in CatalogIndexer.field_type_pattens.items():
             if re.search(pattern, k):
               doc[k] = _type(v)
+          if v == ['']:
+            doc[k] = None
+          if not v and v!= False:
+            doc[k] = None
 
         if search_engine == 'elasticsearch':
           CatalogIndexer.formatESDoc(doc)
