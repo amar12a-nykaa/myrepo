@@ -24,4 +24,5 @@ alias solrconf='cd /home/ubuntu/nykaa_solrconf'
 #alias solrreload='curl "http://localhost:8983/solr/admin/collections?action=RELOAD&name=autocomplete"'
 
 alias popularity="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py"
+alias catalog_pipeline="/usr/bin/python /nykaa/scripts/feed_pipeline/catalogPipeline.py"
 python /nykaa/scripts/shortcuts.py
