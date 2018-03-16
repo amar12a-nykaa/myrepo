@@ -31,10 +31,10 @@ def get_popularity_for_id(product_id, parent_id=None):
 
 def validate_popularity_data_health():
   count = popularity_table.count()
-  assert count > 55000, "Number of products is less than 55000." 
+  assert count > 40000, "Number of products is less than 40000." 
 
   count_non_zero_popularity = popularity_table.count({"popularity": {"$gt": 0}})
-  assert count_non_zero_popularity > 55000, "Number of products is less than 55000." 
+  assert count_non_zero_popularity > 40000, "Number of products is less than 40000." 
 
   print("Popularity data looks good. Validation successful")
   
