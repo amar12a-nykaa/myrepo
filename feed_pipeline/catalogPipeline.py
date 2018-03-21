@@ -159,11 +159,11 @@ if __name__ == "__main__":
   print("Time taken to import data from Nykaa: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(import_duration)))
 
   # Index Elastic Search Data
-  if argv['search_engine'] in ['elasticsearch' or None]:
+  if argv['search_engine'] in ['elasticsearch', None]:
     indexESData(file_path, force_run)
 
   # Index Solr Data
-  if argv['search_engine'] in ['solr' or None]:
+  if argv['search_engine'] in ['solr', None]:
     indexSolrData(file_path, force_run)
 
   script_stop = timeit.default_timer()
