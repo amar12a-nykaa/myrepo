@@ -425,7 +425,9 @@ class CatalogIndexer:
 
         doc['list_offer_ids'] = row['list_offer_id'].split('|')
         doc['max_allowed_qty_i'] = row['max_allowed_qty'] or 5
+        doc['bulkbuyer_max_allowed_qty_i'] = row['bulkbuyer_max_allowed_qty'] or 0
         doc['is_free_sample_i'] = row['is_free_sample'] or 0
+        doc['pro_flag_i'] = row['pro_flag'] or 0
 
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
