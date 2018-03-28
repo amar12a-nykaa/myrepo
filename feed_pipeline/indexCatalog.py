@@ -240,6 +240,12 @@ class CatalogIndexer:
         if row['product_expiry']:
           doc['expiry_date'] = dateparser.parse(row['product_expiry'], ['%d-%m-%Y %H:%M', '%Y-%m-%d %H:%M:%S']).strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['is_service'] = row.get('d_sku') == '1'
+        if(row['d_sku'] == '2'):
+          doc['d_sku_s'] = 'giftcard'
+        elif(row['d_sku'] == '1'):
+          doc['d_sku_s'] = 'beauty_service'
+        else:
+          doc['d_sku_s'] = 'none'
         doc['pack_size'] = row['pack_size']
         doc['is_luxe'] = row.get('is_luxe') == '1'
         doc['can_subscribe'] = row.get('is_subscribable') == '1'
@@ -262,6 +268,7 @@ class CatalogIndexer:
         doc['shipping_quote'] = row.get('shipping_quote')
         doc['vendor_id'] = row['vendor_id']
         doc['vendor_sku'] = row['vendor_sku']
+        doc['catalog_tag'] = row['catalog_tag'].split('|')
 
         #Write productid in product datebase
         try:
@@ -455,7 +462,9 @@ class CatalogIndexer:
 
         doc['list_offer_ids'] = (row['list_offer_id'] or "").split('|')
         doc['max_allowed_qty_i'] = row['max_allowed_qty'] or 5
+        doc['bulkbuyer_max_allowed_qty_i'] = row['bulkbuyer_max_allowed_qty'] or 0
         doc['is_free_sample_i'] = row['is_free_sample'] or 0
+        doc['pro_flag_i'] = row['pro_flag'] or 0
 
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
