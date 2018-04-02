@@ -10,7 +10,7 @@ def strip_accents(text):
 
 def createId(s):
   s = strip_accents(s)
-  s = re.sub('[^A-Za-z0-9 ]+', '', s).lower()
+  s = re.sub('[^A-Za-z0-9 _]+', '', s).lower()
   s = re.sub(' +', '_', s).lower()
   return s
 

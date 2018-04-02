@@ -174,6 +174,7 @@ def index_search_queries(collection, searchengine):
       "weight": row['popularity'],
       "type": _type,
       "data": data,
+      "source": "search_query"
     })
 
     if len(docs) >= 100:
@@ -214,6 +215,8 @@ def index_brands(collection, searchengine):
         "type": "brand",
         "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id']}),
         "id": row['brand_id'],
+        "source": "brand"
+      
       })
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
@@ -248,7 +251,8 @@ def index_categories(collection, searchengine):
         "weight": row['category_popularity'],
         "type": "category",
         "data": json.dumps({"url": row['url'], "type": "category", "id": row['category_id']}),
-        "id": row['category_id']
+        "id": row['category_id'],
+        "source": "category"
       })
     if len(docs) == 100:
       index_docs(searchengine, docs, collection)
@@ -303,7 +307,8 @@ def index_products(collection, searchengine):
         "weight": row['popularity'], 
         "type": _type,
         "data": data,
-        "id": parent_id
+        "id": parent_id,
+        "source": "product"
       })
 
     if len(docs) >= 100:
@@ -328,7 +333,7 @@ def fetch_product_by_parentid(parent_id):
   product = {}
   base_url = Utils.solrHostName() + "/solr/yang/select"
   f = furl(base_url) 
-  f.args['q'] = 'parent_id:%s AND product_id:%s' % (parent_id,parent_id)
+  f.args['q'] = 'parent_id:%s AND product_id:%s' % (parent_id,parent_id) 
   f.args['fq'] = 'type:"simple" OR type:"configurable"'
   f.args['fl'] = 'title,score,media:[json],product_url,product_id,price,type'
   f.args['wt'] = 'json'
