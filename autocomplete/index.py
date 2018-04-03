@@ -333,7 +333,7 @@ def fetch_product_by_parentid(parent_id):
   product = {}
   base_url = Utils.solrHostName() + "/solr/yang/select"
   f = furl(base_url) 
-  f.args['q'] = 'parent_id:%s AND product_id:%s' % (parent_id,parent_id) 
+  f.args['q'] = 'parent_id:%s AND product_id:%s AND -category_ids:2413' % (parent_id,parent_id) 
   f.args['fq'] = 'type:"simple" OR type:"configurable"'
   f.args['fl'] = 'title,score,media:[json],product_url,product_id,price,type'
   f.args['wt'] = 'json'
