@@ -15,7 +15,7 @@ from solrutils import SolrUtils
 sys.path.append('/nykaa/api/')
 from pas.v1.utils import Utils
 
-from index import index_all
+from index import index_engine
 from generate_brand_category_mapping import generate_brand_category_mapping
 from normalize_searches import normalize_search_terms
 
@@ -41,7 +41,7 @@ print("Inactive collection: %s"%inactive_collection)
 resp = SolrUtils.clearSolrCollection(inactive_collection)
 
 index_start = timeit.default_timer()
-index_all(inactive_collection)
+index_engine(engine='solr', collection=inactive_collection, swap=False)
 index_duration = timeit.default_timer() - index_start
 
 # Verify correctness of indexing by comparing total number of documents in both active and inactive collections
