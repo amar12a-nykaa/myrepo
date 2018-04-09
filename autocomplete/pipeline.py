@@ -13,7 +13,7 @@ sys.path.append('/nykaa/scripts/sharedutils/')
 from solrutils import SolrUtils
 
 sys.path.append('/nykaa/api/')
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 from index import index_engine
 from generate_brand_category_mapping import generate_brand_category_mapping

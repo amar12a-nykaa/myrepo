@@ -15,7 +15,7 @@ from loopcounter import LoopCounter
 from cliutils import CliUtils
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 def read_file_by_dates(startdate, enddate, platform, dryrun=False, limit=0, product_id=None, debug=False):
 

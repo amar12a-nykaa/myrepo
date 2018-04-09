@@ -158,7 +158,7 @@ for product_id, bought_with in product_bought_with_dict.items():
 
 
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 # Save all results to PAS DB
 pasdb = Utils.mysqlConnection()

@@ -19,7 +19,7 @@ import pandas as pd
 from pymongo import MongoClient
 
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 import requests
 import IPython

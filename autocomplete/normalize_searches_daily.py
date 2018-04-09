@@ -20,7 +20,7 @@ from pymongo import MongoClient, UpdateOne
 from stemming.porter2 import stem
 
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 def normalize(a):
     if not max(a) - min(a):

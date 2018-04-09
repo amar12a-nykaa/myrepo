@@ -3,7 +3,7 @@ import os
 import mysql.connector
 import sys
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 conn_details = {}
 conn = Utils.nykaaMysqlConnection(connection_details=conn_details)
 print(conn_details)

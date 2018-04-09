@@ -15,7 +15,7 @@ from pytz import timezone
 
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 
 parser = argparse.ArgumentParser()

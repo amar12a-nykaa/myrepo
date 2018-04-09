@@ -12,7 +12,7 @@ from collections import defaultdict
 from pymongo import MongoClient 
 
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 popularity_index = {}
 cat_id_index = defaultdict(dict)

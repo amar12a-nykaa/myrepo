@@ -6,8 +6,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.exceptions import SolrError
-from pas.v1.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
+from pas.v2.exceptions import SolrError
+from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
 
 class PipelineUtils:
 

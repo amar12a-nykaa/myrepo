@@ -4,7 +4,7 @@ from dateutil import tz
 from pipelineUtils import PipelineUtils
 from datetime import datetime, timedelta
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 def getCurrentDateTime():
   current_datetime = datetime.utcnow()

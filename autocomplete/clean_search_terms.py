@@ -22,7 +22,7 @@ from pymongo.errors import BulkWriteError
 from stemming.porter2 import stem
 
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 client = MongoClient()
 search_terms = client['search']['search_terms_daily']
