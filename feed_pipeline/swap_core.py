@@ -3,7 +3,7 @@ import sys
 from pipelineUtils import SolrUtils
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils, CATALOG_COLLECTION_ALIAS
+from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
 
 collections = SolrUtils.get_active_inactive_collections()
 inactive_collection = collections['inactive_collection']

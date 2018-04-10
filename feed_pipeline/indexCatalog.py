@@ -9,8 +9,9 @@ from collections import OrderedDict
 from datetime import datetime
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
-
+import re
 import dateparser
+from IPython import embed
 
 sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
@@ -30,6 +31,10 @@ class CatalogIndexer:
   VISIBILITY_TYPES = ['visible', 'not_visible']
   DOCS_BATCH_SIZE = 1000
 
+  field_type_pattens = {
+    ".*_i$": int,
+    }
+
   def print_errors(errors):
     for err in errors:
       print("[ERROR]: " + err)
@@ -37,6 +42,8 @@ class CatalogIndexer:
   def validate_catalog_feed_row(row):
     for key, value in row.items():
       try:
+        if value is None:
+          value = ""
         value = value.strip()
         value = '' if value.lower() == 'null' else value
 
@@ -54,19 +61,19 @@ class CatalogIndexer:
           value = value.lower()
           assert value in CatalogIndexer.PRODUCT_TYPES, "Invalid type: '%s'. Allowed are %s" %(value, CatalogIndexer.PRODUCT_TYPES)
 
-        elif key in ['rating', 'review_count', 'qna_count']:
+        elif key in ['review_count', 'qna_count']:
           if value:
             try:
               value = int(value)
             except Exception as e:
-              raise Exception('Bad value - %s' % str(e)) 
+              raise Exception('Bad value for key %s- %s' % (key, str(e))) 
 
-        elif key=='rating_num':
+        elif key in ['rating', 'rating_num']:
           if value:
             try:
               value = float(value)
             except Exception as e:
-              raise Exception('Bad value - %s' % str(e))
+              raise Exception('Bad value for key %s- %s' % (key, str(e))) 
         
         elif key=='bucket_discount_percent':
           if value:
@@ -90,6 +97,7 @@ class CatalogIndexer:
         row[key] = value
       except:
         print("[ERROR] Could not process row: %s" % row)
+        print(traceback.format_exc())
 
 
   def fetch_price_availability(input_docs, pws_fetch_products):
@@ -219,19 +227,25 @@ class CatalogIndexer:
         doc['title'] = row['name']
         doc['title_text_split'] = row['name']
         doc['description'] = row['description']
-        doc['tags'] = row['tag'].split('|')
-        doc['highlights'] = row['highlights'].split('|')
-        doc['featured_in_titles'] = row['featured_in_titles'].split('|')
-        doc['featured_in_urls'] = row['featured_in_urls'].split('|')
-        doc['star_rating_count'] = row['rating']
+        doc['tags'] = (row['tag'] or "").split('|')
+        doc['highlights'] = (row['highlights'] or "").split('|')
+        doc['featured_in_titles'] = (row['featured_in_titles'] or "").split('|')
+        doc['featured_in_urls'] = (row['featured_in_urls'] or "").split('|')
+        doc['star_rating_count'] = int(row['rating'] or 0)
         if row['rating_num'] and row['rating_percentage']:
           doc['star_rating'] = row['rating_num']
-          doc['star_rating_percentage'] = row['rating_percentage']
+          doc['star_rating_percentage'] = float(row['rating_percentage'] or 0)
         doc['review_count'] = row['review_count'] or 0
         doc['qna_count'] = row['qna_count'] or 0
         if row['product_expiry']:
           doc['expiry_date'] = dateparser.parse(row['product_expiry'], ['%d-%m-%Y %H:%M', '%Y-%m-%d %H:%M:%S']).strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['is_service'] = row.get('d_sku') == '1'
+        if(row['d_sku'] == '2'):
+          doc['d_sku_s'] = 'giftcard'
+        elif(row['d_sku'] == '1'):
+          doc['d_sku_s'] = 'beauty_service'
+        else:
+          doc['d_sku_s'] = 'none'
         doc['pack_size'] = row['pack_size']
         doc['is_luxe'] = row.get('is_luxe') == '1'
         doc['can_subscribe'] = row.get('is_subscribable') == '1'
@@ -254,6 +268,7 @@ class CatalogIndexer:
         doc['shipping_quote'] = row.get('shipping_quote')
         doc['vendor_id'] = row['vendor_id']
         doc['vendor_sku'] = row['vendor_sku']
+        doc['catalog_tag'] = row['catalog_tag'].split('|')
 
         #Write productid in product datebase
         try:
@@ -292,8 +307,8 @@ class CatalogIndexer:
             doc['slug'] = split_url[-1]
 
         #Category related
-        category_ids = row['category_id'].split('|') if row['category_id'] else []
-        category_names = row['category'].split('|') if row['category'] else []
+        category_ids = (row['category_id'] or "").split('|') if row['category_id'] else []
+        category_names = (row['category'] or "").split('|') if row['category'] else []
         if category_ids and len(category_ids)==len(category_names):
           doc['category_ids'] = category_ids
           doc['category_values'] = category_names
@@ -318,7 +333,7 @@ class CatalogIndexer:
         doc['media'] = []
         main_image = row['main_image']
         main_image_path = urlparse(main_image).path
-        images = row['image_url'].split('|') if row['image_url'] else []
+        images = (row['image_url'] or "").split('|') if row['image_url'] else []
         if main_image and images:
           for image in images:
             image = image.strip()
@@ -334,8 +349,8 @@ class CatalogIndexer:
         # variant stuff
         if doc['type'] == 'configurable':
           variant_type = row['variant_type']
-          variant_skus = row['parent_sku'].split('|') if row['parent_sku'] else []
-          variant_ids = row['parent_id'].split('|') if row['parent_id'] else []
+          variant_skus = (row['parent_sku'] or "").split('|') if row['parent_sku'] else []
+          variant_ids = (row['parent_id'] or "").split('|') if row['parent_id'] else []
           variant_name_key = ''
           variant_icon_key = ''
           variant_attr_id_key = ''
@@ -347,9 +362,9 @@ class CatalogIndexer:
             variant_name_key = 'size'
             variant_attr_id_key = 'size_id'
 
-          variant_names = row[variant_name_key].split('|') if variant_name_key and row[variant_name_key] else []
-          variant_icons = row[variant_icon_key].split('|') if variant_icon_key and row[variant_icon_key] else []
-          variant_attr_ids = row[variant_attr_id_key].split('|') if variant_attr_id_key and row[variant_attr_id_key] else []
+          variant_names = (row[variant_name_key] or "").split('|') if variant_name_key and row[variant_name_key] else []
+          variant_icons = (row[variant_icon_key] or "").split('|') if variant_icon_key and row[variant_icon_key] else []
+          variant_attr_ids = (row[variant_attr_id_key] or "").split('|') if variant_attr_id_key and row[variant_attr_id_key] else []
           if variant_type and variant_skus and len(variant_skus)==len(variant_names) and len(variant_skus)==len(variant_ids) and len(variant_skus)==len(variant_attr_ids):
             if variant_icons and len(variant_icons) != len(variant_skus):
               variant_icons = []
@@ -374,8 +389,8 @@ class CatalogIndexer:
             if variant_attr_id:
               doc['variant_id_i'] = variant_attr_id
         elif doc['type'] == 'bundle':
-          doc['product_ids'] = row['parent_id'].split('|') if row['parent_id'] else []
-          doc['product_skus'] = row['parent_sku'].split('|') if row['parent_sku'] else []
+          doc['product_ids'] = (row['parent_id'] or "").split('|') if row['parent_id'] else []
+          doc['product_skus'] = (row['parent_sku'] or "").split('|') if row['parent_sku'] else []
 
         #Price and availability
         dummy_product = row.get('shop_the_look_product') == '1' or row.get('style_divas') == '1'
@@ -414,8 +429,8 @@ class CatalogIndexer:
         facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1")]
         for field in facet_fields:
           field_prefix = field.rsplit('_', 1)[0]
-          facet_ids = row[field].split('|') if row[field] else []
-          facet_values = row[field_prefix].split('|') if row[field_prefix] else []
+          facet_ids = (row[field] or "").split('|') if row[field] else []
+          facet_values = (row[field_prefix] or "").split('|') if row[field_prefix] else []
           if facet_ids and len(facet_ids) == len(facet_values):
             doc[field_prefix + '_ids'] = facet_ids
             doc[field_prefix + '_values'] = facet_values
@@ -445,13 +460,24 @@ class CatalogIndexer:
         for field in meta_fields:
           doc[field] = row.get(field, "")
 
-        doc['list_offer_ids'] = row['list_offer_id'].split('|')
+        doc['list_offer_ids'] = (row['list_offer_id'] or "").split('|')
         doc['max_allowed_qty_i'] = row['max_allowed_qty'] or 5
+        doc['bulkbuyer_max_allowed_qty_i'] = row['bulkbuyer_max_allowed_qty'] or 0
         doc['is_free_sample_i'] = row['is_free_sample'] or 0
+        doc['pro_flag_i'] = row['pro_flag'] or 0
 
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
+
+        for k,v in doc.items():
+          for pattern, _type in CatalogIndexer.field_type_pattens.items():
+            if re.search(pattern, k):
+              doc[k] = _type(v)
+          if v == ['']:
+            doc[k] = None
+          if not v and v!= False:
+            doc[k] = None
 
         if search_engine == 'elasticsearch':
           CatalogIndexer.formatESDoc(doc)

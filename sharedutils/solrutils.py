@@ -112,7 +112,12 @@ class SolrUtils:
       print(msg)
       raise Exception(msg)
 
-    return {"active_collection": active_collection, "inactive_collection": inactive_collection}
+    return {
+      "active_collection": active_collection,
+      "inactive_collection": inactive_collection,
+      "active_index": active_collection,
+      "inactive_index": inactive_collection
+      }
 
   def swap_core(group):
     collections = SolrUtils.get_active_inactive_collections(group)
@@ -121,6 +126,7 @@ class SolrUtils:
     resp = SolrUtils.createSolrCollectionAlias(inactive_collection, group)
     print("New active collection: %s " % SolrUtils.get_active_inactive_collections(group)['active_collection'])
 
+  get_active_inactive_indexes = get_active_inactive_collections
 
 if __name__ == "__main__":
   ret = SolrUtils.get_active_inactive_collections('livecore')

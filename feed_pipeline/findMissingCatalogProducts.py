@@ -1,6 +1,6 @@
 import sys
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 BATCH_SIZE = 20
 

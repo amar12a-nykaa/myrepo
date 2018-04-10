@@ -15,7 +15,7 @@ from loopcounter import LoopCounter
 from cliutils import CliUtils
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 def read_file_by_dates(startdate, enddate, platform, dryrun=False, limit=0, product_id=None, debug=False):
 
@@ -57,7 +57,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
   assert platform in ['app', 'web']
 
   client = MongoClient()
-  search_terms = client['search']['search_terms']
+  search_terms_daily = client['search']['search_terms_daily']
 
 
   def unzip_file(path_to_zip_file):
@@ -120,6 +120,8 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
           else:
             break
 
+        d['date'] = date
+
       except KeyError:
         print("KeyError", d)
         raise
@@ -141,42 +143,56 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
           d[v] = d.pop(k)
 
       #required_keys = set(['views', 'product_id', 'cart_additions', 'orders'])
-      print("available:keys: %s" % d.keys())
+      #print("available:keys: %s" % d.keys())
       required_keys = set(['date', 'Internal Search Term (Conversion) (evar6)', 'Internal Search Term (Conversion) Instance (Instance of evar6)'])
       missing_keys = required_keys - set(list(d.keys()))
       if missing_keys:
         print("Missing Keys: %s" % missing_keys)
         raise Exception("Missing Keys in CSV")
 
-      #if not d['product_id']:
-      #  continue
+      d['internal_search_term_conversion'] = d.pop("Internal Search Term (Conversion) (evar6)") 
+      d['internal_search_term_conversion_instance'] = d.pop("Internal Search Term (Conversion) Instance (Instance of evar6)") 
 
-#      if product_id_arg:
-#        #embed()
-#        #exit()
-#        if d['product_id'] != product_id_arg:
-#          continue
-        
-      for k in ['cart_additions', 'views', 'orders', 'revenue', 'units']:
-        if k == 'revenue':
-          d[k] = float(d[k])
-        else:
+      is_data_good = True
+      for k in ['internal_search_term_conversion_instance', 'cart_additions']:
+        try:
+          if not d[k]:
+            d[k] = 0
           d[k] = int(d[k])
-
-      if not d['product_id']:
-        print("Skipping empty product_id.")
+        except:
+          print("Error in processing: %s" % d)
+          is_data_good = False
+      if not is_data_good:
         continue
-      
+          
 
-      filt = {"date": date, "product_id": d['product_id'], "platform": platform}
-      update = {k:v for k,v in d.items() if k in ['cart_additions', 'views', 'orders', 'revenue', 'units', 'parent_id']}
+      #print("d: %s" % d)
+      terms  = d['internal_search_term_conversion'].split("|")
+      #if d['internal_search_term_conversion'] == "blackheads removal mask|blackheads removal mask":
+      #  embed()
+      #  exit()
+      try:
+        if len(terms) == 2:
+          d['term'] = d['internal_search_term_conversion'].split("|")[1]
+        else:
+          d['term'] = d['internal_search_term_conversion'].split("|")[0]
+        assert d['term']
+      except:
+        print("Error in processing: %s" % d)
+        continue
+      filt = {"date": date, "term": d['term'], "platform": platform}
+      update = {k:v for k,v in d.items() if k in ['cart_additions', 'internal_search_term_conversion', 'internal_search_term_conversion_instance', 'date', 'term']}
       if debug:
         print("d: %s" % d)
         print("filt: %s" % filt)
         print("update: %s" % update)
 
       if not dryrun:
-        ret = search_terms.update_one(filt, {"$set": update}, upsert=True) 
+        try:
+          ret = search_terms_daily.update_one(filt, {"$set": update}, upsert=True) 
+        except:
+          print("filt: %s" % filt)
+          raise
         if debug:
           print("Mongo response: %s" % ret.raw_result)
 if __name__ == '__main__':
