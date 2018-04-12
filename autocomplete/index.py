@@ -9,6 +9,7 @@ import traceback
 
 import arrow
 import editdistance
+import elasticsearch
 import IPython
 import mysql.connector
 import numpy
@@ -29,6 +30,9 @@ sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
 collection='autocomplete'
+
+ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
+es = Utils.esConn()
 
 def restart_apache_memcached():
   print("Restarting Apache and Memcached")
@@ -371,6 +375,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
 
 
     if index_all:
+
       index_products_arg = True
       index_search_queries_arg= True
       index_categories_arg= True
@@ -396,6 +401,13 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index = None
 
     print("Index: %s" % index)
+
+		if engine == 'elasticsearch':
+			index_client = elasticsearch.client.IndicesClient(es)
+			if index_all and index_client.exists(index = index):
+				index_client.delete(index = index)
+			if not index_client.exists(index = index):
+				index_client.create( index=index, body= ES_SCHEMA)
 
     if index:
       print("Indexing: %s" % index)
