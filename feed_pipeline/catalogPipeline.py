@@ -1,4 +1,6 @@
 #!/usr/bin/python
+import os
+import json
 import socket
 import sys
 import time
@@ -75,7 +77,13 @@ def indexESData(file_path, force_run):
   print("ES Inactive Index: %s"%inactive_index)
 
   #clear inactive index
-  resp = EsUtils.clear_index_data(inactive_index)
+  index_client = EsUtils.get_index_client()
+  if index_client.exists(inactive_index):
+    print("Deleting index: %s" % inactive_index)
+    index_client.delete(inactive_index)
+  schema = json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
+  index_client.create(inactive_index, schema)
+  print("Creating index: %s" % inactive_index)
 
   index_start = timeit.default_timer()
 
