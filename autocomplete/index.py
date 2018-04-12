@@ -402,12 +402,13 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
 
     print("Index: %s" % index)
 
-		if engine == 'elasticsearch':
-			index_client = elasticsearch.client.IndicesClient(es)
-			if index_all and index_client.exists(index = index):
-				index_client.delete(index = index)
-			if not index_client.exists(index = index):
-				index_client.create( index=index, body= ES_SCHEMA)
+    if engine == 'elasticsearch':
+      index_client = elasticsearch.client.IndicesClient(es)
+      if index_all and index_client.exists(index = index):
+        print("Deleting index: %s" % index)
+        index_client.delete(index = index)
+      if not index_client.exists(index = index):
+        index_client.create( index=index, body= ES_SCHEMA)
 
     if index:
       print("Indexing: %s" % index)
