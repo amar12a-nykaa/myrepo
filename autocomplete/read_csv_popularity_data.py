@@ -6,6 +6,7 @@ import argparse
 import sys
 import arrow
 import csv
+import pymongo
 from datetime import date, timedelta
 from pymongo import MongoClient
 from IPython import embed
@@ -16,6 +17,13 @@ from cliutils import CliUtils
 
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils
+
+search_terms_daily = MongoClient().search.search_terms_daily
+
+indices = search_terms_daily.list_indexes()
+if 'date_1_platform_1_term_1' not in [x['name'] for x in indices]:
+  search_terms_daily.create_index([("date", pymongo.ASCENDING), ("platform", pymongo.ASCENDING), ("term", pymongo.ASCENDING)])
+
 
 def read_file_by_dates(startdate, enddate, platform, dryrun=False, limit=0, product_id=None, debug=False):
 
