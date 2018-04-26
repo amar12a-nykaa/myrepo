@@ -7,8 +7,8 @@ import urllib.parse
 import urllib.request
 from tomorrow import threads
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils
-from pas.v1.csvutils import read_csv_from_file
+from pas.v2.utils import Utils
+from pas.v2.csvutils import read_csv_from_file
 from feed_pipeline.pipelineUtils import PipelineUtils
 
 MAX_PARALLEL_REQUESTS = 20
