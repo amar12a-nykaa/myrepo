@@ -10,6 +10,8 @@ import traceback
 from collections import OrderedDict
 from contextlib import closing
 #from loopcounter import LoopCounter
+from IPython import embed
+
 
 import arrow
 import mysql.connector
@@ -22,6 +24,13 @@ from stemming.porter2 import stem
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
+def create_missing_indices():
+  indices = search_terms_daily.list_indexes()
+  if 'query_1' not in [x['name'] for x in indices]:
+    search_terms_daily.create_index([("query", pymongo.ASCENDING)])
+
+create_missing_indices()
+
 def normalize(a):
     if not max(a) - min(a):
         return 0
@@ -30,10 +39,8 @@ def normalize(a):
 def normalize_search_terms():
 
     client = MongoClient()
-    search_terms = client['search']['search_terms_daily_formatted']
+    search_terms_daily = client['search']['search_terms_daily']
     search_terms_normalized = client['search']['search_terms_normalized_daily']
-
-    #ctr = LoopCounter(name='Search Terms Popularity: ')
 
     date_buckets = [(0, 60), (61, 120), (121, 180), (181, 240)]
     dfs = []
@@ -47,10 +54,11 @@ def normalize_search_terms():
         print(startdate, enddate) 
         bucket_results = []
         # TODO need to set count sum to count
-        for term in search_terms.aggregate([
+
+        for term in search_terms_daily.aggregate([
             {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
-            {"$project": {"formatted_term": { "$toLower": "$formatted_term"}, "date":"$date"}},
-            {"$group": {"_id": "$formatted_term", "count": {"$sum": 1}}}, 
+            {"$project": {"term": { "$toLower": "$term"}, "date":"$date", "count": "$internal_search_term_conversion_instance"}},
+            {"$group": {"_id": "$term", "count": {"$sum": "$count"}}}, 
             {"$sort":{ "count": -1}},
         ], allowDiskUse=True):
             term['id'] = term.pop("_id")
@@ -82,9 +90,10 @@ def normalize_search_terms():
     print ("Calculating total popularity")
 
     bucket_results = []
-    for term in search_terms.aggregate([
-        {"$project": {"formatted_term": { "$toLower": "$formatted_term"}, "date":"$date"}},
-        {"$group": {"_id": "$formatted_term", "count": {"$sum": 1}}}, 
+    for term in search_terms_daily.aggregate([
+        #{"$match": {"term" : {"$in": ['Lipstick', 'nars']}}},
+        {"$project": {"term": { "$toLower": "$term"}, "date":"$date","count": "$internal_search_term_conversion_instance" }},
+        {"$group": {"_id": "$term", "count": {"$sum": "$count"} }}, 
         {"$sort":{ "count": -1}},
     ], allowDiskUse=True):
         term['id'] = term.pop("_id")
@@ -93,7 +102,7 @@ def normalize_search_terms():
     df = pd.DataFrame(bucket_results)
     df['norm_count'] = normalize(df['count'])
     df['popularity_total'] = df['norm_count']
-    df.set_index('id')
+    df = df.set_index('id')
 
     a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
     a.popularity_recent = a.popularity_recent.fillna(0) 
@@ -121,7 +130,7 @@ def normalize_search_terms():
 
 """
   current_month = arrow.now().format("YYYY-MM")
-  res = search_terms.aggregate(
+  res = search_terms_daily.aggregate(
     [
       #{"$limit" :1000},
       {"$match": {"month": {"$lt": current_month}, "count": {"$gt": 200 }}},

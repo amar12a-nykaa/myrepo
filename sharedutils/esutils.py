@@ -6,6 +6,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
+import elasticsearch
 import requests
 from IPython import embed
 from elasticsearch import helpers, Elasticsearch
@@ -36,6 +37,13 @@ index_alias_config = {
 }
 
 class EsUtils:
+
+  def get_connection():
+    return Utils.esConn()
+
+  def get_index_client():
+    return elasticsearch.client.IndicesClient(Utils.esConn())
+
   def get_index_from_alias(alias):
     response = {}
     try:
