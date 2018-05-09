@@ -223,7 +223,7 @@ function fetchPWSProducts($products) {
 #  print_r($body);
 
 	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL,"http://$GLUDO_API_HOST/apis/v1/pas.get");
+	curl_setopt($ch, CURLOPT_URL,"http://$GLUDO_API_HOST/apis/v2/pas.get");
 	curl_setopt($ch, CURLOPT_POST, 1);
 	curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
