@@ -264,6 +264,70 @@ def index_categories(collection, searchengine):
 
   index_docs(searchengine, docs, collection)
 
+def index_brands_categories(collection, searchengine):
+  docs = []
+
+  mysql_conn = Utils.mysqlConnection()
+  query = "SELECT brand_id, brand, category_name, category_id, popularity FROM brand_category"
+  results = Utils.fetchResults(mysql_conn, query)
+  ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
+  for row in results:
+    ctr += 1 
+    if ctr.should_print():
+      print(ctr.summary)
+
+    url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['brand'] + " " + row['category_name']
+    docs.append({"_id": createId(row['brand'] +"_"+row['category_name']), 
+        "entity": row['brand'] + " " + row['category_name'],  
+        "weight": row['popularity'], 
+        "type": "brand_category",
+        "data": json.dumps({"url": url, "type": "brand_category" }),
+        "brand_id": row['brand_id'],
+        "category_id": row['category_id'],
+        "category_name": row['category_name'],
+        "source": "brand_category"
+      
+      })
+    if len(docs) >= 100:
+      index_docs(searchengine, docs, collection)
+      docs = []
+
+    print(row['brand'], ctr.count)
+
+  index_docs(searchengine, docs, collection)
+
+def index_category_facets(collection, searchengine):
+  docs = []
+
+  mysql_conn = Utils.mysqlConnection()
+  query = "SELECT category_name, category_id, facet_val, popularity FROM category_facets"
+  results = Utils.fetchResults(mysql_conn, query)
+  ctr = LoopCounter(name='Category Facet Indexing - ' + searchengine)
+  for row in results:
+    ctr += 1 
+    if ctr.should_print():
+      print(ctr.summary)
+
+    url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
+    docs.append({"_id": createId(row['facet_val'] +"_"+row['category_name']), 
+        "entity": row['facet_val'] + " " + row['category_name'],  
+        "weight": row['popularity'], 
+        "type": "category_facet",
+        "data": json.dumps({"url": url, "type": "category_facet" }),
+        "category_id": row['category_id'],
+        "category_name": row['category_name'],
+        "source": "category_facet"
+      
+      })
+    if len(docs) >= 100:
+      index_docs(searchengine, docs, collection)
+      docs = []
+
+    #print(row['brand'], ctr.count)
+
+  index_docs(searchengine, docs, collection)
+
+
 def index_products(collection, searchengine):
 
   docs = []
@@ -370,9 +434,8 @@ def fetch_product_by_parentid(parent_id):
     return doc
   return None
 
-def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_all=False ):
+def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_all=False ):
     assert len([x for x in [collection, active, inactive] if x]) == 1, "Only one of the following should be true"
-
 
     if index_all:
 
@@ -380,6 +443,8 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_search_queries_arg= True
       index_categories_arg= True
       index_brands_arg= True
+      index_brands_categories_arg= True
+      index_category_facets_arg = True
 
     print(locals())
     if engine == 'solr':
@@ -420,6 +485,10 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
         index_categories(index, engine)
       if index_brands_arg:
         index_brands(index, engine)
+      if index_brands_categories_arg:
+        index_brands_categories(index, engine)
+      if index_category_facets_arg:
+        index_category_facets(index, engine)
 
       if engine == 'solr':
         build_suggester(index)
@@ -445,11 +514,13 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
 
   group = parser.add_argument_group('group')
+  group.add_argument("-e", "--searchengine", default="solr,elasticsearch")
   group.add_argument("-c", "--category", action='store_true')
   group.add_argument("-b", "--brand", action='store_true')
   group.add_argument("-s", "--search-query", action='store_true')
   group.add_argument("-p", "--product", action='store_true')
-  group.add_argument("-e", "--searchengine", default="solr,elasticsearch")
+  group.add_argument("--brand-category", action='store_true')
+  group.add_argument("--category-facet", action='store_true')
 
   parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
 
@@ -466,9 +537,9 @@ if __name__ == '__main__':
   print(argv['searchengine'])
   assert all([x in ['elasticsearch', 'solr'] for x in argv['searchengine']])
 
-  required_args = ['category', 'brand', 'search_query', 'product']
+  required_args = ['category', 'brand', 'search_query', 'product', 'brand_category', 'category_facet']
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
 
 
   for engine in argv['searchengine']:
-    index_engine(engine=engine, collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_all=index_all)
+    index_engine(engine=engine, collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_all=index_all)
