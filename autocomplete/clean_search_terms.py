@@ -24,7 +24,7 @@ from stemming.porter2 import stem
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
-client = MongoClient()
+client = MongoClient("172.30.3.5")
 search_terms = client['search']['search_terms_daily']
 search_terms_formatted = client['search']['search_terms_daily_formatted']
 

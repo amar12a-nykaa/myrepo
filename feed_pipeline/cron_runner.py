@@ -32,7 +32,11 @@ for date in recent_missing_dates_preprocess:
   print("\n\n\n")
   print("=== PREPROCESSING  FOR : %s ====" % date)
   d = date.strftime("%Y-%m-%d")
-  cmd="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py --startdate %s --enddate %s --preprocess --popularity -n0 -y " % (d, d)
+  cmd="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py --startdate %s --enddate %s --preprocess -n0 -y " % (d, d)
   print(cmd)
   os.system(cmd)
+
+cmd="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py --popularity -n0 -y " 
+print(cmd)
+os.system(cmd)
 

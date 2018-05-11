@@ -58,7 +58,7 @@ def index_docs(searchengine, docs, collection):
 
 def create_map_search_product():
   DEBUG = False 
-  client = MongoClient()
+  client = MongoClient("172.30.3.5")
   search_terms = client['search']['search_terms']
   search_terms_normalized = client['search']['search_terms_normalized']
 
@@ -126,7 +126,7 @@ def index_search_queries(collection, searchengine):
 
   docs = []
 
-  search_terms_normalized = MongoClient()['search']['search_terms_normalized']
+  search_terms_normalized = MongoClient("172.30.3.5")['search']['search_terms_normalized']
   cnt_product = 0
   cnt_search = 0
 
@@ -268,7 +268,7 @@ def index_products(collection, searchengine):
 
   docs = []
 
-  popularity = MongoClient()['search']['popularity']
+  popularity = MongoClient("172.30.3.5")['search']['popularity']
 
   cnt_product = 0
   cnt_search = 0
