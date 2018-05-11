@@ -31,7 +31,7 @@ elif (file_path and sync_db):
   raise Exception(msg)
 
 def construct_url(params):
-  return "http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.set?"+urllib.parse.urlencode(params)
+  return "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.set?"+urllib.parse.urlencode(params)
 
 @threads(MAX_PARALLEL_REQUESTS, timeout=10)
 def load_url(url):
