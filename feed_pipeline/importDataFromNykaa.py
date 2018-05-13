@@ -3,7 +3,7 @@ import sys
 import json
 import traceback
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils, MemcacheUtils
+from pas.v2.utils import Utils, MemcacheUtils
 
 class NykaaImporter:
 

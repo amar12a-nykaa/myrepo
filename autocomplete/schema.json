@@ -1,0 +1,74 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "autocomplete_ngram": {
+          "tokenizer": "whitespace" ,
+          "filter": ["my_word_delimiter_index","lowercase", "asciifolding", "my_edge_ngram"]
+        },
+        "autocomplete_simple": {
+          "tokenizer": "whitespace" ,
+          "filter": ["my_word_delimiter_index","lowercase", "asciifolding"]
+        },
+        "autocomplete_search": {
+          "tokenizer": "whitespace",
+          "filter": ["my_word_delimiter_search", "lowercase", "asciifolding"]
+        }
+      },
+      "filter": {
+        "my_word_delimiter_index": {
+          "type": "word_delimiter",
+          "catenate_numbers": true,
+          "catenate_words": true,
+          "preserve_original": true
+        },
+        "my_word_delimiter_search": {
+          "type": "word_delimiter",
+          "catenate_numbers": true,
+          "catenate_words": true
+        },
+        
+        "my_edge_ngram": {
+          "type": "edge_ngram",
+          "min_gram": 1,
+          "max_gram": 20,
+          "token_chars": [
+            "letter",
+            "digit"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "entity": {
+      "properties": {
+        "entity_ngram": {
+          "type": "text",
+          "analyzer": "autocomplete_ngram",
+          "search_analyzer": "autocomplete_search"
+        },
+        "entity": {
+          "type": "text",
+          "analyzer": "autocomplete_simple",
+          "search_analyzer": "autocomplete_search"
+        },
+    "data": {
+      "type": "text"
+    },
+    "id": {
+      "type": "keyword"
+    },
+    "type": {
+      "type": "keyword"
+    },
+    "weight": {
+      "type" : "float"
+    }
+      }
+    }
+  }
+}
+
+
+

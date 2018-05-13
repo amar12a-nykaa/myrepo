@@ -9,6 +9,7 @@ import traceback
 
 import arrow
 import editdistance
+import elasticsearch
 import IPython
 import mysql.connector
 import numpy
@@ -26,9 +27,17 @@ from esutils import EsUtils
 from utils import createId
 
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 collection='autocomplete'
+
+ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
+es = Utils.esConn()
+
+def restart_apache_memcached():
+  print("Restarting Apache and Memcached")
+  os.system("/etc/init.d/apache2 restart")
+  os.system("/etc/init.d/memcached restart")
 
 def write_dict_to_csv(dictname, filename):
   with open(filename, 'w') as csv_file:
@@ -41,11 +50,15 @@ def index_docs(searchengine, docs, collection):
     SolrUtils.indexDocs(docs, collection)
     requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
   if searchengine == 'elasticsearch':
-    EsUtils.indexDocs(docs, collection)
+    try:
+      EsUtils.indexDocs(docs, collection)
+    except:
+      print(docs)
+      raise
 
 def create_map_search_product():
   DEBUG = False 
-  client = MongoClient()
+  client = MongoClient("172.30.3.5")
   search_terms = client['search']['search_terms']
   search_terms_normalized = client['search']['search_terms_normalized']
 
@@ -58,6 +71,7 @@ def create_map_search_product():
   search_terms = client['search']['search_terms']
   search_terms_normalized = client['search']['search_terms_normalized']
 
+<<<<<<< HEAD
   map_search_product = {}
 
   es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']
@@ -113,6 +127,26 @@ def create_map_search_product():
     response = Utils.makeESRequest(querydsl, es_index)
     docs = response['hits']['hits']
 
+=======
+  for query in [p['query'] for p in search_terms_normalized.find(no_cursor_timeout=True)]:
+    base_url = Utils.solrHostName() + "/solr/yang/select"
+    #embed()
+    #exit()
+    f = furl(base_url) 
+    f.args['defType'] = 'dismax'
+    f.args['indent'] = 'on'
+    f.args['mm'] = 80
+    f.args['qf'] = 'title_text_split'
+    f.args['type'] = 'simple,configurable'
+    f.args['bf'] = 'popularity'
+    f.args['q'] = str(query)
+    f.args['fq'] = ['type:"simple" OR type:"configurable"', 'price:[1 TO *]']
+    f.args['fl'] = 'title,score,media:[json],product_url,product_id,price,type'
+    f.args['wt'] = 'json'
+    resp = requests.get(f.url)
+    js = resp.json()
+    docs = js['response']['docs']
+>>>>>>> 2384dcfe1524142216a85a5e88b37147faf90054
     if docs:
       max_score = max([x['_score'] for x in docs])
       docs = [x['_source'] for x in docs if x['_score'] == max_score]
@@ -158,14 +192,14 @@ def index_search_queries(collection, searchengine):
 
   docs = []
 
-  search_terms_normalized = MongoClient()['search']['search_terms_normalized']
+  search_terms_normalized = MongoClient("172.30.3.5")['search']['search_terms_normalized']
   cnt_product = 0
   cnt_search = 0
 
   ctr = LoopCounter(name='Search Queries')
   num_errors_searchquery_to_product_mapping = 0
   num_search_queries_that_should_map_to_products = 0
-  for row in search_terms_normalized.find():
+  for row in search_terms_normalized.find(no_cursor_timeout=True):
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
@@ -210,6 +244,7 @@ def index_search_queries(collection, searchengine):
       "weight": row['popularity'],
       "type": _type,
       "data": data,
+      "source": "search_query"
     })
 
     if len(docs) >= 100:
@@ -224,6 +259,8 @@ def index_search_queries(collection, searchengine):
   #print("fail percentage:")
   #print(num_errors_searchquery_to_product_mapping/num_search_queries_that_should_map_to_products * 100)
 
+  #print("fail percentage:")
+  #print(num_errors_searchquery_to_product_mapping/num_search_queries_that_should_map_to_products * 100)
 
   print("cnt_product: %s" % cnt_product)
   print("cnt_search: %s" % cnt_search)
@@ -236,7 +273,7 @@ def index_brands(collection, searchengine):
   mysql_conn = Utils.mysqlConnection()
   query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
   results = Utils.fetchResults(mysql_conn, query)
-  ctr = LoopCounter(name='Brand Indexing')
+  ctr = LoopCounter(name='Brand Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
     if ctr.should_print():
@@ -248,6 +285,8 @@ def index_brands(collection, searchengine):
         "type": "brand",
         "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id']}),
         "id": row['brand_id'],
+        "source": "brand"
+      
       })
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
@@ -263,7 +302,7 @@ def index_categories(collection, searchengine):
   mysql_conn = Utils.mysqlConnection()
   query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories order by name, category_popularity desc"
   results = Utils.fetchResults(mysql_conn, query)
-  ctr = LoopCounter(name='Category Indexing')
+  ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   prev_cat = None
   for row in results:
     ctr += 1
@@ -282,7 +321,8 @@ def index_categories(collection, searchengine):
         "weight": row['category_popularity'],
         "type": "category",
         "data": json.dumps({"url": row['url'], "type": "category", "id": row['category_id']}),
-        "id": row['category_id']
+        "id": row['category_id'],
+        "source": "category"
       })
     if len(docs) == 100:
       index_docs(searchengine, docs, collection)
@@ -294,15 +334,15 @@ def index_products(collection, searchengine):
 
   docs = []
 
-  popularity = MongoClient()['search']['popularity']
+  popularity = MongoClient("172.30.3.5")['search']['popularity']
 
   cnt_product = 0
   cnt_search = 0
   cnt_missing_solr = 0 
   cnt_missing_keys = 0 
 
-  ctr = LoopCounter(name='Product Indexing')
-  for row in popularity.find():
+  ctr = LoopCounter(name='Product Indexing - ' + searchengine)
+  for row in popularity.find(no_cursor_timeout=True):
     parent_id = row['parent_id']
     #print(parent_id)
     ctr += 1
@@ -337,7 +377,8 @@ def index_products(collection, searchengine):
         "weight": row['popularity'], 
         "type": _type,
         "data": data,
-        "id": parent_id
+        "id": parent_id,
+        "source": "product"
       })
 
     if len(docs) >= 100:
@@ -357,19 +398,12 @@ def build_suggester(collection):
   requests.get(base_url + "suggest?wt=json&suggest.q=la&suggest.build=true")
   r = requests.get(base_url + "suggestsmall?wt=json&suggest.q=la&suggest.build=true")
 
-def index_all(collection):
-  index_search_queries(collection)
-  index_products(collection)
-  index_categories(collection)
-  index_brands(collection)
-  build_suggester(collection)
-
 def fetch_product_by_parentid(parent_id):
   DEBUG = False 
   product = {}
   base_url = Utils.solrHostName() + "/solr/yang/select"
   f = furl(base_url) 
-  f.args['q'] = 'parent_id:%s AND product_id:%s' % (parent_id,parent_id)
+  f.args['q'] = 'parent_id:%s AND product_id:%s AND -category_ids:2413' % (parent_id,parent_id) 
   f.args['fq'] = 'type:"simple" OR type:"configurable"'
   f.args['fl'] = 'title,score,media:[json],product_url,product_id,price,type'
   f.args['wt'] = 'json'
@@ -402,6 +436,71 @@ def fetch_product_by_parentid(parent_id):
     return doc
   return None
 
+def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_all=False ):
+    assert len([x for x in [collection, active, inactive] if x]) == 1, "Only one of the following should be true"
+
+
+    if index_all:
+
+      index_products_arg = True
+      index_search_queries_arg= True
+      index_categories_arg= True
+      index_brands_arg= True
+
+    print(locals())
+    if engine == 'solr':
+      EngineUtils = SolrUtils
+    elif engine == 'elasticsearch':
+      EngineUtils = EsUtils
+    else:
+      raise Exception("Unknown Search Engine: %s" % engine)
+    #print(engine,   collection, active, inactive)
+    index = None
+    print('Starting %s Processing' % engine)
+    if collection: 
+      index = collection 
+    elif active:
+      index = EngineUtils.get_active_inactive_indexes('autocomplete')['active_index']
+    elif inactive:
+      index = EngineUtils.get_active_inactive_indexes('autocomplete')['inactive_index']
+    else:
+      index = None
+
+    print("Index: %s" % index)
+
+    if engine == 'elasticsearch':
+      index_client = elasticsearch.client.IndicesClient(es)
+      if index_all and index_client.exists(index = index):
+        print("Deleting index: %s" % index)
+        index_client.delete(index = index)
+      if not index_client.exists(index = index):
+        index_client.create( index=index, body= ES_SCHEMA)
+
+    if index:
+      print("Indexing: %s" % index)
+      if index_search_queries_arg:
+        index_search_queries(index, engine)
+      if index_products_arg:
+        index_products(index, engine)
+      if index_categories_arg:
+        index_categories(index, engine)
+      if index_brands_arg:
+        index_brands(index, engine)
+
+      if engine == 'solr':
+        build_suggester(index)
+
+      print('Done processing ',  engine)
+      restart_apache_memcached()
+    
+    if swap:
+      print("Swapping Index")
+      indexes = EngineUtils.get_active_inactive_indexes('autocomplete')
+      if engine == 'elasticsearch':
+        EngineUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
+      else:
+        EngineUtils.swap_core('autocomplete')
+      exit()
 
 if __name__ == '__main__':
 
@@ -416,6 +515,7 @@ if __name__ == '__main__':
   group.add_argument("-b", "--brand", action='store_true')
   group.add_argument("-s", "--search-query", action='store_true')
   group.add_argument("-p", "--product", action='store_true')
+  group.add_argument("-e", "--searchengine", default="solr,elasticsearch")
 
   parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
 
@@ -423,64 +523,18 @@ if __name__ == '__main__':
   collection_state.add_argument("--inactive", action='store_true')
   collection_state.add_argument("--active", action='store_true')
   collection_state.add_argument("--collection")
-  collection_state.add_argument("--swap", action='store_true', help="Swap the Core")
+  
+  parser.add_argument("--swap", action='store_true', help="Swap the Core")
 
   argv = vars(parser.parse_args())
 
+  argv['searchengine'] = argv['searchengine'].split(",")
+  print(argv['searchengine'])
+  assert all([x in ['elasticsearch', 'solr'] for x in argv['searchengine']])
+
   required_args = ['category', 'brand', 'search_query', 'product']
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
- 
-  # solr
-  if argv['collection']:
-    collection = argv['collection']
-  elif argv['active']:
-    collection = SolrUtils.get_active_inactive_collections('autocomplete')['active_collection']
-  elif argv['inactive']:
-    collection = SolrUtils.get_active_inactive_collections('autocomplete')['inactive_collection']
-  elif argv['swap']:
-    SolrUtils.swap_core('autocomplete')
-    exit()
-
-  print("Indexing to collection: %s" % collection)
-  if argv['search_query'] or index_all:
-    index_search_queries(collection, 'solr')
-  if argv['product'] or index_all:
-    index_products(collection, 'solr')
-  if argv['category'] or index_all:
-    index_categories(collection, 'solr')
-  if argv['brand'] or index_all:
-    index_brands(collection, 'solr')
-  build_suggester(collection)
 
 
-  if argv['buildonly']:
-    build_suggester(collection)
-
-  # elastic search
-  print('Done processing Solr')
-  print('Starting ElasticSearch Processing')
-  if argv['collection']:
-    index = argv['collection']
-  elif argv['active']:
-    index = EsUtils.get_active_inactive_indexes('autocomplete')['active_index']
-  elif argv['inactive']:
-    index = EsUtils.get_active_inactive_indexes('autocomplete')['inactive_index']
-  elif argv['swap']:
-    indexes = EsUtils.get_active_inactive_indexes('autocomplete')
-    EsUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
-    exit()
-
-  print("Indexing: %s" % index)
-  if argv['search_query'] or index_all:
-    index_search_queries(index, 'elasticsearch')
-  if argv['product'] or index_all:
-    index_products(index, 'elasticsearch')
-  if argv['category'] or index_all:
-    index_categories(index, 'elasticsearch')
-  if argv['brand'] or index_all:
-    index_brands(index, 'elasticsearch')
-
-  print("Restarting Apache and Memcached")
-  os.system("/etc/init.d/apache2 restart")
-  os.system("/etc/init.d/memcached restart")
-  
+  for engine in argv['searchengine']:
+    index_engine(engine=engine, collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_all=index_all)

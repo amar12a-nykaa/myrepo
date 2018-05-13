@@ -15,7 +15,7 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils, MemcacheUtils
+from pas.v2.utils import Utils, MemcacheUtils
 
 def valid_date(s):
   try:
@@ -107,7 +107,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
 
   assert platform in ['app', 'web']
 
-  client = MongoClient()
+  client = MongoClient("172.30.3.5")
   raw_data = client['search']['raw_data']
 
 

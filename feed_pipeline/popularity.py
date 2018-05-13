@@ -19,7 +19,7 @@ import pandas as pd
 from pymongo import MongoClient
 
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
@@ -37,7 +37,7 @@ WEIGHT_REVENUE = 20
 #WEIGHT_CART_ADDITIONS = 10
 #WEIGHT_REVENUE = 70
 
-client = MongoClient()
+client = MongoClient("172.30.3.5")
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']

@@ -6,8 +6,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.exceptions import SolrError
-from pas.v1.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
+from pas.v2.exceptions import SolrError
+from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
 
 class PipelineUtils:
 
@@ -89,7 +89,7 @@ class PipelineUtils:
     update_docs = []
     if final_products_to_update:
       params = json.dumps({"products": final_products_to_update}).encode('utf8')
-      req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v1/pas.get", data=params, headers={'content-type': 'application/json'})
+      req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get", data=params, headers={'content-type': 'application/json'})
       pas_object = json.loads(urllib.request.urlopen(req, params).read().decode('utf-8')).get('skus', {})
       swap_keys = {'sp': 'price', 'discount': 'discount', 'mrp': 'mrp', 'is_in_stock': 'in_stock', 'quantity': 'quantity', 'backorders': 'backorders', 'disabled': 'disabled'}
 

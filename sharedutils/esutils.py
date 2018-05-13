@@ -6,13 +6,14 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
+import elasticsearch
 import requests
 from IPython import embed
 from elasticsearch import helpers, Elasticsearch
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v1.exceptions import SolrError
-from pas.v1.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
+from pas.v2.exceptions import SolrError
+from pas.v2.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
 
 
 index_alias_config = {
@@ -36,6 +37,13 @@ index_alias_config = {
 }
 
 class EsUtils:
+
+  def get_connection():
+    return Utils.esConn()
+
+  def get_index_client():
+    return elasticsearch.client.IndicesClient(Utils.esConn())
+
   def get_index_from_alias(alias):
     response = {}
     try:

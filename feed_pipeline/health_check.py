@@ -9,7 +9,7 @@ from pymongo import MongoClient
 
 host = socket.gethostname()
 
-client = MongoClient()
+client = MongoClient("172.30.3.5")
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity = client['search']['popularity']

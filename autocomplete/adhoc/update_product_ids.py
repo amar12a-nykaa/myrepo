@@ -17,15 +17,15 @@ import requests
 
 
 sys.path.append("/nykaa/api")
-from pas.v1.csvutils import read_csv_from_file
-from pas.v1.exceptions import SolrError
-from pas.v1.utils import Utils
+from pas.v2.csvutils import read_csv_from_file
+from pas.v2.exceptions import SolrError
+from pas.v2.utils import Utils
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 
 
-client = MongoClient()
+client = MongoClient("172.30.3.5")
 master_feed= client['feed_pipeline']['master_feed']
 
 conn =  Utils.mysqlConnection()

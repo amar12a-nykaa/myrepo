@@ -1,6 +1,6 @@
 from pymongo import MongoClient
 
-client = MongoClient()
+client = MongoClient("172.30.3.5")
 popularity_coll = client['search']['popularity']
 
 print(popularity_coll.find_one())

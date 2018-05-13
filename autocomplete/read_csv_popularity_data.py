@@ -1,21 +1,77 @@
-import time 
-import datetime
-import subprocess
-import os
 import argparse
-import sys
 import arrow
 import csv
+import datetime
+import html
+import json
+import os
+import os.path
+import pprint
+import pymongo
+import re
+import subprocess
+import sys
+import time 
+import traceback
+#from loopcounter import LoopCounter
+
+from IPython import embed
+from collections import OrderedDict
+from contextlib import closing
 from datetime import date, timedelta
 from pymongo import MongoClient
-from IPython import embed
+
+import arrow
+import mysql.connector
+import numpy
+import omniture
+import pandas as pd
+from pymongo import MongoClient, UpdateOne
+from pymongo.errors import BulkWriteError
+from stemming.porter2 import stem
+
+sys.path.append("/nykaa/api")
+from pas.v2.utils import Utils
+
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 from cliutils import CliUtils
 
-sys.path.append('/home/apis/nykaa/')
-from pas.v1.utils import Utils
+client = MongoClient("172.30.3.5")
+search_terms_daily = client['search']['search_terms_daily']
+search_terms_formatted = client['search']['search_terms_daily_formatted']
+
+def format_term(term):
+    term = html.unescape(term).lower()
+    term = re.sub('[^A-Za-z0-9 ]', "", term)
+    term = re.sub("colour", "color", term)
+    term = re.sub(" +", " ", term)
+    return term.strip()
+
+def normalize_array(query):
+    index = set()
+    for row in Utils.mysql_read(query): 
+        row = row['term']
+        for term in row.split(" "):
+            term = format_term(term)
+            index.add(term)
+    return index
+
+brand_index = normalize_array("select brand as term from nykaa.brands")
+category_index = normalize_array("select name as term from nykaa.l3_categories")
+
+def myconverter(o):
+    if isinstance(o, datetime.datetime):
+        return o.__str__()
+
+
+def create_missing_indices():
+  indices = search_terms_daily.list_indexes()
+  if 'date_1_platform_1_term_1' not in [x['name'] for x in indices]:
+    search_terms_daily.create_index([("date", pymongo.ASCENDING), ("platform", pymongo.ASCENDING), ("term", pymongo.ASCENDING)])
+
+create_missing_indices()
 
 def read_file_by_dates(startdate, enddate, platform, dryrun=False, limit=0, product_id=None, debug=False):
 
@@ -56,8 +112,8 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
   product_id_arg = product_id
   assert platform in ['app', 'web']
 
-  client = MongoClient()
-  search_terms = client['search']['search_terms']
+  client = MongoClient("172.30.3.5")
+  search_terms_daily = client['search']['search_terms_daily']
 
 
   def unzip_file(path_to_zip_file):
@@ -120,6 +176,8 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
           else:
             break
 
+        d['date'] = date
+
       except KeyError:
         print("KeyError", d)
         raise
@@ -141,42 +199,76 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
           d[v] = d.pop(k)
 
       #required_keys = set(['views', 'product_id', 'cart_additions', 'orders'])
-      print("available:keys: %s" % d.keys())
+      #print("available:keys: %s" % d.keys())
       required_keys = set(['date', 'Internal Search Term (Conversion) (evar6)', 'Internal Search Term (Conversion) Instance (Instance of evar6)'])
       missing_keys = required_keys - set(list(d.keys()))
       if missing_keys:
         print("Missing Keys: %s" % missing_keys)
         raise Exception("Missing Keys in CSV")
 
-      #if not d['product_id']:
-      #  continue
+      d['internal_search_term_conversion'] = d.pop("Internal Search Term (Conversion) (evar6)") 
+      d['internal_search_term_conversion_instance'] = d.pop("Internal Search Term (Conversion) Instance (Instance of evar6)") 
 
-#      if product_id_arg:
-#        #embed()
-#        #exit()
-#        if d['product_id'] != product_id_arg:
-#          continue
-        
-      for k in ['cart_additions', 'views', 'orders', 'revenue', 'units']:
-        if k == 'revenue':
-          d[k] = float(d[k])
-        else:
+      is_data_good = True
+      for k in ['internal_search_term_conversion_instance', 'cart_additions']:
+        try:
+          if not d[k]:
+            d[k] = 0
           d[k] = int(d[k])
-
-      if not d['product_id']:
-        print("Skipping empty product_id.")
+        except:
+          print("Error in processing: %s" % d)
+          is_data_good = False
+      if not is_data_good:
         continue
-      
+          
 
-      filt = {"date": date, "product_id": d['product_id'], "platform": platform}
-      update = {k:v for k,v in d.items() if k in ['cart_additions', 'views', 'orders', 'revenue', 'units', 'parent_id']}
+      #print("d: %s" % d)
+      terms  = d['internal_search_term_conversion'].split("|")
+      #if d['internal_search_term_conversion'] == "blackheads removal mask|blackheads removal mask":
+      #  embed()
+      #  exit()
+      try:
+        if len(terms) == 2:
+          d['term'] = d['internal_search_term_conversion'].split("|")[1]
+        else:
+          d['term'] = d['internal_search_term_conversion'].split("|")[0]
+        assert d['term']
+      except:
+        print("Error in processing: %s" % d)
+        continue
+      filt = {"date": date, "term": d['term'], "platform": platform}
+      update = {k:v for k,v in d.items() if k in ['cart_additions', 'internal_search_term_conversion', 'internal_search_term_conversion_instance', 'date', 'term']}
+
+      formatted_term = storable_term = format_term(update['term']).strip()
+      splitted_terms = storable_term.split()
+      for each_term in splitted_terms:
+          if each_term in brand_index or each_term in category_index:
+              formatted_term = formatted_term.replace(each_term, "")
+
+      #print(formatted_term)
+      # TODO Look below, want to uncomment?
+#        if len(formatted_term) <= 3:
+#            continue
+      formatted_term = format_term(formatted_term)
+      try:
+          formatted_term = float(formatted_term)
+      except:
+          if formatted_term:
+              update['formatted_term'] = storable_term
+              update['stripped_term'] = formatted_term
+              update.pop('_id', None)
+
       if debug:
         print("d: %s" % d)
         print("filt: %s" % filt)
         print("update: %s" % update)
 
       if not dryrun:
-        ret = search_terms.update_one(filt, {"$set": update}, upsert=True) 
+        try:
+          ret = search_terms_daily.update_one(filt, {"$set": update}, upsert=True) 
+        except:
+          print("filt: %s" % filt)
+          raise
         if debug:
           print("Mongo response: %s" % ret.raw_result)
 if __name__ == '__main__':
@@ -196,4 +288,42 @@ if __name__ == '__main__':
   else:
     print(argv['startdate'])
     read_file_by_dates(startdate=argv['startdate'], enddate=argv['enddate'], platform=argv['platform'], dryrun=argv['dryrun'], limit=argv['limit'], product_id=argv['id'], debug=argv['debug'])
+
+  exit()
+  offset = 0
+  limit = 1000000
+
+  while True:
+      queries = search_terms_daily.find()[offset:(offset+limit)]
+      if queries:
+          break
+      formatted_queries = []
+      for query in queries:
+          formatted_term = storable_term = format_term(query['term']).strip()
+          splitted_terms = storable_term.split()
+          for each_term in splitted_terms:
+              if each_term in brand_index or each_term in category_index:
+                  formatted_term = formatted_term.replace(each_term, "")
+
+          #print(formatted_term)
+          # TODO Look below, want to uncomment?
+#        if len(formatted_term) <= 3:
+#            continue
+          formatted_term = format_term(formatted_term)
+          try:
+              formatted_term = float(formatted_term)
+          except:
+              if formatted_term:
+                  query['formatted_term'] = storable_term
+                  query['stripped_term'] = formatted_term
+                  query.pop('_id', None)
+                  formatted_queries.append(query)
+
+      #print(json.dumps(formatted_queries, indent=4, default = myconverter))
+      if formatted_queries:
+          try:
+              search_terms_formatted.insert_many(formatted_queries)
+          except BulkWriteError as exc:
+              print(exc.details)
+      offset += limit
 

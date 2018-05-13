@@ -16,9 +16,9 @@ sys.path.append("/nykaa/scripts/sharedutils")
 
 sys.path.append('/nykaa/api')
 
-from pas.v1.utils import Utils, MemcacheUtils
+from pas.v2.utils import Utils, MemcacheUtils
 
-client = MongoClient()
+client = MongoClient("172.30.3.5")
 data = client['local']['feed3']
 
 

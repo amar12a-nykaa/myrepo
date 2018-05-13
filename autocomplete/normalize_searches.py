@@ -20,11 +20,11 @@ from pymongo import MongoClient
 from stemming.porter2 import stem
 
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 
 def normalize_search_terms():
-  client = MongoClient()
+  client = MongoClient("172.30.3.5")
   search_terms = client['search']['search_terms']
   search_terms_normalized = client['search']['search_terms_normalized']
 

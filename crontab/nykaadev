@@ -1,6 +1,0 @@
-SHELL=/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-
-45 */4 * * * root /usr/local/src/findMismatches.php -d -e >> /var/log/nykaa/mismatch.log
-#0 * * * * root cd /home/ubuntu/nykaa_scripts/feed_pipeline; python indexScheduledPrices.py >> /var/log/nykaa/schedule_price_cron.log
-

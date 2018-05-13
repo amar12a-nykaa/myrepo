@@ -12,7 +12,7 @@ from collections import defaultdict
 from pymongo import MongoClient 
 
 sys.path.append("/nykaa/api")
-from pas.v1.utils import Utils
+from pas.v2.utils import Utils
 
 popularity_index = {}
 cat_id_index = defaultdict(dict)
@@ -144,7 +144,7 @@ def getProducts():
 
   query = "show indexes in analytics.catalog_dump"
   index_on_entity_id__catalog_dump = [ x for x in Utils.mysql_read(query, connection=nykaa_analytics_db_conn) if x['Column_name'] == 'entity_id']
-  assert index_on_entity_id__catalog_dump, "Index Missing on catalog_dump"
+  #assert index_on_entity_id__catalog_dump, "Index Missing on catalog_dump"
 
   print("Fetching products from Nykaa DB..")
   query = "SELECT sl.entity_id AS simple_id, sl.sku AS simple_sku,\
