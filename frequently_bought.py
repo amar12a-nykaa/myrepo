@@ -124,7 +124,7 @@ def prepare_cursor_for_archived_orders_table():
                        "ORDER BY sfoi.order_id;"
     else:
         orders_query = "SELECT sfoi.order_id, sfoi.product_id, sfoi.product_type, ccpi.category_id, eaov.value " \
-                       "FROM sales_flat_order_item_archive sfoi FORCE INDEX (IDX_SALES_FLAT_ORDER_ITEM_ORDER_ID) " \
+                       "FROM sales_flat_order_item_archive sfoi " \
                        "LEFT JOIN catalog_product_entity_varchar cpev ON cpev.entity_id = sfoi.product_id AND cpev.attribute_id = 668 " \
                        "LEFT JOIN eav_attribute_option_value eaov ON eaov.option_id = cpev.value AND eaov.store_id = 0 " \
                        "LEFT JOIN catalog_category_product_index ccpi ON ccpi.product_id = sfoi.product_id " \
@@ -251,6 +251,7 @@ def batch_pool_orders():
 
             if DEBUG_MODE:
                 print("Order Details")
+                print("Order ID = " + str(current_order_id))
                 print(current_order_products)
 
             update_dict_with_full_order(current_order_products)
@@ -315,7 +316,7 @@ for product_id, bought_with in product_bought_with_dict.items():
 
 
 # Saves all results to PAS DB
-pasdb = Utils.mysqlConnection()
+pasdb = Utils.mysqlConnection('w')
 cursor = pasdb.cursor()
 
 def write_results_to_db():

@@ -9,10 +9,13 @@ from pymongo import MongoClient
 
 host = socket.gethostname()
 
-client = MongoClient()
+client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity = client['search']['popularity']
+
+sys.path.append("/nykaa/api")
+from pas.v2.utils import Utils
 
 
 def enumerate_dates(startdate, enddate):

@@ -20,6 +20,6 @@ from pymongo import MongoClient
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
-client = MongoClient()
+client = Utils.mongoClient()
 
 

@@ -150,7 +150,7 @@ class CatalogIndexer:
             continue
             #raise Exception("Missing PAS fields: %s"%missing_fields)
         else:
-          #r = json.loads(urllib.request.urlopen("http://priceapi.nyk00-int.network/apis/v1/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
+          #r = json.loads(urllib.request.urlopen("http://priceapi.nyk00-int.network/apis/v2/pas.get?"+urllib.parse.urlencode(params)).read().decode('utf-8'))
           #if not r['skus'].get(doc['sku']):
             #with open("/data/missing_skus.txt", "a") as f:
               #f.write("%s\n"%doc['sku'])

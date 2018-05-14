@@ -41,6 +41,9 @@ def normalize(a):
 
 def normalize_search_terms():
 
+    client = Utils.mongoClient()
+    search_terms_daily = client['search']['search_terms_daily']
+    search_terms_normalized = client['search']['search_terms_normalized_daily']
 
     date_buckets = [(0, 60), (61, 120), (121, 180), (181, 240)]
     dfs = []

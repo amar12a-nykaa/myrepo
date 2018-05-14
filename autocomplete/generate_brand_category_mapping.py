@@ -49,7 +49,7 @@ BLACKLISTED_FACETS = ['old_brand_facet', ]
 POPULARITY_THRESHOLD = 0.1
 
 def build_product_popularity_index():
-  client = MongoClient("52.221.96.159")
+  client = Utils.mongoClient()
   global popularity_index
   popularity_table = client['search']['popularity']
   #max_popularity = popularity_table.aggregate([{"$group":{ "_id": "max", "max":{"$max": "$popularity"}}}])

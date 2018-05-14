@@ -153,7 +153,7 @@ class NykaaImporter:
 
         #Update in memcache
         offer_info = {}
-        memcache_key = 'offer-%s' % item['offer_id']
+        memcache_key = 'offer-v2-%s' % item['offer_id']
         app_sorting = item['app_sorting']
         if not (app_sorting and app_sorting in NykaaImporter.default_sorting_map.keys()):
           app_sorting = '1'
