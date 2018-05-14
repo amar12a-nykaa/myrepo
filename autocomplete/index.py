@@ -60,11 +60,11 @@ def create_map_search_product():
   DEBUG = False 
   client = MongoClient()
   search_terms = client['search']['search_terms']
-  search_terms_normalized = client['search']['search_terms_normalized']
+  search_terms_normalized_daily = client['search']['search_terms_normalized_daily']
 
   map_search_product = {}
 
-  for query in [p['query'] for p in search_terms_normalized.find(no_cursor_timeout=True)]:
+  for query in [p['query'] for p in search_terms_normalized_daily.find(no_cursor_timeout=True)]:
     base_url = Utils.solrHostName() + "/solr/yang/select"
     #embed()
     #exit()
@@ -126,14 +126,14 @@ def index_search_queries(collection, searchengine):
 
   docs = []
 
-  search_terms_normalized = MongoClient()['search']['search_terms_normalized']
+  search_terms_normalized_daily = MongoClient()['search']['search_terms_normalized_daily']
   cnt_product = 0
   cnt_search = 0
 
   ctr = LoopCounter(name='Search Queries')
   num_errors_searchquery_to_product_mapping = 0
   num_search_queries_that_should_map_to_products = 0
-  for row in search_terms_normalized.find(no_cursor_timeout=True):
+  for row in search_terms_normalized_daily.find(no_cursor_timeout=True):
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
@@ -185,7 +185,7 @@ def index_search_queries(collection, searchengine):
       index_docs(searchengine, docs, collection)
       docs = []
   
-  total_search_queries = search_terms_normalized.count()
+  total_search_queries = search_terms_normalized_daily.count()
   if num_errors_searchquery_to_product_mapping/num_search_queries_that_should_map_to_products * 100  > 2:
     raise Exception("Too many search queries failed to get mapped to products. Expected: %s. Failed: %s" % \
       (num_search_queries_that_should_map_to_products, num_errors_searchquery_to_product_mapping))
