@@ -34,7 +34,7 @@ nykaa_replica_db_conn = Utils.nykaaMysqlConnection(force_production=True)
 
 
 def build_product_popularity_index():
-  client = MongoClient("52.221.96.159")
+  client = Utils.mongoClient()
   global popularity_index
   popularity_table = client['search']['popularity']
   #max_popularity = popularity_table.aggregate([{"$group":{ "_id": "max", "max":{"$max": "$popularity"}}}])

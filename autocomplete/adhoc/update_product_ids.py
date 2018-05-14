@@ -25,7 +25,7 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 
 
-client = MongoClient("172.30.3.5")
+client = Utils.mongoClient()
 master_feed= client['feed_pipeline']['master_feed']
 
 conn =  Utils.mysqlConnection()

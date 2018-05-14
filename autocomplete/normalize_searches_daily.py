@@ -38,7 +38,7 @@ def normalize(a):
 
 def normalize_search_terms():
 
-    client = MongoClient("172.30.3.5")
+    client = Utils.mongoClient()
     search_terms_daily = client['search']['search_terms_daily']
     search_terms_normalized = client['search']['search_terms_normalized_daily']
 
