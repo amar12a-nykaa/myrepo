@@ -2,7 +2,7 @@ import sys
 from pymongo import MongoClient
 from IPython import embed
 
-client = MongoClient()
+client = MongoClient("172.30.3.5")
 popularity_table = client['search']['popularity']
 
 def get_popularity_for_id(product_id, parent_id=None):

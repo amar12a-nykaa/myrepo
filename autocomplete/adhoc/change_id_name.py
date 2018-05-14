@@ -8,7 +8,7 @@ from loopcounter import LoopCounter
 def create_product_id_index():
   start = time.time()
   product_id_index = {}
-  client = MongoClient()
+  client = MongoClient("172.30.3.5")
   master_feed = client['feed_pipeline']['master_feed']
   for p in master_feed.find({}, {"parent_id":1, 'product_id':1, "sku":1, "psku":1, "_id": 0}).limit(0) :
     product_id_index[p['product_id']] = p
@@ -21,8 +21,8 @@ def create_product_id_index():
 
 product_id_index = create_product_id_index()
 
-raw_data = MongoClient()['search']['raw_data']
-#raw_data = MongoClient()['search']['processed_data']
+raw_data = MongoClient("172.30.3.5")['search']['raw_data']
+#raw_data = MongoClient("172.30.3.5")['search']['processed_data']
 
 #clause = {"product_id": None}
 ctr = LoopCounter("Reading CSV")#, total=raw_data.count(clause))
