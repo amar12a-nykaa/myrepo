@@ -1,46 +1,10 @@
 {
-  "settings": {
-    "analysis": {
-      "analyzer": {
-        "default": {
-          "tokenizer": "whitespace" ,
-          "filter": ["my_word_delimiter_index", "lowercase", "my_stemming", "asciifolding"]
-        },
-        "default_search": {
-          "tokenizer": "whitespace",
-          "filter": ["my_word_delimiter_search", "lowercase", "my_stemming", "asciifolding"]
-        }
-      },
-      "filter": {
-        "my_word_delimiter_index": {
-          "type": "word_delimiter",
-          "catenate_numbers": true,
-          "catenate_words": true,
-          "preserve_original": true
-        },
-        "my_word_delimiter_search": {
-          "type": "word_delimiter",
-          "catenate_numbers": true,
-          "catenate_words": true
-        },
-        "my_stemming" : {
-          "type" : "stemmer",
-          "language" : "minimal_english"
-        }
-      }
-    }
-  },
   "mappings": {
     "product": {
       "properties": {
         "add_to_cart_url": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "backorders": {
           "type": "boolean"
@@ -104,27 +68,19 @@
         },
         "button_text": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "can_subscribe": {
-          "type": "boolean"
+          "type": "boolean",
+          "index": false
         },
         "can_try": {
-          "type": "boolean"
+          "type": "boolean",
+          "index": false
         },
         "can_try_type": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "category_facet": {
           "type": "text",
@@ -239,27 +195,26 @@
         },
         "description": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "disabled": {
-          "type": "boolean"
+          "type": "boolean",
+          "index" : false
         },
         "discount": {
           "type": "float"
         },
         "eretailer": {
-          "type": "boolean"
+          "type": "boolean",
+          "index" : false
         },
         "expiry_date": {
-          "type": "date"
+          "type": "date",
+          "index" : false
         },
         "fbn": {
-          "type": "boolean"
+          "type": "boolean",
+          "index" : false
         },
         "finish_facet": {
           "type": "text",
@@ -380,33 +335,25 @@
         },
         "how_to_use": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "in_stock": {
           "type": "boolean"
         },
         "is_luxe": {
-          "type": "boolean"
+          "type": "boolean",
+          "index": false
         },
         "is_saleable": {
           "type": "boolean"
         },
         "is_service": {
-          "type": "boolean"
+          "type": "boolean",
+          "index": false
         },
         "media": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "meta_description": {
           "type": "text",
@@ -436,7 +383,8 @@
           }
         },
         "mrp": {
-          "type": "float"
+          "type": "float",
+          "index": false
         },
         "object_type": {
           "type": "text",
@@ -448,7 +396,8 @@
           }
         },
         "offer_count": {
-          "type": "long"
+          "type": "long",
+          "index": false
         },
         "old_brand_facet": {
           "type": "text",
@@ -482,21 +431,11 @@
         },
         "pack_size": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index" : false
         },
         "parent_id": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "popularity": {
           "type": "float"
@@ -551,21 +490,11 @@
         },
         "product_ingredients": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "product_qty_map": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "product_skus": {
           "type": "text",
@@ -578,12 +507,7 @@
         },
         "product_url": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "psku": {
           "type": "text",
@@ -595,40 +519,36 @@
           }
         },
         "qna_count": {
-          "type": "long"
+          "type": "long",
+          "index": false
         },
         "quantity": {
-          "type": "long"
+          "type": "long",
+          "index": false
         },
         "redirect_to_parent": {
-          "type": "boolean"
+          "type": "boolean",
+          "index": false
         },
         "review_count": {
-          "type": "long"
+          "type": "long",
+          "index": false
         },
         "seller_name": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "seller_rating": {
-          "type": "float"
+          "type": "float",
+          "index": false
         },
         "shipping_quote": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "show_wishlist_button": {
-          "type": "boolean"
+          "type": "boolean",
+          "index": false
         },
         "skin_tone_facet": {
           "type": "text",
@@ -695,12 +615,7 @@
         },
         "slug": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "spf_facet": {
           "type": "text",
@@ -730,13 +645,16 @@
           }
         },
         "star_rating": {
-          "type": "float"
+          "type": "float",
+          "index": false
         },
         "star_rating_count": {
-          "type": "long"
+          "type": "long",
+          "index": false
         },
         "star_rating_percentage": {
-          "type": "float"
+          "type": "float",
+          "index": false
         },
         "tags": {
           "type": "text",
@@ -779,21 +697,11 @@
         },
         "variant_icon": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "variant_name": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "variant_type": {
           "type": "text",
@@ -806,30 +714,15 @@
         },
         "variants": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "vendor_id": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "vendor_sku": {
           "type": "text",
-          "fields": {
-            "keyword": {
-              "type": "keyword",
-              "ignore_above": 256
-            }
-          }
+          "index": false
         },
         "viewcount_i": {
           "type": "long"

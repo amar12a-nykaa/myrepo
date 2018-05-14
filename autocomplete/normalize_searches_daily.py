@@ -9,15 +9,14 @@ import sys
 import traceback
 from collections import OrderedDict
 from contextlib import closing
-#from loopcounter import LoopCounter
-from IPython import embed
 
-import pymongo
 import arrow
 import mysql.connector
 import numpy
 import omniture
 import pandas as pd
+import pymongo
+from IPython import embed
 from pymongo import MongoClient, UpdateOne
 from stemming.porter2 import stem
 

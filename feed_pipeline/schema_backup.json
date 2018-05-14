@@ -1,35 +1,4 @@
 {
-  "settings": {
-    "analysis": {
-      "analyzer": {
-        "default": {
-          "tokenizer": "whitespace" ,
-          "filter": ["my_word_delimiter_index", "lowercase", "my_stemming", "asciifolding"]
-        },
-        "default_search": {
-          "tokenizer": "whitespace",
-          "filter": ["my_word_delimiter_search", "lowercase", "my_stemming", "asciifolding"]
-        }
-      },
-      "filter": {
-        "my_word_delimiter_index": {
-          "type": "word_delimiter",
-          "catenate_numbers": true,
-          "catenate_words": true,
-          "preserve_original": true
-        },
-        "my_word_delimiter_search": {
-          "type": "word_delimiter",
-          "catenate_numbers": true,
-          "catenate_words": true
-        },
-        "my_stemming" : {
-          "type" : "stemmer",
-          "language" : "minimal_english"
-        }
-      }
-    }
-  },
   "mappings": {
     "product": {
       "properties": {
