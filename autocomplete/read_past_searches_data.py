@@ -38,7 +38,7 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 from cliutils import CliUtils
 
-client = MongoClient("172.30.3.5")
+client = Utils.mongoClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_formatted = client['search']['search_terms_daily_formatted']
 
@@ -112,7 +112,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
   product_id_arg = product_id
   assert platform in ['app', 'web']
 
-  client = MongoClient("172.30.3.5")
+  client = Utils.mongoClient()
   search_terms_daily = client['search']['search_terms_daily']
 
 

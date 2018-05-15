@@ -1,3 +1,4 @@
+import sys
 import argparse
 import csv
 import pprint
@@ -6,13 +7,21 @@ import socket
 import arrow
 from IPython import embed
 from pymongo import MongoClient
+import sys
+
+sys.path.append("/nykaa/api")
+from pas.v2.utils import Utils
+
+sys.path.append("/nykaa/api")
+from pas.v2.utils import Utils
 
 host = socket.gethostname()
 
-client = MongoClient("172.30.3.5")
+client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity = client['search']['popularity']
+
 
 
 def enumerate_dates(startdate, enddate):
@@ -26,14 +35,8 @@ def enumerate_dates(startdate, enddate):
 
 
 def get_missing_dates(collname, filt=None):
-  if collname == 'raw_data':
-    coll = raw_data 
-  elif collname == 'processed_data':
-    coll = processed_data 
-  else:
-    print("unknown collection")
-    sys.exit()
   
+  coll = client['search'][collname]
   
   pipe = []
   if filt:

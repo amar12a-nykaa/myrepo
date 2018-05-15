@@ -206,7 +206,7 @@ function shouldSkipMatching($product) {
 function fetchPWSProduct($sku, $type) {
   $sku = strtoupper($sku);
   $host = "priceapi.nyk00-int.network";
-  $url = "http://$host/apis/v1/pas.get?sku=" . urlencode($sku) . "&type=$type";
+  $url = "http://$host/apis/v2/pas.get?sku=" . urlencode($sku) . "&type=$type";
   $content = file_get_contents($url);
   if($content === FALSE) {
     print("Failed to fetch URL: $url. Retrying 1..\n");

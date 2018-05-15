@@ -24,7 +24,7 @@ from pas.v2.utils import Utils
 import requests
 import IPython
 
-client = MongoClient("172.30.3.5")
+client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']
