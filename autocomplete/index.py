@@ -64,27 +64,63 @@ def create_map_search_product():
 
   map_search_product = {}
 
+  es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']
+  for query in [p['query'] for p in search_terms_normalized.find()]:
+    querydsl = {
+      "query": {
+        "function_score": {
+          "query": {
+            "bool": {
+              "must": {
+                "dis_max": {
+                  "queries": [
+                    {
+                      "match": {
+                        "title_text_split": {
+                          "query": str(query),
+                          "minimum_should_match": "-20%"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "filter": [
+                {
+                  "terms" : {
+                    "type" : ["simple", "configurable"]
+                  }
+                },
+                {
+                  "range" : {
+                    "price" : {
+                      "gte" : 1
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "field_value_factor": {
+            "field": "popularity",
+            "factor": 1,
+            "modifier": "none",
+            "missing": 1
+          },
+          "score_mode": "multiply",
+          "boost_mode": "multiply"
+        }
+      },
+      "_source" : ["title", "score", "media", "product_url", "product_id", "price", "type"]
+    }
+
+    response = Utils.makeESRequest(querydsl, es_index)
+    docs = response['hits']['hits']
+
   for query in [p['query'] for p in search_terms_normalized_daily.find(no_cursor_timeout=True)]:
-    base_url = Utils.solrHostName() + "/solr/yang/select"
-    #embed()
-    #exit()
-    f = furl(base_url) 
-    f.args['defType'] = 'dismax'
-    f.args['indent'] = 'on'
-    f.args['mm'] = 80
-    f.args['qf'] = 'title_text_split'
-    f.args['type'] = 'simple,configurable'
-    f.args['bf'] = 'popularity'
-    f.args['q'] = str(query)
-    f.args['fq'] = ['type:"simple" OR type:"configurable"', 'price:[1 TO *]']
-    f.args['fl'] = 'title,score,media:[json],product_url,product_id,price,type'
-    f.args['wt'] = 'json'
-    resp = requests.get(f.url)
-    js = resp.json()
-    docs = js['response']['docs']
     if docs:
-      max_score = max([x['score'] for x in docs])
-      docs = [x for x in docs if x['score'] == max_score]
+      max_score = max([x['_score'] for x in docs])
+      docs = [x['_source'] for x in docs if x['_score'] == max_score]
       
       for doc in docs:
         doc['editdistance'] = editdistance.eval(doc['title'].lower(), query.lower()) 
@@ -107,7 +143,8 @@ def create_map_search_product():
       image = ""
       image_base = ""
       try:
-        image = doc['media'][0]['url']
+        media = json.loads(doc['media'])
+        image = media[0]['url']
         image = re.sub("w-[0-9]*", "w-60", image)
         image = re.sub("h-[0-9]*", "h-60", image)
         
