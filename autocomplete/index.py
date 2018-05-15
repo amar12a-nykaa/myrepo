@@ -234,7 +234,7 @@ def index_categories(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories order by name, category_popularity desc"
+  query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' order by name, category_popularity desc"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   prev_cat = None
