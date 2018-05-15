@@ -16,7 +16,6 @@ import numpy
 import omniture
 import pandas as pd
 import pymongo
-#from loopcounter import LoopCounter
 from IPython import embed
 from pymongo import MongoClient, UpdateOne
 from stemming.porter2 import stem
@@ -24,12 +23,14 @@ from stemming.porter2 import stem
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
-client = MongoClient()
+client = Utils.mongoClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
+
 def create_missing_indices():
   indices = search_terms_daily.list_indexes()
   if 'query_1' not in [x['name'] for x in indices]:
+    print("Creating missing index .. ")
     search_terms_daily.create_index([("query", pymongo.ASCENDING)])
 
 create_missing_indices()
@@ -41,9 +42,6 @@ def normalize(a):
 
 def normalize_search_terms():
 
-    client = Utils.mongoClient()
-    search_terms_daily = client['search']['search_terms_daily']
-    search_terms_normalized = client['search']['search_terms_normalized_daily']
 
     date_buckets = [(0, 60), (61, 120), (121, 180), (181, 240)]
     dfs = []
