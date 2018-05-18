@@ -14,6 +14,7 @@ import IPython
 import mysql.connector
 import numpy
 import os
+import pymongo
 import requests
 from furl import furl
 from IPython import embed
@@ -30,7 +31,7 @@ sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
 collection='autocomplete'
-
+search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = Utils.esConn()
 
@@ -58,14 +59,15 @@ def index_docs(searchengine, docs, collection):
 
 def create_map_search_product():
   DEBUG = False 
-  client = Utils.mongoClient()
-  search_terms = client['search']['search_terms']
-  search_terms_normalized_daily = client['search']['search_terms_normalized_daily']
-
   map_search_product = {}
 
   es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']
-  for query in [p['query'] for p in search_terms_normalized.find()]:
+  limit = 50000
+  ctr = LoopCounter(name='create_map_search_product', total=limit)
+  for query in [p['query'] for p in search_terms_normalized_daily.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]).limit(50000)]:
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
     querydsl = {
       "query": {
         "function_score": {
@@ -73,31 +75,12 @@ def create_map_search_product():
             "bool": {
               "must": {
                 "dis_max": {
-                  "queries": [
-                    {
-                      "match": {
-                        "title_text_split": {
-                          "query": str(query),
-                          "minimum_should_match": "-20%"
-                        }
-                      }
-                    }
-                  ]
+                  "queries": [ { "match": { "title_text_split": { "query": str(query), "minimum_should_match": "-20%" } } } ]
                 }
               },
               "filter": [
-                {
-                  "terms" : {
-                    "type" : ["simple", "configurable"]
-                  }
-                },
-                {
-                  "range" : {
-                    "price" : {
-                      "gte" : 1
-                    }
-                  }
-                }
+                { "terms" : { "type" : ["simple", "configurable"] } },
+                { "range" : { "price" : { "gte" : 1 } } }
               ]
             }
           },
@@ -117,7 +100,6 @@ def create_map_search_product():
     response = Utils.makeESRequest(querydsl, es_index)
     docs = response['hits']['hits']
 
-  for query in [p['query'] for p in search_terms_normalized_daily.find(no_cursor_timeout=True)]:
     if docs:
       max_score = max([x['_score'] for x in docs])
       docs = [x['_source'] for x in docs if x['_score'] == max_score]
@@ -143,15 +125,13 @@ def create_map_search_product():
       image = ""
       image_base = ""
       try:
-        media = json.loads(doc['media'])
-        image = media[0]['url']
+        media = json.loads(doc['media'][0])
+        image = media['url']
         image = re.sub("w-[0-9]*", "w-60", image)
         image = re.sub("h-[0-9]*", "h-60", image)
-        
         image_base = re.sub("\/tr[^\/]*", "",  image) 
       except:
         print("[ERROR] Could not index query '%s' as product because image is missing for product_id: %s" % (query, doc['product_id']))
-
       doc['image'] = image 
       doc['image_base'] = image_base 
       doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'product_id']}
@@ -163,14 +143,13 @@ def index_search_queries(collection, searchengine):
 
   docs = []
 
-  search_terms_normalized = Utils.mongoClient()['search']['search_terms_normalized']
   cnt_product = 0
   cnt_search = 0
 
   ctr = LoopCounter(name='Search Queries')
   num_errors_searchquery_to_product_mapping = 0
   num_search_queries_that_should_map_to_products = 0
-  for row in search_terms_normalized_daily.find(no_cursor_timeout=True):
+  for row in search_terms_normalized_daily.find(no_cursor_timeout=True).sort([("popularity", pymongo>DESC)]).limit(10):
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
