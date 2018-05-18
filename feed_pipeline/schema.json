@@ -9,6 +9,10 @@
         "default_search": {
           "tokenizer": "whitespace",
           "filter": ["my_word_delimiter_search", "lowercase", "my_stemming", "asciifolding"]
+        },
+        "shingle_analyzer": {
+          "tokenizer": "whitespace",
+          "filter": ["my_word_delimiter_index", "lowercase", "my_stemming", "asciifolding", "shingle_filter"]
         }
       },
       "filter": {
@@ -26,6 +30,11 @@
         "my_stemming" : {
           "type" : "stemmer",
           "language" : "minimal_english"
+        },
+        "shingle_filter": {
+          "type": "shingle",
+          "output_unigrams": false,
+          "token_separator": ""
         }
       }
     }
@@ -753,6 +762,11 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            },
+            "shingle" : {
+              "type": "text",
+              "analyzer": "shingle_analyzer",
+              "search_analyzer": "default_search"
             }
           }
         },
