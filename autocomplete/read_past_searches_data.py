@@ -148,9 +148,17 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
 
   nrows = int(subprocess.check_output('wc -l ' + filepath, shell=True).decode().split()[0])
   ctr = LoopCounter("Reading CSV: ", total=nrows)
+  first_row = True
+  headers = None
   with open(filepath, newline='') as csvfile:
-    spamreader = csv.DictReader(csvfile,)
-    for row in spamreader:
+    for r in csvfile:
+      r=r.strip().split(",")
+      row = [r[0] , ",".join(r[1:-2]) ]  + r[-2:]
+      if first_row:
+        first_row = False
+        headers = row
+        continue
+      row = dict(list(zip(headers, row)))
       if limit and ctr.count > limit:
         break
       ctr += 1
