@@ -32,8 +32,13 @@ from pas.v2.utils import Utils
 
 collection='autocomplete'
 search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']
+query_product_map_table = Utils.mongoClient()['search']['query_product_map']
+query_product_not_found_table = Utils.mongoClient()['search']['query_product_not_found']
+top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = Utils.esConn()
+
+
 
 def restart_apache_memcached():
   print("Restarting Apache and Memcached")
@@ -60,14 +65,33 @@ def index_docs(searchengine, docs, collection):
 def create_map_search_product():
   DEBUG = False 
   map_search_product = {}
+  for prod in query_product_map_table.find():
+    map_search_product[prod['_id']] = prod
+
+  map_search_product_not_found = {}
+  for prod in query_product_not_found_table.find():
+    map_search_product_not_found[prod['_id']] = ""
 
   es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']
   limit = 50000
-  ctr = LoopCounter(name='create_map_search_product', total=limit)
-  for query in [p['query'] for p in search_terms_normalized_daily.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]).limit(50000)]:
+  ctr = LoopCounter(name='create_map_search_product')
+  for query in (p['query'] for p in search_terms_normalized_daily.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)])):
+    if len(query)>50:
+      continue
+
+    if len(top_queries) == limit:
+      break
+
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
+
+    if createId(query) in map_search_product:
+      continue
+    if createId(query) in map_search_product_not_found:
+      top_queries.append(query)
+      continue
+
     querydsl = {
       "query": {
         "function_score": {
@@ -100,7 +124,10 @@ def create_map_search_product():
     response = Utils.makeESRequest(querydsl, es_index)
     docs = response['hits']['hits']
 
-    if docs:
+    if not docs:
+      top_queries.append(query)
+      query_product_not_found_table.update_one({"_id": createId(query)}, {"$set": {"query": query}}, upsert=True)
+    else:
       max_score = max([x['_score'] for x in docs])
       docs = [x['_source'] for x in docs if x['_score'] == max_score]
       
@@ -109,11 +136,15 @@ def create_map_search_product():
       docs.sort(key=lambda x:x['editdistance'] )
      
       if not docs:
+        top_queries.append(query)
+        query_product_not_found_table.update_one({"_id": createId(query)}, {"$set": {"query": query}}, upsert=True)
         continue
 
       doc = docs[0]
       editdistance_threshold = 0.4
       if doc['editdistance'] / len(query) > editdistance_threshold:
+        top_queries.append(query)
+        query_product_not_found_table.update_one({"_id": createId(query)}, {"$set": {"query": query}}, upsert=True)
         continue
 
       if DEBUG:
@@ -135,7 +166,11 @@ def create_map_search_product():
       doc['image'] = image 
       doc['image_base'] = image_base 
       doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'product_id']}
-      map_search_product[query] = docs[0]
+      doc['query'] = query 
+
+      map_search_product[createId(query)] = docs[0]
+      query_product_map_table.update_one({"_id": createId(query)}, {"$set": doc}, upsert=True)
+
   return map_search_product
 
 def index_search_queries(collection, searchengine):
@@ -147,70 +182,40 @@ def index_search_queries(collection, searchengine):
   cnt_search = 0
 
   ctr = LoopCounter(name='Search Queries')
-  num_errors_searchquery_to_product_mapping = 0
-  num_search_queries_that_should_map_to_products = 0
-  for row in search_terms_normalized_daily.find(no_cursor_timeout=True).sort([("popularity", pymongo>DESC)]).limit(10):
-    ctr += 1
-    if ctr.should_print():
-      print(ctr.summary)
-    if not row['_id']:
-      continue
+  n = 1000 
+  for queries_1k in  [top_queries[i * n:(i + 1) * n] for i in range((len(top_queries) + n - 1) // n )]: 
+    for row in search_terms_normalized_daily.find({'query' : {"$in": queries_1k}}):
+      if len(row['query'])>50:
+        continue
+      ctr += 1
+      if ctr.should_print():
+        print(ctr.summary)
 
-    query = row['query']
-    is_query_mapped_to_a_product_successfully = False
-    if query in map_search_product:
-      num_search_queries_that_should_map_to_products += 1
-      _type = 'product'
-      try:
-        url = map_search_product[query]['product_url']
-        image = map_search_product[query]['image']
-        image_base = map_search_product[query]['image_base']
-        product_id = map_search_product[query]['product_id']
-
-        data = json.dumps({"type": _type, "url": url, "image": image, "image_base": image_base, "id": product_id })
-        cnt_product += 1 
-        entity = map_search_product[query]['title']
-        is_query_mapped_to_a_product_successfully = True
-
-      except:
-        #print("map_search_product[%s]: %s" %(query, map_search_product[query]))
-        print("ERROR: Error in mapping  productid: %s to search term '%s'" % (product_id, query))
-        num_errors_searchquery_to_product_mapping += 1
-
-    if not is_query_mapped_to_a_product_successfully:
+      query = row['query']
       _type = 'search_query'
-      url = "http://www.nykaa.com/search/result/?q=" + row['query'].replace(" ", "+")
+      url = "http://www.nykaa.com/search/result/?q=" + query.replace(" ", "+")
       data = json.dumps({"type": _type, "url": url})
       entity = query 
       cnt_search += 1 
 
-    if entity == "argan oil":
-      row['popularity'] = 200
+      if entity == "argan oil":
+        row['popularity'] = 201
 
-    docs.append({
-      "_id" : createId(row['_id']),
-      "id": createId(row['_id']),
-      "entity": entity,
-      "weight": row['popularity'],
-      "type": _type,
-      "data": data,
-      "source": "search_query"
-    })
+      docs.append({
+        "_id" : createId(row['_id']),
+        "id": createId(row['_id']),
+        "entity": entity,
+        "weight": row['popularity'],
+        "type": _type,
+        "data": data,
+        "source": "search_query"
+      })
 
-    if len(docs) >= 100:
-      index_docs(searchengine, docs, collection)
-      docs = []
+      if len(docs) >= 100:
+        index_docs(searchengine, docs, collection)
+        docs = []
   
   total_search_queries = search_terms_normalized_daily.count()
-  if num_errors_searchquery_to_product_mapping/num_search_queries_that_should_map_to_products * 100  > 2:
-    raise Exception("Too many search queries failed to get mapped to products. Expected: %s. Failed: %s" % \
-      (num_search_queries_that_should_map_to_products, num_errors_searchquery_to_product_mapping))
-
-  #print("fail percentage:")
-  #print(num_errors_searchquery_to_product_mapping/num_search_queries_that_should_map_to_products * 100)
-
-  #print("fail percentage:")
-  #print(num_errors_searchquery_to_product_mapping/num_search_queries_that_should_map_to_products * 100)
 
   print("cnt_product: %s" % cnt_product)
   print("cnt_search: %s" % cnt_search)
@@ -241,8 +246,6 @@ def index_brands(collection, searchengine):
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
       docs = []
-
-    print(row['brand'], ctr.count)
 
   index_docs(searchengine, docs, collection)
 
@@ -356,7 +359,7 @@ def index_products(collection, searchengine):
   cnt_missing_keys = 0 
 
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
-  for row in popularity.find(no_cursor_timeout=True):
+  for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]).limit(50000):
     parent_id = row['parent_id']
     #print(parent_id)
     ctr += 1
