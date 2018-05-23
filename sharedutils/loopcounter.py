@@ -2,6 +2,7 @@ import collections
 import datetime
 import sys
 import time 
+from IPython import embed
 
 __all__ = ["LoopCounter", "LoopCounterGroup"]
 SPEED = '{SPEED}'
@@ -39,6 +40,11 @@ class LoopCounter(object):
   def percent_completed(self):
     return round(self.count * 1.0 / self.total * 100, 2)
 
+  @property
+  def time_remaining(self):
+    sec_remaining = round((100 - self.percent_completed )* self.time /self.percent_completed)
+    return time.strftime('%H:%M:%S', time.gmtime(sec_remaining))
+
   def __iadd__(self, other):
     self.count += other
     return self
@@ -61,6 +67,9 @@ class LoopCounter(object):
     if self.total:
       formatstr += "%2.0f" % self.percent_completed + "% complete. "
     formatstr += "Processed {COUNT} items @ {SPEED} items/sec in {TIME} seconds"
+    if self.total:
+      formatstr += " Time remaining: %s" % self.time_remaining
+
     return self.formatted(formatstr)
 
   def should_print(self, threshold=100, low_interval=10, high_interval=100):
