@@ -2,6 +2,7 @@
 import sys
 import json
 import traceback
+from IPython import embed
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, MemcacheUtils
 
@@ -154,8 +155,8 @@ class NykaaImporter:
         #Update in memcache
         offer_info = {}
         memcache_key = 'offer-v2-%s' % item['offer_id']
-        app_sorting = item['app_sorting']
-        if not (app_sorting and app_sorting in NykaaImporter.default_sorting_map.keys()):
+        app_sorting = str(item['app_sorting'])
+        if not (app_sorting and app_sorting in [str(x) for x in NykaaImporter.default_sorting_map.keys()]):
           app_sorting = '1'
         else:
           app_sorting = str(app_sorting)
