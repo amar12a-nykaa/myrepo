@@ -41,7 +41,7 @@ es = EsUtils.get_connection()
 
 #WEIGHT_BRAND= [200, 300]
 #WEIGHT_CATEGORY = [0, 200]
-WEIGHT_CATEGORY_FACET = 150
+WEIGHT_CATEGORY_FACET = 100
 #WEIGHT_BRAND_CATEGORY = [0, 150]
 #WEIGHT_PRODUCT= [0, 100]
 
@@ -291,7 +291,7 @@ def update_brand_category_table():
     for  category_id, pop in sorted(catinfo.items(), key=lambda x: -x[1] ):
       try:
         pop = round(pop / max_pop * 100, 2 )
-        q = query % (brand, brand_name_id[brand]['brand_id'], category_id, category_id_index[category_id]['name'], pop)
+        q = query % (brand, brand_name_id[brand]['brand_id'], category_id, cat_id_index[category_id]['name'], pop)
         print(q)
         Utils.mysql_write(q)
       except:
