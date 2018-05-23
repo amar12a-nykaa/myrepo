@@ -23,6 +23,12 @@ from stemming.porter2 import stem
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
+from nltk.stem import PorterStemmer
+from nltk.tokenize import sent_tokenize, word_tokenize
+ps = PorterStemmer()
+
+DAILY_THRESHOLD = 3
+
 client = Utils.mongoClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
@@ -57,7 +63,7 @@ def normalize_search_terms():
         # TODO need to set count sum to count
 
         for term in search_terms_daily.aggregate([
-            {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
+            {"$match": {"date": {"$gte": startdate, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
             {"$project": {"term": { "$toLower": "$term"}, "date":"$date", "count": "$internal_search_term_conversion_instance"}},
             {"$group": {"_id": "$term", "count": {"$sum": "$count"}}}, 
             {"$sort":{ "count": -1}},
@@ -89,10 +95,13 @@ def normalize_search_terms():
 
     # Calculate total popularity
     print ("Calculating total popularity")
+    date_6months_ago = arrow.now().replace(days=-6*30, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(tzinfo=None)
 
     bucket_results = []
     for term in search_terms_daily.aggregate([
         #{"$match": {"term" : {"$in": ['Lipstick', 'nars']}}},
+        {"$match": {"internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
+        #{"$match": {"date": {"$gte": date_6months_ago, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
         {"$project": {"term": { "$toLower": "$term"}, "date":"$date","count": "$internal_search_term_conversion_instance" }},
         {"$group": {"_id": "$term", "count": {"$sum": "$count"} }}, 
         {"$sort":{ "count": -1}},
@@ -115,8 +124,22 @@ def normalize_search_terms():
     #brand_index = normalize_array("select brand as term from nykaa.brands where brand like 'l%'")
     #category_index = normalize_array("select name as term from nykaa.l3_categories")
     search_terms_normalized.remove({})
+    cats_stemmed = set([ps.stem(x['name']) for x in Utils.mysql_read("select name from l3_categories ")])
+    brands_stemmed = set([ps.stem(x['brand']) for x in Utils.mysql_read("select brand from brands")])
+    cats_brands_stemmed = cats_stemmed | brands_stemmed
+
 
     for i, row in a.iterrows():
+        query = row['id'].lower()
+        if ps.stem(query) in cats_brands_stemmed:
+          a.drop(i, inplace=True)
+    
+    a['popularity'] = 100 * normalize(a['popularity'])
+    for i, row in a.iterrows():
+        query = row['id'].lower()
+        if ps.stem(query) in cats_brands_stemmed:
+          continue
+
         try:
             requests.append(UpdateOne({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())}, {"$set": {"query": row['id'].lower(), 'popularity': row['popularity']}}, upsert=True))
         except:

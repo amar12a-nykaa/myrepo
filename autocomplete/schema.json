@@ -41,17 +41,20 @@
     }
   },
   "mappings": {
+		"_field_names": { "enabled": false },
     "entity": {
       "properties": {
         "entity_ngram": {
           "type": "text",
           "analyzer": "autocomplete_ngram",
-          "search_analyzer": "autocomplete_search"
+          "search_analyzer": "autocomplete_search",
+          "norms": { "enabled": false }
         },
         "entity": {
           "type": "text",
           "analyzer": "autocomplete_simple",
-          "search_analyzer": "autocomplete_search"
+          "search_analyzer": "autocomplete_search",
+          "norms": { "enabled": false }
         },
     "data": {
       "type": "text"
