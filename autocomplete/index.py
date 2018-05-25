@@ -40,7 +40,9 @@ top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = Utils.esConn()
 
+GLOBAL_FAST_INDEXING = False
 
+Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
 def restart_apache_memcached():
   print("Restarting Apache and Memcached")
@@ -54,15 +56,13 @@ def write_dict_to_csv(dictname, filename):
          writer.writerow([key, value])
 
 def index_docs(searchengine, docs, collection):
+  for doc in docs:
+    doc['entity'] += " s" # This is a trick to hnadle sideeffect of combining shingles and edge ngram token filters
   if searchengine == 'solr':
     SolrUtils.indexDocs(docs, collection)
     requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
   if searchengine == 'elasticsearch':
-    try:
-      EsUtils.indexDocs(docs, collection)
-    except:
-      print(docs)
-      raise
+    EsUtils.indexDocs(docs, collection)
 
 def create_map_search_product():
   DEBUG = False 
@@ -185,6 +185,7 @@ def index_search_queries(collection, searchengine):
 
   ctr = LoopCounter(name='Search Queries')
   n = 1000 
+  top_queries.reverse()
   for queries_1k in  [top_queries[i * n:(i + 1) * n] for i in range((len(top_queries) + n - 1) // n )]: 
     for row in search_terms_normalized_daily.find({'query' : {"$in": queries_1k}}):
       if len(row['query'])>50:
@@ -255,7 +256,7 @@ def index_categories(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' order by name, category_popularity desc"
+  query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories_clean order by name, category_popularity desc"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   prev_cat = None
@@ -414,7 +415,8 @@ def index_products(collection, searchengine):
 
   rows_1k = []
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
-  for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]).limit(50000):
+  limit = 50000 if not GLOBAL_FAST_INDEXING else 5000
+  for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]).limit(limit):
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
@@ -530,23 +532,27 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       if not index_client.exists(index = index):
         index_client.create( index=index, body= ES_SCHEMA)
 
-    threads = []
     if index:
       print("Indexing: %s" % index)
-      arr = ['products', 'search_queries', 'categories', 'brands', 'brands_categories', 'category_facets']
-    
-      for _type in arr:
-        arg = locals()["index_" + _type + "_arg"] 
-        func = globals()["index_" + _type ] 
-        if arg:
-          t = threading.Thread(target=func, args=(index, engine))
-          threads.append((_type,t))
-          t.start()
+      def index_parallel(_types, **kwargs):
+        threads = []
+        for _type in _types:
+          arg = kwargs["index_" + _type + "_arg"] 
+          func = globals()["index_" + _type ] 
+          if arg:
+            t = threading.Thread(target=func, args=(index, engine))
+            threads.append((_type,t))
+            t.start()
 
-      for _type, t in threads: 
-        print("Waiting for thread: %s" % _type)
-        t.join()
-        print("Thread %s is complete" % _type)
+        for _type, t in threads: 
+          print("Waiting for thread: %s" % _type)
+          t.join()
+          print("Thread %s is complete" % _type)
+
+      kwargs = {k:v for k,v in locals().items() if 'index_' in k}
+      index_parallel(['search_queries', 'products'], **kwargs)
+      index_parallel(['categories', 'brands', 'brands_categories', 'category_facets'], **kwargs)
+    
 
       if engine == 'solr':
         build_suggester(index)
@@ -580,6 +586,7 @@ if __name__ == '__main__':
   group.add_argument("--category-facet", action='store_true')
 
   parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
+  parser.add_argument("--fast", action='store_true', help="Index a fraction of products and search queries to save on indexing time")
 
   collection_state = parser.add_mutually_exclusive_group(required=True)
   collection_state.add_argument("--inactive", action='store_true')
@@ -590,6 +597,7 @@ if __name__ == '__main__':
 
   argv = vars(parser.parse_args())
 
+  GLOBAL_FAST_INDEXING = argv['fast']
   argv['searchengine'] = argv['searchengine'].split(",")
   assert all([x in ['elasticsearch', 'solr'] for x in argv['searchengine']])
 
