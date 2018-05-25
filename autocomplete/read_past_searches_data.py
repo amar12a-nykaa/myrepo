@@ -30,6 +30,8 @@ from pymongo import MongoClient, UpdateOne
 from pymongo.errors import BulkWriteError
 from stemming.porter2 import stem
 
+from ensure_mongo_indexes import ensure_mongo_indices_now
+
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
@@ -43,6 +45,7 @@ DAILY_COUNT_THRESHOLD = 2
 client = Utils.mongoClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_formatted = client['search']['search_terms_daily_formatted']
+ensure_mongo_indices_now()
 
 def format_term(term):
     term = html.unescape(term).lower()

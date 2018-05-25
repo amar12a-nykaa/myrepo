@@ -32,6 +32,9 @@ from utils import createId
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
+from ensure_mongo_indexes import ensure_mongo_indices_now
+ensure_mongo_indices_now()
+
 collection='autocomplete'
 search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']
 query_product_map_table = Utils.mongoClient()['search']['query_product_map']

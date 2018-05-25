@@ -17,6 +17,8 @@ from pas.v2.utils import Utils
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
 
+from ensure_mongo_indexes import ensure_mongo_indices_now
+ensure_mongo_indices_now()
 
 popularity_index = {}
 cat_id_index = defaultdict(dict)
