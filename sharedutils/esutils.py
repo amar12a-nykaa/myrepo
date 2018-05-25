@@ -34,6 +34,13 @@ index_alias_config = {
         "entity" : "entity_ngram"
       }
     },
+  "entity":
+    {
+      "collections": ['entity_yin', 'entity_yang'],
+      "config" : "entity",
+      "unique_field" : "_id",
+      "type" : "entity"
+    }
 }
 
 class EsUtils:
@@ -151,7 +158,7 @@ class EsUtils:
     response = {}
     try:
       es = Utils.esConn()
-      helpers.bulk(es, upload_docs)
+      helpers.bulk(es, upload_docs, request_timeout=120)
     except Exception as e:
       print(traceback.format_exc())
       raise 
