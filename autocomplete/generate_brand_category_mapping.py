@@ -117,6 +117,9 @@ def update_category_table(products):
 
   cursor.close()
   mysql_conn.close()
+
+  Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
+
   
 
 def getProducts():
