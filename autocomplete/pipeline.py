@@ -19,7 +19,7 @@ from index import index_engine
 from generate_brand_category_mapping import generate_brand_category_mapping
 from normalize_searches_daily import normalize_search_terms
 
-SOLR_GROUP = 'autocomplete'
+AUTOCOMPLETE = 'autocomplete'
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--force-run", action='store_true')
@@ -28,10 +28,10 @@ argv = vars(parser.parse_args())
 force_run = argv['force_run']
 script_start = timeit.default_timer()
 
-#normalize_search_terms()
-#generate_brand_category_mapping()
+normalize_search_terms()
+generate_brand_category_mapping()
 
-indexes = EsUtils.get_active_inactive_indexes(SOLR_GROUP)
+indexes = EsUtils.get_active_inactive_indexes(AUTOCOMPLETE)
 print(indexes)
 active_index = indexes['active_index']
 inactive_index = indexes['inactive_index']
@@ -65,10 +65,7 @@ if docs_ratio < 0.95 and not force_run:
   print(msg)
   raise Exception(msg)
 
-
-# Update alias SOLR_GROUP to point to freshly indexed index(inactive_index)
-# and do basic verification
-resp = EsUtils.createSolrCollectionAlias(inactive_index, SOLR_GROUP)
+resp = EsUtils.switch_index_alias(AUTOCOMPLETE, active_index, inactive_index)
 
 script_stop = timeit.default_timer()
 script_duration = script_stop - script_start
