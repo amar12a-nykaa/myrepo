@@ -23,6 +23,8 @@ from stemming.porter2 import stem
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
+from ensure_mongo_indexes import ensure_mongo_indices_now
+
 from nltk.stem import PorterStemmer
 from nltk.tokenize import sent_tokenize, word_tokenize
 ps = PorterStemmer()
@@ -32,6 +34,8 @@ DAILY_THRESHOLD = 3
 client = Utils.mongoClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
+search_terms_normalized.drop() 
+ensure_mongo_indices_now()
 
 def create_missing_indices():
   indices = search_terms_daily.list_indexes()

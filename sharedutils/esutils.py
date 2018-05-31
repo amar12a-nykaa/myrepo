@@ -164,6 +164,12 @@ class EsUtils:
       raise 
     return response
 
+  def swap_index(alias):
+    print("Swapping Index")
+    indexes = EsUtils.get_active_inactive_indexes(alias)
+    EsUtils.switch_index_alias(alias, from_index=indexes['active_index'], to_index=indexes['inactive_index'])
+  
+
 if __name__ == "__main__":
   ret = EsUtils.get_active_inactive_indexes('livecore')
   print(ret)
