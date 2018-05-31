@@ -131,6 +131,9 @@ class CatalogIndexer:
           if pas.get('disabled') is not None:
             doc['disabled'] = pas.get('disabled')
 
+          if pas.get('mrp_freeze') is not None:
+            doc['mrp_freeze'] = pas.get('mrp_freeze')
+
           # if bundle, get qty of each product also
           if doc['type']=='bundle':
             bundle_products = pas.get('products', {})
@@ -521,7 +524,7 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
   parser.add_argument("-c", "--collection", help='name of collection to index to')
-  parser.add_argument("-s", "--searchengine", help='name of search engine you want to update. Enter "solr" or "elasticsearch"')
+  parser.add_argument("-s", "--searchengine", required=True, help='name of search engine you want to update. Enter "solr" or "elasticsearch"')
   parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
