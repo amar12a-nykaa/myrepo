@@ -468,7 +468,8 @@ class CatalogIndexer:
         doc['bulkbuyer_max_allowed_qty_i'] = row['bulkbuyer_max_allowed_qty'] or 0
         doc['is_free_sample_i'] = row['is_free_sample'] or 0
         doc['pro_flag_i'] = row['pro_flag'] or 0
-
+        doc['is_kit_combo_i'] = row['is_kit_combo'] or 0
+        
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
