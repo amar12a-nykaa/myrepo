@@ -34,7 +34,7 @@ DAILY_THRESHOLD = 3
 client = Utils.mongoClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
-search_terms_normalized.drop() 
+search_terms_normalized.remove({}) 
 ensure_mongo_indices_now()
 
 def create_missing_indices():

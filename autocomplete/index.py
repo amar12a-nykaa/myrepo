@@ -50,7 +50,7 @@ Utils.mysql_write("create or replace view l3_categories_clean as select * from l
 def restart_apache_memcached():
   print("Restarting Apache and Memcached")
   os.system("/etc/init.d/apache2 restart")
-  Memcached.flush_all()
+  MemcacheUtils.flush_all()
 
 def write_dict_to_csv(dictname, filename):
   with open(filename, 'w') as csv_file:
