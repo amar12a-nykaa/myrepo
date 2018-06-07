@@ -104,7 +104,6 @@ class CatalogIndexer:
     request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
     request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
     req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
-
     pas_object = json.loads(urlopen(req).read().decode('utf-8'))
     pas_object = pas_object['skus']
 
@@ -351,21 +350,26 @@ class CatalogIndexer:
 
         #Primary Categories
         doc['primary_categories'] = []
-        if row['primary_categories']:
-          primary_categories = (row['primary_categories'] or "").split('|') if row['primary_categories'] else []
-          if primary_categories[0]:
-            l1 = primary_categories[0]
-          else:
-            l1 = None
-          if primary_categories[1]:
-            l2 = primary_categories[1]
-          else:
-            l2 =  None
-          if primary_categories[2]:
-            l3 = primary_categories[2]
-          else:
-            l3 = None
-          doc['primary_categories'].append({'l1': l1, 'l2': l2,'l3': l3})
+        if row['primary_categories'] == "":
+          doc['primary_categories'].append({'l1': None, 'l2': None,'l3': None})
+        else:
+        primary_categories = (row['primary_categories'] or "").split('|') if row['primary_categories'] else []
+        if primary_categories[0] != "":
+          l1 = primary_categories[0]
+        else:
+          l1 = None
+
+        if primary_categories[1] != "":
+          l2 = primary_categories[1]
+        else:
+          l2 =  None
+
+        if primary_categories[2] != "":
+          l3 = primary_categories[2]
+        else:
+          l3 = None
+        doc['primary_categories'].append({'l1': l1, 'l2': l2,'l3': l3})
+
 
         # variant stuff
         if doc['type'] == 'configurable':
