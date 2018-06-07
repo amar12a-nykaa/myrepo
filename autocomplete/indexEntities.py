@@ -95,7 +95,7 @@ class EntityIndexer:
     mysql_conn = Utils.mysqlConnection()
     query = "SELECT brand_id, brand, category_name, category_id, popularity FROM brand_category"
     results = Utils.fetchResults(mysql_conn, query)
-    ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
+    ctr = LoopCounter(name='Brand Category Indexing' )
     for row in results:
       ctr += 1 
       if ctr.should_print():
