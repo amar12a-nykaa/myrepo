@@ -1,0 +1,78 @@
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "my_stemming": {
+          "type": "stemmer",
+          "language": "minimal_english"
+        },
+        "shingle_filter": {
+          "type": "shingle",
+          "output_unigrams": false,
+          "token_separator": ""
+        }
+      },
+      "analyzer": {
+        "default_search": {
+          "filter": [
+            "lowercase",
+            "my_stemming",
+            "asciifolding"
+          ],
+          "tokenizer": "whitespace"
+        },
+        "default": {
+          "filter": [
+            "lowercase",
+            "my_stemming",
+            "asciifolding"
+          ],
+          "tokenizer": "whitespace"
+        },
+        "shingle_analyzer": {
+          "tokenizer": "whitespace",
+          "filter": [
+            "lowercase",
+            "my_stemming",
+            "asciifolding",
+            "shingle_filter"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "entity": {
+      "properties": {
+        "entity": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            },
+            "shingle": {
+              "type": "text",
+              "analyzer": "shingle_analyzer",
+              "search_analyzer": "default_search"
+            },
+            "shingle_search": {
+              "type": "text",
+              "analyzer": "default",
+              "search_analyzer": "shingle_analyzer"
+            }
+          }
+        },
+        "id": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "weight": {
+          "type": "float"
+        }
+      }
+    }
+  }
+}
