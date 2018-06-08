@@ -353,22 +353,22 @@ class CatalogIndexer:
         if row['primary_categories'] == "":
           doc['primary_categories'].append({'l1': None, 'l2': None,'l3': None})
         else:
-        primary_categories = (row['primary_categories'] or "").split('|') if row['primary_categories'] else []
-        if primary_categories[0] != "":
-          l1 = primary_categories[0]
-        else:
-          l1 = None
+          primary_categories = (row['primary_categories'] or "").split('|') if row['primary_categories'] else []
+          if primary_categories[0] != "":
+            l1 = primary_categories[0]
+          else:
+            l1 = None
 
-        if primary_categories[1] != "":
-          l2 = primary_categories[1]
-        else:
-          l2 =  None
+          if primary_categories[1] != "":
+            l2 = primary_categories[1]
+          else:
+            l2 =  None
 
-        if primary_categories[2] != "":
-          l3 = primary_categories[2]
-        else:
-          l3 = None
-        doc['primary_categories'].append({'l1': l1, 'l2': l2,'l3': l3})
+          if primary_categories[2] != "":
+            l3 = primary_categories[2]
+          else:
+            l3 = None
+          doc['primary_categories'].append({'l1': l1, 'l2': l2,'l3': l3})
 
 
         # variant stuff
