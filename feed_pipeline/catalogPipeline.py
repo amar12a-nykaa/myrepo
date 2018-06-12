@@ -126,6 +126,7 @@ if __name__ == "__main__":
       url = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
     elif hostname.startswith('preprod') or hostname.startswith('qa') or hostname.startswith('dev'):
       url = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
+      url = "http://preprod-2012758952.ap-southeast-1.elb.amazonaws.com/media/feed/master_feed_gludo.csv"
     if url:
       print("Using default url for %s machine: %s" % (hostname, url))
   import_attrs = argv.get('importattrs', False)
