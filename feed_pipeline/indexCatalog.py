@@ -134,6 +134,9 @@ class CatalogIndexer:
           if pas.get('mrp_freeze') is not None:
             doc['mrp_freeze'] = pas.get('mrp_freeze')
 
+          if pas.get('expdt') is not None:
+            doc['expdt'] = pas.get('expdt')
+
           # if bundle, get qty of each product also
           if doc['type']=='bundle':
             bundle_products = pas.get('products', {})
