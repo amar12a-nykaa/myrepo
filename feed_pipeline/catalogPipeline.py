@@ -23,6 +23,7 @@ from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
 
 #FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_URL_PREPROD = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
+FEED_URL_PREPROD = "http://preprod-2012758952.ap-southeast-1.elb.amazonaws.com/media/feed/master_feed_gludo.csv"
 FEED_URL = "http://adminpanel.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
 hostname = socket.gethostname()
