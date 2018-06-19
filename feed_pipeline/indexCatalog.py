@@ -133,6 +133,9 @@ class CatalogIndexer:
           if pas.get('mrp_freeze') is not None:
             doc['mrp_freeze'] = pas.get('mrp_freeze')
 
+          if pas.get('expdt') is not None:
+            doc['expdt'] = pas.get('expdt')
+
           # if bundle, get qty of each product also
           if doc['type']=='bundle':
             bundle_products = pas.get('products', {})
@@ -201,6 +204,7 @@ class CatalogIndexer:
     'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
     'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
     'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1', 'beauty_partner', 'is_kit_combo', 'primary_categories']
+
 
     all_rows = read_csv_from_file(file_path)
 
@@ -492,7 +496,7 @@ class CatalogIndexer:
         doc['bulkbuyer_max_allowed_qty_i'] = row['bulkbuyer_max_allowed_qty'] or 0
         doc['is_free_sample_i'] = row['is_free_sample'] or 0
         doc['pro_flag_i'] = row['pro_flag'] or 0
-        doc['is_kit_combo_i'] = row['is_kit_combo'] or 0
+        #doc['is_kit_combo_i'] = row['is_kit_combo'] or 0
         
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
