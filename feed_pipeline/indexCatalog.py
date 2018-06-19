@@ -192,7 +192,7 @@ class CatalogIndexer:
         doc[key] = []
 
   def index(search_engine, file_path, collection, update_productids=False):
-    validate_popularity_data_health()
+    #validate_popularity_data_health()
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
     'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
@@ -351,9 +351,10 @@ class CatalogIndexer:
         #Primary Categories
         doc['primary_categories'] = []
         if row['primary_categories'] == "":
-          doc['primary_categories'].append({'l1': None, 'l2': None,'l3': None})
+          doc['primary_categories'].append({"l1":None, "l2":None, "l3":None})
         else:
-          primary_categories = (row['primary_categories'] or "").split('|') if row['primary_categories'] else []
+          primary_categories = row['primary_categories'].split('|')
+          
           if primary_categories[0] != "":
             l1 = primary_categories[0]
           else:
@@ -362,13 +363,14 @@ class CatalogIndexer:
           if primary_categories[1] != "":
             l2 = primary_categories[1]
           else:
-            l2 =  None
+            l2 = None
 
           if primary_categories[2] != "":
             l3 = primary_categories[2]
           else:
             l3 = None
-          doc['primary_categories'].append({'l1': l1, 'l2': l2,'l3': l3})
+
+          doc['primary_categories'].append({"l1":l1, "l2":l2, "l3":l3})
 
 
         # variant stuff
