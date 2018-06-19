@@ -21,7 +21,10 @@ from indexCatalog import CatalogIndexer
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
 
-FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
+#FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
+FEED_URL_PREPROD = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
+FEED_URL_PREPROD = "http://preprod-2012758952.ap-southeast-1.elb.amazonaws.com/media/feed/master_feed_gludo.csv"
+FEED_URL = "http://adminpanel.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
 hostname = socket.gethostname()
 
@@ -123,9 +126,9 @@ if __name__ == "__main__":
   url = argv['url']
   if not url and not file_path: 
     if hostname.startswith('admin'):
-      url = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
+      url = FEED_URL 
     elif hostname.startswith('preprod') or hostname.startswith('qa') or hostname.startswith('dev'):
-      url = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
+      url = FEED_URL_PREPROD
     if url:
       print("Using default url for %s machine: %s" % (hostname, url))
   import_attrs = argv.get('importattrs', False)
@@ -170,9 +173,9 @@ if __name__ == "__main__":
   if argv['search_engine'] in ['elasticsearch', None]:
     indexESData(file_path, force_run)
 
-  # Index Solr Data
-  if argv['search_engine'] in ['solr', None]:
-    indexSolrData(file_path, force_run)
+  ## Index Solr Data
+  #if argv['search_engine'] in ['solr', None]:
+  #  indexSolrData(file_path, force_run)
 
   script_stop = timeit.default_timer()
   script_duration = script_stop - script_start
