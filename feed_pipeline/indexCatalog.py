@@ -107,7 +107,7 @@ class CatalogIndexer:
 
     pas_object = json.loads(urlopen(req).read().decode('utf-8'))
     pas_object = pas_object['skus']
-
+    
     pws_input_docs = []
     errors = []
     for doc in input_docs:
@@ -308,9 +308,9 @@ class CatalogIndexer:
         product_url = row['product_url']
         if product_url:
           doc['product_url'] = product_url
-          split_url = product_url.rsplit('/', 1)
-          if len(split_url) > 1:
-            doc['slug'] = split_url[-1]
+          slug_initial_pos = product_url.find('.com/') + 5
+          slug_end_pos = product_url.find('?') if product_url.find('?') != -1 else len(product_url)
+          doc['slug'] = product_url[slug_initial_pos : slug_end_pos] 
 
         #Category related
         category_ids = (row['category_id'] or "").split('|') if row['category_id'] else []
