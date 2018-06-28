@@ -29,7 +29,7 @@ conn =  Utils.mysqlConnection()
 class CatalogIndexer:
   PRODUCT_TYPES = ['simple', 'configurable', 'bundle']
   VISIBILITY_TYPES = ['visible', 'not_visible']
-  DOCS_BATCH_SIZE = 1000
+  DOCS_BATCH_SIZE = 2000
 
   field_type_pattens = {
     ".*_i$": int,
@@ -106,6 +106,7 @@ class CatalogIndexer:
     req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
     pas_object = json.loads(urlopen(req).read().decode('utf-8'))
     pas_object = pas_object['skus']
+
     pws_input_docs = []
     errors = []
     for doc in input_docs:
@@ -178,15 +179,10 @@ class CatalogIndexer:
       raise Exception(str(e))
 
   def indexES(docs, index):
-    try:
-      if not index:
-        indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
-        index = indexes['active_index']
-        print(" --> Indexing data to inactive elastic search index : %s" % index)
-
-      EsUtils.indexDocs(docs, index)
-    except SolrError as e:
-      raise Exception(str(e))
+    if not index:
+      indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+      index = indexes['active_index']
+    EsUtils.indexDocs(docs, index)
 
   def formatESDoc(doc):
     for key, value in doc.items():
@@ -307,9 +303,9 @@ class CatalogIndexer:
         product_url = row['product_url']
         if product_url:
           doc['product_url'] = product_url
-          split_url = product_url.rsplit('/', 1)
-          if len(split_url) > 1:
-            doc['slug'] = split_url[-1]
+          slug_initial_pos = product_url.find('.com/') + 5
+          slug_end_pos = product_url.find('?') if product_url.find('?') != -1 else len(product_url)
+          doc['slug'] = product_url[slug_initial_pos : slug_end_pos] 
 
         #Category related
         category_ids = (row['category_id'] or "").split('|') if row['category_id'] else []
