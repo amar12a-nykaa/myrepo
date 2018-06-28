@@ -106,7 +106,6 @@ class CatalogIndexer:
     req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
     pas_object = json.loads(urlopen(req).read().decode('utf-8'))
     pas_object = pas_object['skus']
-
     pws_input_docs = []
     errors = []
     for doc in input_docs:
@@ -354,25 +353,55 @@ class CatalogIndexer:
 
         #Primary Categories
         doc['primary_categories'] = []
+        l1 = {}
+        l2 = {}
+        l3 = {}
         if row['primary_categories'] == "":
-          doc['primary_categories'].append({"l1":None, "l2":None, "l3":None})
+          doc['primary_categories'].append({"l1":{'id': None, 'name': None}, "l2":{'id': None, 'name': None}, "l3":{'id': None, 'name': None}})
         else:
           primary_categories = row['primary_categories'].split('|')
-          
           if primary_categories[0] != "":
-            l1 = primary_categories[0]
+            l1['id'] = primary_categories[0]
+            if category_ids and len(category_ids)==len(category_names):
+              if primary_categories[0] in category_ids:
+                cat_index = category_ids.index(primary_categories[0])
+                l1['name'] = category_names[cat_index]
+              else:
+                l1['name'] = None
+            else:
+              l1['name'] = None
           else:
-            l1 = None
+            l1['id'] = None
+            l1['name'] = None
 
           if primary_categories[1] != "":
-            l2 = primary_categories[1]
+            l2['id'] = primary_categories[1]
+            if category_ids and len(category_ids)==len(category_names):
+              if primary_categories[1] in category_ids:
+                cat_index = category_ids.index(primary_categories[1])
+                l2['name'] = category_names[cat_index]
+              else:
+                l2['name'] = None
+            else:
+              l2['name'] = None
           else:
-            l2 = None
+            l2['id'] = None
+            l2['name'] = None
 
           if primary_categories[2] != "":
-            l3 = primary_categories[2]
+            l3['id'] = primary_categories[2]
+            if category_ids and len(category_ids)==len(category_names):
+              if primary_categories[2] in category_ids:
+                cat_index = category_ids.index(primary_categories[2])
+                l3['name'] = category_names[cat_index]
+              else:
+                l3['name'] = None
+            else:
+              l3['name'] = None
+
           else:
-            l3 = None
+            l3['id'] = None
+            l3['name'] = None
 
           doc['primary_categories'].append({"l1":l1, "l2":l2, "l3":l3})
 
