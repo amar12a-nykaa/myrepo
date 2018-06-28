@@ -29,7 +29,7 @@ conn =  Utils.mysqlConnection()
 class CatalogIndexer:
   PRODUCT_TYPES = ['simple', 'configurable', 'bundle']
   VISIBILITY_TYPES = ['visible', 'not_visible']
-  DOCS_BATCH_SIZE = 1000
+  DOCS_BATCH_SIZE = 2000
 
   field_type_pattens = {
     ".*_i$": int,
@@ -180,15 +180,10 @@ class CatalogIndexer:
       raise Exception(str(e))
 
   def indexES(docs, index):
-    try:
-      if not index:
-        indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
-        index = indexes['active_index']
-        print(" --> Indexing data to inactive elastic search index : %s" % index)
-
-      EsUtils.indexDocs(docs, index)
-    except SolrError as e:
-      raise Exception(str(e))
+    if not index:
+      indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+      index = indexes['active_index']
+    EsUtils.indexDocs(docs, index)
 
   def formatESDoc(doc):
     for key, value in doc.items():

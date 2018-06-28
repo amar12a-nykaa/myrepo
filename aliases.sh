@@ -17,6 +17,7 @@ alias nykaapreproddb=" mysql -h preprod-11april2017.cjmplqztt198.ap-southeast-1.
 alias mongocluster="mongo --host 172.30.3.5 search"
 alias nyscripts='cd /home/ubuntu/nykaa_scripts/'
 alias nyapi='cd /home/apis/nykaa'
+alias fp='cd /home/ubuntu/nykaa_scripts/feed_pipeline'
 
 alias solrhome='cd /opt/solr/server/scripts/cloud-scripts'
 alias solrconf='cd /home/ubuntu/nykaa_solrconf'
