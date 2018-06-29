@@ -17,7 +17,6 @@ import numpy
 import omniture
 import pandas as pd
 from pymongo import MongoClient
-
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
@@ -242,13 +241,78 @@ def calculate_popularity():
       print(ctr.summary)
 
     row = dict(row)
+
+    if row.get('parent_id'):
+      child_product_list = get_all_the_child_products( row.get('parent_id'))
+      if len(child_product_list) >0:
+        popularity_multiplier_factor = get_sales_data_for_products(child_product_list)
+      else:
+        popularity_multiplier_factor = 1
+
     #row = {k:v for k,v in row.items() if k in ['cart_additions', 'last_calculated', 'orders', 'parent_id', 'popularity', 'revenue', 'units', 'views']}
     row['last_calculated'] = timestamp
+    row['popularity'] = row['popularity']* float(popularity_multiplier_factor)
 
     if row.get('parent_id'):
       popularity_table.replace_one({"_id": row['parent_id'], "parent_id": row['parent_id']}, row, upsert=True)
 
   popularity_table.remove({"last_calculated": {"$ne": timestamp}})
+
+def get_all_the_child_products(parent_id):
+  query  = "select distinct(product_id) from catalog_product_super_link where parent_id  = '{0}'".format(parent_id)
+
+  mysql_conn = Utils.nykaaMysqlConnection()
+  cursor =  mysql_conn.cursor()
+  cursor.execute(query)
+
+  res = []
+  for row in cursor.fetchall():
+    res.append(row[0])
+  return row
+
+
+def get_sales_data_for_products(product_list, startdate):
+  if len(product_list) >0:
+    products = ','.join(product_list)
+
+    where_clause = 'product_id in ( {0}) and created_at >={1}'.format(products, startdate)
+
+    query =  'select product_id, sum(qty_ordered) from sales_flat_order_item  where {0} group by product_id'.format(where_clause)
+    mysql_conn =  Utils.nykaaMysqlConnection()
+    cursor = mysql_conn.cursor()
+    cursor.execute(query)
+
+    product_order_map = {}
+    total_purchase = 0
+    for row in cursor.fetchall():
+      product_order_map[row[0]] = row[1]
+      total_purchase += row[1]
+
+    popularity_multiplier = 0
+    for key, value in product_order_map.items():
+      flag  = check_if_product_available(key)
+      if flag:
+        popularity_multiplier += float(value)/ total_purchase
+    return popularity_multiplier
+  else:
+    return 0
+
+
+def check_if_product_available(product_id):
+
+  api =  'http://qa-api.nyk00-int.network:4444/v2/product.list?id={0}'.format(product_id)
+  r  = requests.get(api)
+  data  = {}
+  try:
+    data  =  json.loads(r.content)
+
+  try:
+    if data['result']['in_stock'] == 1:
+      return 1
+    return 0
+  except:
+    return 0
+
 
 class SolrPostManager:
   size = 0
