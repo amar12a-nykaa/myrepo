@@ -320,6 +320,9 @@ class CatalogIndexer:
             for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
               cat_facet[key] = str(info.get(key))
             doc['category_facet'].append(cat_facet)
+
+          doc['category_facet_searchable'] = " , ".join([x['name'] for x in doc['category_facet']])
+
         elif len(category_ids)!=len(category_names):
           #with open("/data/inconsistent_cat.txt", "a") as f:
           #  f.write("%s\n"%doc['sku'])
@@ -456,6 +459,8 @@ class CatalogIndexer:
           #  with open("/data/inconsistent_facet.txt", "a") as f:
           #    f.write("%s  %s\n"%(doc['sku'], field))
 
+        doc['brand_facet_searchable'] = " , ".join([x['name'] for x in doc.get('brand_facet', [])])
+
         # meta info: dynamic fields
         meta_fields = [field for field in row.keys() if field.startswith("meta_")]
         for field in meta_fields:
@@ -523,7 +528,7 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
   parser.add_argument("-c", "--collection", help='name of collection to index to')
-  parser.add_argument("-s", "--searchengine", required=True, help='name of search engine you want to update. Enter "solr" or "elasticsearch"')
+  parser.add_argument("-s", "--searchengine", default='elasticsearch', help='name of search engine you want to update. Enter "solr" or "elasticsearch"')
   parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
