@@ -104,10 +104,9 @@ class CatalogIndexer:
     request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
     request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
     req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
-
     pas_object = json.loads(urlopen(req).read().decode('utf-8'))
     pas_object = pas_object['skus']
-    
+
     pws_input_docs = []
     errors = []
     for doc in input_docs:
@@ -199,7 +198,8 @@ class CatalogIndexer:
     'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern', 'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
     'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
     'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
-    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1', 'beauty_partner']
+    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1', 'beauty_partner', 'is_kit_combo', 'primary_categories']
+
 
     all_rows = read_csv_from_file(file_path)
 
@@ -349,6 +349,61 @@ class CatalogIndexer:
         video = row.get('video')
         if video:
           doc['media'].append({'type': 'video', 'url': video})
+
+        #Primary Categories
+        doc['primary_categories'] = []
+        l1 = {}
+        l2 = {}
+        l3 = {}
+        if row['primary_categories'] == "":
+          doc['primary_categories'].append({"l1":{'id': None, 'name': None}, "l2":{'id': None, 'name': None}, "l3":{'id': None, 'name': None}})
+        else:
+          primary_categories = row['primary_categories'].split('|')
+          if primary_categories[0] != "":
+            l1['id'] = primary_categories[0]
+            if category_ids and len(category_ids)==len(category_names):
+              if primary_categories[0] in category_ids:
+                cat_index = category_ids.index(primary_categories[0])
+                l1['name'] = category_names[cat_index]
+              else:
+                l1['name'] = None
+            else:
+              l1['name'] = None
+          else:
+            l1['id'] = None
+            l1['name'] = None
+
+          if primary_categories[1] != "":
+            l2['id'] = primary_categories[1]
+            if category_ids and len(category_ids)==len(category_names):
+              if primary_categories[1] in category_ids:
+                cat_index = category_ids.index(primary_categories[1])
+                l2['name'] = category_names[cat_index]
+              else:
+                l2['name'] = None
+            else:
+              l2['name'] = None
+          else:
+            l2['id'] = None
+            l2['name'] = None
+
+          if primary_categories[2] != "":
+            l3['id'] = primary_categories[2]
+            if category_ids and len(category_ids)==len(category_names):
+              if primary_categories[2] in category_ids:
+                cat_index = category_ids.index(primary_categories[2])
+                l3['name'] = category_names[cat_index]
+              else:
+                l3['name'] = None
+            else:
+              l3['name'] = None
+
+          else:
+            l3['id'] = None
+            l3['name'] = None
+
+          doc['primary_categories'].append({"l1":l1, "l2":l2, "l3":l3})
+
 
         # variant stuff
         if doc['type'] == 'configurable':
