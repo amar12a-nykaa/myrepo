@@ -362,6 +362,33 @@ def index_category_facets(collection, searchengine):
 
 
 def validate_min_count():
+  force_run = False
+
+  indexes = EsUtils.get_active_inactive_indexes('autocomplete')
+  active_index = indexes['active_index']
+  inactive_index = indexes['inactive_index']
+
+# Verify correctness of indexing by comparing total number of documents in both active and inactive indexes
+  params = {'q': '*:*', 'rows': '0'}
+  query = { "size": 0, "query":{ "match_all": {} } }
+  num_docs_active = Utils.makeESRequest(query, index=active_index)['hits']['total']
+  num_docs_inactive = Utils.makeESRequest(query, index=inactive_index)['hits']['total']
+  print('Number of documents in active index(%s): %s'%(active_index, num_docs_active))
+  print('Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
+
+# if it decreased more than 5% of current, abort and throw an error
+  if not num_docs_active:
+    if num_docs_inactive:
+      docs_ratio = 1
+    else:
+      docs_ratio = 0
+  else:
+    docs_ratio = num_docs_inactive/num_docs_active
+  if docs_ratio < 0.95 and not force_run:
+    msg = "[ERROR] Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."
+    print(msg)
+    raise Exception(msg)
+
   def get_count(_type):
     querydsl = { "size": 0, "query":{ "match": {"type": _type} } }
     indexes = EsUtils.get_active_inactive_indexes('autocomplete')
