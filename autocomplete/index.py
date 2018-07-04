@@ -198,6 +198,7 @@ def index_search_queries(collection, searchengine):
   ctr = LoopCounter(name='Search Queries')
   n = 1000 
   top_queries.reverse()
+  assert top_queries
   for queries_1k in  [top_queries[i * n:(i + 1) * n] for i in range((len(top_queries) + n - 1) // n )]: 
     for row in search_terms_normalized_daily.find({'query' : {"$in": queries_1k}}):
       if len(row['query'])>50:
