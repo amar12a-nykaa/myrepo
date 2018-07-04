@@ -27,6 +27,7 @@ sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
 from solrutils import SolrUtils
 from esutils import EsUtils
+from apiutils import ApiUtils
 from utils import createId
 
 sys.path.append("/nykaa/api")
@@ -45,6 +46,14 @@ es = Utils.esConn()
 
 GLOBAL_FAST_INDEXING = False
 
+MIN_COUNTS = {
+  "product": 30000,
+  "brand": 1000,
+  "category": 200,
+  "brand_category": 10000,
+  "search_query": 40000,
+  "category_facet": 900,
+}
 Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
 def restart_apache_memcached():
@@ -352,6 +361,24 @@ def index_category_facets(collection, searchengine):
   index_docs(searchengine, docs, collection)
 
 
+def validate_min_count():
+  def get_count(_type):
+    querydsl = { "size": 0, "query":{ "match": {"type": _type} } }
+    indexes = EsUtils.get_active_inactive_indexes('autocomplete')
+    es_index = indexes['inactive_index']
+    return Utils.makeESRequest(querydsl, es_index)['hits']['total']
+
+  for _type, count in MIN_COUNTS.items():
+    found_count = get_count(_type)
+    if found_count < count:
+      msg = "Failure: Count check failed for %s. Found: %s. Minimum required: %s" % (_type, found_count, count)
+      print(msg)
+      assert found_count >= count, msg
+    else:
+      print("Success: Min count check for %s is ok" % _type)
+
+
+
 def index_products(collection, searchengine):
 
 
@@ -419,7 +446,14 @@ def index_products(collection, searchengine):
   rows_1k = []
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
   limit = 50000 if not GLOBAL_FAST_INDEXING else 5000
-  for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]).limit(limit):
+  count = 0 
+  for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]):# .limit(limit):
+    try:
+      if requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.list?id=%s" % row['_id']).json()['result']['price'] < 1:
+        #print("Rejecting product_id %s. Price (%s) is less than 1" % row['_id'])
+        continue
+    except:
+      pass
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
@@ -427,6 +461,9 @@ def index_products(collection, searchengine):
     if len(rows_1k) >= 100:
       flush_index_products(rows_1k)
       rows_1k = []
+
+    if ctr.count >= limit:
+      break
   flush_index_products(rows_1k)
     
 
@@ -565,6 +602,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
     
     if swap:
       print("Swapping Index")
+      validate_min_count()
       indexes = EngineUtils.get_active_inactive_indexes('autocomplete')
       if engine == 'elasticsearch':
         EngineUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
@@ -580,7 +618,6 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
 
   group = parser.add_argument_group('group')
-  group.add_argument("-e", "--searchengine", default="solr,elasticsearch")
   group.add_argument("-c", "--category", action='store_true')
   group.add_argument("-b", "--brand", action='store_true')
   group.add_argument("-s", "--search-query", action='store_true')
@@ -601,14 +638,11 @@ if __name__ == '__main__':
   argv = vars(parser.parse_args())
 
   GLOBAL_FAST_INDEXING = argv['fast']
-  argv['searchengine'] = argv['searchengine'].split(",")
-  assert all([x in ['elasticsearch', 'solr'] for x in argv['searchengine']])
 
   required_args = ['category', 'brand', 'search_query', 'product', 'brand_category', 'category_facet']
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
 
   startts = time.time()
-  for engine in argv['searchengine']:
-    index_engine(engine=engine, collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_all=index_all)
+  index_engine(engine='elasticsearch', collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_all=index_all)
   mins = round((time.time()-startts)/60, 2)
   print("Time taken: %s mins" % mins)
