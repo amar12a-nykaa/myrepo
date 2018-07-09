@@ -28,7 +28,7 @@ from loopcounter import LoopCounter
 from solrutils import SolrUtils
 from esutils import EsUtils
 from apiutils import ApiUtils
-from utils import createId
+from idutils import createId
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils, MemcacheUtils
