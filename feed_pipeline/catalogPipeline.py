@@ -28,15 +28,16 @@ FEED_URL = "http://adminpanel.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
 hostname = socket.gethostname()
 
+myname = os.path.basename(__file__)
 def getCount():
-  myname = os.path.basename(__file__)
-  return int(subprocess.check_output("ps aux | grep python | grep %s| grep -vE 'vim|grep|/bin/sh' | wc -l " % myname, shell=True).strip())
+  return int(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep' |  awk '{ print $4 }' | sort -n  | uniq | wc -l " % myname, shell=True).strip())
 
-if getCount() >= 2:
+if getCount() > 1:
   print()
   print()
   print("=" * 20)
   print("This script is already running. Exiting without doing anything")
+  #print(str(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep'" % myname, shell=True)))
   print("This means that your intented changes might still be in progress!!!")
   exit()
 
