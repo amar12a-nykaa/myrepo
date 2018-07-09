@@ -30,7 +30,7 @@ hostname = socket.gethostname()
 
 def getCount():
   myname = os.path.basename(__file__)
-  return int(subprocess.check_output("ps aux | grep python | grep %s| grep -vE 'vim|grep' | wc -l " % myname, shell=True).strip())
+  return int(subprocess.check_output("ps aux | grep python | grep %s| grep -vE 'vim|grep|/bin/sh' | wc -l " % myname, shell=True).strip())
 
 if getCount() >= 2:
   print()
@@ -39,6 +39,8 @@ if getCount() >= 2:
   print("This script is already running. Exiting without doing anything")
   print("This means that your intented changes might still be in progress!!!")
   exit()
+
+
 
 
 def indexSolrData(file_path, force_run):
