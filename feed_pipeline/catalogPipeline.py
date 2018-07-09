@@ -28,6 +28,18 @@ FEED_URL = "http://adminpanel.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
 hostname = socket.gethostname()
 
+def getCount():
+  myname = os.path.basename(__file__)
+  return int(subprocess.check_output("ps aux | grep python | grep %s| grep -vE 'vim|grep' | wc -l " % myname, shell=True).strip())
+
+if getCount() >= 2:
+  print()
+  print()
+  print("=" * 20)
+  print("This script is already running. Exiting without doing anything")
+  print("This means that your intented changes might still be in progress!!!")
+  exit()
+
 
 def indexSolrData(file_path, force_run):
   collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
