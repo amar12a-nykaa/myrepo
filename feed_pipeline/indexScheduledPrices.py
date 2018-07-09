@@ -6,6 +6,26 @@ from datetime import datetime, timedelta
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils
 
+
+import argparse
+import re
+import sys
+import subprocess
+import math
+import os
+import json
+import time
+
+def getCount():
+  return int(subprocess.check_output("ps aux | grep python | grep indexScheduledPrices.py | grep -vE 'vim|grep' | wc -l ", shell=True).strip())
+
+if getCount() >= 2: 
+	print("This script is already running. Exiting without doing anything")
+	exit()
+
+
+time.sleep(10)
+
 def getCurrentDateTime():
   current_datetime = datetime.utcnow()
   from_zone = tz.gettz('UTC')
