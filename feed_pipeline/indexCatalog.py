@@ -189,7 +189,7 @@ class CatalogIndexer:
       if isinstance(value, list) and value == ['']:
         doc[key] = []
 
-  def index(search_engine, file_path, collection, update_productids=False):
+  def index(search_engine, file_path, collection, update_productids=False, limit=0):
     validate_popularity_data_health()
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
@@ -214,6 +214,8 @@ class CatalogIndexer:
 
     ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
     for index, row in enumerate(all_rows):
+      if limit and ctr.count == limit:
+        break
       ctr += 1
       if ctr.should_print():
         print(ctr.summary)
@@ -283,9 +285,10 @@ class CatalogIndexer:
             if set_clause_arr:
               set_clause = " set " + ", ".join(set_clause_arr)
               query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause, sku=doc['sku'])
-              print(query)
+              #print(query)
               Utils.mysql_write(query, connection=conn)
         except:
+          #print(traceback.format_exc())
           print("[ERROR] Failed to update product_id and parent_id for sku: %s" % doc['sku'])
           pass
 
@@ -321,7 +324,7 @@ class CatalogIndexer:
               cat_facet[key] = str(info.get(key))
             doc['category_facet'].append(cat_facet)
 
-          doc['category_facet_searchable'] = " , ".join([x['name'] for x in doc['category_facet']])
+          doc['category_facet_searchable'] = " , ".join([x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
 
         elif len(category_ids)!=len(category_names):
           #with open("/data/inconsistent_cat.txt", "a") as f:
@@ -514,7 +517,7 @@ class CatalogIndexer:
           #  with open("/data/inconsistent_facet.txt", "a") as f:
           #    f.write("%s  %s\n"%(doc['sku'], field))
 
-        doc['brand_facet_searchable'] = " , ".join([x['name'] for x in doc.get('brand_facet', [])])
+        doc['brand_facet_searchable'] = " , ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
 
         # meta info: dynamic fields
         meta_fields = [field for field in row.keys() if field.startswith("meta_")]
@@ -540,6 +543,14 @@ class CatalogIndexer:
             doc[k] = None
           if not v and v!= False:
             doc[k] = None
+
+
+        try:
+          doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""), doc.get("brand_facet_searchable", ""), doc.get("category_facet_searchable", "")] if x])
+        except:
+          embed()
+          exit()
+          pass
 
         if search_engine == 'elasticsearch':
           CatalogIndexer.formatESDoc(doc)
@@ -589,5 +600,7 @@ if __name__ == "__main__":
   file_path = argv['filepath']
   collection = argv['collection']
   searchengine = argv['searchengine']
+
+  argv['update_productids'] = True
 
   CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'])

@@ -91,7 +91,7 @@ def indexESData(file_path, force_run):
   index_start = timeit.default_timer()
 
   print("\n\nES: Indexing documents from csv file '%s' to index '%s'."%(file_path, inactive_index))
-  CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index)
+  CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index, limit=argv['limit'])
 
   index_stop = timeit.default_timer()
   index_duration = index_stop - index_start
@@ -118,6 +118,7 @@ if __name__ == "__main__":
   parser.add_argument("-f", "--force", action='store_true', help='Force run the indexing, without any restrictions')
   parser.add_argument("-g", "--generate-third-party-feeds", action='store_true')
   parser.add_argument("-s", "--search-engine", default=None, help='"solr" or "elasticsearch". If nothing is passed, both are indexed')
+  parser.add_argument("-l", "--limit", default=0, help='number of docs to index', type=int)
   argv = vars(parser.parse_args())
   
   assert argv['search_engine'] in ['solr', 'elasticsearch', None]

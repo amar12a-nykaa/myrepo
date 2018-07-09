@@ -798,6 +798,20 @@
             }
           }
         },
+        "title_brand_category": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            },
+            "shingle" : {
+              "type": "text",
+              "analyzer": "shingle_analyzer",
+              "search_analyzer": "default_search"
+            }
+          }
+        },
         "title_text_split": {
           "type": "text",
           "fields": {
