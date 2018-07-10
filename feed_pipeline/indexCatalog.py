@@ -189,7 +189,10 @@ class CatalogIndexer:
       if isinstance(value, list) and value == ['']:
         doc[key] = []
 
-  def index(search_engine, file_path, collection, update_productids=False, limit=0):
+  def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None):
+    skus = skus or []
+    if skus:
+      print("Running catalog pipeline for selected skus: %s" % skus) 
     validate_popularity_data_health()
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
@@ -223,6 +226,8 @@ class CatalogIndexer:
         CatalogIndexer.validate_catalog_feed_row(row)
         doc = {}
         doc['sku'] = row['sku']
+        if skus and doc['sku'] not in skus: 
+          continue
         doc['product_id'] = row['product_id']
         doc['type'] = row['type_id']
         doc['psku'] = row['parent_sku'] if doc['type'] == 'simple' and row['parent_sku'] else row['sku']
@@ -518,6 +523,9 @@ class CatalogIndexer:
           #    f.write("%s  %s\n"%(doc['sku'], field))
 
         doc['brand_facet_searchable'] = " , ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
+        if not doc['brand_facet_searchable']:
+          doc['brand_facet_searchable'] = " , ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
+
 
         # meta info: dynamic fields
         meta_fields = [field for field in row.keys() if field.startswith("meta_")]
@@ -548,8 +556,6 @@ class CatalogIndexer:
         try:
           doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""), doc.get("brand_facet_searchable", ""), doc.get("category_facet_searchable", "")] if x])
         except:
-          embed()
-          exit()
           pass
 
         if search_engine == 'elasticsearch':
@@ -596,6 +602,7 @@ if __name__ == "__main__":
   parser.add_argument("-c", "--collection", help='name of collection to index to')
   parser.add_argument("-s", "--searchengine", default='elasticsearch', help='name of search engine you want to update. Enter "solr" or "elasticsearch"')
   parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
+  parser.add_argument("--sku", type=str)
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
   collection = argv['collection']
@@ -603,4 +610,4 @@ if __name__ == "__main__":
 
   argv['update_productids'] = True
 
-  CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'])
+  CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'], skus=argv['sku'].split(","))
