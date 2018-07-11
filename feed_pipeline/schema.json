@@ -33,7 +33,7 @@
         },
         "shingle_filter": {
           "type": "shingle",
-          "output_unigrams": false,
+          "output_unigrams": true,
           "token_separator": ""
         }
       }
