@@ -331,7 +331,7 @@ class CatalogIndexer:
               cat_facet[key] = str(info.get(key))
             doc['category_facet'].append(cat_facet)
 
-          doc['category_facet_searchable'] = " , ".join([x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
+          doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
 
         elif len(category_ids)!=len(category_names):
           #with open("/data/inconsistent_cat.txt", "a") as f:
@@ -524,9 +524,9 @@ class CatalogIndexer:
           #  with open("/data/inconsistent_facet.txt", "a") as f:
           #    f.write("%s  %s\n"%(doc['sku'], field))
 
-        doc['brand_facet_searchable'] = " , ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
+        doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
         if not doc['brand_facet_searchable']:
-          doc['brand_facet_searchable'] = " , ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
+          doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
 
 
         # meta info: dynamic fields
