@@ -25,7 +25,6 @@ from stemming.porter2 import stem
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
-from solrutils import SolrUtils
 from esutils import EsUtils
 from apiutils import ApiUtils
 from idutils import createId
@@ -70,11 +69,8 @@ def write_dict_to_csv(dictname, filename):
 def index_docs(searchengine, docs, collection):
   for doc in docs:
     doc['entity'] += " s" # This is a trick to hnadle sideeffect of combining shingles and edge ngram token filters
-  if searchengine == 'solr':
-    SolrUtils.indexDocs(docs, collection)
-    requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
-  if searchengine == 'elasticsearch':
-    EsUtils.indexDocs(docs, collection)
+  assert searchengine == 'elasticsearch':
+  EsUtils.indexDocs(docs, collection)
 
 def create_map_search_product():
   DEBUG = False 
@@ -417,7 +413,6 @@ def index_products(collection, searchengine):
     docs = []
     cnt_product = 0
     cnt_search = 0
-    cnt_missing_solr = 0 
     cnt_missing_keys = 0 
 
     ids = [x['_id'] for x in rows]
@@ -433,8 +428,6 @@ def index_products(collection, searchengine):
 
       product = products.get(parent_id)
       if not product:
-        #print("[ERROR] Product missing in solr yin yang: %s" % parent_id)
-        cnt_missing_solr += 1
         continue
       required_keys = set(["product_url", 'image', 'title', 'image_base'])
       missing_keys = required_keys - set(list(product.keys())) 
@@ -467,7 +460,6 @@ def index_products(collection, searchengine):
 
   #print("cnt_product: %s" % cnt_product)
 #  print("cnt_search: %s" % cnt_search)
-#  print("cnt_missing_solr: %s" % cnt_missing_solr)
 #  print("cnt_missing_keys: %s" % cnt_missing_keys)
 
 
@@ -495,11 +487,6 @@ def index_products(collection, searchengine):
   flush_index_products(rows_1k)
     
 
-def build_suggester(collection):
-  print("Building suggester .. ")
-  base_url = Utils.solrBaseURL(collection=collection)
-  requests.get(base_url + "suggest?wt=json&suggest.q=la&suggest.build=true")
-  r = requests.get(base_url + "suggestsmall?wt=json&suggest.q=la&suggest.build=true")
 
 def fetch_product_by_parentids(parent_ids):
   DEBUG = False 
@@ -572,13 +559,9 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_category_facets_arg = True
 
     print(locals())
-    if engine == 'solr':
-      EngineUtils = SolrUtils
-    elif engine == 'elasticsearch':
-      EngineUtils = EsUtils
-    else:
-      raise Exception("Unknown Search Engine: %s" % engine)
-    #print(engine,   collection, active, inactive)
+    assert engine == 'elasticsearch':
+    EngineUtils = EsUtils
+
     index = None
     print('Starting %s Processing' % engine)
     if collection: 
@@ -622,8 +605,6 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_parallel(['categories', 'brands', 'brands_categories', 'category_facets'], **kwargs)
     
 
-      if engine == 'solr':
-        build_suggester(index)
 
       print('Done processing ',  engine)
       restart_apache_memcached()
