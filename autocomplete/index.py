@@ -69,7 +69,7 @@ def write_dict_to_csv(dictname, filename):
 def index_docs(searchengine, docs, collection):
   for doc in docs:
     doc['entity'] += " s" # This is a trick to hnadle sideeffect of combining shingles and edge ngram token filters
-  assert searchengine == 'elasticsearch':
+  assert searchengine == 'elasticsearch'
   EsUtils.indexDocs(docs, collection)
 
 def create_map_search_product():
@@ -559,7 +559,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_category_facets_arg = True
 
     print(locals())
-    assert engine == 'elasticsearch':
+    assert engine == 'elasticsearch'
     EngineUtils = EsUtils
 
     index = None
