@@ -19,11 +19,6 @@ alias nyscripts='cd /home/ubuntu/nykaa_scripts/'
 alias nyapi='cd /home/apis/nykaa'
 alias fp='cd /home/ubuntu/nykaa_scripts/feed_pipeline'
 
-alias solrhome='cd /opt/solr/server/scripts/cloud-scripts'
-alias solrconf='cd /home/ubuntu/nykaa_solrconf'
-#alias solrup='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:9983 -cmd upconfig -confdir /home/ubuntu/nykaa_solrconf/autocomplete -confname autocomplete'
-#alias solrdown='/opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost localhost:9983 -cmd downconfig  -confname autocomplete -confdir /home/ubuntu/nykaa_solrconf/autocomplete'
-#alias solrreload='curl "http://localhost:8983/solr/admin/collections?action=RELOAD&name=autocomplete"'
 
 alias popularity="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py"
 alias catalog_pipeline="/usr/bin/python /nykaa/scripts/feed_pipeline/catalogPipeline.py"
