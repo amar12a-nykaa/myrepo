@@ -17,11 +17,9 @@ sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
 from pas.v2.csvutils import read_csv_from_file
-from pas.v2.exceptions import SolrError
 from pas.v2.utils import CATALOG_COLLECTION_ALIAS, Utils
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
-from solrutils import SolrUtils
 from esutils import EsUtils
 
 conn =  Utils.mysqlConnection()
@@ -167,16 +165,6 @@ class CatalogIndexer:
       pws_input_docs.append(doc)
     return (pws_input_docs, errors)
 
-  def indexSolr(docs, collection):
-    try:
-      if not collection:
-        collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
-        collection = collections['inactive_collection']
-        print(" --> Indexing to inactive solr collection: %s" % collection)
-
-      SolrUtils.indexDocs(docs, collection)
-    except SolrError as e:
-      raise Exception(str(e))
 
   def indexES(docs, index):
     if not index:
@@ -565,13 +553,9 @@ class CatalogIndexer:
 
         input_docs.append(doc)
 
-        #index to solr in batches of DOCS_BATCH_SIZE
         if ((index+1) % CatalogIndexer.DOCS_BATCH_SIZE == 0):
           (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
 
-          # index solr
-          if search_engine == 'solr':
-            CatalogIndexer.indexSolr(input_docs, collection)
 
           # index elastic search
           if search_engine == 'elasticsearch':
@@ -588,10 +572,6 @@ class CatalogIndexer:
     if input_docs:
       (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
       
-      # index solr
-      if search_engine == 'solr':
-        CatalogIndexer.indexSolr(input_docs, collection)
-
       # index elastic search
       if search_engine == 'elasticsearch':
         CatalogIndexer.indexES(input_docs, collection)
@@ -602,7 +582,7 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
   parser.add_argument("-c", "--collection", help='name of collection to index to')
-  parser.add_argument("-s", "--searchengine", default='elasticsearch', help='name of search engine you want to update. Enter "solr" or "elasticsearch"')
+  parser.add_argument("-s", "--searchengine", default='elasticsearch')
   parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
   parser.add_argument("--sku", type=str)
   argv = vars(parser.parse_args())
