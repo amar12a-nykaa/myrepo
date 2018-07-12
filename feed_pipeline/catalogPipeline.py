@@ -57,7 +57,7 @@ def indexSolrData(file_path, force_run):
   index_start = timeit.default_timer()
 
   print("\n\nSolr: Indexing documents from csv file '%s' to collection '%s'."%(file_path, inactive_collection))
-  CatalogIndexer.index(search_engine='solr', file_path=file_path, collection=inactive_collection)
+  CatalogIndexer.index(search_engine='solr', file_path=file_path, collection=inactive_collection, update_productids=True)
 
   #print("Committing all remaining docs")
   #base_url = Utils.solrBaseURL(collection=inactive_collection)
@@ -106,7 +106,7 @@ def indexESData(file_path, force_run):
   index_start = timeit.default_timer()
 
   print("\n\nES: Indexing documents from csv file '%s' to index '%s'."%(file_path, inactive_index))
-  CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index, limit=argv['limit'])
+  CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index, limit=argv['limit'],update_productids=True)
 
   index_stop = timeit.default_timer()
   index_duration = index_stop - index_start
