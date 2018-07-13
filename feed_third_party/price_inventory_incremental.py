@@ -20,7 +20,7 @@ def incremental_feed():
 	print("Start Time ==="+datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'))
 	sys.path.append("/nykaa/scripts/sharedutils")
 	sys.path.append('/var/www/html/nykaa_apis/')
-	from pas.v1.utils import Utils, MemcacheUtils
+	from pas.v2.utils import Utils, MemcacheUtils
 	client 	 = MongoClient("localhost")
 	data 	 = client['local']['feeddata']
 	crondata = client['local']['crondata']

@@ -3,3 +3,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 * * * * * root /usr/bin/python /home/ubuntu/nykaa_scripts/feed_pipeline/indexScheduledPrices.py 2>&1 >> /var/log/nykaa/schedule_price_cron.log
 0 0 * * * root /usr/bin/python /nykaa/scripts/feed_pipeline/cron_runner.py  2>&1 >> /var/log/feed_pipeline_cron.log
+
+0 0 * * * root /usr/bin/python /nykaa/scripts/feed_pipeline/health_check.py -m  
+

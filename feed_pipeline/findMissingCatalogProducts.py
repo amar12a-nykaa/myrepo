@@ -1,3 +1,4 @@
+raise Exception("Assumption is that this file is not being used anymore - Mayank")
 import sys
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils
