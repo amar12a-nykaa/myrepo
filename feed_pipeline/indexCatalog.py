@@ -97,6 +97,15 @@ class CatalogIndexer:
         print("[ERROR] Could not process row: %s" % row)
         print(traceback.format_exc())
 
+  def getCategoryFacetAttributesMap():
+    cat_facet_attrs = {}
+    mysql_conn = Utils.nykaaMysqlConnection()
+    query = "SELECT * FROM nk_categories"
+    results = Utils.fetchResults(mysql_conn, query)
+    for result in results:
+      cat_facet_attrs[str(result['category_id'])] =  result
+
+    return cat_facet_attrs
 
   def fetch_price_availability(input_docs, pws_fetch_products):
     request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
@@ -202,6 +211,8 @@ class CatalogIndexer:
     count = len(all_rows)
     input_docs = []
     pws_fetch_products = []
+
+    categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
 
     ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
     for index, row in enumerate(all_rows):
