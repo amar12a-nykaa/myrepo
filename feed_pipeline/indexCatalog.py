@@ -279,7 +279,7 @@ class CatalogIndexer:
               set_clause = " set " + ", ".join(set_clause_arr)
               query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause, sku=doc['sku'])
               #print(query)
-              Utils.mysql_write(query, connection=conn)
+              Utils.mysql_write(query)
         except:
           #print(traceback.format_exc())
           print("[ERROR] Failed to update product_id and parent_id for sku: %s" % doc['sku'])
