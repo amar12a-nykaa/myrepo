@@ -12,8 +12,6 @@ from urllib.request import Request, urlopen
 import re
 import dateparser
 from IPython import embed
-import time
-import timeit
 
 sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
