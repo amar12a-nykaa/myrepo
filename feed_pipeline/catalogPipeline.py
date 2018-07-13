@@ -13,7 +13,6 @@ import urllib.request
 import csv
 
 sys.path.append('/nykaa/scripts/sharedutils/')
-from solrutils import SolrUtils
 from esutils import EsUtils
 
 from importDataFromNykaa import NykaaImporter
@@ -28,49 +27,20 @@ FEED_URL = "http://adminpanel.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
 hostname = socket.gethostname()
 
+myname = os.path.basename(__file__)
+def getCount():
+  return int(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep' |  awk '{ print $4 }' | sort -n  | uniq | wc -l " % myname, shell=True).strip())
 
-def indexSolrData(file_path, force_run):
-  collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
-  active_collection = collections['active_collection']
-  inactive_collection = collections['inactive_collection']
-  print("Solr: Active collection: %s"%active_collection)
-  print("Solr: Inactive collection: %s"%inactive_collection)
+if getCount() > 1:
+  print()
+  print()
+  print("=" * 20)
+  print("This script is already running. Exiting without doing anything")
+  #print(str(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep'" % myname, shell=True)))
+  print("This means that your intented changes might still be in progress!!!")
+  exit()
 
-  #clear inactive collection
-  resp = SolrUtils.clearSolrCollection(inactive_collection)
 
-  index_start = timeit.default_timer()
-
-  print("\n\nSolr: Indexing documents from csv file '%s' to collection '%s'."%(file_path, inactive_collection))
-  CatalogIndexer.index(search_engine='solr', file_path=file_path, collection=inactive_collection)
-
-  #print("Committing all remaining docs")
-  #base_url = Utils.solrBaseURL(collection=inactive_collection)
-  #requests.get(base_url + "update?commit=true")
-
-  index_stop = timeit.default_timer()
-  index_duration = index_stop - index_start
-
-  # Verify correctness of indexing by comparing total number of documents in both active and inactive collections
-  params = {'q': '*:*', 'rows': '0'}
-  num_docs_active = Utils.makeSolrRequest(params, collection=active_collection)['numFound']
-  num_docs_inactive = Utils.makeSolrRequest(params, collection=inactive_collection)['numFound']
-  print('Solr: Number of documents in active collection(%s): %s'%(active_collection, num_docs_active))
-  print('Solr: Number of documents in inactive collection(%s): %s'%(inactive_collection, num_docs_inactive))
-
-  # if it decreased more than 5% of current, abort and throw an error
-  docs_ratio = num_docs_inactive/num_docs_active
-  if docs_ratio < 0.95 and not force_run:
-    msg = "[ERROR]Solr: Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."
-    print(msg)
-    raise Exception(msg)
-
-  # Update alias CATALOG_COLLECTION_ALIAS to point to freshly indexed collection(inactive_collection)
-  # and do basic verification
-  resp = SolrUtils.createSolrCollectionAlias(inactive_collection, CATALOG_COLLECTION_ALIAS)
-
-  print("\n\nFinished running catalog pipeline for Solr. NEW ACTIVE COLLECTION: %s\n\n"%inactive_collection)
-  print("Time taken to index data to Solr: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
 
 def indexESData(file_path, force_run):
   indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
@@ -91,7 +61,7 @@ def indexESData(file_path, force_run):
   index_start = timeit.default_timer()
 
   print("\n\nES: Indexing documents from csv file '%s' to index '%s'."%(file_path, inactive_index))
-  CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index)
+  CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index, limit=argv['limit'],update_productids=True)
 
   index_stop = timeit.default_timer()
   index_duration = index_stop - index_start
@@ -117,10 +87,11 @@ if __name__ == "__main__":
   parser.add_argument("-i", "--importattrs", action='store_true', help='Flag to import attributes first')
   parser.add_argument("-f", "--force", action='store_true', help='Force run the indexing, without any restrictions')
   parser.add_argument("-g", "--generate-third-party-feeds", action='store_true')
-  parser.add_argument("-s", "--search-engine", default=None, help='"solr" or "elasticsearch". If nothing is passed, both are indexed')
+  parser.add_argument("-s", "--search-engine", default="elasticsearch")
+  parser.add_argument("-l", "--limit", default=0, help='number of docs to index', type=int)
   argv = vars(parser.parse_args())
   
-  assert argv['search_engine'] in ['solr', 'elasticsearch', None]
+  assert argv['search_engine'] in ['elasticsearch', None]
 
   file_path = argv['filepath']
   url = argv['url']
@@ -172,10 +143,6 @@ if __name__ == "__main__":
   # Index Elastic Search Data
   if argv['search_engine'] in ['elasticsearch', None]:
     indexESData(file_path, force_run)
-
-  ## Index Solr Data
-  #if argv['search_engine'] in ['solr', None]:
-  #  indexSolrData(file_path, force_run)
 
   script_stop = timeit.default_timer()
   script_duration = script_stop - script_start

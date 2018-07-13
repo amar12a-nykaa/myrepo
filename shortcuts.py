@@ -4,10 +4,6 @@ import os.path
 shortcuts = [
   ("/nykaa/scripts/mysqlremote.py", "/usr/local/bin/mysqlremote"),
   ("/nykaa/scripts/mysqlnykaa.py", "/usr/local/bin/mysqlnykaa"),
-  ("/nykaa/scripts/bin/solrup.py", "/usr/local/bin/solrup"),
-  ("/nykaa/scripts/bin/solrdown.py", "/usr/local/bin/solrdown"),
-  #("/nykaa/scripts/bin/solrconf.py", "/usr/local/bin/solrconf"),
-  ("/nykaa/scripts/bin/solrreload.py", "/usr/local/bin/solrreload"),
   ("/nykaa/scripts/bin/scpny.py", "/usr/local/bin/scpny"),
 ]
 

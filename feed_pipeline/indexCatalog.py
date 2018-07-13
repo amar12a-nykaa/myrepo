@@ -17,11 +17,9 @@ sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
 from pas.v2.csvutils import read_csv_from_file
-from pas.v2.exceptions import SolrError
 from pas.v2.utils import CATALOG_COLLECTION_ALIAS, Utils
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
-from solrutils import SolrUtils
 from esutils import EsUtils
 
 conn =  Utils.mysqlConnection()
@@ -176,16 +174,6 @@ class CatalogIndexer:
       pws_input_docs.append(doc)
     return (pws_input_docs, errors)
 
-  def indexSolr(docs, collection):
-    try:
-      if not collection:
-        collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
-        collection = collections['inactive_collection']
-        print(" --> Indexing to inactive solr collection: %s" % collection)
-
-      SolrUtils.indexDocs(docs, collection)
-    except SolrError as e:
-      raise Exception(str(e))
 
   def indexES(docs, index):
     if not index:
@@ -198,7 +186,10 @@ class CatalogIndexer:
       if isinstance(value, list) and value == ['']:
         doc[key] = []
 
-  def index(search_engine, file_path, collection, update_productids=False):
+  def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None):
+    skus = skus or []
+    if skus:
+      print("Running catalog pipeline for selected skus: %s" % skus) 
     validate_popularity_data_health()
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
@@ -225,6 +216,8 @@ class CatalogIndexer:
 
     ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
     for index, row in enumerate(all_rows):
+      if limit and ctr.count == limit:
+        break
       ctr += 1
       if ctr.should_print():
         print(ctr.summary)
@@ -232,6 +225,8 @@ class CatalogIndexer:
         CatalogIndexer.validate_catalog_feed_row(row)
         doc = {}
         doc['sku'] = row['sku']
+        if skus and doc['sku'] not in skus: 
+          continue
         doc['product_id'] = row['product_id']
         doc['type'] = row['type_id']
         doc['psku'] = row['parent_sku'] if doc['type'] == 'simple' and row['parent_sku'] else row['sku']
@@ -294,9 +289,10 @@ class CatalogIndexer:
             if set_clause_arr:
               set_clause = " set " + ", ".join(set_clause_arr)
               query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause, sku=doc['sku'])
-              print(query)
-              Utils.mysql_write(query, connection=conn)
+              #print(query)
+              Utils.mysql_write(query)
         except:
+          #print(traceback.format_exc())
           print("[ERROR] Failed to update product_id and parent_id for sku: %s" % doc['sku'])
           pass
 
@@ -327,13 +323,15 @@ class CatalogIndexer:
           doc['category_ids'] = category_ids
           doc['category_values'] = category_names
           doc['category_facet'] = []
-          for category_id in category_ids:
-            info  = categoryFacetAttributesInfoMap.get(str(category_id))
-            if info:
-              cat_facet = OrderedDict()
-              for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
-                cat_facet[key] = str(info.get(key))
-              doc['category_facet'].append(cat_facet)
+          cat_info = PipelineUtils.getCategoryFacetAttributes(category_ids)
+          for info in cat_info:
+            cat_facet = OrderedDict()
+            for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
+              cat_facet[key] = str(info.get(key))
+            doc['category_facet'].append(cat_facet)
+
+          doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
+
         elif len(category_ids)!=len(category_names):
           #with open("/data/inconsistent_cat.txt", "a") as f:
           #  f.write("%s\n"%doc['sku'])
@@ -525,6 +523,11 @@ class CatalogIndexer:
           #  with open("/data/inconsistent_facet.txt", "a") as f:
           #    f.write("%s  %s\n"%(doc['sku'], field))
 
+        doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
+        if not doc['brand_facet_searchable']:
+          doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
+
+
         # meta info: dynamic fields
         meta_fields = [field for field in row.keys() if field.startswith("meta_")]
         for field in meta_fields:
@@ -550,18 +553,20 @@ class CatalogIndexer:
           if not v and v!= False:
             doc[k] = None
 
+
+        try:
+          doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""), doc.get("brand_facet_searchable", ""), doc.get("category_facet_searchable", "")] if x])
+        except:
+          pass
+
         if search_engine == 'elasticsearch':
           CatalogIndexer.formatESDoc(doc)
 
         input_docs.append(doc)
 
-        #index to solr in batches of DOCS_BATCH_SIZE
         if ((index+1) % CatalogIndexer.DOCS_BATCH_SIZE == 0):
           (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
 
-          # index solr
-          if search_engine == 'solr':
-            CatalogIndexer.indexSolr(input_docs, collection)
 
           # index elastic search
           if search_engine == 'elasticsearch':
@@ -578,10 +583,6 @@ class CatalogIndexer:
     if input_docs:
       (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
       
-      # index solr
-      if search_engine == 'solr':
-        CatalogIndexer.indexSolr(input_docs, collection)
-
       # index elastic search
       if search_engine == 'elasticsearch':
         CatalogIndexer.indexES(input_docs, collection)
@@ -592,11 +593,14 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
   parser.add_argument("-c", "--collection", help='name of collection to index to')
-  parser.add_argument("-s", "--searchengine", required=True, help='name of search engine you want to update. Enter "solr" or "elasticsearch"')
+  parser.add_argument("-s", "--searchengine", default='elasticsearch')
   parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
+  parser.add_argument("--sku", type=str)
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
   collection = argv['collection']
   searchengine = argv['searchengine']
 
-  CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'])
+  argv['update_productids'] = True
+
+  CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'], skus=argv['sku'].split(","))

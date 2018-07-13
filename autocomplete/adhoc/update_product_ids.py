@@ -18,7 +18,6 @@ import requests
 
 sys.path.append("/nykaa/api")
 from pas.v2.csvutils import read_csv_from_file
-from pas.v2.exceptions import SolrError
 from pas.v2.utils import Utils
 
 sys.path.append("/nykaa/scripts/sharedutils")

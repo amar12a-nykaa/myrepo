@@ -80,14 +80,12 @@ parser.add_argument("--startdate", help="startdate in YYYYMMDD format or number 
 parser.add_argument("--enddate", help="enddate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace().format('YYYY-MM-DD'))
 parser.add_argument("--preprocess", help="Only runs the report and prints.", action='store_true')
 parser.add_argument("--popularity", help="Calculates popularity", action='store_true')
-parser.add_argument("--post-to-solr", help="Posts popularity to Solr", action='store_true')
 parser.add_argument("--dump-metrics", help="Dump metrics into a file", action='store_true')
 
 parser.add_argument("--from-file", help="Read report from file", type=str)
 parser.add_argument("--table", type=str, default='popularity')
 parser.add_argument("--print-popularity-ids", type=str)
 parser.add_argument("--debug", action='store_true')
-parser.add_argument("--id", help='id to process. Only works with post-to-solr')
 parser.add_argument("--platform", default='web,app')
 parser.add_argument("--num-prods", '-n', help="obsolete", default=0, type=int)
 parser.add_argument("--yes", '-y', help="obsolete", action='store_true')
@@ -325,49 +323,6 @@ def get_popularity_multiplier(product_list):
   else:
     return 0
 
-class SolrPostManager:
-  size = 0
-  BATCH_SIZE = 10
-  docs = []
-  ids = []
-  id_object = {}
-
-  def post_to_solr(self, product_id, obj):
-    self.id_object[product_id] = obj 
-    if product_id and 'unspecified' not in product_id:
-      self.ids.append(product_id)
-
-    if len(self.ids) > self.BATCH_SIZE:
-      self.flush()
-    return
-
-
-  def flush(self ):
-    ids = self.ids
-
-    required_fields = ['sku', 'product_id']
-    params = {}
-    params['q'] = " OR ".join(["product_id:%s" %x for x in ids] )
-    params['fl'] = ",".join(required_fields)
-
-    response = Utils.makeSolrRequest(params)
-    docs = response['docs']
-    final_docs = []
-    for i, doc in enumerate(docs):
-      _id = doc['product_id']
-      doc = {k: v for k,v in doc.items() if k in required_fields}
-      doc.update({k:{"set": v} for k,v in self.id_object[_id].items()})
-
-      final_docs.append(doc)
-
-    #print("flushing... ")
-    try:
-      response = Utils.updateCatalog(final_docs)
-      #print(response)
-    except:
-      print(traceback.format_exc())
-      print("[ERROR] Could not post to solr following ids: %s" % [x['product_id'] for x in final_docs])
-    self.ids = []
     
 
 if argv['preprocess']:
@@ -380,19 +335,3 @@ if argv['popularity']:
   calculate_popularity()
   print("popularity end: %s" % arrow.now())
 
-if argv['post_to_solr']:
-  post_mgr = SolrPostManager()
-  query = {}
-  if argv['id']:
-    query = {"_id": argv['id']}
-    print("query: %s" % query)
-  ctr = LoopCounter(name='Post Popularity data to Solr: ', total = popularity_table.count())
-  for p in popularity_table.find(query,no_cursor_timeout=True):
-    ctr += 1
-    if ctr.should_print():
-      print(ctr.summary)
-    obj = {
-      "popularity":p.get('popularity_total_recent', 0),
-    }
-    post_mgr.post_to_solr(product_id=p['product_id'], obj=obj)
-  post_mgr.flush()

@@ -33,7 +33,7 @@
         },
         "shingle_filter": {
           "type": "shingle",
-          "output_unigrams": false,
+          "output_unigrams": true,
           "token_separator": ""
         }
       }
@@ -90,6 +90,20 @@
             }
           }
         },
+        "brand_facet_searchable": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            },
+            "shingle" : {
+              "type": "text",
+              "analyzer": "shingle_analyzer",
+              "search_analyzer": "default_search"
+            }
+          }
+        },
         "brand_ids": {
           "type": "text",
           "fields": {
@@ -141,6 +155,20 @@
             "keyword": {
               "type": "keyword",
               "ignore_above": 256
+            }
+          }
+        },
+        "category_facet_searchable": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            },
+            "shingle" : {
+              "type": "text",
+              "analyzer": "shingle_analyzer",
+              "search_analyzer": "default_search"
             }
           }
         },
@@ -757,6 +785,20 @@
           }
         },
         "title": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            },
+            "shingle" : {
+              "type": "text",
+              "analyzer": "shingle_analyzer",
+              "search_analyzer": "default_search"
+            }
+          }
+        },
+        "title_brand_category": {
           "type": "text",
           "fields": {
             "keyword": {

@@ -10,6 +10,13 @@
           "type": "shingle",
           "output_unigrams": false,
           "token_separator": ""
+        },
+        "char_filter" : {
+          "specialCharactersFilters": {
+            "pattern" : "[^A-Za-z0-9 ]",
+            "type" : "pattern_replace",
+            "replacement" : ""
+          }
         }
       },
       "analyzer": {
@@ -19,7 +26,8 @@
             "my_stemming",
             "asciifolding"
           ],
-          "tokenizer": "whitespace"
+          "tokenizer": "whitespace",
+          "char_filter" : ["specialCharactersFilters"]
         },
         "default": {
           "filter": [
@@ -27,7 +35,8 @@
             "my_stemming",
             "asciifolding"
           ],
-          "tokenizer": "whitespace"
+          "tokenizer": "whitespace",
+          "char_filter" : ["specialCharactersFilters"]
         },
         "shingle_analyzer": {
           "tokenizer": "whitespace",

@@ -6,6 +6,16 @@ from datetime import datetime, timedelta
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils
 
+
+import argparse
+import re
+import sys
+import subprocess
+import math
+import os
+import json
+import time
+
 def getCurrentDateTime():
   current_datetime = datetime.utcnow()
   from_zone = tz.gettz('UTC')
@@ -13,6 +23,17 @@ def getCurrentDateTime():
   current_datetime = current_datetime.replace(tzinfo=from_zone)
   current_datetime = current_datetime.astimezone(to_zone) 
   return current_datetime
+
+print("=" * 30 + " %s ======= " % getCurrentDateTime())
+def getCount():
+  return int(subprocess.check_output("ps aux | grep python | grep indexScheduledPrices.py | grep -vE 'vim|grep|/bin/sh' | wc -l ", shell=True).strip())
+
+if getCount() >= 2: 
+  print("getCount(): %r" % getCount())
+  print("[%s] This script is already running. Exiting without doing anything"% getCurrentDateTime())
+  print(str(subprocess.check_output("ps aux | grep python | grep indexScheduledPrices.py | grep -vE 'vim|grep|/bin/sh' ", shell=True)))
+  exit()
+
 
 class ScheduledPriceUpdater:
 
@@ -25,10 +46,12 @@ class ScheduledPriceUpdater:
         content = f.read()
         if content:
           last_datetime = content
+          print("reading last_datetime from file: %s" % last_datetime)
         f.seek(0)
         f.write(str(current_datetime))
         f.truncate()
     except FileNotFoundError:
+      print("FileNotFoundError")
       with open("last_update_time.txt", "w") as f:
         f.write(str(current_datetime))
     except Exception as e:
@@ -39,10 +62,12 @@ class ScheduledPriceUpdater:
  
     mysql_conn = Utils.mysqlConnection('r')
     query = "SELECT sku, psku, type FROM products" + where_clause
+    print("[%s] "% getCurrentDateTime() + query % (last_datetime, current_datetime, last_datetime, current_datetime))
     results = Utils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime))    
     print("[%s] Starting simple product updates" % getCurrentDateTime())
     for product in results:
       if product['type'] == 'simple':
+        print("sku: %s" % product['sku'])
         product_updated_count += PipelineUtils.updateCatalog(product['sku'], product['psku'], product['type'])
         if product_updated_count % 100 == 0:
           print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
