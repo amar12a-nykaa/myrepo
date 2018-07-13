@@ -575,13 +575,12 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
 
     print("Index: %s" % index)
 
-    if engine == 'elasticsearch':
-      index_client = elasticsearch.client.IndicesClient(es)
-      if index_all and index_client.exists(index = index):
-        print("Deleting index: %s" % index)
-        index_client.delete(index = index)
-      if not index_client.exists(index = index):
-        index_client.create( index=index, body= ES_SCHEMA)
+    index_client = elasticsearch.client.IndicesClient(es)
+    if index_all and index_client.exists(index = index):
+      print("Deleting index: %s" % index)
+      index_client.delete(index = index)
+    if not index_client.exists(index = index):
+      index_client.create( index=index, body= ES_SCHEMA)
 
     if index:
       print("Indexing: %s" % index)
@@ -613,10 +612,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       print("Swapping Index")
       validate_min_count()
       indexes = EngineUtils.get_active_inactive_indexes('autocomplete')
-      if engine == 'elasticsearch':
-        EngineUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
-      else:
-        EngineUtils.swap_core('autocomplete')
+      EngineUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
 
 if __name__ == '__main__':
 
