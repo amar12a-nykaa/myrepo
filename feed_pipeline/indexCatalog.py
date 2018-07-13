@@ -323,13 +323,13 @@ class CatalogIndexer:
           doc['category_ids'] = category_ids
           doc['category_values'] = category_names
           doc['category_facet'] = []
-          cat_info = PipelineUtils.getCategoryFacetAttributes(category_ids)
-          for info in cat_info:
-            cat_facet = OrderedDict()
-            for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
-              cat_facet[key] = str(info.get(key))
-            doc['category_facet'].append(cat_facet)
-
+          for category_id in category_ids:
+            info  = categoryFacetAttributesInfoMap.get( str(category_id))
+            if info:
+              cat_facet = OrderedDict()
+              for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
+                cat_facet[key] = str(info.get(key))
+              doc['category_facet'].append(cat_facet)
           doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
 
         elif len(category_ids)!=len(category_names):
