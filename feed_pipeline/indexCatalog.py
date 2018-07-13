@@ -12,6 +12,8 @@ from urllib.request import Request, urlopen
 import re
 import dateparser
 from IPython import embed
+import time
+import timeit
 
 sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
@@ -99,6 +101,15 @@ class CatalogIndexer:
         print("[ERROR] Could not process row: %s" % row)
         print(traceback.format_exc())
 
+  def getCategoryFacetAttributesMap():
+    cat_facet_attrs = {}
+    mysql_conn = Utils.nykaaMysqlConnection()
+    query = "SELECT * FROM nk_categories"
+    results = Utils.fetchResults(mysql_conn, query)
+    for result in results:
+      cat_facet_attrs[str(result['category_id'])] =  result
+
+    return cat_facet_attrs
 
   def fetch_price_availability(input_docs, pws_fetch_products):
     request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
@@ -212,6 +223,8 @@ class CatalogIndexer:
     input_docs = []
     pws_fetch_products = []
 
+    categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
+
     ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
     for index, row in enumerate(all_rows):
       ctr += 1
@@ -316,12 +329,13 @@ class CatalogIndexer:
           doc['category_ids'] = category_ids
           doc['category_values'] = category_names
           doc['category_facet'] = []
-          cat_info = PipelineUtils.getCategoryFacetAttributes(category_ids)
-          for info in cat_info:
-            cat_facet = OrderedDict()
-            for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
-              cat_facet[key] = str(info.get(key))
-            doc['category_facet'].append(cat_facet)
+          for category_id in category_ids:
+            info  = categoryFacetAttributesInfoMap.get(str(category_id))
+            if info:
+              cat_facet = OrderedDict()
+              for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
+                cat_facet[key] = str(info.get(key))
+              doc['category_facet'].append(cat_facet)
         elif len(category_ids)!=len(category_names):
           #with open("/data/inconsistent_cat.txt", "a") as f:
           #  f.write("%s\n"%doc['sku'])
