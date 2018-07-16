@@ -13,10 +13,12 @@
         "shingle_analyzer": {
           "tokenizer": "whitespace",
           "filter": ["my_word_delimiter_index", "lowercase", "my_stemming", "asciifolding", "shingle_filter"]
-        },
+        }
+      },
+      "normalizer":{
         "case_insensitive_sort": {
-          "tokenizer": "keyword",
-          "filter": ["my_word_delimiter_index", "lowercase", "my_stemming", "asciifolding"]
+          "type": "custom",
+          "filter": ["lowercase", "asciifolding"]
         }
       },
       "filter": {
@@ -793,7 +795,7 @@
           "fields": {
             "keyword": {
               "type": "keyword",
-              "analyzer": "case_insensitive_sort",
+              "normalizer": "case_insensitive_sort",
               "ignore_above": 256
             },
             "shingle" : {
