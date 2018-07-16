@@ -15,6 +15,12 @@
           "filter": ["my_word_delimiter_index", "lowercase", "my_stemming", "asciifolding", "shingle_filter"]
         }
       },
+      "normalizer":{
+        "case_insensitive_sort": {
+          "type": "custom",
+          "filter": ["lowercase", "asciifolding"]
+        }
+      },
       "filter": {
         "my_word_delimiter_index": {
           "type": "word_delimiter",
@@ -789,6 +795,7 @@
           "fields": {
             "keyword": {
               "type": "keyword",
+              "normalizer": "case_insensitive_sort",
               "ignore_above": 256
             },
             "shingle" : {
