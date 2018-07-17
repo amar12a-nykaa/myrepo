@@ -26,7 +26,7 @@
         "remove_space": {
           "type": "pattern_replace",
           "pattern": "(\\s)",
-          "replacement": ""
+          "replacement": " "
         }
       },
       "filter": {
