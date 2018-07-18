@@ -100,7 +100,7 @@ class CatalogIndexer:
   def getCategoryFacetAttributesMap():
     cat_facet_attrs = {}
     mysql_conn = Utils.nykaaMysqlConnection()
-    query = "SELECT nkc.*,tsc.total_revenue FROM nk_categories nkc left join top_selling_categories tsc on tsc.category_id=nkc.category_id"
+    query = "SELECT * FROM nk_categories"
     results = Utils.fetchResults(mysql_conn, query)
     for result in results:
       cat_facet_attrs[str(result['category_id'])] =  result
