@@ -231,7 +231,7 @@ class CatalogIndexer:
         doc['type'] = row['type_id']
         doc['psku'] = row['parent_sku'] if doc['type'] == 'simple' and row['parent_sku'] else row['sku']
         doc['parent_id'] = row['parent_id'] if doc['type'] == 'simple' and row['parent_id'] else row['product_id']
-        doc['title'] = row['name']
+        doc['title'] = (re.sub(r'\s+', ' ', row['name'])).strip()
         doc['title_text_split'] = row['name']
         doc['description'] = row['description']
         doc['tags'] = (row['tag'] or "").split('|')
