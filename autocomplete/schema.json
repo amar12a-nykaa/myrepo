@@ -4,16 +4,28 @@
       "analyzer": {
         "autocomplete_ngram": {
           "tokenizer": "whitespace" ,
-          "filter": ["my_word_delimiter_index","lowercase", "asciifolding", "my_edge_ngram"]
+          "filter": ["lowercase", "my_word_delimiter_index","asciifolding", "shingle_filter", "my_edge_ngram"],
+          "char_filter": [ "strip_special_chars" ]
         },
         "autocomplete_simple": {
           "tokenizer": "whitespace" ,
-          "filter": ["my_word_delimiter_index","lowercase", "asciifolding"]
+          "filter": ["lowercase", "my_word_delimiter_index", "asciifolding"],
+          "char_filter": [ "strip_special_chars" ]
         },
         "autocomplete_search": {
           "tokenizer": "whitespace",
-          "filter": ["my_word_delimiter_search", "lowercase", "asciifolding"]
+          "filter": ["lowercase", "my_word_delimiter_search", "asciifolding"],
+          "char_filter": [ "strip_special_chars" ]
         }
+      },
+      "char_filter":{
+        "strip_special_chars": {
+          "type": "mapping",
+          "mappings": [
+            "- => ",
+            "' => "
+          ]
+        } 
       },
       "filter": {
         "my_word_delimiter_index": {
@@ -36,6 +48,12 @@
             "letter",
             "digit"
           ]
+        },
+        "shingle_filter": {
+          "type": "shingle",
+          "output_unigrams": false,
+          "output_unigrams_if_no_shingles": true,
+          "token_separator": ""
         }
       }
     }
@@ -46,12 +64,14 @@
         "entity_ngram": {
           "type": "text",
           "analyzer": "autocomplete_ngram",
-          "search_analyzer": "autocomplete_search"
+          "search_analyzer": "autocomplete_search",
+          "norms": { "enabled": false }
         },
         "entity": {
           "type": "text",
           "analyzer": "autocomplete_simple",
-          "search_analyzer": "autocomplete_search"
+          "search_analyzer": "autocomplete_search",
+          "norms": { "enabled": false }
         },
     "data": {
       "type": "text"

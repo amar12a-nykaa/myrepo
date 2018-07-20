@@ -6,8 +6,9 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 sys.path.append('/home/apis/nykaa/')
-from pas.v2.exceptions import SolrError
 from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
+#from pas.v2.models import Product
+from IPython import embed 
 
 class PipelineUtils:
 
@@ -74,33 +75,49 @@ class PipelineUtils:
       raise Exception("Missing Fields: %s" % missing_fields)
 
   def getProductsToIndex(products):
-    # Check if to-be-updated skus are actually present in solr, ignore skus not present
+    update_docs = []
+
+    # Check if to-be-updated skus are actually present in ES, ignore skus not present
     final_products_to_update = []
     product_skus = [product['sku'].upper() for product in products]
-    solr_params = {}
+    querydsl = {}
     if product_skus:
-      solr_params['q'] = ' OR '.join(['(sku:'+sku+')' for sku in product_skus])
-      solr_params['fl'] = 'sku,type'
-      solr_response = Utils.makeSolrRequest(solr_params)
-      docs = solr_response.get("docs", [])
+      sku_should_query = []
+      for sku in product_skus:
+        sku_should_query.append({'term' : {'sku.keyword' : sku}})
+      querydsl['query'] = {'bool':{'should':sku_should_query}}
+      querydsl['_source'] = ['sku','type']
+      response = Utils.makeESRequest(querydsl, index='livecore')
+      docs = response['hits']['hits']
       for doc in docs:
-        final_products_to_update.append({'sku': doc['sku'], 'type': doc['type']})
+        final_products_to_update.append({'sku': doc['_source']['sku'], 'type': doc['_source']['type']})
 
-    update_docs = []
-    if final_products_to_update:
-      params = json.dumps({"products": final_products_to_update}).encode('utf8')
-      req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get", data=params, headers={'content-type': 'application/json'})
-      pas_object = json.loads(urllib.request.urlopen(req, params).read().decode('utf-8')).get('skus', {})
+    #pas_object = Product.getPAS(final_products_to_update)
+
+    params = json.dumps({"products": final_products_to_update}).encode('utf8')
+    req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get", data=params, headers={'content-type': 'application/json'})
+    pas_object = json.loads(urllib.request.urlopen(req, params).read().decode('utf-8')).get('skus', {})
+
+    for product in final_products_to_update:
+      update_fields = {}
+      sku = product['sku']
+      product_type = product['type']
+      pas = pas_object.get(sku) or {}
       swap_keys = {'sp': 'price', 'discount': 'discount', 'mrp': 'mrp', 'is_in_stock': 'in_stock', 'quantity': 'quantity', 'backorders': 'backorders', 'disabled': 'disabled'}
-
-      for sku, pas in pas_object.items():
-        update_fields = {}
-        for key in swap_keys.keys():
-          if pas.get(key) is not None:
-            update_fields[swap_keys[key]] = {'set': pas[key]}
-        update_fields.update({'sku': sku})
-        update_fields['update_time'] = {'set': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')}
-        update_docs.append(update_fields)
+      for key in swap_keys.keys():
+        if pas.get(key) is not None:
+          update_fields[swap_keys[key]] = pas[key]
+        if key == 'is_in_stock':
+          update_fields[swap_keys[key]] = bool(pas[key])
+      update_fields.update({'sku': sku})
+      update_fields['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+      if product_type=='bundle':
+        bundle_products = pas.get('products', {})
+        product_qty_map = {}
+        for product_sku, bundle_prod in bundle_products.items():
+          product_qty_map[product_sku] = bundle_prod.get('quantity_in_bundle', 0)
+        update_fields['product_qty_map'] = json.dumps(product_qty_map)
+      update_docs.append(update_fields)
 
     return update_docs
 
@@ -121,12 +138,11 @@ class PipelineUtils:
 
     update_docs = PipelineUtils.getProductsToIndex(products)
     if update_docs:
-      Utils.updateCatalog(update_docs)
+      Utils.updateESCatalog(update_docs)
     return len(update_docs)
 
 
 
 if __name__ == "__main__":
-  #ret = SolrUtils.get_active_inactive_collections()
   #print(ret)
   pass

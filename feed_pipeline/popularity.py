@@ -5,10 +5,12 @@ import os
 import os.path
 import pprint
 import re
+import requests
 import sys
 import traceback
 from collections import OrderedDict, defaultdict
 from contextlib import closing
+
 
 import arrow
 from IPython import embed
@@ -17,7 +19,7 @@ import numpy
 import omniture
 import pandas as pd
 from pymongo import MongoClient
-
+from pipelineUtils import PipelineUtils
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
@@ -42,6 +44,22 @@ raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']
 
+product_sales_map = {}
+
+def build_product_sales_map(startdate='2018-04-01'):
+  global product_sales_map
+  
+  where_clause = "orderdetail_dt_created >='{0}'".format(startdate)
+  query =  """select product_id, sum(OrderDetail_QTY) as qty_ordered from fact_order_detail_new  where {0}  group by product_id""".format(where_clause)
+  print (query)
+  redshift_conn =  Utils.redshiftConnection()
+  cur  =  redshift_conn.cursor()
+
+  cur.execute(query)
+
+  for row in cur.fetchall():
+    product_sales_map[str(row[0])] = float(row[1])
+   
 def valid_date(s):
   try:
     if re.search("^-?[0-9]+$", s):
@@ -57,18 +75,17 @@ def valid_date(s):
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--back_date_90_days", help="90 days back date in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-90).format('YYYY-MM-DD'))
 parser.add_argument("--startdate", help="startdate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-30).format('YYYY-MM-DD'))
 parser.add_argument("--enddate", help="enddate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace().format('YYYY-MM-DD'))
 parser.add_argument("--preprocess", help="Only runs the report and prints.", action='store_true')
 parser.add_argument("--popularity", help="Calculates popularity", action='store_true')
-parser.add_argument("--post-to-solr", help="Posts popularity to Solr", action='store_true')
 parser.add_argument("--dump-metrics", help="Dump metrics into a file", action='store_true')
 
 parser.add_argument("--from-file", help="Read report from file", type=str)
 parser.add_argument("--table", type=str, default='popularity')
 parser.add_argument("--print-popularity-ids", type=str)
 parser.add_argument("--debug", action='store_true')
-parser.add_argument("--id", help='id to process. Only works with post-to-solr')
 parser.add_argument("--platform", default='web,app')
 parser.add_argument("--num-prods", '-n', help="obsolete", default=0, type=int)
 parser.add_argument("--yes", '-y', help="obsolete", action='store_true')
@@ -77,12 +94,15 @@ argv = vars(parser.parse_args())
 
 debug = argv['debug']
 TABLE = argv['table']
+back_date_90_days_time = arrow.get(argv['back_date_90_days']).datetime
 startdatetime = arrow.get(argv['startdate']).datetime
 enddatetime = arrow.get(argv['enddate']).datetime
 print(startdatetime)
 print(enddatetime)
 platforms = argv["platform"].split(",")
 
+build_product_sales_map(str(back_date_90_days_time))
+print(len(product_sales_map))
 
 if argv['dump_metrics']:
   analytics = omniture.authenticate('soumen.seth:FSN E-Commerce', '770f388b78d019017d5e8bd7a63883fb')
@@ -242,57 +262,67 @@ def calculate_popularity():
       print(ctr.summary)
 
     row = dict(row)
+
+    if row.get('parent_id'):
+      child_product_list = get_all_the_child_products(row.get('parent_id'))
+      if len(child_product_list) >0:
+        popularity_multiplier_factor = get_popularity_multiplier(child_product_list)
+      else:
+        popularity_multiplier_factor = 1
+
     #row = {k:v for k,v in row.items() if k in ['cart_additions', 'last_calculated', 'orders', 'parent_id', 'popularity', 'revenue', 'units', 'views']}
     row['last_calculated'] = timestamp
+    row['popularity_multiplier_factor'] =  popularity_multiplier_factor
+    row['popularity_in_stock'] = row['popularity']* float(popularity_multiplier_factor)
 
     if row.get('parent_id'):
       popularity_table.replace_one({"_id": row['parent_id'], "parent_id": row['parent_id']}, row, upsert=True)
 
   popularity_table.remove({"last_calculated": {"$ne": timestamp}})
 
-class SolrPostManager:
-  size = 0
-  BATCH_SIZE = 10
-  docs = []
-  ids = []
-  id_object = {}
+def get_all_the_child_products(parent_id):
+  query  = "select distinct(product_id) from catalog_product_super_link where parent_id  = '{0}'".format(parent_id)
 
-  def post_to_solr(self, product_id, obj):
-    self.id_object[product_id] = obj 
-    if product_id and 'unspecified' not in product_id:
-      self.ids.append(product_id)
-
-    if len(self.ids) > self.BATCH_SIZE:
-      self.flush()
-    return
+  mysql_conn = Utils.nykaaMysqlConnection()
+  data = Utils.mysql_read(query, connection=mysql_conn)
+  res  = []
+  for row in data:
+    res.append(str(row['product_id'] ))
+  return res
 
 
-  def flush(self ):
-    ids = self.ids
+def check_if_product_available(product_id):
 
-    required_fields = ['sku', 'product_id']
-    params = {}
-    params['q'] = " OR ".join(["product_id:%s" %x for x in ids] )
-    params['fl'] = ",".join(required_fields)
+  api =  'http://'+ PipelineUtils.getAPIHost()+'/apis/v2/product.list?id={0}'.format(product_id)
+  #api =  'http://preprod-api.nyk00-int.network/apis/v2/product.list?id={0}'.format(product_id)
+  r  = requests.get(api)
+  data  = {}
+  try:
+    data  =  json.loads(r.content.decode('utf-8'))
+    if (not data['result']['in_stock'] ) or (data['result']['disabled']) or (float(data['result']['mrp']) <1):
+      return 0
+    return 1
+  except:
+    return 1
 
-    response = Utils.makeSolrRequest(params)
-    docs = response['docs']
-    final_docs = []
-    for i, doc in enumerate(docs):
-      _id = doc['product_id']
-      doc = {k: v for k,v in doc.items() if k in required_fields}
-      doc.update({k:{"set": v} for k,v in self.id_object[_id].items()})
+def get_popularity_multiplier(product_list):
+  global product_sales_map
+  if len(product_list) >0:
+    total_purchase =0
+    for p in product_list:
+      if float(product_sales_map.get(str(p), 0))>0:
+        total_purchase += float(product_sales_map.get(str(p), 0))
 
-      final_docs.append(doc)
+    popularity_multiplier = 1
+    if total_purchase > 0:
+      for p in product_list:
+        flag = check_if_product_available(p)
+        if not flag:
+          popularity_multiplier -= float(product_sales_map.get(str(p), 0))/total_purchase
+    return max(popularity_multiplier, 0)
+  else:
+    return 0
 
-    #print("flushing... ")
-    try:
-      response = Utils.updateCatalog(final_docs)
-      #print(response)
-    except:
-      print(traceback.format_exc())
-      print("[ERROR] Could not post to solr following ids: %s" % [x['product_id'] for x in final_docs])
-    self.ids = []
     
 
 if argv['preprocess']:
@@ -305,19 +335,3 @@ if argv['popularity']:
   calculate_popularity()
   print("popularity end: %s" % arrow.now())
 
-if argv['post_to_solr']:
-  post_mgr = SolrPostManager()
-  query = {}
-  if argv['id']:
-    query = {"_id": argv['id']}
-    print("query: %s" % query)
-  ctr = LoopCounter(name='Post Popularity data to Solr: ', total = popularity_table.count())
-  for p in popularity_table.find(query,no_cursor_timeout=True):
-    ctr += 1
-    if ctr.should_print():
-      print(ctr.summary)
-    obj = {
-      "popularity":p.get('popularity_total_recent', 0),
-    }
-    post_mgr.post_to_solr(product_id=p['product_id'], obj=obj)
-  post_mgr.flush()

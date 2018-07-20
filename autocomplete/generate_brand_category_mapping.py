@@ -17,6 +17,8 @@ from pas.v2.utils import Utils
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
 
+from ensure_mongo_indexes import ensure_mongo_indices_now
+ensure_mongo_indices_now()
 
 popularity_index = {}
 cat_id_index = defaultdict(dict)
@@ -41,7 +43,7 @@ es = EsUtils.get_connection()
 
 #WEIGHT_BRAND= [200, 300]
 #WEIGHT_CATEGORY = [0, 200]
-WEIGHT_CATEGORY_FACET = 150
+WEIGHT_CATEGORY_FACET = 100
 #WEIGHT_BRAND_CATEGORY = [0, 150]
 #WEIGHT_PRODUCT= [0, 100]
 
@@ -117,6 +119,9 @@ def update_category_table(products):
 
   cursor.close()
   mysql_conn.close()
+
+  Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
+
   
 
 def getProducts():
@@ -291,7 +296,7 @@ def update_brand_category_table():
     for  category_id, pop in sorted(catinfo.items(), key=lambda x: -x[1] ):
       try:
         pop = round(pop / max_pop * 100, 2 )
-        q = query % (brand, brand_name_id[brand]['brand_id'], category_id, category_id_index[category_id]['name'], pop)
+        q = query % (brand, brand_name_id[brand]['brand_id'], category_id, cat_id_index[category_id]['name'], pop)
         print(q)
         Utils.mysql_write(q)
       except:

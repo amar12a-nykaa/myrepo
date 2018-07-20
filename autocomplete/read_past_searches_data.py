@@ -30,6 +30,8 @@ from pymongo import MongoClient, UpdateOne
 from pymongo.errors import BulkWriteError
 from stemming.porter2 import stem
 
+from ensure_mongo_indexes import ensure_mongo_indices_now
+
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
@@ -38,9 +40,12 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 from cliutils import CliUtils
 
+DAILY_COUNT_THRESHOLD = 2 
+
 client = Utils.mongoClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_formatted = client['search']['search_terms_daily_formatted']
+ensure_mongo_indices_now()
 
 def format_term(term):
     term = html.unescape(term).lower()
@@ -246,6 +251,9 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
         continue
       filt = {"date": date, "term": d['term'], "platform": platform}
       update = {k:v for k,v in d.items() if k in ['cart_additions', 'internal_search_term_conversion', 'internal_search_term_conversion_instance', 'date', 'term']}
+
+      if update['internal_search_term_conversion_instance'] < DAILY_COUNT_THRESHOLD :
+        continue
 
       formatted_term = storable_term = format_term(update['term']).strip()
       splitted_terms = storable_term.split()

@@ -5,6 +5,8 @@ import json
 from pprint import pprint
 import re
 import sys
+import time
+import threading
 import traceback
 
 import arrow
@@ -23,12 +25,15 @@ from stemming.porter2 import stem
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
-from solrutils import SolrUtils
 from esutils import EsUtils
-from utils import createId
+from apiutils import ApiUtils
+from idutils import createId
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils, MemcacheUtils
+
+from ensure_mongo_indexes import ensure_mongo_indices_now
+ensure_mongo_indices_now()
 
 collection='autocomplete'
 search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']
@@ -38,12 +43,22 @@ top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = Utils.esConn()
 
+GLOBAL_FAST_INDEXING = False
 
+MIN_COUNTS = {
+  "product": 30000,
+  "brand": 1000,
+  "category": 200,
+  "brand_category": 10000,
+  "search_query": 40000,
+  "category_facet": 900,
+}
+Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
 def restart_apache_memcached():
   print("Restarting Apache and Memcached")
   os.system("/etc/init.d/apache2 restart")
-  os.system("/etc/init.d/memcached restart")
+  MemcacheUtils.flush_all()
 
 def write_dict_to_csv(dictname, filename):
   with open(filename, 'w') as csv_file:
@@ -52,15 +67,10 @@ def write_dict_to_csv(dictname, filename):
          writer.writerow([key, value])
 
 def index_docs(searchengine, docs, collection):
-  if searchengine == 'solr':
-    SolrUtils.indexDocs(docs, collection)
-    requests.get(Utils.solrBaseURL(collection=collection)+ "update?commit=true")
-  if searchengine == 'elasticsearch':
-    try:
-      EsUtils.indexDocs(docs, collection)
-    except:
-      print(docs)
-      raise
+  for doc in docs:
+    doc['entity'] += " s" # This is a trick to hnadle sideeffect of combining shingles and edge ngram token filters
+  assert searchengine == 'elasticsearch'
+  EsUtils.indexDocs(docs, collection)
 
 def create_map_search_product():
   DEBUG = False 
@@ -183,6 +193,8 @@ def index_search_queries(collection, searchengine):
 
   ctr = LoopCounter(name='Search Queries')
   n = 1000 
+  top_queries.reverse()
+  assert top_queries
   for queries_1k in  [top_queries[i * n:(i + 1) * n] for i in range((len(top_queries) + n - 1) // n )]: 
     for row in search_terms_normalized_daily.find({'query' : {"$in": queries_1k}}):
       if len(row['query'])>50:
@@ -253,7 +265,7 @@ def index_categories(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' order by name, category_popularity desc"
+  query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories_clean order by name, category_popularity desc"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   prev_cat = None
@@ -311,7 +323,6 @@ def index_brands_categories(collection, searchengine):
       index_docs(searchengine, docs, collection)
       docs = []
 
-    print(row['brand'], ctr.count)
 
   index_docs(searchengine, docs, collection)
 
@@ -347,111 +358,193 @@ def index_category_facets(collection, searchengine):
   index_docs(searchengine, docs, collection)
 
 
+def validate_min_count():
+  force_run = False
+
+  indexes = EsUtils.get_active_inactive_indexes('autocomplete')
+  active_index = indexes['active_index']
+  inactive_index = indexes['inactive_index']
+
+# Verify correctness of indexing by comparing total number of documents in both active and inactive indexes
+  params = {'q': '*:*', 'rows': '0'}
+  query = { "size": 0, "query":{ "match_all": {} } }
+  num_docs_active = Utils.makeESRequest(query, index=active_index)['hits']['total']
+  num_docs_inactive = Utils.makeESRequest(query, index=inactive_index)['hits']['total']
+  print('Number of documents in active index(%s): %s'%(active_index, num_docs_active))
+  print('Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
+
+# if it decreased more than 5% of current, abort and throw an error
+  if not num_docs_active:
+    if num_docs_inactive:
+      docs_ratio = 1
+    else:
+      docs_ratio = 0
+  else:
+    docs_ratio = num_docs_inactive/num_docs_active
+  if docs_ratio < 0.95 and not force_run:
+    msg = "[ERROR] Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."
+    print(msg)
+    raise Exception(msg)
+
+  def get_count(_type):
+    querydsl = { "size": 0, "query":{ "match": {"type": _type} } }
+    indexes = EsUtils.get_active_inactive_indexes('autocomplete')
+    es_index = indexes['inactive_index']
+    return Utils.makeESRequest(querydsl, es_index)['hits']['total']
+
+  for _type, count in MIN_COUNTS.items():
+    found_count = get_count(_type)
+    if found_count < count:
+      msg = "Failure: Count check failed for %s. Found: %s. Minimum required: %s" % (_type, found_count, count)
+      print(msg)
+      assert found_count >= count, msg
+    else:
+      print("Success: Min count check for %s is ok" % _type)
+
+
+
 def index_products(collection, searchengine):
 
-  docs = []
 
   popularity = Utils.mongoClient()['search']['popularity']
 
-  cnt_product = 0
-  cnt_search = 0
-  cnt_missing_solr = 0 
-  cnt_missing_keys = 0 
+    
+  def flush_index_products(rows):
+    docs = []
+    cnt_product = 0
+    cnt_search = 0
+    cnt_missing_keys = 0 
 
+    ids = [x['_id'] for x in rows]
+    if not ids:
+      return
+    products = fetch_product_by_parentids(ids)
+    for row in rows:
+
+      parent_id = row['parent_id']
+      #print(parent_id)
+      if not row['_id']:
+        continue
+
+      product = products.get(parent_id)
+      if not product:
+        continue
+      required_keys = set(["product_url", 'image', 'title', 'image_base'])
+      missing_keys = required_keys - set(list(product.keys())) 
+      if missing_keys:
+        #print("[ERROR] Required keys missing for %s: %s" % (parent_id, missing_keys))
+        cnt_missing_keys+= 1
+        continue
+
+      _type = 'product'
+      url = product['product_url']
+      image = product['image']
+      image_base = product['image_base']
+
+      data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id})
+      #cnt_product += 1 
+      docs.append({
+          "_id": createId(product['title']),
+          "entity": product['title'], 
+          "weight": row['popularity'], 
+          "type": _type,
+          "data": data,
+          "id": parent_id,
+          "source": "product"
+        })
+
+      if len(docs) >= 100:
+        index_docs(searchengine, docs, collection)
+        docs = []
+    index_docs(searchengine, docs, collection)
+
+  #print("cnt_product: %s" % cnt_product)
+#  print("cnt_search: %s" % cnt_search)
+#  print("cnt_missing_keys: %s" % cnt_missing_keys)
+
+
+  rows_1k = []
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
-  for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]).limit(50000):
-    parent_id = row['parent_id']
-    #print(parent_id)
+  limit = 50000 if not GLOBAL_FAST_INDEXING else 5000
+  count = 0 
+  for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]):# .limit(limit):
+    try:
+      if requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.list?id=%s" % row['_id']).json()['result']['price'] < 1:
+        #print("Rejecting product_id %s. Price (%s) is less than 1" % row['_id'])
+        continue
+    except:
+      pass
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
-    if not row['_id']:
-      continue
+    rows_1k.append(row)
+    if len(rows_1k) >= 100:
+      flush_index_products(rows_1k)
+      rows_1k = []
 
-    product = fetch_product_by_parentid(parent_id)
-    if not product:
-      #print("[ERROR] Product missing in solr yin yang: %s" % parent_id)
-      cnt_missing_solr += 1
-      continue
-    required_keys = set(["product_url", 'image', 'title', 'image_base'])
-    missing_keys = required_keys - set(list(product.keys())) 
-    if missing_keys:
-      #print("[ERROR] Required keys missing for %s: %s" % (parent_id, missing_keys))
-      cnt_missing_keys+= 1
-      continue
-
-
-    _type = 'product'
-    url = product['product_url']
-    image = product['image']
-    image_base = product['image_base']
-
-    data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id})
-    cnt_product += 1 
-    docs.append({
-        "_id": createId(product['title']),
-        "entity": product['title'], 
-        "weight": row['popularity'], 
-        "type": _type,
-        "data": data,
-        "id": parent_id,
-        "source": "product"
-      })
-
-    if len(docs) >= 100:
-      index_docs(searchengine, docs, collection)
-      docs = []
-
-  print("cnt_product: %s" % cnt_product)
-  print("cnt_search: %s" % cnt_search)
-  print("cnt_missing_solr: %s" % cnt_missing_solr)
-  print("cnt_missing_keys: %s" % cnt_missing_keys)
-
-  index_docs(searchengine, docs, collection)
-
-def build_suggester(collection):
-  print("Building suggester .. ")
-  base_url = Utils.solrBaseURL(collection=collection)
-  requests.get(base_url + "suggest?wt=json&suggest.q=la&suggest.build=true")
-  r = requests.get(base_url + "suggestsmall?wt=json&suggest.q=la&suggest.build=true")
-
-def fetch_product_by_parentid(parent_id):
-  DEBUG = False 
-  product = {}
-  base_url = Utils.solrHostName() + "/solr/yang/select"
-  f = furl(base_url) 
-  f.args['q'] = 'parent_id:%s AND product_id:%s AND -category_ids:2413' % (parent_id,parent_id) 
-  f.args['fq'] = 'type:"simple" OR type:"configurable"'
-  f.args['fl'] = 'title,score,media:[json],product_url,product_id,price,type'
-  f.args['wt'] = 'json'
-  resp = requests.get(f.url)
-  js = resp.json()
-  docs = js['response']['docs']
-  if docs:
-    assert len(docs) == 1, "More than 1 docs foud for query %s" % parent_id
+    if ctr.count >= limit:
+      break
+  flush_index_products(rows_1k)
     
-    doc = docs[0]
 
-    if DEBUG:
-      print(parent_id)
-      print(doc['title'])
-      print("===========")
 
-    image = ""
-    image_base = ""
-    try:
-      image = doc['media'][0]['url']
-      image = re.sub("w-[0-9]*", "w-60", image)
-      image = re.sub("h-[0-9]*", "h-60", image)
-      image_base = re.sub("\/tr[^\/]*", "",  image) 
-    except:
-      print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
+def fetch_product_by_parentids(parent_ids):
+  DEBUG = False 
+  queries = []
+  for parent_id in parent_ids:
+    query = {
+      "query": {
+        "bool": 
+          {
+            "must":[
+              {"term":{"product_id": parent_id}},
+              {"term":{"parent_id": parent_id}}
+            ],
+            "must_not": [
+              {"term":{"category_ids": "2413"}}
+            ], 
+            "should": [
+              {"term":{"type": "simple"}},
+              {"term":{"type": "configurable"}}
+              ]
+          }
+        },
+      "_source":["product_id", "title","score", "media", "product_url", "price", "type", "parent_id"]
+    }
+    queries.append("{}")
+    queries.append(json.dumps(query))
 
-    doc['image'] = image 
-    doc['image_base'] = image_base 
-    doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url']}
-    return doc
-  return None
+  product = {}
+  response = Utils.makeESRequest(queries, 'livecore', msearch=True)
+  response['responses'][0]['hits']['hits']
+  final_docs = {}
+  for docs in [x['hits']['hits'] for x in response['responses']]:
+    if docs:
+      assert len(docs) == 1, "More than 1 docs foud for query %s" % parent_id
+      
+      doc = docs[0]['_source']
+
+      if DEBUG:
+        print(parent_id)
+        print(doc['title'])
+        print("===========")
+
+      image = ""
+      image_base = ""
+      try:
+        image = json.loads(doc['media'][0])['url']
+        image = re.sub("w-[0-9]*", "w-60", image)
+        image = re.sub("h-[0-9]*", "h-60", image)
+        image_base = re.sub("\/tr[^\/]*", "",  image) 
+      except:
+        print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
+
+      doc['image'] = image 
+      doc['image_base'] = image_base 
+      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'parent_id']}
+      final_docs[doc['parent_id']] = doc
+  return final_docs
+
 
 def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_all=False ):
     assert len([x for x in [collection, active, inactive] if x]) == 1, "Only one of the following should be true"
@@ -466,13 +559,9 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_category_facets_arg = True
 
     print(locals())
-    if engine == 'solr':
-      EngineUtils = SolrUtils
-    elif engine == 'elasticsearch':
-      EngineUtils = EsUtils
-    else:
-      raise Exception("Unknown Search Engine: %s" % engine)
-    #print(engine,   collection, active, inactive)
+    assert engine == 'elasticsearch'
+    EngineUtils = EsUtils
+
     index = None
     print('Starting %s Processing' % engine)
     if collection: 
@@ -486,54 +575,54 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
 
     print("Index: %s" % index)
 
-    if engine == 'elasticsearch':
-      index_client = elasticsearch.client.IndicesClient(es)
-      if index_all and index_client.exists(index = index):
-        print("Deleting index: %s" % index)
-        index_client.delete(index = index)
-      if not index_client.exists(index = index):
-        index_client.create( index=index, body= ES_SCHEMA)
+    index_client = elasticsearch.client.IndicesClient(es)
+    if index_all and index_client.exists(index = index):
+      print("Deleting index: %s" % index)
+      index_client.delete(index = index)
+    if not index_client.exists(index = index):
+      index_client.create( index=index, body= ES_SCHEMA)
 
     if index:
       print("Indexing: %s" % index)
-      if index_search_queries_arg:
-        index_search_queries(index, engine)
-      if index_products_arg:
-        index_products(index, engine)
-      if index_categories_arg:
-        index_categories(index, engine)
-      if index_brands_arg:
-        index_brands(index, engine)
-      if index_brands_categories_arg:
-        index_brands_categories(index, engine)
-      if index_category_facets_arg:
-        index_category_facets(index, engine)
+      def index_parallel(_types, **kwargs):
+        threads = []
+        for _type in _types:
+          arg = kwargs["index_" + _type + "_arg"] 
+          func = globals()["index_" + _type ] 
+          if arg:
+            t = threading.Thread(target=func, args=(index, engine))
+            threads.append((_type,t))
+            t.start()
 
-      if engine == 'solr':
-        build_suggester(index)
+        for _type, t in threads: 
+          print("Waiting for thread: %s" % _type)
+          t.join()
+          print("Thread %s is complete" % _type)
+
+      kwargs = {k:v for k,v in locals().items() if 'index_' in k}
+      index_parallel(['search_queries', 'products'], **kwargs)
+      index_parallel(['categories', 'brands', 'brands_categories', 'category_facets'], **kwargs)
+    
+
 
       print('Done processing ',  engine)
       restart_apache_memcached()
     
     if swap:
       print("Swapping Index")
+      validate_min_count()
       indexes = EngineUtils.get_active_inactive_indexes('autocomplete')
-      if engine == 'elasticsearch':
-        EngineUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
-      else:
-        EngineUtils.swap_core('autocomplete')
-      exit()
+      EngineUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
 
 if __name__ == '__main__':
 
-  #print(fetch_product_by_parentid("7723"))
-  #map=create_map_search_product()
   #embed()
+  #map=create_map_search_product()
+  #pprint(fetch_product_by_parentids(['27269', '28760']))
   #exit()
   parser = argparse.ArgumentParser()
 
   group = parser.add_argument_group('group')
-  group.add_argument("-e", "--searchengine", default="solr,elasticsearch")
   group.add_argument("-c", "--category", action='store_true')
   group.add_argument("-b", "--brand", action='store_true')
   group.add_argument("-s", "--search-query", action='store_true')
@@ -542,6 +631,7 @@ if __name__ == '__main__':
   group.add_argument("--category-facet", action='store_true')
 
   parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
+  parser.add_argument("--fast", action='store_true', help="Index a fraction of products and search queries to save on indexing time")
 
   collection_state = parser.add_mutually_exclusive_group(required=True)
   collection_state.add_argument("--inactive", action='store_true')
@@ -552,13 +642,12 @@ if __name__ == '__main__':
 
   argv = vars(parser.parse_args())
 
-  argv['searchengine'] = argv['searchengine'].split(",")
-  print(argv['searchengine'])
-  assert all([x in ['elasticsearch', 'solr'] for x in argv['searchengine']])
+  GLOBAL_FAST_INDEXING = argv['fast']
 
   required_args = ['category', 'brand', 'search_query', 'product', 'brand_category', 'category_facet']
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
 
-
-  for engine in argv['searchengine']:
-    index_engine(engine=engine, collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_all=index_all)
+  startts = time.time()
+  index_engine(engine='elasticsearch', collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_all=index_all)
+  mins = round((time.time()-startts)/60, 2)
+  print("Time taken: %s mins" % mins)

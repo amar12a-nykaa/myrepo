@@ -17,11 +17,9 @@ sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
 from pas.v2.csvutils import read_csv_from_file
-from pas.v2.exceptions import SolrError
 from pas.v2.utils import CATALOG_COLLECTION_ALIAS, Utils
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
-from solrutils import SolrUtils
 from esutils import EsUtils
 
 conn =  Utils.mysqlConnection()
@@ -29,7 +27,7 @@ conn =  Utils.mysqlConnection()
 class CatalogIndexer:
   PRODUCT_TYPES = ['simple', 'configurable', 'bundle']
   VISIBILITY_TYPES = ['visible', 'not_visible']
-  DOCS_BATCH_SIZE = 1000
+  DOCS_BATCH_SIZE = 2000
 
   field_type_pattens = {
     ".*_i$": int,
@@ -99,12 +97,20 @@ class CatalogIndexer:
         print("[ERROR] Could not process row: %s" % row)
         print(traceback.format_exc())
 
+  def getCategoryFacetAttributesMap():
+    cat_facet_attrs = {}
+    mysql_conn = Utils.nykaaMysqlConnection()
+    query = "SELECT * FROM nk_categories"
+    results = Utils.fetchResults(mysql_conn, query)
+    for result in results:
+      cat_facet_attrs[str(result['category_id'])] =  result
+
+    return cat_facet_attrs
 
   def fetch_price_availability(input_docs, pws_fetch_products):
     request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
     request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
     req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
-
     pas_object = json.loads(urlopen(req).read().decode('utf-8'))
     pas_object = pas_object['skus']
 
@@ -130,6 +136,12 @@ class CatalogIndexer:
 
           if pas.get('disabled') is not None:
             doc['disabled'] = pas.get('disabled')
+
+          if pas.get('mrp_freeze') is not None:
+            doc['mrp_freeze'] = pas.get('mrp_freeze')
+
+          if pas.get('expdt') is not None:
+            doc['expdt'] = pas.get('expdt')
 
           # if bundle, get qty of each product also
           if doc['type']=='bundle':
@@ -162,34 +174,22 @@ class CatalogIndexer:
       pws_input_docs.append(doc)
     return (pws_input_docs, errors)
 
-  def indexSolr(docs, collection):
-    try:
-      if not collection:
-        collections = SolrUtils.get_active_inactive_collections(CATALOG_COLLECTION_ALIAS)
-        collection = collections['inactive_collection']
-        print(" --> Indexing to inactive solr collection: %s" % collection)
-
-      SolrUtils.indexDocs(docs, collection)
-    except SolrError as e:
-      raise Exception(str(e))
 
   def indexES(docs, index):
-    try:
-      if not index:
-        indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
-        index = indexes['active_index']
-        print(" --> Indexing data to inactive elastic search index : %s" % index)
-
-      EsUtils.indexDocs(docs, index)
-    except SolrError as e:
-      raise Exception(str(e))
+    if not index:
+      indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+      index = indexes['active_index']
+    EsUtils.indexDocs(docs, index)
 
   def formatESDoc(doc):
     for key, value in doc.items():
       if isinstance(value, list) and value == ['']:
         doc[key] = []
 
-  def index(search_engine, file_path, collection, update_productids=False):
+  def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None):
+    skus = skus or []
+    if skus:
+      print("Running catalog pipeline for selected skus: %s" % skus) 
     validate_popularity_data_health()
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
@@ -198,7 +198,8 @@ class CatalogIndexer:
     'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern', 'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
     'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
     'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
-    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1', 'beauty_partner']
+    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1', 'beauty_partner', 'is_kit_combo', 'primary_categories']
+
 
     all_rows = read_csv_from_file(file_path)
 
@@ -211,8 +212,12 @@ class CatalogIndexer:
     input_docs = []
     pws_fetch_products = []
 
+    categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
+
     ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
     for index, row in enumerate(all_rows):
+      if limit and ctr.count == limit:
+        break
       ctr += 1
       if ctr.should_print():
         print(ctr.summary)
@@ -220,11 +225,13 @@ class CatalogIndexer:
         CatalogIndexer.validate_catalog_feed_row(row)
         doc = {}
         doc['sku'] = row['sku']
+        if skus and doc['sku'] not in skus: 
+          continue
         doc['product_id'] = row['product_id']
         doc['type'] = row['type_id']
         doc['psku'] = row['parent_sku'] if doc['type'] == 'simple' and row['parent_sku'] else row['sku']
         doc['parent_id'] = row['parent_id'] if doc['type'] == 'simple' and row['parent_id'] else row['product_id']
-        doc['title'] = row['name']
+        doc['title'] = (re.sub(r'\s+', ' ', row['name'])).strip()
         doc['title_text_split'] = row['name']
         doc['description'] = row['description']
         doc['tags'] = (row['tag'] or "").split('|')
@@ -282,9 +289,10 @@ class CatalogIndexer:
             if set_clause_arr:
               set_clause = " set " + ", ".join(set_clause_arr)
               query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause, sku=doc['sku'])
-              print(query)
-              Utils.mysql_write(query, connection=conn)
+              #print(query)
+              Utils.mysql_write(query)
         except:
+          #print(traceback.format_exc())
           print("[ERROR] Failed to update product_id and parent_id for sku: %s" % doc['sku'])
           pass
 
@@ -293,18 +301,20 @@ class CatalogIndexer:
         popularity_obj = popularity_obj.get(doc['product_id'])
         doc['popularity'] = 0 
         doc['viewcount_i'] = 0
+        doc['popularity_in_stock'] = 0
         if popularity_obj:
           doc['popularity'] = popularity_obj['popularity']
           #View based Popularity
           doc['viewcount_i'] = popularity_obj.get('views', 0)
+          doc['popularity_in_stock'] = popularity_obj.get('popularity_in_stock', 0)
             
         # Product URL and slug
         product_url = row['product_url']
         if product_url:
           doc['product_url'] = product_url
-          split_url = product_url.rsplit('/', 1)
-          if len(split_url) > 1:
-            doc['slug'] = split_url[-1]
+          slug_initial_pos = product_url.find('.com/') + 5
+          slug_end_pos = product_url.find('?') if product_url.find('?') != -1 else len(product_url)
+          doc['slug'] = product_url[slug_initial_pos : slug_end_pos] 
 
         #Category related
         category_ids = (row['category_id'] or "").split('|') if row['category_id'] else []
@@ -313,12 +323,15 @@ class CatalogIndexer:
           doc['category_ids'] = category_ids
           doc['category_values'] = category_names
           doc['category_facet'] = []
-          cat_info = PipelineUtils.getCategoryFacetAttributes(category_ids)
-          for info in cat_info:
-            cat_facet = OrderedDict()
-            for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
-              cat_facet[key] = str(info.get(key))
-            doc['category_facet'].append(cat_facet)
+          for category_id in category_ids:
+            info  = categoryFacetAttributesInfoMap.get( str(category_id))
+            if info:
+              cat_facet = OrderedDict()
+              for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
+                cat_facet[key] = str(info.get(key))
+              doc['category_facet'].append(cat_facet)
+          doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
+
         elif len(category_ids)!=len(category_names):
           #with open("/data/inconsistent_cat.txt", "a") as f:
           #  f.write("%s\n"%doc['sku'])
@@ -345,6 +358,61 @@ class CatalogIndexer:
         video = row.get('video')
         if video:
           doc['media'].append({'type': 'video', 'url': video})
+
+        #Primary Categories
+        doc['primary_categories'] = []
+        l1 = {}
+        l2 = {}
+        l3 = {}
+        if row['primary_categories'] == "":
+          doc['primary_categories'].append({"l1":{'id': None, 'name': None}, "l2":{'id': None, 'name': None}, "l3":{'id': None, 'name': None}})
+        else:
+          primary_categories = row['primary_categories'].split('|')
+          if primary_categories[0] != "":
+            l1['id'] = primary_categories[0]
+            if category_ids and len(category_ids)==len(category_names):
+              if primary_categories[0] in category_ids:
+                cat_index = category_ids.index(primary_categories[0])
+                l1['name'] = category_names[cat_index]
+              else:
+                l1['name'] = None
+            else:
+              l1['name'] = None
+          else:
+            l1['id'] = None
+            l1['name'] = None
+
+          if primary_categories[1] != "":
+            l2['id'] = primary_categories[1]
+            if category_ids and len(category_ids)==len(category_names):
+              if primary_categories[1] in category_ids:
+                cat_index = category_ids.index(primary_categories[1])
+                l2['name'] = category_names[cat_index]
+              else:
+                l2['name'] = None
+            else:
+              l2['name'] = None
+          else:
+            l2['id'] = None
+            l2['name'] = None
+
+          if primary_categories[2] != "":
+            l3['id'] = primary_categories[2]
+            if category_ids and len(category_ids)==len(category_names):
+              if primary_categories[2] in category_ids:
+                cat_index = category_ids.index(primary_categories[2])
+                l3['name'] = category_names[cat_index]
+              else:
+                l3['name'] = None
+            else:
+              l3['name'] = None
+
+          else:
+            l3['id'] = None
+            l3['name'] = None
+
+          doc['primary_categories'].append({"l1":l1, "l2":l2, "l3":l3})
+
 
         # variant stuff
         if doc['type'] == 'configurable':
@@ -455,6 +523,11 @@ class CatalogIndexer:
           #  with open("/data/inconsistent_facet.txt", "a") as f:
           #    f.write("%s  %s\n"%(doc['sku'], field))
 
+        doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
+        if not doc['brand_facet_searchable']:
+          doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
+
+
         # meta info: dynamic fields
         meta_fields = [field for field in row.keys() if field.startswith("meta_")]
         for field in meta_fields:
@@ -465,7 +538,8 @@ class CatalogIndexer:
         doc['bulkbuyer_max_allowed_qty_i'] = row['bulkbuyer_max_allowed_qty'] or 0
         doc['is_free_sample_i'] = row['is_free_sample'] or 0
         doc['pro_flag_i'] = row['pro_flag'] or 0
-
+        #doc['is_kit_combo_i'] = row['is_kit_combo'] or 0
+        
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
@@ -479,18 +553,20 @@ class CatalogIndexer:
           if not v and v!= False:
             doc[k] = None
 
+
+        try:
+          doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""), doc.get("brand_facet_searchable", ""), doc.get("category_facet_searchable", "")] if x])
+        except:
+          pass
+
         if search_engine == 'elasticsearch':
           CatalogIndexer.formatESDoc(doc)
 
         input_docs.append(doc)
 
-        #index to solr in batches of DOCS_BATCH_SIZE
         if ((index+1) % CatalogIndexer.DOCS_BATCH_SIZE == 0):
           (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
 
-          # index solr
-          if search_engine == 'solr':
-            CatalogIndexer.indexSolr(input_docs, collection)
 
           # index elastic search
           if search_engine == 'elasticsearch':
@@ -507,10 +583,6 @@ class CatalogIndexer:
     if input_docs:
       (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
       
-      # index solr
-      if search_engine == 'solr':
-        CatalogIndexer.indexSolr(input_docs, collection)
-
       # index elastic search
       if search_engine == 'elasticsearch':
         CatalogIndexer.indexES(input_docs, collection)
@@ -521,11 +593,14 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
   parser.add_argument("-c", "--collection", help='name of collection to index to')
-  parser.add_argument("-s", "--searchengine", help='name of search engine you want to update. Enter "solr" or "elasticsearch"')
+  parser.add_argument("-s", "--searchengine", default='elasticsearch')
   parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
+  parser.add_argument("--sku", type=str)
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
   collection = argv['collection']
   searchengine = argv['searchengine']
 
-  CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'])
+  argv['update_productids'] = True
+
+  CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'], skus=argv['sku'].split(","))

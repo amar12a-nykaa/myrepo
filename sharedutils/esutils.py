@@ -12,7 +12,6 @@ from IPython import embed
 from elasticsearch import helpers, Elasticsearch
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v2.exceptions import SolrError
 from pas.v2.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
 
 
@@ -34,6 +33,13 @@ index_alias_config = {
         "entity" : "entity_ngram"
       }
     },
+  "entity":
+    {
+      "collections": ['entity_yin', 'entity_yang'],
+      "config" : "entity",
+      "unique_field" : "_id",
+      "type" : "entity"
+    }
 }
 
 class EsUtils:
@@ -151,11 +157,17 @@ class EsUtils:
     response = {}
     try:
       es = Utils.esConn()
-      helpers.bulk(es, upload_docs)
+      helpers.bulk(es, upload_docs, request_timeout=120)
     except Exception as e:
       print(traceback.format_exc())
       raise 
     return response
+
+  def swap_index(alias):
+    print("Swapping Index")
+    indexes = EsUtils.get_active_inactive_indexes(alias)
+    EsUtils.switch_index_alias(alias, from_index=indexes['active_index'], to_index=indexes['inactive_index'])
+  
 
 if __name__ == "__main__":
   ret = EsUtils.get_active_inactive_indexes('livecore')
