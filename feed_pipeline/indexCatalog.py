@@ -237,7 +237,7 @@ class CatalogIndexer:
         doc['type'] = row['type_id']
         doc['psku'] = row['parent_sku'] if doc['type'] == 'simple' and row['parent_sku'] else row['sku']
         doc['parent_id'] = row['parent_id'] if doc['type'] == 'simple' and row['parent_id'] else row['product_id']
-        doc['title'] = row['name']
+        doc['title'] = (re.sub(r'\s+', ' ', row['name'])).strip()
         doc['title_text_split'] = row['name']
         doc['description'] = row['description']
         doc['tags'] = (row['tag'] or "").split('|')
@@ -555,6 +555,8 @@ class CatalogIndexer:
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
+        doc['top_reviews'] = row['top_reviews']
+        doc['review_splitup'] = row['review_splitup']
 
         for k,v in doc.items():
           for pattern, _type in CatalogIndexer.field_type_pattens.items():
