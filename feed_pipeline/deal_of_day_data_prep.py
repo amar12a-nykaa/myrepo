@@ -67,9 +67,6 @@ def load_brand_limits():
       daily_brandwise_limits[brand] = dl
       weekly_brandwise_limits[brand] = wl
 
-client = Utils.mongoClient()
-deal_of_the_day_table = client['search']['deal_of_the_day']
-
 client = Client('harsh.karnawat:FSN E-Commerce', '98b91427ba974dd0268a14e789922b53')
 suite = client.suites()['fsnecommercemobileappprod']
 
@@ -105,15 +102,21 @@ def get_intent_set():
 def get_rating_set():
   global back_date_7_days
   redshift_conn =  Utils.redshiftConnection()
-  query = """select product_sku, product_id, rating_star, date(created_at), status_code from reviews_qna where status_code in ('Approved','Pending')  and created_at >='{0}'""".format(back_date_7_days)
+  print (back_date_7_days)
+  try:
+    query = """select product_sku, product_id, rating_star, date(created_at), status_code from reviews_qna where status_code in ('Approved','Pending')  and created_at >='{0}'""".format(back_date_7_days)
 
-  rating_raw  =  pd.read_sql(query, redshift_conn)
-  temp = rating_raw.groupby(['product_sku','product_id'])['rating_star'].agg(['count',np.average]).reset_index()
-  temp.columns = ['sku' , 'entity_id' , 'count' , 'avg']
-  temp['flag'] = ( temp['count'] >= temp['count'].quantile(quantile_lower_limit)) 
-  rating_set = pd.DataFrame(temp[temp['flag']==True]['entity_id'])
-  rating_set['entity_id'] = pd.to_numeric(rating_set['entity_id'])
-  return rating_set 
+    rating_raw  =  pd.read_sql(query, redshift_conn)
+    temp = rating_raw.groupby(['product_sku','product_id'])['rating_star'].agg(['count',np.average]).reset_index()
+    print (temp)
+    temp.columns = ['sku' , 'entity_id' , 'count' , 'avg']
+    temp['flag'] = ( temp['count'] >= temp['count'].quantile(quantile_lower_limit)) 
+    rating_set = pd.DataFrame(temp[temp['flag']==True]['entity_id'])
+    rating_set['entity_id'] = pd.to_numeric(rating_set['entity_id'])
+    return rating_set 
+  except:
+    print ("NOT ABLE TO GET RATING DATA")
+  return pd.DataFrame()
 
 def get_sales_data():
   global back_date_7_days
@@ -415,11 +418,17 @@ if __name__ == '__main__':
   #with myfile:
   #  writer = csv.writer(myfile)
   #  writer.writerows(csv_data)
+  if len(new_docs) < 20:
+    print("Selected product are not sufficient, Please check")
 
-  #for counter, doc in enumerate(new_docs[:30]):
-  #  if doc.get('product_id'):
-  #    doc['position'] = counter
-  #    doc['_id'] = counter
-  #    deal_of_the_day_table.replace_one({"_id": counter},doc, upsert=True)
+  for counter, doc in enumerate(new_docs[:30]):
+    if doc.get('product_id'):
+      mysql_conn =  Utils.mysqlConnection()
+      product_id = doc.get('product_id')
+      sku = doc.get('sku')
+      starttime = '2018-07-23 10:00:00'
+      endtime = '2018-07-28 22:00:00'
+      query =  """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') """.format(product_id, sku, starttime, endtime,counter)
+      ans  = Utils.mysql_write(query)
   
   dump_to_redshift(new_docs[:30], dt)
