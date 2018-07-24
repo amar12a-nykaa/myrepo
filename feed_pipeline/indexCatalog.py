@@ -99,19 +99,13 @@ class CatalogIndexer:
 
   def getCategoryFacetAttributesMap():
     cat_facet_attrs = {}
-    parent_cat_facet_attrs = {}
-    cat_facet_data = {}
     mysql_conn = Utils.nykaaMysqlConnection()
     query = "SELECT * FROM nk_categories"
     results = Utils.fetchResults(mysql_conn, query)
     for result in results:
       cat_facet_attrs[str(result['category_id'])] =  result
-      parent_cat_facet_attrs[str(result['parent_id'])] =  str(result['parent_id'])
 
-    cat_facet_data['cat_facet'] = cat_facet_attrs
-    cat_facet_data['parent_cat_facet'] = parent_cat_facet_attrs
-
-    return cat_facet_data
+    return cat_facet_attrs
 
   def fetch_price_availability(input_docs, pws_fetch_products):
     request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
@@ -329,18 +323,12 @@ class CatalogIndexer:
           doc['category_ids'] = category_ids
           doc['category_values'] = category_names
           doc['category_facet'] = []
-          doc['l3_category_facet'] = []
           for category_id in category_ids:
-            info  = categoryFacetAttributesInfoMap['cat_facet'].get( str(category_id))
+            info  = categoryFacetAttributesInfoMap.get( str(category_id))
             if info:
               cat_facet = OrderedDict()
               for key in ['category_id', 'name', 'rgt', 'lft', 'depth', 'include_in_menu', 'parent_id', 'position']:
                 cat_facet[key] = str(info.get(key))
-
-              l3_info = categoryFacetAttributesInfoMap['parent_cat_facet'].get(str(category_id))
-              if not l3_info and cat_facet['depth'] != "1":
-                doc['l3_category_facet'].append(cat_facet)
-
               doc['category_facet'].append(cat_facet)
           doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
 
@@ -555,8 +543,6 @@ class CatalogIndexer:
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
-        doc['top_reviews'] = row['top_reviews']
-        doc['review_splitup'] = row['review_splitup']
 
         for k,v in doc.items():
           for pattern, _type in CatalogIndexer.field_type_pattens.items():
