@@ -108,7 +108,6 @@ def get_rating_set():
 
     rating_raw  =  pd.read_sql(query, redshift_conn)
     temp = rating_raw.groupby(['product_sku','product_id'])['rating_star'].agg(['count',np.average]).reset_index()
-    print (temp)
     temp.columns = ['sku' , 'entity_id' , 'count' , 'avg']
     temp['flag'] = ( temp['count'] >= temp['count'].quantile(quantile_lower_limit)) 
     rating_set = pd.DataFrame(temp[temp['flag']==True]['entity_id'])
@@ -426,9 +425,9 @@ if __name__ == '__main__':
       mysql_conn =  Utils.mysqlConnection()
       product_id = doc.get('product_id')
       sku = doc.get('sku')
-      starttime = '2018-07-23 10:00:00'
-      endtime = '2018-07-28 22:00:00'
-      query =  """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') """.format(product_id, sku, starttime, endtime,counter)
+      starttime = str(date_today)+' 10:00:00'
+      endtime = str(date_today) +' 22:00:00'
+      query =  """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.format(product_id, sku, starttime, endtime,counter)
       ans  = Utils.mysql_write(query)
   
   dump_to_redshift(new_docs[:30], dt)
