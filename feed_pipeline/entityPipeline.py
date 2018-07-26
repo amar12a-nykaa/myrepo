@@ -14,6 +14,7 @@ import csv
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
+from indexEntities import EntityIndexer
 
 from importDataFromNykaa import NykaaImporter
 from indexCatalog import CatalogIndexer
@@ -44,10 +45,9 @@ def indexESData():
   index_client.create(inactive_index, schema)
   print("Creating index: %s" % inactive_index)
 
-  exit()
   index_start = timeit.default_timer()
 
-  #TODO ... index 
+  EntityIndexer.indexEntities(inactive=True, swap=True, index_all=True)
 
   index_stop = timeit.default_timer()
   index_duration = index_stop - index_start
