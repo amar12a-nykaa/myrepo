@@ -420,7 +420,7 @@ if __name__ == '__main__':
   for counter, doc in enumerate(new_docs[:30]):
     if doc.get('product_id'):
       
-      mysql_conn =  Utils.mysqlConnection()
+      mysql_conn =  Utils.mysqlConnection('w')
       product_id = str(doc.get('product_id'))
       sku = doc.get('sku')
       starttime = str(date_today)+' 10:00:00'
