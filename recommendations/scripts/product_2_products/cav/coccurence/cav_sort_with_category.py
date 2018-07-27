@@ -2,7 +2,7 @@ import sys
 import json
 import argparse
 
-sys.path.append("/nykaa/api")
+sys.path.append("/home/ubuntu/api")
 from pas.v2.utils import Utils, RecommendationsUtils
 
 sys.path.append("/home/ubuntu/nykaa_scripts/utils/")
