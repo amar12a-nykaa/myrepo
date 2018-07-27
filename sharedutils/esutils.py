@@ -54,15 +54,33 @@ class EsUtils:
     response = {}
     try:
       es = Utils.esConn()
-      response = es.indices.get_alias(
-        index=alias
-      )
+      if es.indices.exists_alias(alias):
+        response = es.indices.get_alias(
+          index=alias
+        )
+      else:
+        if index_alias_config.get(alias):
+          settings = index_alias_config.get(alias)
+          if settings and settings.get('collections'):
+            index_client =  EsUtils.get_index_client()
+            for index in settings['collections']:
+              if not index_client.exists(index):
+                if index in ['yin', 'yang']:
+                  schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/schema.json'))
+                  es.indices.create(index = index, body = schema)
+                  es.indices.put_alias(index= index, name = alias)
+                if index in ['autocomplete_yin', 'autocomplete_yang']:
+                  schema = json.load(open('/home/ubuntu/nykaa_scripts/autocomplete/schema.json'))
+                  es.indices.create(index = index, body = schema)
+                  es.indices.put_alias(index= index, name = alias)
+              else:
+                es.indices.put_alias(index= index, name = alias)
 
       for index, index_aliases in response.items():
         return index
     except Exception as e:
       print(traceback.format_exc())
-      raise 
+      raise
     return response
 
   def get_active_inactive_indexes(index_alias):
