@@ -154,15 +154,24 @@ def get_product_sku_data():
 
 def get_pas_data(product_details):
   request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
-  #print (request_url)
-  request_data = json.dumps({'products': product_details}).encode('utf-8')
-  #print (json.loads(request_data.decode('utf-8')))
+  print (request_url)
+  old_dict = {}
+  n =  len(product_details)
+  temp_product_details = []
+  for counter, p in enumerate(product_details):
+    temp_product_details.append(p)
+    if (counter + 1)%500 == 0 or counter == n-1:
+      request_data = json.dumps({'products': temp_product_details}).encode('utf-8')
+      #print (json.loads(request_data.decode('utf-8')))
 
-  req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
-  pas_object = json.loads(urlopen(req).read().decode('utf-8'))
-  pas_object = pas_object['skus']
+      req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
+      pas_object = json.loads(urlopen(req).read().decode('utf-8'))
+      #print (pas_object)
+      pas_object = pas_object['skus']
+      old_dict.update(pas_object)
+      temp_product_details = []
 
-  return pas_object
+  return old_dict
 
 def get_product_detail(product_id):
   request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/product.list?id={0}".format(product_id)
