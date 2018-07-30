@@ -118,7 +118,7 @@ def process_orders_df(start_datetime=None):
                 print("No products in order: %d" % order_id)
 
     recommendation_rows = []
-    for algo in ['coccurence_direct', 'coccurence_simple', 'coccurence_log', 'coccurence_sqrt']:
+    for algo in ['coccurence_direct']:
         query = "SELECT entity_id, recommended_products_json FROM recommendations_v2 WHERE entity_type='product' AND recommendation_type='bought' AND algo='%s'" % algo
         rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 10000)
         
@@ -132,8 +132,7 @@ def process_orders_df(start_datetime=None):
         Parallel(n_jobs=20, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(compute_recommendation_rows)(customer_ids_chunk, 'user', 'bought', algo, customer_2_product_chunks, recommendation_rows, product_2_recommendations) for customer_ids_chunk in customer_ids_chunks)
 
     print("Total Recommendation rows: %d" % len(recommendation_rows))
-    recommendation_rows_chunks = [recommendation_rows[i:i+1000] for i in range(0, len(recommendation_rows), 1000)]
-    Parallel(n_jobs=10, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(insert_recommendations_2_db)(recommendation_rows_chunk) for recommendation_rows_chunk in recommendation_rows_chunks)
+    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection('w'), 'recommendations_v2', recommendation_rows)
     print(str(datetime.now()))
 
 

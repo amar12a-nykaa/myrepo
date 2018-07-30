@@ -7,7 +7,7 @@ import psutil
 import argparse
 import operator
 import pandas as pd
-sys.path.append("/nykaa/api")
+sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, RecommendationsUtils
 sys.path.append("/home/ubuntu/nykaa_scripts/utils/")
 from pandasutils import parallelize_dataframe
@@ -59,7 +59,7 @@ def rank_by_bought_data(source_algo, algo, datetime, limit=None):
     mysql_conn = Utils.mysqlConnection('w')
     cursor = mysql_conn.cursor()
     cursor.execute(query)
-    CHUNK_SIZE = 15
+    CHUNK_SIZE = 10
     rows = []
     ctr = LoopCounter(name='Reranking the results')
     for row in cursor.fetchall():
@@ -80,6 +80,7 @@ def rank_by_bought_data(source_algo, algo, datetime, limit=None):
                 print(chunk)
             _df = bought_df[bought_df['product_id'].isin(chunk)].sort_values(by=['bought_count'], ascending=False)
             new_recommendations += [p['product_id'] for p in _df.to_dict(orient='records')]
+            new_recommendations += list(filter(lambda x: x not in new_recommendations, chunk))
             if DEBUG:
                 print("After sorting products: ")
                 print([p['product_id'] for p in _df.to_dict(orient='records')])
