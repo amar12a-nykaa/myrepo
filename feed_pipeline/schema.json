@@ -4,15 +4,15 @@
       "analyzer": {
         "default": {
           "tokenizer": "whitespace" ,
-          "filter": ["my_word_delimiter_index", "lowercase", "my_stemming", "asciifolding"]
+          "filter": ["my_word_delimiter_index", "lowercase", "synonym", "my_stemming", "asciifolding", "stop_english", "stop_custom"]
         },
         "default_search": {
           "tokenizer": "whitespace",
-          "filter": ["my_word_delimiter_search", "lowercase", "my_stemming", "asciifolding"]
+          "filter": ["my_word_delimiter_search", "lowercase", "synonym", "my_stemming", "asciifolding", "stop_english", "stop_custom"]
         },
         "shingle_analyzer": {
           "tokenizer": "whitespace",
-          "filter": ["my_word_delimiter_index", "lowercase", "my_stemming", "asciifolding", "shingle_filter"]
+          "filter": ["my_word_delimiter_index", "lowercase", "synonym",  "my_stemming", "asciifolding", "shingle_filter", "stop_english", "stop_custom"]
         }
       },
       "normalizer":{
@@ -49,7 +49,28 @@
           "type": "shingle",
           "output_unigrams": true,
           "token_separator": ""
+        },
+        "stop_english": {
+          "type": "stop",
+          "stopwords": "_english_"
+        },
+        "stop_custom": {
+          "type": "stop",
+          "stopwords": ["product", "products", "&"]
+        },
+        "synonym": {
+          "type" : "synonym",
+          "synonyms" :[
+            "parcos => abercrombie & fitch, alaia, antonio banderas, azzaro, benetton puig, boucheron, carolina herrera, chambor, coach, dolce & gabbana, dunhill, elie saab, elizabeth arden, evaflor, ferrari, guy laroche, issey miyake, jean paul gaultier, jimmy choo, john varvatos, juicy couture, kenzo, lanvin, missoni, mont blanc, moschino, narciso rodriguez, nina ricci, opi, paco rabanne, hollister, rimmel, sally hansen, shakira, shiseido, trussardi, udv, united colors of benetton, versace, yves rocher, giorgio armani, diesel, ralph lauren,",
+            "body wash,shower gel",
+            "nail polish, nail paint, nail enamel, nail lacquer",
+            "cream, creme   ",
+            "professional,  professionnel   ",
+            "colour,  color   ",
+            "face wash, facial wash, facial cleanser, face cleanser"
+          ]
         }
+
       }
     }
   },
