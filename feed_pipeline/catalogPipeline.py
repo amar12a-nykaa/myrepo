@@ -21,7 +21,7 @@ sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
 
 #FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
-FEED_URL_PREPROD = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
+#FEED_URL_PREPROD = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_URL_PREPROD = "http://preprod-2012758952.ap-southeast-1.elb.amazonaws.com/media/feed/master_feed_gludo.csv"
 FEED_URL = "http://adminpanel.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
@@ -73,6 +73,11 @@ def indexESData(file_path, force_run):
   num_docs_inactive = Utils.makeESRequest(body, inactive_index)['hits']['total']
   print('ES Number of documents in active index(%s): %s'%(active_index, num_docs_active))
   print('ES Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
+
+  if abs((num_docs_inactive-num_docs_active)/num_docs_active) > 0.05:
+      raise Exception("Difference in the number of docs on the active and inactive indices is more than 5%")
+  else:
+      print("Check of 5 percent is passed")
 
   # Update alias CATALOG_COLLECTION_ALIAS to point to freshly generated index
   # and do basic verification
