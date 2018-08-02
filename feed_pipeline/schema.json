@@ -4,11 +4,11 @@
       "analyzer": {
         "default": {
           "tokenizer": "whitespace" ,
-          "filter": ["my_word_delimiter_index", "lowercase", "synonym_indextime", "my_stemming", "asciifolding", "stop_english", "stop_custom", "shingle_filter"]
+          "filter": ["my_word_delimiter_index", "lowercase", "my_stemming", "asciifolding", "stop_english", "stop_custom", "shingle_filter"]
         },
         "default_search": {
           "tokenizer": "whitespace",
-          "filter": ["my_word_delimiter_search", "lowercase", "synonym_querytime", "my_stemming", "asciifolding", "stop_english", "stop_custom", "shingle_filter"]
+          "filter": ["my_word_delimiter_search", "lowercase", "my_stemming", "asciifolding", "stop_english", "stop_custom", "shingle_filter"]
         },
         "shingle_analyzer": {
           "tokenizer": "whitespace",
@@ -57,12 +57,6 @@
         "stop_custom": {
           "type": "stop",
           "stopwords": ["product", "products", "&"]
-        },
-        "synonym_querytime": {
-          "type" : "synonym",
-          "synonyms" :[
-            "parcos => abercrombie & fitch perfume, alaia perfume, antonio banderas perfume, azzaro perfume, benetton puig perfume, boucheron perfume, carolina herrera perfume, chambor perfume, coach perfume, dolce & gabbana perfume, dunhill perfume, elie saab perfume, elizabeth arden perfume, evaflor perfume, ferrari perfume, guy laroche perfume, issey miyake perfume, jean paul gaultier perfume, jimmy choo perfume, john varvatos perfume, juicy couture perfume, kenzo perfume, lanvin perfume, missoni perfume, mont blanc perfume, moschino perfume, narciso rodriguez perfume, nina ricci perfume, opi perfume, paco rabanne perfume, hollister perfume, rimmel perfume, sally hansen perfume, shakira perfume, shiseido perfume, trussardi perfume, udv perfume, united colors of benetton perfume, versace perfume, yves rocher perfume, giorgio armani perfume, diesel perfume, ralph lauren perfume"
-          ]
         },
         "synonym_indextime": {
           "type" : "synonym",
