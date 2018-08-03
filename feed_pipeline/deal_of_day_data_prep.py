@@ -206,43 +206,52 @@ def helper_function(weekly_category_wise_count_map, weekly_category_brand_count_
       continue
 
     l_list = []
+    brand_id_list = []
     l1 = None
     l2 = None
     l3 = None
-    brand_ids = None
 
     if doc.get('category_levels'):
       cat_levels =  doc.get('category_levels')
 
+      is_not_cat3_ids = False
       for key, value in cat_levels.items():
         if value == "2":
           l3 =  int(key)
-      if str(l3) not in cat3_ids:
+          l_list.append(l3)
+          if str(l3) not in cat3_ids:
+            is_not_cat3_ids = True
+            continue
+      if is_not_cat3_ids:
         continue
 
-      if l3:
-        l_list.append(l3)
-      else:
+      if not l3:
         l_list.append('UNKNOWN')
 
     if doc.get('brand_ids'):
-      brand_ids = doc.get('brand_ids')
+      brand_ids = doc.get('brand_ids').strip().split(',')
+      for bid in brand_ids:
+        brand_id_list.append(bid)
+      
     else:
       brand_ids =  'UNKNOWN'
+      brand_id_list.append(brand_ids)
 
-    
-    cat_brand = None
-    if l3 and brand_ids:
-      cat_brand =  str(l3)+ str(brand_ids)
     
     is_eligible = True
     for l in l_list:
-      if ((daily_category_count_map.get(l, 0) >= DAILY_CATEGORY_LIMIT) and (daily_category_count_map.get(l,0 ) >=daily_categorywise_limits.get(l,0))) or ((weekly_category_wise_count_map.get(l, 0) >= WEEKLY_CATEGORY_LIMIT) and (weekly_category_wise_count_map.get(l, 0)>= weekly_categorywise_limits.get(l,0))):
-        is_eligible =  False
-    if brand_ids and ((daily_brand_count_map.get(brand_ids, 0) >= DAILY_BRAND_LIMIT and (daily_brand_count_map.get(brand_ids, 0)>= daily_brandwise_limits.get(brand_ids, 0))) or(weekly_brand_count_map.get(brand_ids, 0) >= WEEKLY_BRAND_LIMIT and weekly_brand_count_map.get(brand_ids,0) >= weekly_brandwise_limits.get(brand_ids, 0))):
-      is_eligible = False
-    if cat_brand  and daily_category_brand_count_map.get(cat_brand, 0) >= DAILY_CATEGORY_BRAND_LIMIT:
-      is_eligible =  False
+      for brand_ids in brand_id_list:
+
+        cat_brand = None
+        if l3 and brand_ids:
+          cat_brand =  str(l)+ str(brand_ids)
+
+        if ((daily_category_count_map.get(l, 0) >= DAILY_CATEGORY_LIMIT) and (daily_category_count_map.get(l,0 ) >=daily_categorywise_limits.get(l,0))) or ((weekly_category_wise_count_map.get(l, 0) >= WEEKLY_CATEGORY_LIMIT) and (weekly_category_wise_count_map.get(l, 0)>= weekly_categorywise_limits.get(l,0))):
+          is_eligible =  False
+        if brand_ids and ((daily_brand_count_map.get(brand_ids, 0) >= DAILY_BRAND_LIMIT and (daily_brand_count_map.get(brand_ids, 0)>= daily_brandwise_limits.get(brand_ids, 0))) or(weekly_brand_count_map.get(brand_ids, 0) >= WEEKLY_BRAND_LIMIT and weekly_brand_count_map.get(brand_ids,0) >= weekly_brandwise_limits.get(brand_ids, 0))):
+          is_eligible = False
+        if cat_brand  and daily_category_brand_count_map.get(cat_brand, 0) >= DAILY_CATEGORY_BRAND_LIMIT:
+          is_eligible =  False
       
     if is_eligible:
       for l in l_list:
@@ -250,15 +259,19 @@ def helper_function(weekly_category_wise_count_map, weekly_category_brand_count_
           daily_category_count_map[l] +=1
         else:
           daily_category_count_map[l] =1
-      if brand_ids:
+      for  brand_ids in brand_id_list:
         if daily_brand_count_map.get(brand_ids):
           daily_brand_count_map[brand_ids] += 1
         else:
           daily_brand_count_map[brand_ids] = 1
-      if daily_category_brand_count_map.get(cat_brand):
-        daily_category_brand_count_map[cat_brand] += 1
-      else:
-        daily_category_brand_count_map[cat_brand] = 1
+      for l in l_list:
+        for brand_ids  in brand_id_list:
+          cat_brand = str(l)+  str(brand_ids)
+
+          if daily_category_brand_count_map.get(cat_brand):
+            daily_category_brand_count_map[cat_brand] += 1
+          else:
+            daily_category_brand_count_map[cat_brand] = 1
       final_list.append(doc)
   return final_list
 
@@ -309,13 +322,12 @@ def get_final_eligible_product_list(docs, dt):
       for key, value in cat_levels.items():
         if value == "2":
           l3 =  int(key)
+          l_list.append(l3)
 
       #if l1:
       #  l_list.append(l1)
       #if l2: 
       #  l_list.append(l2)
-      if l3:
-        l_list.append(l3)
 
       for l in l_list:
         if weekly_category_wise_count_map.get(l):
@@ -323,19 +335,22 @@ def get_final_eligible_product_list(docs, dt):
         else:
           weekly_category_wise_count_map[l] =1
     
+    brand_ids = []
     if d.get('brand_ids'):
-      brand_ids = d.get('brand_ids')
-      if weekly_brand_count_map.get(brand_ids):
-        weekly_brand_count_map[brand_ids] += 1
-      else:
-        weekly_brand_count_map[brand_ids] = 1
+      brand_ids = d.get('brand_ids').strip().split(',')
+      for brand_id  in brand_ids:
+        if weekly_brand_count_map.get(brand_id):
+          weekly_brand_count_map[brand_id] += 1
+        else:
+          weekly_brand_count_map[brand_id] = 1
       
       for l in l_list:
-        cat_brand =  str(l)+ str(brand_ids)
-        if weekly_category_brand_count_map.get(cat_brand):
-          weekly_category_brand_count_map[cat_brand] +=1
-        else:
-          weekly_category_brand_count_map[cat_brand] = 1
+        for brand_id in brand_ids: 
+          cat_brand =  str(l)+ str(brand_id)
+          if weekly_category_brand_count_map.get(cat_brand):
+            weekly_category_brand_count_map[cat_brand] +=1
+          else:
+            weekly_category_brand_count_map[cat_brand] = 1
 
 
   final_list = helper_function(weekly_category_wise_count_map, weekly_category_brand_count_map, weekly_brand_count_map, docs, already_dotd_products)
