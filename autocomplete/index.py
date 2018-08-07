@@ -469,7 +469,8 @@ def index_products(collection, searchengine):
   count = 0 
   for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]):# .limit(limit):
     try:
-      if requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.list?id=%s" % row['_id']).json()['result']['price'] < 1:
+      r = requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.list?id=%s" % row['_id']).json()
+      if requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.list?id=%s" % row['_id']).json()['result']['price'] < 1 or str(r.get('pro_flag_i', "")) =='1':
         #print("Rejecting product_id %s. Price (%s) is less than 1" % row['_id'])
         continue
     except:
