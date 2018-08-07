@@ -51,7 +51,7 @@ MIN_COUNTS = {
   "category": 200,
   "brand_category": 10000,
   "search_query": 40000,
-  "category_facet": 900,
+  "category_facet": 600,
 }
 Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
@@ -464,24 +464,26 @@ def index_products(collection, searchengine):
 
 
   rows_1k = []
+  rows_untested = {}
+  ids = []
+
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
   limit = 50000 if not GLOBAL_FAST_INDEXING else 5000
   count = 0 
   for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]):# .limit(limit):
-    try:
-      r = requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.list?id=%s" % row['_id']).json()
-      if r['result']['price'] < 1 or r['result']['pro_flag'] ==1:
-        #print("Rejecting product_id %s. Price (%s) is less than 1" % row['_id'])
-        continue
-    except:
-      pass
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
-    rows_1k.append(row)
-    if len(rows_1k) >= 100:
+    rows_untested[row['_id']] = row
+    if len(rows_untested) >= 1000:
+      ids = list(rows_untested.keys())
+      for product in requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.listids?ids=%s" % ",".join(ids)).json()['result']['products']:
+        if product['price'] < 1 or product['pro_flag'] ==1:
+          continue
+        rows_1k.append(rows_untested[product['product_id']])
       flush_index_products(rows_1k)
       rows_1k = []
+      rows_untested = {}
 
     if ctr.count >= limit:
       break
