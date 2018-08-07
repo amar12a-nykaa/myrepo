@@ -543,8 +543,10 @@ class CatalogIndexer:
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
-        doc['top_reviews'] = row['top_reviews']
-        doc['review_splitup'] = row['review_splitup']
+
+        # Code by anoop to push top_reviews & review_splitup
+        doc['top_reviews'] = row,get('top_reviews', '')
+        doc['review_splitup'] = row.get('review_splitup', '')
 
         for k,v in doc.items():
           for pattern, _type in CatalogIndexer.field_type_pattens.items():
