@@ -21,8 +21,8 @@ max_discount = 50
 DAILY_CATEGORY_LIMIT = 5
 DAILY_BRAND_LIMIT = 3
 DAILY_CATEGORY_BRAND_LIMIT = 1
-WEEKLY_CATEGORY_LIMIT = 9000
-WEEKLY_BRAND_LIMIT = 9000
+WEEKLY_CATEGORY_LIMIT = 15
+WEEKLY_BRAND_LIMIT = 9
 MAX_INT = 100000000
 
 cat3_ids = ['233','234','228','231','4140','229','235','236','232','237','6761','239','687','240','241','242','245','1995','247','931','244','2440','1513','1514','4036','249','263','5079','250','251','252','253','254','255','256','257','259','260','3277','267','269','268','270','266','271','272','273','274','947','4037','283','282','222','224','284','285','933','227','5486','2063','521','1649','376','691','380','379','372','1650','1644','2084','2069','288','536','2080','289','287','226','281','225','2065','2066','2067','2068','632','286','316','317','319','2040','320','2041','2048','361','362','364','363','2049','2444','2043','332','331','329','346','1214','1222','2046','2746','2045','7305','2089','525','583','545','550','367','551','370','1495','554','555','2458','6168','2110','572','3859','2092','364','1543','1399','1400','1401','1404','1405','41','1517','43','44','368','369','367','370','316','319','691','374','376','283','224','584','385','2084','382','1650','1644','975','2057','1673','1676','60','746','1666','1675','1546','4874','1664','636','637','635','638','1274','430','6919','6917','6922', '223', '1411', '1650','962']
@@ -147,8 +147,9 @@ def get_product_sku_data():
   sku_details_map = {}
   
   for index, row in product_sku_raw_data.iterrows():
-    product_id_sku_details_map[str(row['product_id'])] =  {"sku": row['sku'], "type": (row['sku_type']).lower()}
-    sku_details_map[str(row['sku'])] = {"sku": row["sku"], "type": (row['sku_type']).lower(), 'product_id': row['product_id']}
+    if (row['sku_type'].lower()) in ['simple']:
+      product_id_sku_details_map[str(row['product_id'])] =  {"sku": row['sku'], "type": (row['sku_type']).lower()}
+      sku_details_map[str(row['sku'])] = {"sku": row["sku"], "type": (row['sku_type']).lower(), 'product_id': row['product_id']}
   return product_id_sku_details_map, sku_details_map 
 
 
@@ -206,43 +207,53 @@ def helper_function(weekly_category_wise_count_map, weekly_category_brand_count_
       continue
 
     l_list = []
+    brand_id_list = []
     l1 = None
     l2 = None
     l3 = None
-    brand_ids = None
 
+    is_not_cat3_ids = False
     if doc.get('category_levels'):
       cat_levels =  doc.get('category_levels')
 
       for key, value in cat_levels.items():
         if value == "2":
           l3 =  int(key)
-      if str(l3) not in cat3_ids:
-        continue
-
-      if l3:
-        l_list.append(l3)
-      else:
-        l_list.append('UNKNOWN')
+          l_list.append(l3)
+          if str(l3) not in cat3_ids:
+            is_not_cat3_ids = True
+            
+    if is_not_cat3_ids:
+      continue
+    
+    if not l3:
+      l_list.append('UNKNOWN')
+      continue
 
     if doc.get('brand_ids'):
-      brand_ids = doc.get('brand_ids')
+      brand_ids = doc.get('brand_ids').strip().split(',')
+      for bid in brand_ids:
+        brand_id_list.append(bid)
+      
     else:
       brand_ids =  'UNKNOWN'
-
-    
-    cat_brand = None
-    if l3 and brand_ids:
-      cat_brand =  str(l3)+ str(brand_ids)
+      brand_id_list.append(brand_ids)
+      continue
     
     is_eligible = True
     for l in l_list:
-      if ((daily_category_count_map.get(l, 0) >= DAILY_CATEGORY_LIMIT) and (daily_category_count_map.get(l,0 ) >=daily_categorywise_limits.get(l,0))) or ((weekly_category_wise_count_map.get(l, 0) >= WEEKLY_CATEGORY_LIMIT) and (weekly_category_wise_count_map.get(l, 0)>= weekly_categorywise_limits.get(l,0))):
-        is_eligible =  False
-    if brand_ids and ((daily_brand_count_map.get(brand_ids, 0) >= DAILY_BRAND_LIMIT and (daily_brand_count_map.get(brand_ids, 0)>= daily_brandwise_limits.get(brand_ids, 0))) or(weekly_brand_count_map.get(brand_ids, 0) >= WEEKLY_BRAND_LIMIT and weekly_brand_count_map.get(brand_ids,0) >= weekly_brandwise_limits.get(brand_ids, 0))):
-      is_eligible = False
-    if cat_brand  and daily_category_brand_count_map.get(cat_brand, 0) >= DAILY_CATEGORY_BRAND_LIMIT:
-      is_eligible =  False
+      for brand_ids in brand_id_list:
+
+        cat_brand = None
+        if l3 and brand_ids:
+          cat_brand =  str(l)+ str(brand_ids)
+
+        if ((daily_category_count_map.get(l, 0) >= DAILY_CATEGORY_LIMIT) and (daily_category_count_map.get(l,0 ) >=daily_categorywise_limits.get(l,0))) or ((weekly_category_wise_count_map.get(l, 0) >= WEEKLY_CATEGORY_LIMIT) and (weekly_category_wise_count_map.get(l, 0)>= weekly_categorywise_limits.get(l,0))):
+          is_eligible =  False
+        if brand_ids and ((daily_brand_count_map.get(brand_ids, 0) >= DAILY_BRAND_LIMIT and (daily_brand_count_map.get(brand_ids, 0)>= daily_brandwise_limits.get(brand_ids, 0))) or(weekly_brand_count_map.get(brand_ids, 0) >= WEEKLY_BRAND_LIMIT and weekly_brand_count_map.get(brand_ids,0) >= weekly_brandwise_limits.get(brand_ids, 0))):
+          is_eligible = False
+        if cat_brand  and daily_category_brand_count_map.get(cat_brand, 0) >= DAILY_CATEGORY_BRAND_LIMIT:
+          is_eligible =  False
       
     if is_eligible:
       for l in l_list:
@@ -250,15 +261,19 @@ def helper_function(weekly_category_wise_count_map, weekly_category_brand_count_
           daily_category_count_map[l] +=1
         else:
           daily_category_count_map[l] =1
-      if brand_ids:
+      for  brand_ids in brand_id_list:
         if daily_brand_count_map.get(brand_ids):
           daily_brand_count_map[brand_ids] += 1
         else:
           daily_brand_count_map[brand_ids] = 1
-      if daily_category_brand_count_map.get(cat_brand):
-        daily_category_brand_count_map[cat_brand] += 1
-      else:
-        daily_category_brand_count_map[cat_brand] = 1
+      for l in l_list:
+        for brand_ids  in brand_id_list:
+          cat_brand = str(l)+  str(brand_ids)
+
+          if daily_category_brand_count_map.get(cat_brand):
+            daily_category_brand_count_map[cat_brand] += 1
+          else:
+            daily_category_brand_count_map[cat_brand] = 1
       final_list.append(doc)
   return final_list
 
@@ -309,13 +324,12 @@ def get_final_eligible_product_list(docs, dt):
       for key, value in cat_levels.items():
         if value == "2":
           l3 =  int(key)
+          l_list.append(l3)
 
       #if l1:
       #  l_list.append(l1)
       #if l2: 
       #  l_list.append(l2)
-      if l3:
-        l_list.append(l3)
 
       for l in l_list:
         if weekly_category_wise_count_map.get(l):
@@ -323,19 +337,22 @@ def get_final_eligible_product_list(docs, dt):
         else:
           weekly_category_wise_count_map[l] =1
     
+    brand_ids = []
     if d.get('brand_ids'):
-      brand_ids = d.get('brand_ids')
-      if weekly_brand_count_map.get(brand_ids):
-        weekly_brand_count_map[brand_ids] += 1
-      else:
-        weekly_brand_count_map[brand_ids] = 1
+      brand_ids = d.get('brand_ids').strip().split(',')
+      for brand_id  in brand_ids:
+        if weekly_brand_count_map.get(brand_id):
+          weekly_brand_count_map[brand_id] += 1
+        else:
+          weekly_brand_count_map[brand_id] = 1
       
       for l in l_list:
-        cat_brand =  str(l)+ str(brand_ids)
-        if weekly_category_brand_count_map.get(cat_brand):
-          weekly_category_brand_count_map[cat_brand] +=1
-        else:
-          weekly_category_brand_count_map[cat_brand] = 1
+        for brand_id in brand_ids: 
+          cat_brand =  str(l)+ str(brand_id)
+          if weekly_category_brand_count_map.get(cat_brand):
+            weekly_category_brand_count_map[cat_brand] +=1
+          else:
+            weekly_category_brand_count_map[cat_brand] = 1
 
 
   final_list = helper_function(weekly_category_wise_count_map, weekly_category_brand_count_map, weekly_brand_count_map, docs, already_dotd_products)
@@ -354,7 +371,10 @@ def dump_to_redshift(docs, dt):
       product_id =  doc.get('product_id')
       sku =  doc.get('sku')
       position =  counter
-      query  =  "insert into deal_of_the_day_data values ('{0}', '{1}', '{2}', '{3}')".format(product_id, sku, position, dt)
+      sets =  doc.get('sets')
+      price  =  doc.get('mrp')
+      discount =  doc.get('discount')
+      query  =  "insert into deal_of_the_day_data values ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}')".format(product_id, sku, position, dt, sets, price, discount)
 
       cur.execute(query)
   redshift_conn.commit()
@@ -366,7 +386,9 @@ if __name__ == '__main__':
   back_date_7_days = str((datetime.now()-timedelta(days=8)).date())
   date_today =dt
 
-  intent_set =  get_intent_set()
+  print ("intent set")
+  #intent_set =  get_intent_set()
+  print ("rating set")
   rating_set =  get_rating_set()
   sales_set =  get_sales_data()
   product_id_sku_details_map, sku_details_map =  get_product_sku_data()
@@ -377,8 +399,8 @@ if __name__ == '__main__':
   for index, row in rating_set.iterrows():
     all_selected_product.append(str(row['entity_id']))
 
-  for index, row in intent_set.iterrows():
-    all_selected_product.append(str(row['entity_id']))
+  #for index, row in intent_set.iterrows():
+  #  all_selected_product.append(str(row['entity_id']))
 
   for index, row in sales_set.iterrows():
     all_selected_product.append(str(row['entity_id']))
@@ -404,8 +426,10 @@ if __name__ == '__main__':
 
       for key, value in sku_details.items():
         row[key] = value
-      if row.get("is_in_stock", 0) and (not row.get('disabled', False)) and row.get('discount', 0)>=min_discount and row.get('discount', 0)<= max_discount and row.get('product_id'):
+      if row.get("is_in_stock", 0) and (not row.get('disabled', False)) and row.get('discount', 0)>=min_discount and row.get('discount', 0)<= max_discount and row.get('product_id') and float(row.get('quantity', 0))> 10:
         p_details = get_product_detail(row.get('product_id'))
+        if len(p_details) < 1:
+          continue
         for key, value in p_details.items():
           row[key] = value
         docs.append(row)
@@ -428,7 +452,7 @@ if __name__ == '__main__':
     print("Selected product are not sufficient, Please check")  
   for counter, doc in enumerate(new_docs[:30]):
     if doc.get('product_id'):
-      
+      print (doc) 
       mysql_conn =  Utils.mysqlConnection('w')
       product_id = str(doc.get('product_id'))
       sku = doc.get('sku')
@@ -437,14 +461,19 @@ if __name__ == '__main__':
       query =  """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.format(product_id, sku, starttime, endtime,counter)
       ans  = Utils.mysql_write(query)
 
+      sets_list = []
       if int(product_id) in list(rating_set['entity_id']):
         print ( str(product_id)+ " in rating set")
+        sets_list.append('rating set')
 
-      if int(product_id) in list(intent_set['entity_id']):
-        print ( str(product_id)+ " in intent set")
+      #if int(product_id) in list(intent_set['entity_id']):
+      #  print ( str(product_id)+ " in intent set")
+      #  sets_list.append('intent set')
     
       if int(product_id) in list(sales_set['entity_id']):
         print ( str(product_id)+  " in sales_data set")
+        sets_list.append('sales set')
+      doc['sets'] =  ','.join(sets_list)
+      new_docs[counter] = doc
 
-  
   dump_to_redshift(new_docs[:30], dt)
