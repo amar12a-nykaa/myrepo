@@ -358,8 +358,8 @@ def index_category_facets(collection, searchengine):
   index_docs(searchengine, docs, collection)
 
 
-def validate_min_count():
-  force_run = False
+def validate_min_count(force_run):
+  #force_run = False
 
   indexes = EsUtils.get_active_inactive_indexes('autocomplete')
   active_index = indexes['active_index']
@@ -549,7 +549,7 @@ def fetch_product_by_parentids(parent_ids):
   return final_docs
 
 
-def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_all=False ):
+def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_all=False, force_run=False ):
     assert len([x for x in [collection, active, inactive] if x]) == 1, "Only one of the following should be true"
 
     if index_all:
@@ -613,7 +613,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
     
     if swap:
       print("Swapping Index")
-      validate_min_count()
+      validate_min_count(force_run)
       indexes = EngineUtils.get_active_inactive_indexes('autocomplete')
       EngineUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
 
@@ -635,6 +635,7 @@ if __name__ == '__main__':
 
   parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
   parser.add_argument("--fast", action='store_true', help="Index a fraction of products and search queries to save on indexing time")
+  parser.add_argument("--force", action='store_true', help="Ignore Validation")
 
   collection_state = parser.add_mutually_exclusive_group(required=True)
   collection_state.add_argument("--inactive", action='store_true')
@@ -651,6 +652,6 @@ if __name__ == '__main__':
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
 
   startts = time.time()
-  index_engine(engine='elasticsearch', collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_all=index_all)
+  index_engine(engine='elasticsearch', collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_all=index_all, force_run=argv['force'])
   mins = round((time.time()-startts)/60, 2)
   print("Time taken: %s mins" % mins)
