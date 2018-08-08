@@ -331,6 +331,7 @@ class CatalogIndexer:
                 cat_facet[key] = str(info.get(key))
               doc['category_facet'].append(cat_facet)
           doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
+          doc['category_facet_searchable'] += " " + " ".join([x for x in doc['category_values'] if 'parcos' in x.lower()])
 
         elif len(category_ids)!=len(category_names):
           #with open("/data/inconsistent_cat.txt", "a") as f:
