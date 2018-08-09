@@ -8,7 +8,7 @@
         },
         "default_search": {
           "tokenizer": "whitespace",
-          "filter": ["my_word_delimiter_search", "lowercase", "my_stemming", "asciifolding", "stop_english", "stop_custom", "shingle_filter"]
+          "filter": ["my_word_delimiter_search", "lowercase", "my_stemming", "asciifolding", "stop_english", "stop_custom"]
         },
         "shingle_analyzer": {
           "tokenizer": "whitespace",
