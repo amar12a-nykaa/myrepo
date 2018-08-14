@@ -40,7 +40,16 @@ if getCount() > 1:
   print("This means that your intented changes might still be in progress!!!")
   exit()
 
+def addESScripts(es_client):
 
+  product_id_order_maintain_score_script = {
+    "script": {
+      "lang": "painless",
+      "source": "params.ranking_dict[doc[\"product_id.keyword\"].value]"
+    }
+  }
+
+  es_client.put_script(id='product_id_order_maintain_score_script', body=product_id_order_maintain_score_script)
 
 def indexESData(file_path, force_run):
   indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
@@ -57,6 +66,8 @@ def indexESData(file_path, force_run):
   schema = json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
   index_client.create(inactive_index, schema)
   print("Creating index: %s" % inactive_index)
+
+  addESScripts(EsUtils.get_connection())
 
   index_start = timeit.default_timer()
 
