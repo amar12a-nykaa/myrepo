@@ -553,7 +553,6 @@ class CatalogIndexer:
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
-
         doc['top_reviews'] = row.get('top_reviews', '')
         doc['review_splitup'] = row.get('review_splitup', '')
 
