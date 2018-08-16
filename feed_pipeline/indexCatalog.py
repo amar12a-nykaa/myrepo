@@ -111,7 +111,16 @@ class CatalogIndexer:
     request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
     request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
     req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
-    pas_object = json.loads(urlopen(req).read().decode('utf-8'))
+    attempts = 3
+    while(attempts):
+      try:
+        pas_object = json.loads(urlopen(req).read().decode('utf-8'))
+        break
+      except:
+        attempts -= 1
+        print("WARNING ... Attempts remaining: %s, Failed to fetch data: %s %s " % (attempts, request_url, request_data))
+        
+
     pas_object = pas_object['skus']
 
     pws_input_docs = []
@@ -544,6 +553,8 @@ class CatalogIndexer:
         doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
+
+        # Code by anoop to push top_reviews & review_splitup
         doc['top_reviews'] = row.get('top_reviews', '')
         doc['review_splitup'] = row.get('review_splitup', '')
 
@@ -598,7 +609,7 @@ if __name__ == "__main__":
   parser.add_argument("-c", "--collection", help='name of collection to index to')
   parser.add_argument("-s", "--searchengine", default='elasticsearch')
   parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
-  parser.add_argument("--sku", type=str)
+  parser.add_argument("--sku", type=str, default="")
   argv = vars(parser.parse_args())
   file_path = argv['filepath']
   collection = argv['collection']
