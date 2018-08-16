@@ -40,6 +40,8 @@ def populateFrequentProductDetails():
         for row in cursor.fetchall():
             rows.append((str(row[0]), row[1], row[2], row[3]))
 
+        Utils.mysql_write("""create table if not exist free_shipping_recommendation(product_id varchar(50),
+                                category varchar(255), bucket varchar(50),bought_count int(11))""")
         Utils.mysql_write("""create table free_shipping_recommendation_tmp select * from free_shipping_recommendation""")
         Utils.mysql_write("""truncate table free_shipping_recommendation""")
         truncate_table = True
