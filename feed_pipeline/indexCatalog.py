@@ -554,7 +554,6 @@ class CatalogIndexer:
         doc['create_time'] = row['created_at']
         doc['object_type'] = "product"
 
-        # Code by anoop to push top_reviews & review_splitup
         doc['top_reviews'] = row.get('top_reviews', '')
         doc['review_splitup'] = row.get('review_splitup', '')
 
