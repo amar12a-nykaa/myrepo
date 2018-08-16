@@ -2,14 +2,12 @@ import sys
 import json
 import argparse
 from datetime import datetime, timedelta
-import pydevd
 
-# sys.path.append("/home/ubuntu/api")
-sys.path.append("/home/shweta/nykaa/fresh_nykaa_apis/")
+sys.path.append("/home/ubuntu/api")
 from pas.v2.utils import Utils
 
-sys.path.append("/home/shweta/nykaa/nykaa_scripts/utils/")
-sys.path.append("/home/shweta/nykaa/nykaa_scripts/sharedutils/")
+sys.path.append("/home/ubuntu/nykaa_scripts/utils/")
+sys.path.append("/home/ubuntu/nykaa_scripts/sharedutils/")
 
 
 global back_date_90_days
@@ -72,5 +70,4 @@ def add_freeshipping_recommendations_in_mysql(db,rows):
 
 if __name__ == '__main__':
     back_date_90_days = str((datetime.now() - timedelta(days=90)).date())
-    pydevd.settrace('localhost', port=7000, stdoutToServer=True, stderrToServer=True)
     populateFrequentProductDetails()
