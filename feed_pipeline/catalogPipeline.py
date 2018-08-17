@@ -74,7 +74,7 @@ def indexESData(file_path, force_run):
   print('ES Number of documents in active index(%s): %s'%(active_index, num_docs_active))
   print('ES Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
 
-  if abs((num_docs_inactive-num_docs_active)/(num_docs_active + 1)) > 0.05:
+  if (num_docs_active-num_docs_inactive)/(num_docs_active + 1) > 0.05:
     if not force_run:
       raise Exception("Difference in the number of docs on the active and inactive indices is more than 5%")
     else:
