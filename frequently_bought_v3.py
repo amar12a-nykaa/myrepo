@@ -218,7 +218,8 @@ def update_dict_with_full_order(products):
             # stop here if the two products don't have at least 1 common L1 category
             if ((not any_common_l1_category(products[p], products[q])) or any_common_l3_category(products[p], products[q])
                     or products[p]['brand'] != products[q]['brand']):
-                product_bought_with_dict[p].pop(q)
+                if not DEBUG_MODE:
+                    product_bought_with_dict[p].pop(q)
                 continue
 
             if DEBUG_MODE:
