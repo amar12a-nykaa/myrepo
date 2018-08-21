@@ -216,11 +216,10 @@ def update_dict_with_full_order(products):
                 product_bought_with_dict[p][q]['total_count'] += 1
 
             # stop here if the two products don't have at least 1 common L1 category
-            if not any_common_l1_category(products[p], products[q]): continue
-
-            if any_common_l3_category(products[p], products[q]) : continue
-
-            if products[p]['brand'] != products[q]['brand'] : continue
+            if ((not any_common_l1_category(products[p], products[q])) or any_common_l3_category(products[p], products[q])
+                    or products[p]['brand'] != products[q]['brand']):
+                product_bought_with_dict[p].pop(q)
+                continue
 
             if DEBUG_MODE:
                 product_bought_with_dict[p][q]['category_l1_matching'] = True
@@ -229,12 +228,6 @@ def update_dict_with_full_order(products):
 
             # Update the score. Same brand products get a boosted count
             product_bought_with_dict[p][q]['score'] += 1
-
-            # If score is still 0, (probably because CROSS_BRAND factor is set to 0, we would want to remove
-            # Or else, products with 0 scores will could up in frequently_bought_with API call
-            # Of course, in debug_mode, we keep all the info, and don't drop
-            if not DEBUG_MODE and product_bought_with_dict[p][q]['score'] == 0:
-                product_bought_with_dict[p].pop(q)
 
 
 current_order_id = None
