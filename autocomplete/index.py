@@ -278,6 +278,9 @@ def index_categories(collection, searchengine):
       continue
     prev_cat = row['category_name']
 
+    category_url = row['url']
+    url = "http://www.nykaa.com/search/result/?q=" + prev_cat.replace(" ", "+")
+
 #    if row['category_name'].lower() in ['concealer', 'lipstick', 'nail polish', 'eyeliner', 'kajal']:
 #      continue
     docs.append({
@@ -285,7 +288,7 @@ def index_categories(collection, searchengine):
         "entity": row['category_name'],
         "weight": row['category_popularity'],
         "type": "category",
-        "data": json.dumps({"url": row['url'], "type": "category", "id": row['category_id']}),
+        "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url" : category_url}),
         "id": row['category_id'],
         "source": "category"
       })
