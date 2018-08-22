@@ -5,6 +5,7 @@ import pprint
 import socket
 import sys
 import traceback
+from operator import itemgetter
 from collections import OrderedDict
 from datetime import datetime
 from urllib.parse import urlparse
@@ -198,7 +199,8 @@ class CatalogIndexer:
     'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern', 'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
     'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
     'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
-    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1', 'beauty_partner', 'is_kit_combo', 'primary_categories']
+    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1',
+    'beauty_partner', 'is_kit_combo', 'primary_categories', 'offers']
 
 
     all_rows = read_csv_from_file(file_path)
@@ -474,25 +476,79 @@ class CatalogIndexer:
           params = {'sku': doc['sku'], 'type': doc['type']}
           pws_fetch_products.append(params)
 
-        # offers stuff
-        offer_ids = row['offer_id'].split("|") if row['offer_id'] else []
-        offer_names = row['offer_name'].split("|") if row['offer_name'] else []
-        offer_descriptions = row['offer_description'].split("|") if row['offer_description'] else []
+        # # offers stuff
+        # offer_ids = row['offer_id'].split("|") if row['offer_id'] else []
+        # offer_names = row['offer_name'].split("|") if row['offer_name'] else []
+        # offer_descriptions = row['offer_description'].split("|") if row['offer_description'] else []
+        # doc['offers'] = []
+        # if offer_ids and len(offer_ids) == len(offer_names) and len(offer_ids) == len(offer_descriptions):
+        #   doc['offer_ids'] = offer_ids
+        #   doc['offer_facet'] = []
+        #   for i, offer_id in enumerate(offer_ids):
+        #     doc['offers'].append({'id': offer_ids[i], 'name': offer_names[i], 'description': offer_descriptions[i]})
+        #     offer_facet = OrderedDict()
+        #     offer_facet['id'] = offer_ids[i]
+        #     offer_facet['name'] = offer_names[i]
+        #     doc['offer_facet'].append(offer_facet)
+        # #elif offer_ids:
+        #   #with open("/data/inconsistent_offers.txt", "a") as f:
+        #   #  f.write("%s\n"%doc['sku'])
+        #   #print('inconsistent offer values for %s'%doc['sku'])
+        # doc['offer_count'] = len(doc['offers'])
+
+
+
+        # New offer Json
         doc['offers'] = []
-        if offer_ids and len(offer_ids) == len(offer_names) and len(offer_ids) == len(offer_descriptions):
-          doc['offer_ids'] = offer_ids
-          doc['offer_facet'] = []
-          for i, offer_id in enumerate(offer_ids):
-            doc['offers'].append({'id': offer_ids[i], 'name': offer_names[i], 'description': offer_descriptions[i]})
-            offer_facet = OrderedDict()
-            offer_facet['id'] = offer_ids[i]
-            offer_facet['name'] = offer_names[i]
-            doc['offer_facet'].append(offer_facet)
-        #elif offer_ids:
-          #with open("/data/inconsistent_offers.txt", "a") as f:
-          #  f.write("%s\n"%doc['sku'])
-          #print('inconsistent offer values for %s'%doc['sku'])
-        doc['offer_count'] = len(doc['offers'])
+        doc['offers_new'] = []
+        doc['offer_ids'] = []
+        doc['offer_facet'] = []
+        doc['nykaaman_offers'] = []
+        doc['nykaaman_offers_new'] = []
+        doc['nykaaman_offer_ids'] = []
+        doc['nykaaman_offer_facet'] = []
+        if row['offers']:
+          product['offers'] = ast.literal_eval(row['offers'])
+
+          #Nykaa offers
+          product['nykaa_offers'] = product['offers']['nykaa_offers']
+          if product['nykaa_offers']:
+            for i in product['nykaa_offers']:
+              offer_facet = OrderedDict()
+              offer_facet['id'] = i['id']
+              offer_facet['name'] = i['name']
+              offer_facet['offer_start_date'] = i['offer_start_date']
+              offer_facet['offer_end_date'] = i['offer_end_date']
+              doc['offer_facet'].append(offer_facet)
+              doc['offer_ids'].append(i['id'])
+
+            product['offers']['nykaa_offers'] = sorted(product['offers']['nykaa_offers'], key=itemgetter('priority'), reverse=True)
+            doc['offers_new'] = product['offers']['nykaa_offers']
+
+            doc['offer_count'] = len(doc['offers_new'])
+            for i in doc['offers_new']:
+              i = json.dumps(i)
+              doc['offers'].append(i)
+
+          #Nykaaman offers
+          product['nykaaman_offers'] = product['offers']['nykaaman_offers']
+          if product['nykaaman_offers']:
+            for i in product['nykaaman_offers']:
+              nykaaman_offer_facet = OrderedDict()
+              nykaaman_offer_facet['id'] = i['id']
+              nykaaman_offer_facet['name'] = i['name']
+              nykaaman_offer_facet['offer_start_date'] = i['offer_start_date']
+              nykaaman_offer_facet['offer_end_date'] = i['offer_end_date']
+              doc['nykaaman_offer_facet'].append(nykaaman_offer_facet)
+              doc['nykaaman_offer_ids'].append(i['id'])
+
+            product['offers']['nykaaman_offers'] = sorted(product['offers']['nykaaman_offers'], key=itemgetter('priority'), reverse=True)
+            doc['nykaaman_offers_new'] = product['offers']['nykaaman_offers']
+
+            doc['nykaaman_offer_count'] = len(doc['nykaaman_offers_new'])
+            for i in doc['nykaaman_offers_new']:
+              i = json.dumps(i)
+              doc['nykaaman_offers'].append(i)
 
         # facets: dynamic fields
         facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1")]
