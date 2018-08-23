@@ -5,6 +5,7 @@ import pprint
 import socket
 import sys
 import traceback
+import ast
 from operator import itemgetter
 from collections import OrderedDict
 from datetime import datetime
@@ -500,14 +501,13 @@ class CatalogIndexer:
 
         # New offer Json
         doc['offers'] = []
-        doc['offers_new'] = []
         doc['offer_ids'] = []
         doc['offer_facet'] = []
         doc['nykaaman_offers'] = []
-        doc['nykaaman_offers_new'] = []
         doc['nykaaman_offer_ids'] = []
         doc['nykaaman_offer_facet'] = []
         if row['offers']:
+          product = {}
           product['offers'] = ast.literal_eval(row['offers'])
 
           #Nykaa offers
@@ -523,12 +523,9 @@ class CatalogIndexer:
               doc['offer_ids'].append(i['id'])
 
             product['offers']['nykaa_offers'] = sorted(product['offers']['nykaa_offers'], key=itemgetter('priority'), reverse=True)
-            doc['offers_new'] = product['offers']['nykaa_offers']
+            doc['offers'] = product['offers']['nykaa_offers']
 
-            doc['offer_count'] = len(doc['offers_new'])
-            for i in doc['offers_new']:
-              i = json.dumps(i)
-              doc['offers'].append(i)
+            doc['offer_count'] = len(doc['offers'])
 
           #Nykaaman offers
           product['nykaaman_offers'] = product['offers']['nykaaman_offers']
@@ -543,12 +540,9 @@ class CatalogIndexer:
               doc['nykaaman_offer_ids'].append(i['id'])
 
             product['offers']['nykaaman_offers'] = sorted(product['offers']['nykaaman_offers'], key=itemgetter('priority'), reverse=True)
-            doc['nykaaman_offers_new'] = product['offers']['nykaaman_offers']
+            doc['nykaaman_offers'] = product['offers']['nykaaman_offers']
 
-            doc['nykaaman_offer_count'] = len(doc['nykaaman_offers_new'])
-            for i in doc['nykaaman_offers_new']:
-              i = json.dumps(i)
-              doc['nykaaman_offers'].append(i)
+            doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
 
         # facets: dynamic fields
         facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1")]
