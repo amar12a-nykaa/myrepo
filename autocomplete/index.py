@@ -278,6 +278,9 @@ def index_categories(collection, searchengine):
       continue
     prev_cat = row['category_name']
 
+    category_url = row['url']
+    url = "http://www.nykaa.com/search/result/?q=" + prev_cat.replace(" ", "+")
+
 #    if row['category_name'].lower() in ['concealer', 'lipstick', 'nail polish', 'eyeliner', 'kajal']:
 #      continue
     docs.append({
@@ -285,7 +288,7 @@ def index_categories(collection, searchengine):
         "entity": row['category_name'],
         "weight": row['category_popularity'],
         "type": "category",
-        "data": json.dumps({"url": row['url'], "type": "category", "id": row['category_id']}),
+        "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url" : category_url}),
         "id": row['category_id'],
         "source": "category"
       })
@@ -481,7 +484,7 @@ def index_products(collection, searchengine):
     if len(rows_untested) >= 1000:
       ids = list(rows_untested.keys())
       for product in requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.listids?ids=%s" % ",".join(ids)).json()['result']['products']:
-        if product['price'] < 1 or product['pro_flag'] ==1:
+        if product['price'] < 1 or product['pro_flag'] == 1 or product['is_service'] == True:
           continue
         rows_1k.append(rows_untested[product['product_id']])
       flush_index_products(rows_1k)
