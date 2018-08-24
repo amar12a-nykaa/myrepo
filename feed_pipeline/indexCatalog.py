@@ -525,7 +525,6 @@ class CatalogIndexer:
             product['offers']['nykaa_offers'] = sorted(product['offers']['nykaa_offers'], key=itemgetter('priority'), reverse=True)
             doc['offers'] = product['offers']['nykaa_offers']
 
-            doc['offer_count'] = len(doc['offers'])
 
           #Nykaaman offers
           product['nykaaman_offers'] = product['offers']['nykaaman_offers']
@@ -542,7 +541,8 @@ class CatalogIndexer:
             product['offers']['nykaaman_offers'] = sorted(product['offers']['nykaaman_offers'], key=itemgetter('priority'), reverse=True)
             doc['nykaaman_offers'] = product['offers']['nykaaman_offers']
 
-            doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
+        doc['offer_count'] = len(doc['offers'])
+        doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
 
         # facets: dynamic fields
         facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1")]
