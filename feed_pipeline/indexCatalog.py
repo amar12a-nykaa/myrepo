@@ -109,6 +109,16 @@ class CatalogIndexer:
 
     return cat_facet_attrs
 
+  def getOffersApiConfig():
+    mysql_conn = Utils.nykaaMysqlConnection()
+    query = "SELECT plain_value FROM core_variable_value cvv JOIN core_variable cv ON cv.variable_id = cvv.variable_id WHERE code = 'offers-api-config';"
+    results = Utils.fetchResults(mysql_conn, query)
+    for key, config_value in enumerate(results):
+      if config_value['plain_value']:
+        offers_api_config = json.loads(config_value['plain_value'])
+        offers_api_config['product_ids'] = offers_api_config['product_ids'].split(',')
+    return offers_api_config
+
   def fetch_price_availability(input_docs, pws_fetch_products):
     request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
     request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
@@ -216,7 +226,8 @@ class CatalogIndexer:
     pws_fetch_products = []
 
     categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
-
+    offersApiConfig = CatalogIndexer.getOffersApiConfig()
+    
     ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
     for index, row in enumerate(all_rows):
       if limit and ctr.count == limit:
@@ -477,72 +488,85 @@ class CatalogIndexer:
           params = {'sku': doc['sku'], 'type': doc['type']}
           pws_fetch_products.append(params)
 
-        # # offers stuff
-        # offer_ids = row['offer_id'].split("|") if row['offer_id'] else []
-        # offer_names = row['offer_name'].split("|") if row['offer_name'] else []
-        # offer_descriptions = row['offer_description'].split("|") if row['offer_description'] else []
-        # doc['offers'] = []
-        # if offer_ids and len(offer_ids) == len(offer_names) and len(offer_ids) == len(offer_descriptions):
-        #   doc['offer_ids'] = offer_ids
-        #   doc['offer_facet'] = []
-        #   for i, offer_id in enumerate(offer_ids):
-        #     doc['offers'].append({'id': offer_ids[i], 'name': offer_names[i], 'description': offer_descriptions[i]})
-        #     offer_facet = OrderedDict()
-        #     offer_facet['id'] = offer_ids[i]
-        #     offer_facet['name'] = offer_names[i]
-        #     doc['offer_facet'].append(offer_facet)
-        # #elif offer_ids:
-        #   #with open("/data/inconsistent_offers.txt", "a") as f:
-        #   #  f.write("%s\n"%doc['sku'])
-        #   #print('inconsistent offer values for %s'%doc['sku'])
-        # doc['offer_count'] = len(doc['offers'])
-
-
-
-        # New offer Json
+        # offers stuff
+        offer_ids = row['offer_id'].split("|") if row['offer_id'] else []
+        offer_names = row['offer_name'].split("|") if row['offer_name'] else []
+        offer_descriptions = row['offer_description'].split("|") if row['offer_description'] else []
         doc['offers'] = []
-        doc['offer_ids'] = []
-        doc['offer_facet'] = []
         doc['nykaaman_offers'] = []
-        doc['nykaaman_offer_ids'] = []
-        doc['nykaaman_offer_facet'] = []
-        if row['offers']:
-          product = {}
-          product['offers'] = ast.literal_eval(row['offers'])
-
-          #Nykaa offers
-          product['nykaa_offers'] = product['offers']['nykaa_offers']
-          if product['nykaa_offers']:
-            for i in product['nykaa_offers']:
-              offer_facet = OrderedDict()
-              offer_facet['id'] = i['id']
-              offer_facet['name'] = i['name']
-              offer_facet['offer_start_date'] = i['offer_start_date']
-              offer_facet['offer_end_date'] = i['offer_end_date']
-              doc['offer_facet'].append(offer_facet)
-              doc['offer_ids'].append(i['id'])
-
-            product['offers']['nykaa_offers'] = sorted(product['offers']['nykaa_offers'], key=itemgetter('priority'), reverse=True)
-            doc['offers'] = product['offers']['nykaa_offers']
-
-
-          #Nykaaman offers
-          product['nykaaman_offers'] = product['offers']['nykaaman_offers']
-          if product['nykaaman_offers']:
-            for i in product['nykaaman_offers']:
-              nykaaman_offer_facet = OrderedDict()
-              nykaaman_offer_facet['id'] = i['id']
-              nykaaman_offer_facet['name'] = i['name']
-              nykaaman_offer_facet['offer_start_date'] = i['offer_start_date']
-              nykaaman_offer_facet['offer_end_date'] = i['offer_end_date']
-              doc['nykaaman_offer_facet'].append(nykaaman_offer_facet)
-              doc['nykaaman_offer_ids'].append(i['id'])
-
-            product['offers']['nykaaman_offers'] = sorted(product['offers']['nykaaman_offers'], key=itemgetter('priority'), reverse=True)
-            doc['nykaaman_offers'] = product['offers']['nykaaman_offers']
-
+        if offer_ids and len(offer_ids) == len(offer_names) and len(offer_ids) == len(offer_descriptions):
+          doc['offer_ids'] = offer_ids
+          doc['offer_facet'] = []
+          for i, offer_id in enumerate(offer_ids):
+            doc['offers'].append({'id': offer_ids[i], 'name': offer_names[i], 'description': offer_descriptions[i]})
+            offer_facet = OrderedDict()
+            offer_facet['id'] = offer_ids[i]
+            offer_facet['name'] = offer_names[i]
+            doc['offer_facet'].append(offer_facet)
+        #elif offer_ids:
+          #with open("/data/inconsistent_offers.txt", "a") as f:
+          #  f.write("%s\n"%doc['sku'])
+          #print('inconsistent offer values for %s'%doc['sku'])
         doc['offer_count'] = len(doc['offers'])
-        doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
+        doc['offer_count'] = len(doc['offers'])
+
+
+        if offersApiConfig and offersApiConfig['status']:
+          if offersApiConfig['status'] == 1 and offersApiConfig['product_ids'] and len(offersApiConfig['product_ids']) > 0:
+            if doc['product_id'] in offersApiConfig['product_ids']:
+              new_offer_status = 1
+          elif offersApiConfig['status'] == 2:
+            new_offer_status = 1
+          else:
+            new_offer_status = 0
+        else:
+          new_offer_status = 0
+
+        if new_offer_status == 1:
+          # New offer Json
+          doc['offers'] = []
+          doc['offer_ids'] = []
+          doc['offer_facet'] = []
+          doc['nykaaman_offers'] = []
+          doc['nykaaman_offer_ids'] = []
+          doc['nykaaman_offer_facet'] = []
+          if row['offers']:
+            product = {}
+            product['offers'] = ast.literal_eval(row['offers'])
+
+            #Nykaa offers
+            product['nykaa_offers'] = product['offers']['nykaa_offers']
+            if product['nykaa_offers']:
+              for i in product['nykaa_offers']:
+                offer_facet = OrderedDict()
+                offer_facet['id'] = i['id']
+                offer_facet['name'] = i['name']
+                offer_facet['offer_start_date'] = i['offer_start_date']
+                offer_facet['offer_end_date'] = i['offer_end_date']
+                doc['offer_facet'].append(offer_facet)
+                doc['offer_ids'].append(i['id'])
+
+              product['offers']['nykaa_offers'] = sorted(product['offers']['nykaa_offers'], key=itemgetter('priority'), reverse=True)
+              doc['offers'] = product['offers']['nykaa_offers']
+
+
+            #Nykaaman offers
+            product['nykaaman_offers'] = product['offers']['nykaaman_offers']
+            if product['nykaaman_offers']:
+              for i in product['nykaaman_offers']:
+                nykaaman_offer_facet = OrderedDict()
+                nykaaman_offer_facet['id'] = i['id']
+                nykaaman_offer_facet['name'] = i['name']
+                nykaaman_offer_facet['offer_start_date'] = i['offer_start_date']
+                nykaaman_offer_facet['offer_end_date'] = i['offer_end_date']
+                doc['nykaaman_offer_facet'].append(nykaaman_offer_facet)
+                doc['nykaaman_offer_ids'].append(i['id'])
+
+              product['offers']['nykaaman_offers'] = sorted(product['offers']['nykaaman_offers'], key=itemgetter('priority'), reverse=True)
+              doc['nykaaman_offers'] = product['offers']['nykaaman_offers']
+
+          doc['offer_count'] = len(doc['offers'])
+          doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
 
         # facets: dynamic fields
         facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1")]
