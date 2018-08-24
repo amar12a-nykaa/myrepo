@@ -3,7 +3,7 @@ import json
 import argparse
 from datetime import datetime, timedelta
 
-sys.path.append("/home/ubuntu/api")
+sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
 sys.path.append("/home/ubuntu/nykaa_scripts/utils/")
@@ -34,19 +34,21 @@ def populateFrequentProductDetails():
         """.format(back_date_90_days, purchase_count_threshold)
         cursor = redshift_conn.cursor()
         cursor.execute(query)
+        print("connection fetched")
         rows = []
         for row in cursor.fetchall():
             rows.append((str(row[0]), row[1], row[2], row[3]))
-
-        Utils.mysql_write("""create table if not exist free_shipping_recommendation(product_id varchar(50),
+        print("doing mysql queries")
+        Utils.mysql_write("""create table if not exists free_shipping_recommendation(product_id varchar(50),
                                 category varchar(255), bucket varchar(50),bought_count int(11))""")
         Utils.mysql_write("""create table free_shipping_recommendation_tmp select * from free_shipping_recommendation""")
         Utils.mysql_write("""truncate table free_shipping_recommendation""")
         truncate_table = True
         add_freeshipping_recommendations_in_mysql(mysql_conn, rows)
         Utils.mysql_write("""drop table free_shipping_recommendation_tmp""")
-    except:
+    except Exception as e:
         print("Not ABLE TO RETRIEVE FREQUENT PRODUCT DATA")
+        print(e)
         if truncate_table:
             Utils.mysql_write("""truncate table free_shipping_recommendation""")
             Utils.mysql_write("""insert into free_shipping_recommendation select * from free_shipping_recommendation_tmp""")
