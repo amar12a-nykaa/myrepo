@@ -25,8 +25,12 @@ cat_id_index = defaultdict(dict)
 brand_name_id = {}
 brand_name_name = {}
 brand_popularity = defaultdict(float)
-category_popularity = defaultdict(float)
+# category_popularity = defaultdict(float)
+category_popularity = defaultdict(lambda  : defaultdict(float))
 brand_cat_popularity = defaultdict(lambda : defaultdict(float))
+
+Nykaa = "nykaa"
+Men = "men"
 
 ## MySQL Connections 
 host = "nykaa-analytics.nyk00-int.network"
@@ -94,26 +98,35 @@ def update_category_table(products):
     if not category_id:
       continue
     product_simple_id = str(product['simple_id'])
-    category_popularity[category_id] += popularity_index.get(product_simple_id, 0)
+    category_popularity[category_id][Nykaa] += popularity_index.get(product_simple_id, 0)
+    if(product.get('is_men') == 'Yes'):
+      category_popularity[category_id][Men] += popularity_index.get(product_simple_id, 0)
 
   #Normalize category_popularity
-  max_category_popularity = 0
+  max_category_popularity_nykaa = 0
+  max_category_popularity_men = 0
+
   for k,v in category_popularity.items():
-    max_category_popularity = max(max_category_popularity, v)
+    max_category_popularity_nykaa = max(max_category_popularity_nykaa, v.get(Nykaa))
+    if(Men in v):
+      max_category_popularity_men = max(max_category_popularity_men, v.get(Men))
+
   for k,v in category_popularity.items():
-    category_popularity[k] = category_popularity[k] / max_category_popularity * 100 + 100
+    category_popularity[k][Nykaa] = category_popularity[k][Nykaa] / max_category_popularity_nykaa * 100 + 100
+    if(Men in v):
+      category_popularity[k][Men] = category_popularity[k][Men] / max_category_popularity_men * 100 + 100
 
   mysql_conn = Utils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
 
   Utils.mysql_write("delete from l3_categories", connection = mysql_conn)
-  query = "REPLACE INTO l3_categories(id, name, url, category_popularity) VALUES (%s, %s, %s, %s) "
+  query = "REPLACE INTO l3_categories(id, name, url, category_popularity, catagory_popularity_men) VALUES (%s, %s, %s, %s, %s) "
   #print("cat_id_index: %s" % cat_id_index)
   for _id, d in cat_id_index.items():
     cat_name = d.get('name')
     cat_url = d.get('url')
     if cat_name and cat_url:
-      values = (_id, cat_name, cat_url, category_popularity.get(_id, 0))
+      values = (_id, cat_name, cat_url, category_popularity.get(_id).get(Nykaa, 0), category_popularity.get(_id).get(Men, 0))
       cursor.execute(query, values)
       mysql_conn.commit()
 
@@ -168,7 +181,9 @@ def getProducts():
 
   print("Fetching products from Nykaa DB..")
   query = "SELECT sl.entity_id AS simple_id, sl.sku AS simple_sku,\
-           sl.key AS parent_id, sl.key_sku AS parent_sku, sl.l2 AS category_l1, sl.l3 AS category_l2, sl.l4 AS category_l3, sl.l4_id AS category_l3_id, cd.brand \
+           sl.key AS parent_id, sl.key_sku AS parent_sku, sl.l2 AS category_l1, sl.l3 AS category_l2,\
+           sl.l4 AS category_l3, sl.l4_id AS category_l3_id, cd.brand, \
+           cd.is_men \
            FROM analytics.sku_l4 sl\
            JOIN analytics.catalog_dump cd ON cd.entity_id=sl.entity_id\
            WHERE sl.l2 NOT LIKE '%Luxe%'\
