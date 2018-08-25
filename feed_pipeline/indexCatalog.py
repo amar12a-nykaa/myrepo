@@ -211,7 +211,7 @@ class CatalogIndexer:
     'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
     'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
     'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1',
-    'beauty_partner', 'is_kit_combo', 'primary_categories', 'offers']
+    'beauty_partner', 'primary_categories', 'offers']
 
 
     all_rows = read_csv_from_file(file_path)
@@ -530,40 +530,34 @@ class CatalogIndexer:
           doc['nykaaman_offers'] = []
           doc['nykaaman_offer_ids'] = []
           doc['nykaaman_offer_facet'] = []
+
           if row['offers']:
             product = {}
             product['offers'] = ast.literal_eval(row['offers'])
+            for i in product['offers']:
+              prefix = i
+              if product['offers'][prefix]:
+                for i in product['offers'][prefix]:
+                  if prefix == 'nykaa':
+                    key = 'offer_facet'
+                  else:
+                    key = prefix+'_offer_facet'
+                  key = OrderedDict()
+                  key['id'] = i['id']
+                  key['name'] = i['name']
+                  key['offer_start_date'] = i['offer_start_date']
+                  key['offer_end_date'] = i['offer_end_date']
+                  doc['key'].append(key)
+                  if prefix == 'nykaa':
+                    doc['offer_ids'].append(i['id'])
+                  else:
+                    doc[prefix+'_offer_ids'].append(i['id'])
 
-            #Nykaa offers
-            product['nykaa_offers'] = product['offers']['nykaa_offers']
-            if product['nykaa_offers']:
-              for i in product['nykaa_offers']:
-                offer_facet = OrderedDict()
-                offer_facet['id'] = i['id']
-                offer_facet['name'] = i['name']
-                offer_facet['offer_start_date'] = i['offer_start_date']
-                offer_facet['offer_end_date'] = i['offer_end_date']
-                doc['offer_facet'].append(offer_facet)
-                doc['offer_ids'].append(i['id'])
-
-              product['offers']['nykaa_offers'] = sorted(product['offers']['nykaa_offers'], key=itemgetter('priority'), reverse=True)
-              doc['offers'] = product['offers']['nykaa_offers']
-
-
-            #Nykaaman offers
-            product['nykaaman_offers'] = product['offers']['nykaaman_offers']
-            if product['nykaaman_offers']:
-              for i in product['nykaaman_offers']:
-                nykaaman_offer_facet = OrderedDict()
-                nykaaman_offer_facet['id'] = i['id']
-                nykaaman_offer_facet['name'] = i['name']
-                nykaaman_offer_facet['offer_start_date'] = i['offer_start_date']
-                nykaaman_offer_facet['offer_end_date'] = i['offer_end_date']
-                doc['nykaaman_offer_facet'].append(nykaaman_offer_facet)
-                doc['nykaaman_offer_ids'].append(i['id'])
-
-              product['offers']['nykaaman_offers'] = sorted(product['offers']['nykaaman_offers'], key=itemgetter('priority'), reverse=True)
-              doc['nykaaman_offers'] = product['offers']['nykaaman_offers']
+                product['offers'][prefix] = sorted(product['offers'][prefix], key=itemgetter('priority'), reverse=True)
+                if prefix == 'nykaa':
+                  doc['offers'] = product['offers'][prefix]
+                else:
+                  doc[prefix+'_offers'] = product['offers'][prefix]
 
           doc['offer_count'] = len(doc['offers'])
           doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
