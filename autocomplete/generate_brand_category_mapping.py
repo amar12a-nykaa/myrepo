@@ -24,10 +24,10 @@ popularity_index = {}
 cat_id_index = defaultdict(dict)
 brand_name_id = {}
 brand_name_name = {}
-brand_popularity = defaultdict(float)
+brand_popularity = defaultdict(lambda : defaultdict(float))
 # category_popularity = defaultdict(float)
 category_popularity = defaultdict(lambda  : defaultdict(float))
-brand_cat_popularity = defaultdict(lambda : defaultdict(float))
+brand_cat_popularity = defaultdict(lambda : defaultdict(lambda : defaultdict(float)))
 
 Nykaa = "nykaa"
 Men = "men"
@@ -202,7 +202,8 @@ def getProducts():
 
 def getMappings(products):
   print("Generating brand category mappings..")
-  global brand_cat_popularity 
+  global brand_cat_popularity
+  global brand_popularity
   brand_category_mappings = {}
   for product in products:
     if not product.get('brand'):
@@ -218,24 +219,37 @@ def getMappings(products):
       categories = brand_category_mappings[brand]
 
     if category_id not in categories:
-      categories[category_id] = 0
+      categories[category_id] = {}
+      categories[category_id][Nykaa] = 0
+      categories[category_id][Men] = 0
 
     product_simple_id = str(product['simple_id'])
 
-    categories[category_id] += popularity_index.get(product_simple_id, 0)
-    brand_popularity[brand] += popularity_index.get(product_simple_id, 0)
-    brand_cat_popularity[brand][category_id] += popularity_index.get(product_simple_id, 0)
+    categories[category_id][Nykaa] += popularity_index.get(product_simple_id, 0)
+    brand_popularity[brand][Nykaa] += popularity_index.get(product_simple_id, 0)
+    brand_cat_popularity[brand][category_id][Nykaa] += popularity_index.get(product_simple_id, 0)
+    if(product.get('is_men') == 'Yes'):
+      categories[category_id][Men] += popularity_index.get(product_simple_id, 0)
+      brand_popularity[brand][Men] += popularity_index.get(product_simple_id, 0)
+      brand_cat_popularity[brand][category_id][Men] += popularity_index.get(product_simple_id, 0)
+
     brand_category_mappings[brand] = categories
 
 
   #Normalize brand_popularity
-  max_brand_popularity = 0
+  max_brand_popularity_Nykaa = 0
+  max_brand_popularity_Men = 0
   for k,v in brand_popularity.items():
     if k =='Nykaa Cosmetics':
       continue
-    max_brand_popularity = max(max_brand_popularity, v)
+    max_brand_popularity_Nykaa = max(max_brand_popularity_Nykaa, v.get(Nykaa))
+    if v.get(Men):
+      max_brand_popularity_Men = max(max_brand_popularity_Men, v.get(Men))
+
   for k,v in brand_popularity.items():
-    brand_popularity[k] = brand_popularity[k] / max_brand_popularity * 100 * 2 + 100
+    brand_popularity[k][Nykaa] = brand_popularity[k][Nykaa] / max_brand_popularity_Nykaa * 100 * 2 + 100
+    if v.get(Men):
+      brand_popularity[k][Men] = brand_popularity[k][Men] / max_brand_popularity_Men * 100 * 2 + 100
 
   return brand_category_mappings
 
@@ -247,30 +261,49 @@ def saveMappings(brand_category_mappings):
 
   Utils.mysql_write("delete from brands", connection = mysql_conn)
 
-  query = "REPLACE INTO brands (brand, brand_id, brands_v1, brand_popularity, top_categories, brand_url) VALUES (%s, %s, %s, %s, %s, %s) "
+  query = "REPLACE INTO brands (brand, brand_id, brands_v1, brand_popularity, brand_popularity_men, top_categories, top_categories_men, brand_url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
 
   num_brands_skipped = 0
   num_brands_processed= 0
   for brand, categories in brand_category_mappings.items():
     brand = brand.replace("’", "'")
-    sortkey = operator.itemgetter(1)
+    sortkey = operator.itemgetter(Nykaa)
+    sortkeyMen = operator.itemgetter(Men)
     sorted_categories = sorted(categories.items(), key=sortkey, reverse=True)
+    sorted_categories_men = sorted(categories.items(), key=sortkeyMen, reverse=True)
     top_categories = []
     top_categories_str = ""
+    top_categories_men = []
+    top_categories_men_str = ""
     try:
-      category_names_added_yet = set()
+      category_names_added_yet_nykaa = set()
       for k in sorted_categories:
         if cat_id_index.get(k[0]):
           name = cat_id_index[k[0]]['name']
           _id = k[0]
           url = brand_name_id[brand]['brand_url'] + "?cat=%s" % _id
-          if name not in category_names_added_yet:
+          if name not in category_names_added_yet_nykaa:
             top_categories.append({"category": name, "category_id": _id, "category_url": url})
-          category_names_added_yet.add(name)
+            category_names_added_yet_nykaa.add(name)
 
         if len(top_categories) <= 5:
           top_categories_str = json.dumps(top_categories)
         if len(top_categories) == 5:
+          break
+
+      category_names_added_yet_men = set()
+      for k in sorted_categories_men:
+        if cat_id_index.get(k[0]):
+          name = cat_id_index[k[0]]['name']
+          _id = k[0]
+          url = brand_name_id[brand]['brand_url'] + "?cat=%s" % _id
+          if name not in category_names_added_yet_men:
+            top_categories_men.append({"category": name, "category_id": _id, "category_url": url})
+            category_names_added_yet_men.add(name)
+
+        if len(top_categories_men) <= 5:
+          top_categories_men_str = json.dumps(top_categories_men)
+        if len(top_categories_men) == 5:
           break
     except:
       #print(traceback.format_exc())
@@ -283,7 +316,9 @@ def saveMappings(brand_category_mappings):
       num_brands_skipped += 1; 
       continue
 
-    values = (brand_name_name[brand], brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'], brand_popularity[brand], top_categories_str, brand_name_id[brand]['brand_url'])
+    values = (brand_name_name[brand], brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'],
+              brand_popularity[brand][Nykaa],brand_popularity[brand][Men], top_categories_str, top_categories_men_str,
+              brand_name_id[brand]['brand_url'])
     cursor.execute(query, values)
     mysql_conn.commit()
     num_brands_processed += 1
@@ -297,21 +332,29 @@ def saveMappings(brand_category_mappings):
 def update_brand_category_table():
   assert brand_cat_popularity
   if not Utils.mysql_read("SHOW TABLES LIKE 'brand_category'"):
-    Utils.mysql_write("create table brand_category(brand varchar(30), brand_id varchar(32), category_id varchar(32), category_name varchar(32), popularity float)")
+    Utils.mysql_write("create table brand_category(brand varchar(30), brand_id varchar(32), category_id varchar(32), category_name varchar(32), popularity float, popularity_men float)")
   Utils.mysql_write("delete from brand_category")
 
-  max_pop = 0
+  max_pop_Nykaa = 0
+  max_pop_Men = 0
   for brand, catinfo in brand_cat_popularity.items():
-    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x[1]):
-      max_pop = max(pop, max_pop)
+    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x[Nykaa]):
+      max_pop_Nykaa = max(pop[Nykaa], max_pop_Nykaa)
+      break
+    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x[Men] if Men in x else 0):
+      if Men in pop:
+        max_pop_Men = max(pop[Men], max_pop_Men)
       break
 
-  query = "REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity) VALUES ('%s', '%s', '%s', '%s', %s) "
+  query = "REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity, popularity_men) VALUES ('%s', '%s', '%s', '%s', %s, %s) "
   for brand, catinfo in brand_cat_popularity.items():
-    for  category_id, pop in sorted(catinfo.items(), key=lambda x: -x[1] ):
+    for category_id, pop in catinfo.items():
       try:
-        pop = round(pop / max_pop * 100, 2 )
-        q = query % (brand, brand_name_id[brand]['brand_id'], category_id, cat_id_index[category_id]['name'], pop)
+        pop[Nykaa] = round(pop[Nykaa] / max_pop_Nykaa * 100, 2)
+        pop[Men] = 0
+        if Men in pop:
+          pop[Men] = round(pop[Men] / max_pop_Men * 100, 2)
+        q = query % (brand, brand_name_id[brand]['brand_id'], category_id, cat_id_index[category_id]['name'], pop[Nykaa], pop[Men])
         print(q)
         Utils.mysql_write(q)
       except:
