@@ -509,7 +509,6 @@ class CatalogIndexer:
         doc['offer_count'] = len(doc['offers'])
         doc['offer_count'] = len(doc['offers'])
 
-
         if offersApiConfig and offersApiConfig['status']:
           if offersApiConfig['status'] == 1 and offersApiConfig['product_ids'] and len(offersApiConfig['product_ids']) > 0:
             if doc['product_id'] in offersApiConfig['product_ids']:
@@ -542,6 +541,7 @@ class CatalogIndexer:
                     key = 'offer_facet'
                   else:
                     key = prefix+'_offer_facet'
+                  doc['key'] = []
                   key = OrderedDict()
                   key['id'] = i['id']
                   key['name'] = i['name']
