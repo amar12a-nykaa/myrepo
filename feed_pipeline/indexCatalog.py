@@ -493,7 +493,6 @@ class CatalogIndexer:
         offer_names = row['offer_name'].split("|") if row['offer_name'] else []
         offer_descriptions = row['offer_description'].split("|") if row['offer_description'] else []
         doc['offers'] = []
-        doc['nykaaman_offers'] = []
         if offer_ids and len(offer_ids) == len(offer_names) and len(offer_ids) == len(offer_descriptions):
           doc['offer_ids'] = offer_ids
           doc['offer_facet'] = []
@@ -532,8 +531,9 @@ class CatalogIndexer:
           doc['nykaaman_offer_facet'] = []
 
           if row['offers']:
+            product_offers = row['offers']
             product = {}
-            product['offers'] = ast.literal_eval(row['offers'])
+            product['offers'] = ast.literal_eval(product_offers)
             for i in product['offers']:
               prefix = i
               if product['offers'][prefix]:
