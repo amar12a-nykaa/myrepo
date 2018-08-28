@@ -532,7 +532,7 @@ class CatalogIndexer:
 
           try:
             if row['offers']:
-              product_offers = row['offers']
+              product_offers = row['offers'].replace("\\\\","\\")
               product = {}
               product['offers'] = ast.literal_eval(product_offers)
               for i in product['offers']:
