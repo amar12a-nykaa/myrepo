@@ -202,7 +202,7 @@ class CatalogIndexer:
     skus = skus or []
     if skus:
       print("Running catalog pipeline for selected skus: %s" % skus) 
-    validate_popularity_data_health()
+    # validate_popularity_data_health()
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
     'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
@@ -508,6 +508,7 @@ class CatalogIndexer:
           #print('inconsistent offer values for %s'%doc['sku'])
         doc['offer_count'] = len(doc['offers'])
         doc['offer_count'] = len(doc['offers'])
+        # print(doc['offers'])
 
         if offersApiConfig and offersApiConfig['status']:
           if offersApiConfig['status'] == 1 and offersApiConfig['product_ids'] and len(offersApiConfig['product_ids']) > 0:
@@ -529,35 +530,38 @@ class CatalogIndexer:
           doc['nykaaman_offer_ids'] = []
           doc['nykaaman_offer_facet'] = []
 
-          if row['offers']:
-            product_offers = row['offers']
-            product = {}
-            product['offers'] = ast.literal_eval(product_offers)
-            for i in product['offers']:
-              prefix = i
-              if product['offers'][prefix]:
-                for i in product['offers'][prefix]:
-                  if prefix == 'nykaa':
-                    key = 'offer_facet'
-                  else:
-                    key = prefix+'_offer_facet'
-                  doc['key'] = []
-                  key = OrderedDict()
-                  key['id'] = i['id']
-                  key['name'] = i['name']
-                  key['offer_start_date'] = i['offer_start_date']
-                  key['offer_end_date'] = i['offer_end_date']
-                  doc['key'].append(key)
-                  if prefix == 'nykaa':
-                    doc['offer_ids'].append(i['id'])
-                  else:
-                    doc[prefix+'_offer_ids'].append(i['id'])
+          try:
+            if row['offers']:
+              product_offers = row['offers']
+              product = {}
+              product['offers'] = ast.literal_eval(product_offers)
+              for i in product['offers']:
+                prefix = i
+                if product['offers'][prefix]:
+                  for i in product['offers'][prefix]:
+                    if prefix == 'nykaa':
+                      key = 'offer_facet'
+                    else:
+                      key = prefix+'_offer_facet'
+                    doc['key'] = []
+                    key = OrderedDict()
+                    key['id'] = i['id']
+                    key['name'] = i['name']
+                    key['offer_start_date'] = i['offer_start_date']
+                    key['offer_end_date'] = i['offer_end_date']
+                    doc['key'].append(key)
+                    if prefix == 'nykaa':
+                      doc['offer_ids'].append(i['id'])
+                    else:
+                      doc[prefix+'_offer_ids'].append(i['id'])
 
-                product['offers'][prefix] = sorted(product['offers'][prefix], key=itemgetter('priority'), reverse=True)
-                if prefix == 'nykaa':
-                  doc['offers'] = product['offers'][prefix]
-                else:
-                  doc[prefix+'_offers'] = product['offers'][prefix]
+                  product['offers'][prefix] = sorted(product['offers'][prefix], key=itemgetter('priority'), reverse=True)
+                  if prefix == 'nykaa':
+                    doc['offers'] = product['offers'][prefix]
+                  else:
+                    doc[prefix+'_offers'] = product['offers'][prefix]
+          except Exception as e:
+            print(traceback.format_exc())
 
           doc['offer_count'] = len(doc['offers'])
           doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
