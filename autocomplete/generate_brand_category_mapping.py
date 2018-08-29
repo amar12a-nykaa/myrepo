@@ -171,6 +171,7 @@ def getProducts():
 
       brand_name_id[brand_lower] = {'brand_id': brand_id, 'brand_url': brand_url, 'brands_v1': brands_v1}
 
+
   query = "show indexes in analytics.sku_l4"
   index_on_entity_id__sku_l4 = [ x for x in Utils.mysql_read(query, connection=nykaa_analytics_db_conn) if x['Column_name'] == 'entity_id']
   assert index_on_entity_id__sku_l4, "Index missing on sku_l4"
@@ -267,10 +268,8 @@ def saveMappings(brand_category_mappings):
   num_brands_processed= 0
   for brand, categories in brand_category_mappings.items():
     brand = brand.replace("’", "'")
-    sortkey = operator.itemgetter(Nykaa)
-    sortkeyMen = operator.itemgetter(Men)
-    sorted_categories = sorted(categories.items(), key=sortkey, reverse=True)
-    sorted_categories_men = sorted(categories.items(), key=sortkeyMen, reverse=True)
+    sorted_categories = sorted(categories.items(), key=lambda x : -x.get(Nykaa) if Nykaa in x else 0)
+    sorted_categories_men = sorted(categories.items(), key=lambda x : -x.get(Men) if Men in x else 0)
     top_categories = []
     top_categories_str = ""
     top_categories_men = []
@@ -316,7 +315,7 @@ def saveMappings(brand_category_mappings):
       num_brands_skipped += 1; 
       continue
 
-    values = (brand_name_name[brand], brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'],
+    values = (brand_name_name[brand].replace("'", "''"), brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'],
               brand_popularity[brand][Nykaa],brand_popularity[brand][Men], top_categories_str, top_categories_men_str,
               brand_name_id[brand]['brand_url'])
     cursor.execute(query, values)
@@ -338,10 +337,10 @@ def update_brand_category_table():
   max_pop_Nykaa = 0
   max_pop_Men = 0
   for brand, catinfo in brand_cat_popularity.items():
-    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x[Nykaa]):
+    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x.get(Nykaa) if Nykaa in x else 0):
       max_pop_Nykaa = max(pop[Nykaa], max_pop_Nykaa)
       break
-    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x[Men] if Men in x else 0):
+    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x.get(Nykaa) if Men in x else 0):
       if Men in pop:
         max_pop_Men = max(pop[Men], max_pop_Men)
       break
@@ -354,7 +353,13 @@ def update_brand_category_table():
         pop[Men] = 0
         if Men in pop:
           pop[Men] = round(pop[Men] / max_pop_Men * 100, 2)
-        q = query % (brand, brand_name_id[brand]['brand_id'], category_id, cat_id_index[category_id]['name'], pop[Nykaa], pop[Men])
+        brand_id = None
+        category_name = None
+        if brand_name_id[brand]:
+          brand_id = brand_name_id[brand]['brand_id']
+        if cat_id_index[category_id]:
+          category_name = cat_id_index[category_id]['name']
+        q = query % (brand.replace("'", "''"), brand_id, category_id, category_name.replace("'", "''"), pop[Nykaa], pop[Men])
         print(q)
         Utils.mysql_write(q)
       except:
