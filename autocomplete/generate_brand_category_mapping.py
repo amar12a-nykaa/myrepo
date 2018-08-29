@@ -81,8 +81,10 @@ def get_category_details():
   for row in results:
     _id = str(row['category_id'])
     url = "http://www.nykaa.com/" + row['url']
+    men_url = "http://www.nykaaman.com/" + row['url']
     if _id in cat_id_index:
       cat_id_index[_id]['url'] = url
+      cat_id_index[_id]['men_url'] = men_url
 
 
 def update_category_table(products):
@@ -120,13 +122,14 @@ def update_category_table(products):
   cursor = mysql_conn.cursor()
 
   Utils.mysql_write("delete from l3_categories", connection = mysql_conn)
-  query = "REPLACE INTO l3_categories(id, name, url, category_popularity, catagory_popularity_men) VALUES (%s, %s, %s, %s, %s) "
+  query = "REPLACE INTO l3_categories(id, name, url, men_url, category_popularity, catagory_popularity_men) VALUES (%s, %s, %s, %s, %s, %s) "
   #print("cat_id_index: %s" % cat_id_index)
   for _id, d in cat_id_index.items():
     cat_name = d.get('name')
     cat_url = d.get('url')
+    cat_men_url = d.get('men_url')
     if cat_name and cat_url:
-      values = (_id, cat_name, cat_url, category_popularity.get(_id).get(Nykaa, 0), category_popularity.get(_id).get(Men, 0))
+      values = (_id, cat_name, cat_url, cat_men_url, category_popularity.get(_id).get(Nykaa, 0), category_popularity.get(_id).get(Men, 0))
       cursor.execute(query, values)
       mysql_conn.commit()
 
@@ -163,13 +166,14 @@ def getProducts():
     brand_name = brand['name'].replace("’", "'")
     brand_id = brand['id']
     brand_url = "http://www.nykaa.com/" + brand['url']
+    brand_men_url = "http://www.nykaaman.com/" + brand['url']
     brands_v1 = brand['brands_v1']
     if brand_name is not None:
       brand_upper = brand_name.strip()
       brand_lower = brand_upper.lower()
       brand_name_name[brand_lower] = brand_upper
 
-      brand_name_id[brand_lower] = {'brand_id': brand_id, 'brand_url': brand_url, 'brands_v1': brands_v1}
+      brand_name_id[brand_lower] = {'brand_id': brand_id, 'brand_url': brand_url, 'brand_men_url': brand_men_url, 'brands_v1': brands_v1}
 
 
   query = "show indexes in analytics.sku_l4"
@@ -262,7 +266,8 @@ def saveMappings(brand_category_mappings):
 
   Utils.mysql_write("delete from brands", connection = mysql_conn)
 
-  query = "REPLACE INTO brands (brand, brand_id, brands_v1, brand_popularity, brand_popularity_men, top_categories, top_categories_men, brand_url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
+  query = "REPLACE INTO brands (brand, brand_id, brands_v1, brand_popularity, brand_popularity_men, top_categories, top_categories_men, brand_url, brand_men_url) " \
+          "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
 
   num_brands_skipped = 0
   num_brands_processed= 0
@@ -295,7 +300,7 @@ def saveMappings(brand_category_mappings):
         if cat_id_index.get(k[0]):
           name = cat_id_index[k[0]]['name']
           _id = k[0]
-          url = brand_name_id[brand]['brand_url'] + "?cat=%s" % _id
+          url = brand_name_id[brand]['brand_men_url'] + "?cat=%s" % _id
           if name not in category_names_added_yet_men:
             top_categories_men.append({"category": name, "category_id": _id, "category_url": url})
             category_names_added_yet_men.add(name)
@@ -317,7 +322,7 @@ def saveMappings(brand_category_mappings):
 
     values = (brand_name_name[brand].replace("'", "''"), brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'],
               brand_popularity[brand][Nykaa],brand_popularity[brand][Men], top_categories_str, top_categories_men_str,
-              brand_name_id[brand]['brand_url'])
+              brand_name_id[brand]['brand_url'], brand_name_id[brand]['brand_men_url'])
     cursor.execute(query, values)
     mysql_conn.commit()
     num_brands_processed += 1
