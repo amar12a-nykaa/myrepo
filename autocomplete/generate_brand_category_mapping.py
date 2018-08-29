@@ -128,7 +128,7 @@ def update_category_table(products):
     cat_name = d.get('name')
     cat_url = d.get('url')
     cat_men_url = d.get('men_url')
-    if cat_name and cat_url:
+    if cat_name and cat_url and category_popularity.get(_id):
       values = (_id, cat_name, cat_url, cat_men_url, category_popularity.get(_id).get(Nykaa, 0), category_popularity.get(_id).get(Men, 0))
       cursor.execute(query, values)
       mysql_conn.commit()
