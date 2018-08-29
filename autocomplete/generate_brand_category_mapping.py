@@ -345,7 +345,7 @@ def update_brand_category_table():
     for category_id, pop in sorted(catinfo.items(), key=lambda x: -x.get(Nykaa) if Nykaa in x else 0):
       max_pop_Nykaa = max(pop[Nykaa], max_pop_Nykaa)
       break
-    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x.get(Nykaa) if Men in x else 0):
+    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x.get(Men) if Men in x else 0):
       if Men in pop:
         max_pop_Men = max(pop[Men], max_pop_Men)
       break
@@ -360,12 +360,12 @@ def update_brand_category_table():
           pop[Men] = round(pop[Men] / max_pop_Men * 100, 2)
         brand_id = None
         category_name = None
-        if brand_name_id[brand]:
+        if brand in brand_name_id:
           brand_id = brand_name_id[brand]['brand_id']
         if cat_id_index[category_id]:
           category_name = cat_id_index[category_id]['name']
         q = query % (brand.replace("'", "''"), brand_id, category_id, category_name.replace("'", "''"), pop[Nykaa], pop[Men])
-        print(q)
+        # print(q)
         Utils.mysql_write(q)
       except:
         print(traceback.format_exc())
