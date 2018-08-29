@@ -460,30 +460,35 @@ def update_category_facets_table():
           "size": 200
         },
         "aggs":{
-            "benefits_facet": { "terms": { "field": "benefits_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-            #"brand_facet": { "terms": { "field": "brand_facet.keyword", "size": 100 } },
-            #"category_facet": { "terms": { "field": "category_facet.keyword", "size": 100 } },
-            "color_facet": { "terms": { "field": "color_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-            "concern_facet": { "terms": { "field": "concern_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-            "coverage_facet": { "terms": { "field": "coverage_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
+            "benefits_facet": { "terms": { "field": "benefits_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men" : {"filter": {"term": {"catalog_tag": "men"}},"aggs": {"popularity_sum_men": {"sum": {"field": "popularity"}}}}}},
+            "color_facet": { "terms": { "field": "color_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men": {"filter": {"term": {"catalog_tag": "men"}},"aggs": {"popularity_sum_men": {"sum": {"field": "popularity"}}}}}},
+            "concern_facet": { "terms": { "field": "concern_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men": {"filter": {"term": {"catalog_tag": "men"}},"aggs": {"popularity_sum_men": {"sum": {"field": "popularity"}}}}}},
+            "coverage_facet": { "terms": { "field": "coverage_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men": {"filter": {"term": {"catalog_tag": "men"}},"aggs": {"popularity_sum_men": {"sum": {"field": "popularity"}}}}}},
             "discount_interval": { "range": { "field": "discount", "ranges": [ { "from": "0", "to": "10.001" }, { "from": "10" }, { "from": "20" }, { "from": "30" }, { "from": "40" } ] } },
             "discount_stats": { "extended_stats": { "field": "discount" } },
-            "finish_facet": { "terms": { "field": "finish_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-            "formulation_facet": { "terms": { "field": "formulation_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-            "gender_facet": { "terms": { "field": "gender_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-            "hair_type_facet": { "terms": { "field": "hair_type_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-            "old_brand_facet": { "terms": { "field": "old_brand_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-            "preference_facet": { "terms": { "field": "preference_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-#          "price_interval": {
-#              "range": {
-#                  "field": "price",
-#                  "ranges": [ { "from": "0", "to": "499.001" }, { "from": "500", "to": "999.001" }, { "from": "1000", "to": "1999.001" }, { "from": "2000", "to": "3999.001" }, { "from": "4000" } ]
-#              }
-#          },
+            "finish_facet": { "terms": { "field": "finish_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
+            "formulation_facet": { "terms": { "field": "formulation_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
+            "gender_facet": { "terms": { "field": "gender_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
+            "hair_type_facet": { "terms": { "field": "hair_type_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
+            "old_brand_facet": { "terms": { "field": "old_brand_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
+            "preference_facet": { "terms": { "field": "preference_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
             "price_stats": { "extended_stats": { "field": "price" } },
-            "skin_tone_facet": { "terms": { "field": "skin_tone_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-            "skin_type_facet": { "terms": { "field": "skin_type_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}},
-            "spf_facet": { "terms": { "field": "spf_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}}}}
+            "skin_tone_facet": { "terms": { "field": "skin_tone_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
+            "skin_type_facet": { "terms": { "field": "skin_type_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
+            "spf_facet": { "terms": { "field": "spf_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
+            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}}
         }
       }
     },
@@ -492,6 +497,7 @@ def update_category_facets_table():
 
   results = es.search(index='livecore', body=query, request_timeout=120)
   max_pop = 0
+  max_pop_men = 0
   arr = []
   is_good_facet = False
   for catbucket in results['aggregations']['categories']['buckets']:
@@ -508,11 +514,13 @@ def update_category_facets_table():
           is_good_facet = True
         name = facet_bucket['key']['name'].lower()
         popularity = facet_bucket['popularity_sum']['value']
+        popularity_men = facet_bucket['men']['popularity_sum_men']['value']
         max_pop = max(max_pop, popularity)
+        max_pop_men = max(max_pop_men, popularity_men)
         if facet_name in BLACKLISTED_FACETS or popularity < POPULARITY_THRESHOLD:
           is_good_facet = False
         if is_good_facet:
-          arr.append({'category_id': catbucket['key'], 'facet_name':facet_name, 'facet_val': name, 'popularity': popularity})
+          arr.append({'category_id': catbucket['key'], 'facet_name':facet_name, 'facet_val': name, 'popularity': popularity, 'popularity_men' : popularity_men})
 
   for row in arr:
     try:
@@ -521,9 +529,10 @@ def update_category_facets_table():
       print("Skipping category_id %s in category_facets" % row['category_id'])
       continue
 
-    query = "REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity) VALUES ('%s', '%s', '%s', '%s', %s) "
-    popularity = row['popularity']/ max_pop * WEIGHT_CATEGORY_FACET 
-    query = query % (row['category_id'], category_name, row['facet_name'], row['facet_val'].strip().replace("'", "''"), popularity)
+    query = "REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, popularity_men) VALUES ('%s', '%s', '%s', '%s', %s, %s) "
+    popularity = row['popularity']/ max_pop * WEIGHT_CATEGORY_FACET
+    popularity_men = row['popularity_men']/max_pop_men * WEIGHT_CATEGORY_FACET
+    query = query % (row['category_id'], category_name, row['facet_name'], row['facet_val'].strip().replace("'", "''"), popularity, popularity_men)
     Utils.mysql_write(query)
 
 
