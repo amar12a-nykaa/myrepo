@@ -273,8 +273,8 @@ def saveMappings(brand_category_mappings):
   num_brands_processed= 0
   for brand, categories in brand_category_mappings.items():
     brand = brand.replace("’", "'")
-    sorted_categories = sorted(categories.items(), key=lambda x : -x.get(Nykaa) if Nykaa in x else 0)
-    sorted_categories_men = sorted(categories.items(), key=lambda x : -x.get(Men) if Men in x else 0)
+    sorted_categories = sorted(categories.items(), key=lambda x : -x[1][Nykaa])
+    sorted_categories_men = sorted(categories.items(), key=lambda x : -x[1][Men])
     top_categories = []
     top_categories_str = ""
     top_categories_men = []
@@ -342,10 +342,10 @@ def update_brand_category_table():
   max_pop_Nykaa = 0
   max_pop_Men = 0
   for brand, catinfo in brand_cat_popularity.items():
-    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x.get(Nykaa) if Nykaa in x else 0):
+    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x[1][Nykaa]):
       max_pop_Nykaa = max(pop[Nykaa], max_pop_Nykaa)
       break
-    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x.get(Men) if Men in x else 0):
+    for category_id, pop in sorted(catinfo.items(), key=lambda x: -x[1][Men]):
       if Men in pop:
         max_pop_Men = max(pop[Men], max_pop_Men)
       break
