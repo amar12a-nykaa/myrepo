@@ -346,8 +346,7 @@ def update_brand_category_table():
       max_pop_Nykaa = max(pop[Nykaa], max_pop_Nykaa)
       break
     for category_id, pop in sorted(catinfo.items(), key=lambda x: -x[1][Men]):
-      if Men in pop:
-        max_pop_Men = max(pop[Men], max_pop_Men)
+      max_pop_Men = max(pop[Men], max_pop_Men)
       break
 
   query = "REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity, popularity_men) VALUES ('%s', '%s', '%s', '%s', %s, %s) "
@@ -355,9 +354,7 @@ def update_brand_category_table():
     for category_id, pop in catinfo.items():
       try:
         pop[Nykaa] = round(pop[Nykaa] / max_pop_Nykaa * 100, 2)
-        pop[Men] = 0
-        if Men in pop:
-          pop[Men] = round(pop[Men] / max_pop_Men * 100, 2)
+        pop[Men] = round(pop[Men] / max_pop_Men * 100, 2)
         brand_id = None
         category_name = None
         if brand in brand_name_id:
