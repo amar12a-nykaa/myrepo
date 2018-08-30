@@ -460,35 +460,50 @@ def update_category_facets_table():
           "size": 200
         },
         "aggs":{
-            "benefits_facet": { "terms": { "field": "benefits_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men" : {"filter": {"term": {"catalog_tag": "men"}},"aggs": {"popularity_sum_men": {"sum": {"field": "popularity"}}}}}},
-            "color_facet": { "terms": { "field": "color_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men": {"filter": {"term": {"catalog_tag": "men"}},"aggs": {"popularity_sum_men": {"sum": {"field": "popularity"}}}}}},
-            "concern_facet": { "terms": { "field": "concern_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men": {"filter": {"term": {"catalog_tag": "men"}},"aggs": {"popularity_sum_men": {"sum": {"field": "popularity"}}}}}},
-            "coverage_facet": { "terms": { "field": "coverage_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men": {"filter": {"term": {"catalog_tag": "men"}},"aggs": {"popularity_sum_men": {"sum": {"field": "popularity"}}}}}},
-            "discount_interval": { "range": { "field": "discount", "ranges": [ { "from": "0", "to": "10.001" }, { "from": "10" }, { "from": "20" }, { "from": "30" }, { "from": "40" } ] } },
-            "discount_stats": { "extended_stats": { "field": "discount" } },
-            "finish_facet": { "terms": { "field": "finish_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
-            "formulation_facet": { "terms": { "field": "formulation_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
-            "gender_facet": { "terms": { "field": "gender_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
-            "hair_type_facet": { "terms": { "field": "hair_type_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
-            "old_brand_facet": { "terms": { "field": "old_brand_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
-            "preference_facet": { "terms": { "field": "preference_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
-            "price_stats": { "extended_stats": { "field": "price" } },
-            "skin_tone_facet": { "terms": { "field": "skin_tone_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
-            "skin_type_facet": { "terms": { "field": "skin_type_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}},
-            "spf_facet": { "terms": { "field": "spf_facet.keyword", "size": 100 }, "aggs": { "popularity_sum": { "sum": {"field": "popularity"}},
-            "men":{"filter":{"term":{"catalog_tag":"men"}},"aggs":{"popularity_sum_men":{"sum":{"field":"popularity"}}}}}}
+          "benefits_facet": {"terms": {"field": "benefits_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "color_facet": {"terms": {"field": "color_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "concern_facet": {"terms": {"field": "concern_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "coverage_facet": {"terms": {"field": "coverage_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "discount_interval": {"range": {"field": "discount",
+                                          "ranges": [{"from": "0", "to": "10.001"}, {"from": "10"}, {"from": "20"},
+                                                     {"from": "30"}, {"from": "40"}]}},
+          "discount_stats": {"extended_stats": {"field": "discount"}},
+          "finish_facet": {"terms": {"field": "finish_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "formulation_facet": {"terms": {"field": "formulation_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "gender_facet": {"terms": {"field": "gender_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "hair_type_facet": {"terms": {"field": "hair_type_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "old_brand_facet": {"terms": {"field": "old_brand_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "preference_facet": {"terms": {"field": "preference_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "price_stats": {"extended_stats": {"field": "price"}},
+          "skin_tone_facet": {"terms": {"field": "skin_tone_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "skin_type_facet": {"terms": {"field": "skin_type_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
+          "spf_facet": {"terms": {"field": "spf_facet.keyword", "size": 100}, "aggs": {
+            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
+                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}}
         }
       }
     },
