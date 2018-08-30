@@ -528,8 +528,13 @@ def update_category_facets_table():
         if 5 < coverage_percentage < 95:
           is_good_facet = True
         name = facet_bucket['key']['name'].lower()
-        popularity = facet_bucket['popularity_sum']['value']
-        popularity_men = facet_bucket['men']['popularity_sum_men']['value']
+        popularity = 0
+        popularity_men = 0
+        for catalog in facet_bucket['catalog']['buckets']:
+          if(catalog['key'] == 'nykaa'):
+            popularity = catalog['popularity_sum']['value']
+          elif(catalog['key'] == 'men'):
+            popularity_men = catalog['popularity_sum']['value']
         max_pop = max(max_pop, popularity)
         max_pop_men = max(max_pop_men, popularity_men)
         if facet_name in BLACKLISTED_FACETS or popularity < POPULARITY_THRESHOLD:
