@@ -122,7 +122,7 @@ def update_category_table(products):
   cursor = mysql_conn.cursor()
 
   Utils.mysql_write("delete from l3_categories", connection = mysql_conn)
-  query = "REPLACE INTO l3_categories(id, name, url, men_url, category_popularity, catagory_popularity_men) VALUES (%s, %s, %s, %s, %s, %s) "
+  query = "REPLACE INTO l3_categories(id, name, url, men_url, category_popularity, category_popularity_men) VALUES (%s, %s, %s, %s, %s, %s) "
   #print("cat_id_index: %s" % cat_id_index)
   for _id, d in cat_id_index.items():
     cat_name = d.get('name')
