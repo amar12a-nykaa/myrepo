@@ -320,7 +320,7 @@ def index_brands_categories(collection, searchengine):
     docs.append({"_id": createId(row['brand'] +"_"+row['category_name']), 
         "entity": row['brand'] + " " + row['category_name'],  
         "weight": row['popularity'],
-        "weigh_men" : row['weight_men'],
+        "weight_men" : row['popularity_men'],
         "type": "brand_category",
         "data": json.dumps({"url": url, "type": "brand_category", "men_url" : men_url}),
         "brand_id": row['brand_id'],
