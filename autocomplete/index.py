@@ -245,6 +245,9 @@ def index_brands(collection, searchengine):
     ctr += 1 
     if ctr.should_print():
       print(ctr.summary)
+    is_men = False
+    if row['brand_popularity_men'] > 0:
+      is_men = True
 
     docs.append({"_id": createId(row['brand']), 
         "entity": row['brand'], 
@@ -253,6 +256,7 @@ def index_brands(collection, searchengine):
         "type": "brand",
         "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
         "id": row['brand_id'],
+        "is_men" : is_men,
         "source": "brand"
       
       })
@@ -284,6 +288,10 @@ def index_categories(collection, searchengine):
     url = "http://www.nykaa.com/search/result/?q=" + prev_cat.replace(" ", "+")
     men_url = "http://www.nykaaman.com/search/result/?q=" + prev_cat.replace(" ", "+")
 
+    is_men = False
+    if row['category_popularity_men'] > 0:
+      is_men = True
+
 #    if row['category_name'].lower() in ['concealer', 'lipstick', 'nail polish', 'eyeliner', 'kajal']:
 #      continue
     docs.append({
@@ -295,6 +303,7 @@ def index_categories(collection, searchengine):
         "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url" : category_url,
                             "men_url":men_url, "category_men_url" : category_men_url}),
         "id": row['category_id'],
+        "is_men" : is_men,
         "source": "category"
       })
     if len(docs) == 100:
@@ -315,6 +324,10 @@ def index_brands_categories(collection, searchengine):
     if ctr.should_print():
       print(ctr.summary)
 
+    is_men = False
+    if row['popularity_men'] > 0:
+      is_men = True
+
     url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['brand'] + " " + row['category_name']
     men_url = url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['brand'] + " " + row['category_name']
     docs.append({"_id": createId(row['brand'] +"_"+row['category_name']), 
@@ -326,6 +339,7 @@ def index_brands_categories(collection, searchengine):
         "brand_id": row['brand_id'],
         "category_id": row['category_id'],
         "category_name": row['category_name'],
+        "is_men" : is_men,
         "source": "brand_category"
       })
     if len(docs) >= 100:
@@ -347,6 +361,10 @@ def index_category_facets(collection, searchengine):
     if ctr.should_print():
       print(ctr.summary)
 
+    is_men = False
+    if row['popularity_men'] > 0:
+      is_men = True
+
     url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
     men_url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
     docs.append({"_id": createId(row['facet_val'] +"_"+row['category_name']), 
@@ -357,6 +375,7 @@ def index_category_facets(collection, searchengine):
         "data": json.dumps({"url": url, "type": "category_facet", "men_url" : men_url}),
         "category_id": row['category_id'],
         "category_name": row['category_name'],
+        "is_men" : is_men,
         "source": "category_facet"
       })
     if len(docs) >= 100:
@@ -455,9 +474,11 @@ def index_products(collection, searchengine):
       image_base = product['image_base']
       men_url = None
       weight_men = 0
+      is_men = False
       if 'men' in product['catalog_tag']:
         men_url = url.replace("www.nykaa.com", "www.nykaaman.com")
         weight_men = row['popularity']
+        is_men = True
       data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id, "men_url" : men_url})
       #cnt_product += 1 
       docs.append({
@@ -468,6 +489,7 @@ def index_products(collection, searchengine):
           "type": _type,
           "data": data,
           "id": parent_id,
+          "is_men" : is_men,
           "source": "product"
         })
 
