@@ -442,13 +442,10 @@ def update_brand_category_facets_table():
     Utils.mysql_write(q)
     print(q)
 
+def getAggQueryResult(facet1, facet2):
+  key1 = facet1 + ".keyword"
+  key2 = facet2 + ".keyword"
 
-def update_category_facets_table():
-  if not Utils.mysql_read("SHOW TABLES LIKE 'category_facets'"):
-    Utils.mysql_write("create table category_facets(category_id varchar(32), category_name varchar(32), facet_name varchar(20), facet_val varchar(20), popularity float)")
-  Utils.mysql_write("delete from category_facets")
-
-  
   query = {
     "aggs": {
       "categories": {
@@ -456,49 +453,11 @@ def update_category_facets_table():
           "field": "category_ids.keyword",
           "size": 200
         },
-        "aggs":{
-          "benefits_facet": {"terms": {"field": "benefits_facet.keyword", "size": 100}, "aggs": {
+        "aggs": {
+          facet1: {"terms": {"field": key1, "size": 100}, "aggs": {
             "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
                         "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "color_facet": {"terms": {"field": "color_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "concern_facet": {"terms": {"field": "concern_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "coverage_facet": {"terms": {"field": "coverage_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "discount_interval": {"range": {"field": "discount",
-                                          "ranges": [{"from": "0", "to": "10.001"}, {"from": "10"}, {"from": "20"},
-                                                     {"from": "30"}, {"from": "40"}]}},
-          "discount_stats": {"extended_stats": {"field": "discount"}},
-          "finish_facet": {"terms": {"field": "finish_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "formulation_facet": {"terms": {"field": "formulation_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "gender_facet": {"terms": {"field": "gender_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "hair_type_facet": {"terms": {"field": "hair_type_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "old_brand_facet": {"terms": {"field": "old_brand_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "preference_facet": {"terms": {"field": "preference_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "price_stats": {"extended_stats": {"field": "price"}},
-          "skin_tone_facet": {"terms": {"field": "skin_tone_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "skin_type_facet": {"terms": {"field": "skin_type_facet.keyword", "size": 100}, "aggs": {
-            "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
-                        "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}},
-          "spf_facet": {"terms": {"field": "spf_facet.keyword", "size": 100}, "aggs": {
+          facet2: {"terms": {"field": key2, "size": 100}, "aggs": {
             "catalog": {"terms": {"field": "catalog_tag.keyword", "size": 100},
                         "aggs": {"popularity_sum": {"sum": {"field": "popularity"}}}}}}
         }
@@ -506,11 +465,11 @@ def update_category_facets_table():
     },
     "size": 0
   }
-
   results = es.search(index='livecore', body=query, request_timeout=120)
-  max_pop = 0
-  max_pop_men = 0
-  arr = []
+  return results
+
+def getFacetPopularityArray(results, max_pop, max_pop_men):
+  tempArr = []
   is_good_facet = False
   for catbucket in results['aggregations']['categories']['buckets']:
     facet_names = [x for x in catbucket.keys() if '_facet' in x]
@@ -521,24 +480,59 @@ def update_category_facets_table():
       facet = catbucket[facet_name]
       for facet_bucket in facet['buckets']:
         facet_bucket['key'] = json.loads(facet_bucket['key'])
-        coverage_percentage = facet_bucket['doc_count'] / catbucket['doc_count'] * 100 
+        coverage_percentage = facet_bucket['doc_count'] / catbucket['doc_count'] * 100
         if 5 < coverage_percentage < 95:
           is_good_facet = True
         name = facet_bucket['key']['name'].lower()
         popularity = 0
         popularity_men = 0
         for catalog in facet_bucket['catalog']['buckets']:
-          if(catalog['key'] == 'nykaa'):
+          if (catalog['key'] == 'nykaa'):
             popularity = catalog['popularity_sum']['value']
-          elif(catalog['key'] == 'men'):
+          elif (catalog['key'] == 'men'):
             popularity_men = catalog['popularity_sum']['value']
         max_pop = max(max_pop, popularity)
         max_pop_men = max(max_pop_men, popularity_men)
         if facet_name in BLACKLISTED_FACETS or popularity < POPULARITY_THRESHOLD:
           is_good_facet = False
         if is_good_facet:
-          arr.append({'category_id': catbucket['key'], 'facet_name':facet_name, 'facet_val': name, 'popularity': popularity, 'popularity_men' : popularity_men})
+          tempArr.append(
+            {'category_id': catbucket['key'], 'facet_name': facet_name, 'facet_val': name, 'popularity': popularity,
+             'popularity_men': popularity_men})
+  return tempArr, max_pop, max_pop_men
 
+def update_category_facets_table():
+  if not Utils.mysql_read("SHOW TABLES LIKE 'category_facets'"):
+    Utils.mysql_write("create table category_facets(category_id varchar(32), category_name varchar(32), facet_name varchar(20), facet_val varchar(20), popularity float)")
+  Utils.mysql_write("delete from category_facets")
+
+  arr = []
+  max_pop = 0
+  max_pop_men = 0
+
+  results = getAggQueryResult("benefits_facet", "color_facet")
+  tempArr, max_pop, max_pop_men = getFacetPopularityArray(results, max_pop, max_pop_men)
+  arr.extend(tempArr)
+
+  results = getAggQueryResult("concern_facet", "coverage_facet")
+  tempArr, max_pop, max_pop_men = getFacetPopularityArray(results, max_pop, max_pop_men)
+  arr.extend(tempArr)
+
+  results = getAggQueryResult("finish_facet", "formulation_facet")
+  tempArr, max_pop, max_pop_men = getFacetPopularityArray(results, max_pop, max_pop_men)
+  arr.extend(tempArr)
+
+  results = getAggQueryResult("gender_facet", "hair_type_facet")
+  tempArr, max_pop, max_pop_men = getFacetPopularityArray(results, max_pop, max_pop_men)
+  arr.extend(tempArr)
+
+  results = getAggQueryResult("spf_facet", "preference_facet")
+  tempArr, max_pop, max_pop_men = getFacetPopularityArray(results, max_pop, max_pop_men)
+  arr.extend(tempArr)
+
+  results = getAggQueryResult("skin_tone_facet", "skin_type_facet")
+  tempArr, max_pop, max_pop_men = getFacetPopularityArray(results, max_pop, max_pop_men)
+  arr.extend(tempArr)
 
   for row in arr:
     try:
