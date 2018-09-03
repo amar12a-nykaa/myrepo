@@ -238,20 +238,25 @@ def index_brands(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
+  query = "SELECT brand_id, brand, brand_popularity, brand_popularity_men, brand_url, brand_men_url FROM brands ORDER BY brand_popularity DESC"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
     if ctr.should_print():
       print(ctr.summary)
+    is_men = False
+    if row['brand_popularity_men'] > 0:
+      is_men = True
 
     docs.append({"_id": createId(row['brand']), 
         "entity": row['brand'], 
-        "weight": row['brand_popularity'], 
+        "weight": row['brand_popularity'],
+        "weight_men" : row['brand_popularity_men'],
         "type": "brand",
-        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id']}),
+        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
         "id": row['brand_id'],
+        "is_men" : is_men,
         "source": "brand"
       
       })
@@ -265,7 +270,7 @@ def index_categories(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories_clean order by name, category_popularity desc"
+  query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, category_popularity_men FROM l3_categories_clean order by name, category_popularity desc"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   prev_cat = None
@@ -279,7 +284,13 @@ def index_categories(collection, searchengine):
     prev_cat = row['category_name']
 
     category_url = row['url']
+    category_men_url = row['men_url']
     url = "http://www.nykaa.com/search/result/?q=" + prev_cat.replace(" ", "+")
+    men_url = "http://www.nykaaman.com/search/result/?q=" + prev_cat.replace(" ", "+")
+
+    is_men = False
+    if row['category_popularity_men'] > 0:
+      is_men = True
 
 #    if row['category_name'].lower() in ['concealer', 'lipstick', 'nail polish', 'eyeliner', 'kajal']:
 #      continue
@@ -287,9 +298,12 @@ def index_categories(collection, searchengine):
         "_id": createId(row['category_name']),
         "entity": row['category_name'],
         "weight": row['category_popularity'],
+        "weight_men" : row['category_popularity_men'],
         "type": "category",
-        "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url" : category_url}),
+        "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url" : category_url,
+                            "men_url":men_url, "category_men_url" : category_men_url}),
         "id": row['category_id'],
+        "is_men" : is_men,
         "source": "category"
       })
     if len(docs) == 100:
@@ -302,7 +316,7 @@ def index_brands_categories(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT brand_id, brand, category_name, category_id, popularity FROM brand_category"
+  query = "SELECT brand_id, brand, category_name, category_id, popularity, popularity_men FROM brand_category"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
   for row in results:
@@ -310,17 +324,23 @@ def index_brands_categories(collection, searchengine):
     if ctr.should_print():
       print(ctr.summary)
 
+    is_men = False
+    if row['popularity_men'] > 0:
+      is_men = True
+
     url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['brand'] + " " + row['category_name']
+    men_url = url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['brand'] + " " + row['category_name']
     docs.append({"_id": createId(row['brand'] +"_"+row['category_name']), 
         "entity": row['brand'] + " " + row['category_name'],  
-        "weight": row['popularity'], 
+        "weight": row['popularity'],
+        "weight_men" : row['popularity_men'],
         "type": "brand_category",
-        "data": json.dumps({"url": url, "type": "brand_category" }),
+        "data": json.dumps({"url": url, "type": "brand_category", "men_url" : men_url}),
         "brand_id": row['brand_id'],
         "category_id": row['category_id'],
         "category_name": row['category_name'],
+        "is_men" : is_men,
         "source": "brand_category"
-      
       })
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
@@ -333,7 +353,7 @@ def index_category_facets(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT category_name, category_id, facet_val, popularity FROM category_facets"
+  query = "SELECT category_name, category_id, facet_val, popularity, popularity_men FROM category_facets"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Facet Indexing - ' + searchengine)
   for row in results:
@@ -341,16 +361,22 @@ def index_category_facets(collection, searchengine):
     if ctr.should_print():
       print(ctr.summary)
 
+    is_men = False
+    if row['popularity_men'] > 0:
+      is_men = True
+
     url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
+    men_url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
     docs.append({"_id": createId(row['facet_val'] +"_"+row['category_name']), 
         "entity": row['facet_val'] + " " + row['category_name'],  
-        "weight": row['popularity'], 
+        "weight": row['popularity'],
+        "weight_men" : row['popularity_men'],
         "type": "category_facet",
-        "data": json.dumps({"url": url, "type": "category_facet" }),
+        "data": json.dumps({"url": url, "type": "category_facet", "men_url" : men_url}),
         "category_id": row['category_id'],
         "category_name": row['category_name'],
+        "is_men" : is_men,
         "source": "category_facet"
-      
       })
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
@@ -446,16 +472,24 @@ def index_products(collection, searchengine):
       url = product['product_url']
       image = product['image']
       image_base = product['image_base']
-
-      data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id})
+      men_url = None
+      weight_men = 0
+      is_men = False
+      if 'men' in product['catalog_tag']:
+        men_url = url.replace("www.nykaa.com", "www.nykaaman.com")
+        weight_men = row['popularity']
+        is_men = True
+      data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id, "men_url" : men_url})
       #cnt_product += 1 
       docs.append({
           "_id": createId(product['title']),
           "entity": product['title'], 
-          "weight": row['popularity'], 
+          "weight": row['popularity'],
+          "weight_men" : weight_men,
           "type": _type,
           "data": data,
           "id": parent_id,
+          "is_men" : is_men,
           "source": "product"
         })
 
@@ -518,7 +552,7 @@ def fetch_product_by_parentids(parent_ids):
               ]
           }
         },
-      "_source":["product_id", "title","score", "media", "product_url", "price", "type", "parent_id"]
+      "_source":["product_id", "title","score", "media", "product_url", "price", "type", "parent_id", "catalog_tag"]
     }
     queries.append("{}")
     queries.append(json.dumps(query))
@@ -550,7 +584,7 @@ def fetch_product_by_parentids(parent_ids):
 
       doc['image'] = image 
       doc['image_base'] = image_base 
-      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'parent_id']}
+      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'parent_id', 'catalog_tag']}
       final_docs[doc['parent_id']] = doc
   return final_docs
 
