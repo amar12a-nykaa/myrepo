@@ -21,7 +21,7 @@ max_discount = 50
 DAILY_CATEGORY_LIMIT = 5
 DAILY_BRAND_LIMIT = 3
 DAILY_CATEGORY_BRAND_LIMIT = 1
-WEEKLY_CATEGORY_LIMIT = 15
+WEEKLY_CATEGORY_LIMIT = 30
 WEEKLY_BRAND_LIMIT = 9
 MAX_INT = 100000000
 
@@ -434,6 +434,7 @@ if __name__ == '__main__':
           row[key] = value
         docs.append(row)
   new_docs=  sorted(docs, key=lambda x: float(x.get('discount', 0)), reverse=True)
+  print (len(new_docs))
   new_docs = get_final_eligible_product_list(new_docs, dt)
 
   #csv_data  = []
@@ -448,6 +449,7 @@ if __name__ == '__main__':
   #with myfile:
   #  writer = csv.writer(myfile)
   #  writer.writerows(csv_data)
+  print (len(new_docs))
   if len(new_docs) < 20:
     print("Selected product are not sufficient, Please check")  
   for counter, doc in enumerate(new_docs[:30]):
