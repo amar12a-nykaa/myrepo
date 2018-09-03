@@ -1,0 +1,87 @@
+{
+  "settings": {
+
+        "analysis": {
+          "filter": {
+            "shingle_filter": {
+              "output_unigrams": "false",
+              "token_separator": "",
+              "type": "shingle"
+            },
+            "my_stemming": {
+              "type": "stemmer",
+              "language": "minimal_english"
+            }
+          },
+          "analyzer": {
+            "default_search": {
+              "filter": [
+                "lowercase",
+                "my_stemming",
+                "asciifolding"
+              ],
+              "tokenizer": "whitespace"
+            },
+            "shingle_analyzer": {
+              "filter": [
+                "lowercase",
+                "my_stemming",
+                "asciifolding",
+                "shingle_filter"
+              ],
+              "tokenizer": "whitespace"
+            },
+            "default": {
+              "filter": [
+                "lowercase",
+                "my_stemming",
+                "asciifolding"
+              ],
+              "tokenizer": "whitespace"
+            }
+          }
+        }
+    
+  },
+  "mappings": {
+
+      "entity": {
+        "properties": {
+          "entity": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              },
+              "shingle": {
+                "type": "text",
+                "analyzer": "shingle_analyzer",
+                "search_analyzer": "default_search"
+              },
+              "shingle_search": {
+                "type": "text",
+                "analyzer": "default",
+                "search_analyzer": "shingle_analyzer"
+              }
+            },
+            "analyzer": "default",
+            "search_analyzer": "default_search"
+          },
+          "entity_synonyms" : {
+             "type": "keyword"
+          },
+          "id": {
+            "type": "keyword"
+          },
+          "type": {
+            "type": "keyword"
+          },
+          "weight": {
+            "type": "float"
+          }
+        }
+      }
+    
+  }
+}
