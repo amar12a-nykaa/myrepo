@@ -61,7 +61,8 @@ def build_product_popularity_index():
 
 def get_category_details():
   global cat_id_index
-
+  global nykaa_analytics_db_conn
+  global nykaa_replica_db_conn
   #Category id - name mapping
   query = "SELECT DISTINCT l4, l4_id FROM analytics.sku_l4;"
   results = Utils.fetchResults(nykaa_analytics_db_conn, query)
@@ -128,6 +129,8 @@ def getProducts():
   products = []
   global brand_name_id
   global brand_name_name
+  global nykaa_analytics_db_conn
+  global nykaa_replica_db_conn
 
   #Brand id - name mapping
   query = """
@@ -268,7 +271,7 @@ def saveMappings(brand_category_mappings):
       num_brands_skipped += 1; 
       continue
 
-    values = (brand_name_name[brand], brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'], brand_popularity[brand], top_categories_str, brand_name_id[brand]['brand_url'])
+    values = (brand_name_name[brand].replace("'", "''"), brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'], brand_popularity[brand], top_categories_str, brand_name_id[brand]['brand_url'])
     cursor.execute(query, values)
     mysql_conn.commit()
     num_brands_processed += 1
@@ -367,7 +370,7 @@ def update_brand_category_facets_table():
       #print(facet, popularity)
       #print(query)
       max_pop = max(max_pop, popularity)
-      arr.append((brand, brand_id, category_id, category_name, facet, popularity))
+      arr.append((brand.replace("'", "''"), brand_id, category_id, category_name.replace("'", "''"), facet, popularity))
   
   print("Writing into mysql .. ")
   query = "REPLACE INTO brand_category_facets (brand, brand_id, category_id, category_name, facet, popularity) VALUES ('%s', '%s', '%s', '%s', '%s', %s) "
