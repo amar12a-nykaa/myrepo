@@ -32,13 +32,6 @@ brand_cat_popularity = defaultdict(lambda : defaultdict(lambda : defaultdict(flo
 NYKAA = "nykaa"
 MEN = "men"
 
-## MySQL Connections
-host = "nykaa-analytics.nyk00-int.network"
-user = "analytics"
-password = "P1u8Sxh7kNr"
-db = "analytics" 
-nykaa_analytics_db_conn = mysql.connector.connect(host=host, user=user, password=password, database=db)
-
 #Connection to 'read-replica' host
 nykaa_replica_db_conn = Utils.nykaaMysqlConnection(force_production=True)
 
@@ -65,8 +58,10 @@ def build_product_popularity_index():
 
 def get_category_details():
   global cat_id_index
-  global nykaa_analytics_db_conn
   global nykaa_replica_db_conn
+
+  nykaa_analytics_db_conn = mysql.connector.connect(host='nykaa-analytics.nyk00-int.network', user='analytics',
+                                                    password='P1u8Sxh7kNr', database='analytics')
   #Category id - name mapping
   query = "SELECT DISTINCT l4, l4_id FROM analytics.sku_l4;"
   results = Utils.fetchResults(nykaa_analytics_db_conn, query)
@@ -86,7 +81,7 @@ def get_category_details():
     if _id in cat_id_index:
       cat_id_index[_id]['url'] = url
       cat_id_index[_id]['men_url'] = men_url
-
+  nykaa_analytics_db_conn.close()
 
 def update_category_table(products):
   """
@@ -145,8 +140,10 @@ def getProducts():
   products = []
   global brand_name_id
   global brand_name_name
-  global nykaa_analytics_db_conn
   global nykaa_replica_db_conn
+
+  nykaa_analytics_db_conn = mysql.connector.connect(host='nykaa-analytics.nyk00-int.network', user='analytics',
+                                                    password='P1u8Sxh7kNr', database='analytics')
 
   #Brand id - name mapping
   query = """
@@ -205,6 +202,7 @@ def getProducts():
     products.append(row)
 
   print("# products found: %s" % len(products))
+  nykaa_analytics_db_conn.close()
   return products
 
 
