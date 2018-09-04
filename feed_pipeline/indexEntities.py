@@ -34,7 +34,11 @@ class EntityIndexer:
   def index_brands(collection):
     docs = []
   
-    synonyms = {'The Body Shop' : ['Body Shop']}
+    synonyms = {
+      'The Body Shop' : ['Body Shop'],
+      "The Face Shop": ["Face Shop"],
+      "The Body Care": ["Body Care"],
+    }
     mysql_conn = Utils.mysqlConnection()
     query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
     results = Utils.fetchResults(mysql_conn, query)
