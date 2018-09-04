@@ -33,7 +33,8 @@ class EntityIndexer:
 
   def index_brands(collection):
     docs = []
-
+  
+    synonyms = {'The Body Shop' : ['Body Shop']}
     mysql_conn = Utils.mysqlConnection()
     query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
     results = Utils.fetchResults(mysql_conn, query)
@@ -43,13 +44,18 @@ class EntityIndexer:
       if ctr.should_print():
         print(ctr.summary)
 
-      docs.append({
+      brand_doc = {
         "_id": createId(row['brand']), 
         "entity": row['brand'], 
         "weight": row['brand_popularity'], 
         "type": "brand",
         "id": row['brand_id']
-      })
+      }
+
+      if row['brand'] in synonyms:
+        brand_doc["entity_synonyms"] = synonyms[row['brand']]
+ 
+      docs.append(brand_doc)
       if len(docs) >= 100:
         EsUtils.indexDocs(docs, collection)
         docs = []
