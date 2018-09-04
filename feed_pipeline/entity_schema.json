@@ -70,6 +70,7 @@
           },
           "entity_synonyms" : {
              "type": "text"
+
           },
           "id": {
             "type": "keyword"

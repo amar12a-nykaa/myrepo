@@ -5,8 +5,6 @@ import pprint
 import socket
 import sys
 import traceback
-import ast
-from operator import itemgetter
 from collections import OrderedDict
 from datetime import datetime
 from urllib.parse import urlparse
@@ -109,16 +107,6 @@ class CatalogIndexer:
 
     return cat_facet_attrs
 
-  def getOffersApiConfig():
-    mysql_conn = Utils.nykaaMysqlConnection()
-    query = "SELECT plain_value FROM core_variable_value cvv JOIN core_variable cv ON cv.variable_id = cvv.variable_id WHERE code = 'offers-api-config';"
-    results = Utils.fetchResults(mysql_conn, query)
-    for key, config_value in enumerate(results):
-      if config_value['plain_value']:
-        offers_api_config = json.loads(config_value['plain_value'])
-        offers_api_config['product_ids'] = offers_api_config['product_ids'].split(',')
-    return offers_api_config
-
   def fetch_price_availability(input_docs, pws_fetch_products):
     request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
     request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
@@ -211,7 +199,7 @@ class CatalogIndexer:
     skus = skus or []
     if skus:
       print("Running catalog pipeline for selected skus: %s" % skus) 
-    # validate_popularity_data_health()
+    validate_popularity_data_health()
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
     'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
@@ -219,8 +207,7 @@ class CatalogIndexer:
     'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern', 'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
     'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
     'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
-    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1',
-    'beauty_partner', 'primary_categories', 'offers']
+    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1', 'beauty_partner', 'is_kit_combo', 'primary_categories']
 
 
     all_rows = read_csv_from_file(file_path)
@@ -235,8 +222,7 @@ class CatalogIndexer:
     pws_fetch_products = []
 
     categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
-    offersApiConfig = CatalogIndexer.getOffersApiConfig()
-    
+
     ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
     for index, row in enumerate(all_rows):
       if limit and ctr.count == limit:
@@ -457,15 +443,19 @@ class CatalogIndexer:
           variant_names = (row[variant_name_key] or "").split('|') if variant_name_key and row[variant_name_key] else []
           variant_icons = (row[variant_icon_key] or "").split('|') if variant_icon_key and row[variant_icon_key] else []
           variant_attr_ids = (row[variant_attr_id_key] or "").split('|') if variant_attr_id_key and row[variant_attr_id_key] else []
-          if variant_type and variant_skus and len(variant_skus)==len(variant_names) and len(variant_skus)==len(variant_ids) and len(variant_skus)==len(variant_attr_ids):
-            if variant_icons and len(variant_icons) != len(variant_skus):
-              variant_icons = []
-            variants_arr = []
-            if not variant_icons:
-              variant_icons = [""]*len(variant_skus)
-            for i, sku in enumerate(variant_skus):
-              variants_arr.append({'sku': variant_skus[i], 'id': variant_ids[i], 'name': variant_names[i], 'icon': variant_icons[i], 'variant_id': variant_attr_ids[i]})
-            doc['variants'] = {variant_type: variants_arr}
+          try:  
+            if variant_type and variant_skus and len(variant_skus)==len(variant_names) and len(variant_skus)==len(variant_ids) and len(variant_skus)==len(variant_attr_ids):
+              if variant_icons and len(variant_icons) != len(variant_skus):
+                variant_icons = []
+              variants_arr = []
+              if not variant_icons:
+                variant_icons = [""]*len(variant_skus)
+              for i, sku in enumerate(variant_skus):
+                variants_arr.append({'sku': variant_skus[i], 'id': variant_ids[i], 'name': variant_names[i], 'icon': variant_icons[i], 'variant_id': variant_attr_ids[i]})
+              doc['variants'] = {variant_type: variants_arr}
+          except:
+            print("[ERROR] variants field not formed for SKU: %s" % doc['sku']) 
+            pass   
           doc['variant_type'] = variant_type
           doc['option_count'] = len(variant_skus)
         elif doc['type'] == 'simple':
@@ -516,64 +506,6 @@ class CatalogIndexer:
           #  f.write("%s\n"%doc['sku'])
           #print('inconsistent offer values for %s'%doc['sku'])
         doc['offer_count'] = len(doc['offers'])
-        doc['offer_count'] = len(doc['offers'])
-        # print(doc['offers'])
-
-        if offersApiConfig and offersApiConfig['status']:
-          if offersApiConfig['status'] == 1 and offersApiConfig['product_ids'] and len(offersApiConfig['product_ids']) > 0:
-            if doc['product_id'] in offersApiConfig['product_ids']:
-              new_offer_status = 1
-          elif offersApiConfig['status'] == 2:
-            new_offer_status = 1
-          else:
-            new_offer_status = 0
-        else:
-          new_offer_status = 0
-
-        if new_offer_status == 1:
-          # New offer Json
-          doc['offers'] = []
-          doc['offer_ids'] = []
-          doc['offer_facet'] = []
-          doc['nykaaman_offers'] = []
-          doc['nykaaman_offer_ids'] = []
-          doc['nykaaman_offer_facet'] = []
-
-          try:
-            if row['offers']:
-              product_offers = row['offers'].replace("\\\\","\\")
-              product = {}
-              product['offers'] = ast.literal_eval(product_offers)
-              for i in product['offers']:
-                prefix = i
-                if product['offers'][prefix]:
-                  for i in product['offers'][prefix]:
-                    if prefix == 'nykaa':
-                      key = 'offer_facet'
-                    else:
-                      key = prefix+'_offer_facet'
-                    doc['key'] = []
-                    key = OrderedDict()
-                    key['id'] = i['id']
-                    key['name'] = i['name']
-                    key['offer_start_date'] = i['offer_start_date']
-                    key['offer_end_date'] = i['offer_end_date']
-                    doc['key'].append(key)
-                    if prefix == 'nykaa':
-                      doc['offer_ids'].append(i['id'])
-                    else:
-                      doc[prefix+'_offer_ids'].append(i['id'])
-
-                  product['offers'][prefix] = sorted(product['offers'][prefix], key=itemgetter('priority'), reverse=True)
-                  if prefix == 'nykaa':
-                    doc['offers'] = product['offers'][prefix]
-                  else:
-                    doc[prefix+'_offers'] = product['offers'][prefix]
-          except Exception as e:
-            print(traceback.format_exc())
-
-          doc['offer_count'] = len(doc['offers'])
-          doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
 
         # facets: dynamic fields
         facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1")]
