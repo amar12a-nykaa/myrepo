@@ -254,6 +254,7 @@ def calculate_popularity():
   a.popularity_recent = a.popularity_recent.fillna(0)
   a['popularity'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
   a.popularity= a.popularity.fillna(0)
+  a.popularity_recent = a.popularity_recent.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
   for i, row in a.iterrows():
@@ -274,6 +275,7 @@ def calculate_popularity():
     row['last_calculated'] = timestamp
     row['popularity_multiplier_factor'] =  popularity_multiplier_factor
     row['popularity'] = row['popularity']* float(popularity_multiplier_factor)
+    row['popularity_recent'] = row['popularity_recent']* float(popularity_multiplier_factor)
 
     if row.get('parent_id'):
       popularity_table.replace_one({"_id": row['parent_id'], "parent_id": row['parent_id']}, row, upsert=True)
