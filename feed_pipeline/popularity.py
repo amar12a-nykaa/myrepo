@@ -273,7 +273,7 @@ def calculate_popularity():
     #row = {k:v for k,v in row.items() if k in ['cart_additions', 'last_calculated', 'orders', 'parent_id', 'popularity', 'revenue', 'units', 'views']}
     row['last_calculated'] = timestamp
     row['popularity_multiplier_factor'] =  popularity_multiplier_factor
-    row['popularity_in_stock'] = row['popularity']* float(popularity_multiplier_factor)
+    row['popularity'] = row['popularity']* float(popularity_multiplier_factor)
 
     if row.get('parent_id'):
       popularity_table.replace_one({"_id": row['parent_id'], "parent_id": row['parent_id']}, row, upsert=True)
