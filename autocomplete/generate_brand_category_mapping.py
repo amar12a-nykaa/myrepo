@@ -321,7 +321,6 @@ def saveMappings(brand_category_mappings):
       num_brands_skipped += 1; 
       continue
 
-
     values = (brand_name_name[brand].replace("'", "''"), brand_name_id[brand]['brand_id'], brand_name_id[brand]['brands_v1'],
               brand_popularity[brand][NYKAA], brand_popularity[brand][MEN], top_categories_str, top_categories_men_str,
               brand_name_id[brand]['brand_url'], brand_name_id[brand]['brand_men_url'])

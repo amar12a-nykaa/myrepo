@@ -68,6 +68,9 @@
             "analyzer": "default",
             "search_analyzer": "default_search"
           },
+          "entity_synonyms" : {
+             "type": "keyword"
+          },
           "id": {
             "type": "keyword"
           },
