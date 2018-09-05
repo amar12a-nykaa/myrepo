@@ -522,7 +522,7 @@ class CatalogIndexer:
         doc['offer_count'] = len(doc['offers'])
         doc['offer_count'] = len(doc['offers'])
         # print(doc['offers'])
-
+        new_offer_status = 0
         if offersApiConfig and offersApiConfig['status']:
           if offersApiConfig['status'] == 1 and offersApiConfig['product_ids'] and len(offersApiConfig['product_ids']) > 0:
             if doc['product_id'] in offersApiConfig['product_ids']:
