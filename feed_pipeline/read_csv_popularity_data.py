@@ -11,6 +11,8 @@ import csv
 from pymongo import MongoClient
 from IPython import embed
 
+import boto3
+
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 
