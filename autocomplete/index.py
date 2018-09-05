@@ -476,7 +476,7 @@ def index_products(collection, searchengine):
       weight_men = 0
       is_men = False
       if 'men' in product['catalog_tag']:
-        men_url = url.replace("www.nykaa.com", "www.nykaaman.com")
+        men_url = url.replace(".nykaa.com", ".nykaaman.com")
         weight_men = row['popularity']
         is_men = True
       data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id, "men_url" : men_url})
