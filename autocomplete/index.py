@@ -329,7 +329,7 @@ def index_brands_categories(collection, searchengine):
       is_men = True
 
     url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['brand'] + " " + row['category_name']
-    men_url = url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['brand'] + " " + row['category_name']
+    men_url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['brand'] + " " + row['category_name']
     docs.append({"_id": createId(row['brand'] +"_"+row['category_name']), 
         "entity": row['brand'] + " " + row['category_name'],  
         "weight": row['popularity'],
