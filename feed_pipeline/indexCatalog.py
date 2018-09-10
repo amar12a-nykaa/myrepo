@@ -310,12 +310,12 @@ class CatalogIndexer:
         popularity_obj = popularity_obj.get(doc['product_id'])
         doc['popularity'] = 0 
         doc['viewcount_i'] = 0
-        doc['popularity_in_stock'] = 0
+        doc['popularity_recent'] = 0
         if popularity_obj:
           doc['popularity'] = popularity_obj['popularity']
           #View based Popularity
           doc['viewcount_i'] = popularity_obj.get('views', 0)
-          doc['popularity_in_stock'] = popularity_obj.get('popularity_in_stock', 0)
+          doc['popularity_recent'] = popularity_obj.get('popularity_recent',0)
             
         # Product URL and slug
         product_url = row['product_url']
@@ -443,15 +443,19 @@ class CatalogIndexer:
           variant_names = (row[variant_name_key] or "").split('|') if variant_name_key and row[variant_name_key] else []
           variant_icons = (row[variant_icon_key] or "").split('|') if variant_icon_key and row[variant_icon_key] else []
           variant_attr_ids = (row[variant_attr_id_key] or "").split('|') if variant_attr_id_key and row[variant_attr_id_key] else []
-          if variant_type and variant_skus and len(variant_skus)==len(variant_names) and len(variant_skus)==len(variant_ids) and len(variant_skus)==len(variant_attr_ids):
-            if variant_icons and len(variant_icons) != len(variant_skus):
-              variant_icons = []
-            variants_arr = []
-            if not variant_icons:
-              variant_icons = [""]*len(variant_skus)
-            for i, sku in enumerate(variant_skus):
-              variants_arr.append({'sku': variant_skus[i], 'id': variant_ids[i], 'name': variant_names[i], 'icon': variant_icons[i], 'variant_id': variant_attr_ids[i]})
-            doc['variants'] = {variant_type: variants_arr}
+          try:  
+            if variant_type and variant_skus and len(variant_skus)==len(variant_names) and len(variant_skus)==len(variant_ids) and len(variant_skus)==len(variant_attr_ids):
+              if variant_icons and len(variant_icons) != len(variant_skus):
+                variant_icons = []
+              variants_arr = []
+              if not variant_icons:
+                variant_icons = [""]*len(variant_skus)
+              for i, sku in enumerate(variant_skus):
+                variants_arr.append({'sku': variant_skus[i], 'id': variant_ids[i], 'name': variant_names[i], 'icon': variant_icons[i], 'variant_id': variant_attr_ids[i]})
+              doc['variants'] = {variant_type: variants_arr}
+          except:
+            print("[ERROR] variants field not formed for SKU: %s" % doc['sku']) 
+            pass   
           doc['variant_type'] = variant_type
           doc['option_count'] = len(variant_skus)
         elif doc['type'] == 'simple':
@@ -565,11 +569,16 @@ class CatalogIndexer:
           if not v and v!= False:
             doc[k] = None
 
-
         try:
           doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""), doc.get("brand_facet_searchable", ""), doc.get("category_facet_searchable", "")] if x])
         except:
           pass
+        
+        for facet in ['color_facet', 'finish_facet', 'formulation_facet']:
+          try:
+            doc['title_brand_category'] += " " + doc[facet][0]['name']
+          except:
+            pass
 
         if search_engine == 'elasticsearch':
           CatalogIndexer.formatESDoc(doc)
