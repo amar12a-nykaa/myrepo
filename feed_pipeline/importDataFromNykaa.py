@@ -143,15 +143,15 @@ class NykaaImporter:
   def importOfferAttributes():
     # Import offer attributes: featured_products and app_sorting
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
-    query = "SELECT entity_id AS offer_id, app_sorting, custom_sort, filter_params, filter_values FROM `nykaa_offers`"
+    query = "SELECT entity_id AS offer_id, name, app_sorting, custom_sort, filter_params, filter_values FROM `nykaa_offers`"
     results = Utils.fetchResults(nykaa_mysql_conn, query)
     count = 0
     for item in results:
       try:
         # Write to PWS DB
-        query = """INSERT INTO offer_information (id, sorting, featured_products, filter_params, filter_values) VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE 
-                   sorting=VALUES(sorting), featured_products=VALUES(featured_products), filter_params=VALUES(filter_params), filter_values=VALUES(filter_values)"""
-        NykaaImporter.pws_cursor.execute(query, (item['offer_id'], item['app_sorting'], item['custom_sort'], item['filter_params'], item['filter_values'])
+        query = """INSERT INTO offer_information (id, name, sorting, featured_products, filter_params, filter_values) VALUES (%s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE 
+                   name=VALUES(name), sorting=VALUES(sorting), featured_products=VALUES(featured_products), filter_params=VALUES(filter_params), filter_values=VALUES(filter_values)"""
+        NykaaImporter.pws_cursor.execute(query, (item['offer_id'], item['name'], item['app_sorting'], item['custom_sort'], item['filter_params'], item['filter_values'])
         NykaaImporter.pws_mysql_conn.commit()
         count += 1
 
