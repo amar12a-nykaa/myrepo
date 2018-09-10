@@ -113,6 +113,7 @@ class CatalogIndexer:
     mysql_conn = Utils.nykaaMysqlConnection()
     query = "SELECT plain_value FROM core_variable_value cvv JOIN core_variable cv ON cv.variable_id = cvv.variable_id WHERE code = 'offers-api-config';"
     results = Utils.fetchResults(mysql_conn, query)
+    offers_api_config = None
     for key, config_value in enumerate(results):
       if config_value['plain_value']:
         offers_api_config = json.loads(config_value['plain_value'])
