@@ -310,12 +310,12 @@ class CatalogIndexer:
         popularity_obj = popularity_obj.get(doc['product_id'])
         doc['popularity'] = 0 
         doc['viewcount_i'] = 0
-        doc['popularity_in_stock'] = 0
+        doc['popularity_recent'] = 0
         if popularity_obj:
           doc['popularity'] = popularity_obj['popularity']
           #View based Popularity
           doc['viewcount_i'] = popularity_obj.get('views', 0)
-          doc['popularity_in_stock'] = popularity_obj.get('popularity_in_stock', 0)
+          doc['popularity_recent'] = popularity_obj.get('popularity_recent',0)
             
         # Product URL and slug
         product_url = row['product_url']
@@ -569,11 +569,16 @@ class CatalogIndexer:
           if not v and v!= False:
             doc[k] = None
 
-
         try:
           doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""), doc.get("brand_facet_searchable", ""), doc.get("category_facet_searchable", "")] if x])
         except:
           pass
+        
+        for facet in ['color_facet', 'finish_facet', 'formulation_facet']:
+          try:
+            doc['title_brand_category'] += " " + doc[facet][0]['name']
+          except:
+            pass
 
         if search_engine == 'elasticsearch':
           CatalogIndexer.formatESDoc(doc)

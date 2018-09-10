@@ -69,7 +69,7 @@
             "search_analyzer": "default_search"
           },
           "entity_synonyms" : {
-             "type": "keyword"
+             "type": "text"
           },
           "id": {
             "type": "keyword"
