@@ -151,7 +151,7 @@ class NykaaImporter:
         # Write to PWS DB
         query = """INSERT INTO offer_information (id, name, sorting, featured_products, filter_params, filter_values) VALUES (%s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE 
                    name=VALUES(name), sorting=VALUES(sorting), featured_products=VALUES(featured_products), filter_params=VALUES(filter_params), filter_values=VALUES(filter_values)"""
-        NykaaImporter.pws_cursor.execute(query, (item['offer_id'], item['name'], item['app_sorting'], item['custom_sort'], item['filter_params'], item['filter_values'])
+        NykaaImporter.pws_cursor.execute(query, (item['offer_id'], item['name'], item['app_sorting'], item['custom_sort'], item['filter_params'], item['filter_values']))
         NykaaImporter.pws_mysql_conn.commit()
         count += 1
 
