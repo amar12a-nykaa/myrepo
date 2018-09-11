@@ -29,7 +29,7 @@ for date in recent_missing_dates:
 
 
 if recent_missing_dates :
-  cmd="/usr/bin/python /nykaa/scripts/normalize_searches_daily.py" 
+  cmd="/usr/bin/python /nykaa/scripts/autocomplete/pipeline.py"
   print(cmd)
   os.system(cmd)
 else:
