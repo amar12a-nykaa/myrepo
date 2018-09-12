@@ -212,7 +212,7 @@ class CatalogIndexer:
     skus = skus or []
     if skus:
       print("Running catalog pipeline for selected skus: %s" % skus) 
-    # validate_popularity_data_health()
+    validate_popularity_data_health()
 
     required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
     'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
