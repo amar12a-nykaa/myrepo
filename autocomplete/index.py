@@ -51,7 +51,7 @@ MIN_COUNTS = {
   "category": 200,
   "brand_category": 10000,
   "search_query": 40000,
-  "category_facet": 900,
+  "category_facet": 600,
 }
 Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
@@ -238,20 +238,25 @@ def index_brands(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
+  query = "SELECT brand_id, brand, brand_popularity, brand_popularity_men, brand_url, brand_men_url FROM brands ORDER BY brand_popularity DESC"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
     if ctr.should_print():
       print(ctr.summary)
+    is_men = False
+    if row['brand_popularity_men'] > 0:
+      is_men = True
 
     docs.append({"_id": createId(row['brand']), 
         "entity": row['brand'], 
-        "weight": row['brand_popularity'], 
+        "weight": row['brand_popularity'],
+        "weight_men" : row['brand_popularity_men'],
         "type": "brand",
-        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id']}),
+        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
         "id": row['brand_id'],
+        "is_men" : is_men,
         "source": "brand"
       
       })
@@ -265,7 +270,7 @@ def index_categories(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories_clean order by name, category_popularity desc"
+  query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, category_popularity_men FROM l3_categories_clean order by name, category_popularity desc"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   prev_cat = None
@@ -278,15 +283,27 @@ def index_categories(collection, searchengine):
       continue
     prev_cat = row['category_name']
 
+    category_url = row['url']
+    category_men_url = row['men_url']
+    url = "http://www.nykaa.com/search/result/?q=" + prev_cat.replace(" ", "+")
+    men_url = "http://www.nykaaman.com/search/result/?q=" + prev_cat.replace(" ", "+")
+
+    is_men = False
+    if row['category_popularity_men'] > 0:
+      is_men = True
+
 #    if row['category_name'].lower() in ['concealer', 'lipstick', 'nail polish', 'eyeliner', 'kajal']:
 #      continue
     docs.append({
         "_id": createId(row['category_name']),
         "entity": row['category_name'],
         "weight": row['category_popularity'],
+        "weight_men" : row['category_popularity_men'],
         "type": "category",
-        "data": json.dumps({"url": row['url'], "type": "category", "id": row['category_id']}),
+        "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url" : category_url,
+                            "men_url":men_url, "category_men_url" : category_men_url}),
         "id": row['category_id'],
+        "is_men" : is_men,
         "source": "category"
       })
     if len(docs) == 100:
@@ -299,7 +316,7 @@ def index_brands_categories(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT brand_id, brand, category_name, category_id, popularity FROM brand_category"
+  query = "SELECT brand_id, brand, category_name, category_id, popularity, popularity_men FROM brand_category"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
   for row in results:
@@ -307,17 +324,23 @@ def index_brands_categories(collection, searchengine):
     if ctr.should_print():
       print(ctr.summary)
 
+    is_men = False
+    if row['popularity_men'] > 0:
+      is_men = True
+
     url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['brand'] + " " + row['category_name']
+    men_url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['brand'] + " " + row['category_name']
     docs.append({"_id": createId(row['brand'] +"_"+row['category_name']), 
         "entity": row['brand'] + " " + row['category_name'],  
-        "weight": row['popularity'], 
+        "weight": row['popularity'],
+        "weight_men" : row['popularity_men'],
         "type": "brand_category",
-        "data": json.dumps({"url": url, "type": "brand_category" }),
+        "data": json.dumps({"url": url, "type": "brand_category", "men_url" : men_url}),
         "brand_id": row['brand_id'],
         "category_id": row['category_id'],
         "category_name": row['category_name'],
+        "is_men" : is_men,
         "source": "brand_category"
-      
       })
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
@@ -330,7 +353,7 @@ def index_category_facets(collection, searchengine):
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
-  query = "SELECT category_name, category_id, facet_val, popularity FROM category_facets"
+  query = "SELECT category_name, category_id, facet_val, popularity, popularity_men FROM category_facets"
   results = Utils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Facet Indexing - ' + searchengine)
   for row in results:
@@ -338,16 +361,22 @@ def index_category_facets(collection, searchengine):
     if ctr.should_print():
       print(ctr.summary)
 
+    is_men = False
+    if row['popularity_men'] > 0:
+      is_men = True
+
     url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
+    men_url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
     docs.append({"_id": createId(row['facet_val'] +"_"+row['category_name']), 
         "entity": row['facet_val'] + " " + row['category_name'],  
-        "weight": row['popularity'], 
+        "weight": row['popularity'],
+        "weight_men" : row['popularity_men'],
         "type": "category_facet",
-        "data": json.dumps({"url": url, "type": "category_facet" }),
+        "data": json.dumps({"url": url, "type": "category_facet", "men_url" : men_url}),
         "category_id": row['category_id'],
         "category_name": row['category_name'],
+        "is_men" : is_men,
         "source": "category_facet"
-      
       })
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
@@ -358,8 +387,8 @@ def index_category_facets(collection, searchengine):
   index_docs(searchengine, docs, collection)
 
 
-def validate_min_count():
-  force_run = False
+def validate_min_count(force_run, allowed_min_docs):
+  #force_run = False
 
   indexes = EsUtils.get_active_inactive_indexes('autocomplete')
   active_index = indexes['active_index']
@@ -382,6 +411,9 @@ def validate_min_count():
   else:
     docs_ratio = num_docs_inactive/num_docs_active
   if docs_ratio < 0.95 and not force_run:
+    if allowed_min_docs > 0 and  num_docs_inactive > allowed_min_docs:
+      print("Validation is OK since num_docs_inactive > allowed_min_docs")
+      return
     msg = "[ERROR] Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."
     print(msg)
     raise Exception(msg)
@@ -440,16 +472,24 @@ def index_products(collection, searchengine):
       url = product['product_url']
       image = product['image']
       image_base = product['image_base']
-
-      data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id})
+      men_url = None
+      weight_men = 0
+      is_men = False
+      if 'men' in product['catalog_tag']:
+        men_url = url.replace(".nykaa.com", ".nykaaman.com")
+        weight_men = row['popularity']
+        is_men = True
+      data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id, "men_url" : men_url})
       #cnt_product += 1 
       docs.append({
           "_id": createId(product['title']),
           "entity": product['title'], 
-          "weight": row['popularity'], 
+          "weight": row['popularity'],
+          "weight_men" : weight_men,
           "type": _type,
           "data": data,
           "id": parent_id,
+          "is_men" : is_men,
           "source": "product"
         })
 
@@ -464,23 +504,26 @@ def index_products(collection, searchengine):
 
 
   rows_1k = []
+  rows_untested = {}
+  ids = []
+
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
   limit = 50000 if not GLOBAL_FAST_INDEXING else 5000
   count = 0 
   for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]):# .limit(limit):
-    try:
-      if requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.list?id=%s" % row['_id']).json()['result']['price'] < 1:
-        #print("Rejecting product_id %s. Price (%s) is less than 1" % row['_id'])
-        continue
-    except:
-      pass
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
-    rows_1k.append(row)
-    if len(rows_1k) >= 100:
+    rows_untested[row['_id']] = row
+    if len(rows_untested) >= 1000:
+      ids = list(rows_untested.keys())
+      for product in requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.listids?ids=%s" % ",".join(ids)).json()['result']['products']:
+        if product['price'] < 1 or product['pro_flag'] == 1 or product['is_service'] == True:
+          continue
+        rows_1k.append(rows_untested[product['product_id']])
       flush_index_products(rows_1k)
       rows_1k = []
+      rows_untested = {}
 
     if ctr.count >= limit:
       break
@@ -509,7 +552,7 @@ def fetch_product_by_parentids(parent_ids):
               ]
           }
         },
-      "_source":["product_id", "title","score", "media", "product_url", "price", "type", "parent_id"]
+      "_source":["product_id", "title","score", "media", "product_url", "price", "type", "parent_id", "catalog_tag"]
     }
     queries.append("{}")
     queries.append(json.dumps(query))
@@ -541,12 +584,12 @@ def fetch_product_by_parentids(parent_ids):
 
       doc['image'] = image 
       doc['image_base'] = image_base 
-      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'parent_id']}
+      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'parent_id', 'catalog_tag']}
       final_docs[doc['parent_id']] = doc
   return final_docs
 
 
-def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_all=False ):
+def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_all=False, force_run=False, allowed_min_docs=0 ):
     assert len([x for x in [collection, active, inactive] if x]) == 1, "Only one of the following should be true"
 
     if index_all:
@@ -610,7 +653,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
     
     if swap:
       print("Swapping Index")
-      validate_min_count()
+      validate_min_count(force_run=force_run, allowed_min_docs=allowed_min_docs)
       indexes = EngineUtils.get_active_inactive_indexes('autocomplete')
       EngineUtils.switch_index_alias('autocomplete', indexes['active_index'], indexes['inactive_index'])
 
@@ -632,6 +675,8 @@ if __name__ == '__main__':
 
   parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
   parser.add_argument("--fast", action='store_true', help="Index a fraction of products and search queries to save on indexing time")
+  parser.add_argument("--force", action='store_true', help="Ignore Validation")
+  parser.add_argument("--allowed_min_docs", type=int, default=0, help="Minimum number of docs allowed")
 
   collection_state = parser.add_mutually_exclusive_group(required=True)
   collection_state.add_argument("--inactive", action='store_true')
@@ -648,6 +693,6 @@ if __name__ == '__main__':
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
 
   startts = time.time()
-  index_engine(engine='elasticsearch', collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_all=index_all)
+  index_engine(engine='elasticsearch', collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_all=index_all, force_run=argv['force'], allowed_min_docs=argv['allowed_min_docs'])
   mins = round((time.time()-startts)/60, 2)
   print("Time taken: %s mins" % mins)

@@ -5,6 +5,7 @@ alias gd='git diff'
 alias gdt='git difftool'
 alias got='git '
 alias gs='git status '
+alias gb='git branch '
 alias pull='git pull'
 alias push='git push'
 
