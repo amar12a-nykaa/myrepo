@@ -46,7 +46,8 @@ if getCount() > 1:
   print("This script is already running. Exiting without doing anything")
   #print(str(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep'" % myname, shell=True)))
   print("This means that your intented changes might still be in progress!!!")
-  exit()
+  raise Exception("Pipeline is already running. Exiting without doing anything")
+
 
 def indexESData(file_path, force_run):
   indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
