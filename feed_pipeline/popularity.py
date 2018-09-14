@@ -29,11 +29,11 @@ from loopcounter import LoopCounter
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from popularity_api import get_popularity_for_id  
 
-WEIGHT_VIEWS = 35
-WEIGHT_UNITS = 35
+WEIGHT_VIEWS = 25 # 35
+WEIGHT_UNITS = 25 # 35
 WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 20
-
+WEIGHT_UNITS_BY_VIEWS = 20 
 #WEIGHT_VIEWS = 10
 #WEIGHT_UNITS = 10
 #WEIGHT_CART_ADDITIONS = 10
@@ -204,10 +204,14 @@ def calculate_popularity():
       df['On'] = normalize(df['orders'])
       df['Rn'] = normalize(df['revenue'])
       df['Un'] = normalize(df['units'])
+      df['UVn'] = df['units']/ df['views']
+      df['UVn'] = normalize(df['UVn'])
 
       df['popularity'] = (len(date_buckets) - bucket_id) *\
         normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
-      dfs.append(df.loc[:, ['parent_id', 'popularity']].set_index('parent_id'))
+      df['popularity_conversion'] = (len(date_buckets) - bucket_id) *\
+        normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'] + WEIGHT_UNITS_BY_VIEWS * df['UVn'])) * 100
+      dfs.append(df.loc[:, ['parent_id', 'popularity', 'popularity_conversion']].set_index('parent_id'))
         
   if argv['print_popularity_ids']:
     ids = [x.strip() for x in argv['print_popularity_ids'].split(",") if x]
@@ -223,8 +227,10 @@ def calculate_popularity():
   for i in range(1, len(dfs)):
     final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
   final_df.popularity = final_df.popularity.fillna(0)
+  final_df.popularity_conversion = final_df.popularity_conversion.fillna(0)
 
   final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
+  final_df['popularity_conversion'] = 100 * normalize(final_df['popularity_conversion'])
   final_df.drop(['popularity'], axis = 1, inplace = True)
 
   # Calculate total popularity
@@ -254,7 +260,7 @@ def calculate_popularity():
   a.popularity_recent = a.popularity_recent.fillna(0)
   a['popularity'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
   a.popularity= a.popularity.fillna(0)
-  a.popularity_recent = a.popularity_recent.fillna(0)
+  a.popularity_conversion = a.popularity_conversion.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
   for i, row in a.iterrows():
@@ -276,6 +282,7 @@ def calculate_popularity():
     row['popularity_multiplier_factor'] =  popularity_multiplier_factor
     row['popularity'] = row['popularity']* float(popularity_multiplier_factor)
     row['popularity_recent'] = row['popularity_recent']* float(popularity_multiplier_factor)
+    row['popularity_conversion'] = row['popularity_conversion']* float(popularity_multiplier_factor)
 
     if row.get('parent_id'):
       popularity_table.replace_one({"_id": row['parent_id'], "parent_id": row['parent_id']}, row, upsert=True)
