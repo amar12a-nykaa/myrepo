@@ -572,6 +572,9 @@
         "popularity": {
           "type": "float"
         },
+        "popularity_recent": {
+          "type": "float"
+        },
         "preference_facet": {
           "type": "text",
           "fields": {

@@ -29,7 +29,15 @@ hostname = socket.gethostname()
 
 myname = os.path.basename(__file__)
 def getCount():
-  return int(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep' |  awk '{ print $4 }' | sort -n  | uniq | wc -l " % myname, shell=True).strip())
+  print("== List of processes running at the moment ==")
+  print(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep'  " % myname, shell=True).strip())
+  print("== List of parent IDs running at the moment == ")
+  print(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep' |  awk '{ print $4 }' | sort -n  " % myname, shell=True).strip())
+  num =  int(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep' |  awk '{ print $4 }' | sort -n  | uniq | wc -l " % myname, shell=True).strip())
+  print("== Number of processes running ==")
+  print(num)
+  print("====")
+  return num
 
 if getCount() > 1:
   print()
@@ -39,8 +47,6 @@ if getCount() > 1:
   #print(str(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep'" % myname, shell=True)))
   print("This means that your intented changes might still be in progress!!!")
   exit()
-
-
 
 def indexESData(file_path, force_run):
   indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
