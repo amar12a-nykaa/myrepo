@@ -72,7 +72,7 @@ class NykaaImporter:
   def importBrandCategoryAttributes():
     #Import Brand-Category level info like app_sorting, featured_products
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
-    query = """SELECT DISTINCT(cce.entity_id) AS category_id, cur.request_path AS category_url, 
+    query = """SELECT cce.entity_id AS category_id, cur.request_path AS category_url, 
             ci.app_sorting, ci.custom_sort, ci.art_banner_image, ci.art_banner_video, ci.art_banner_video_image, 
             ci.font_color, ci.art_title, ci.art_content, ci.art_url, ci.art_link_text, ci.categories, ci.art_position,
             (cce.level-2) AS level, (CASE WHEN nkb.brand_id > 0 THEN 'brand' ELSE 'category' END) AS type 
