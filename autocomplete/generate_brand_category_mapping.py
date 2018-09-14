@@ -355,7 +355,7 @@ def update_brand_category_table():
     for category_id, pop in catinfo.items():
       try:
         pop[NYKAA] = round(pop[NYKAA] / max_pop_Nykaa * 100, 2)
-        pop[MEN] = round(pop[MEN] / max_pop_Men * 100, 2)
+        pop[MEN] = round(pop[MEN] / max_pop_Men * 100, 2) if max_pop_Men > 0 else 0
         brand_id = None
         category_name = None
         if brand in brand_name_id:
@@ -544,7 +544,7 @@ def update_category_facets_table():
 
     query = "REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, popularity_men) VALUES ('%s', '%s', '%s', '%s', %s, %s) "
     popularity = row['popularity']/ max_pop * WEIGHT_CATEGORY_FACET
-    popularity_men = row['popularity_men']/max_pop_men * WEIGHT_CATEGORY_FACET
+    popularity_men = row['popularity_men']/max_pop_men * WEIGHT_CATEGORY_FACET if max_pop_men > 0 else 0
     query = query % (row['category_id'], category_name, row['facet_name'], row['facet_val'].strip().replace("'", "''"), popularity, popularity_men)
     Utils.mysql_write(query)
 
