@@ -178,7 +178,7 @@ def get_product_detail(product_id):
   request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/product.list?id={0}".format(product_id)
 
   r =  requests.get(request_url, headers = {'content-type': 'application/json'})
-  req_fields = ['category_levels', 'brand_name', 'brand_ids', 'is_luxe']
+  req_fields = ['category_levels', 'brand_name', 'brand_ids', 'is_luxe', 'catalog_tag']
   try:
     data = (json.loads(r.content.decode('utf-8')).get('result'))
     row  = {}
@@ -431,6 +431,8 @@ if __name__ == '__main__':
           continue
         for key, value in p_details.items():
           row[key] = value
+        if 'men' in row.get('catalog_tag'):
+          continue
         docs.append(row)
   new_docs=  sorted(docs, key=lambda x: float(x.get('discount', 0)), reverse=True)
   print (len(new_docs))
