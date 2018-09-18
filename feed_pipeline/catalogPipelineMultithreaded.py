@@ -73,6 +73,7 @@ def indexESData(file_path, force_run):
 
     sett = {'refresh_interval': '1s'}
     index_client.put_settings(sett, inactive_index)
+    time.sleep(3)
     index_stop = timeit.default_timer()
     index_duration = index_stop - index_start
     print("Time taken to index data to ElasticSearch: %s seconds" % time.strftime("%M min %S seconds",
