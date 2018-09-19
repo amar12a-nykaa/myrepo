@@ -7,9 +7,9 @@ import psutil
 import argparse
 import operator
 import pandas as pd
-sys.path.append("/nykaa/nykaa_scripts/utils")
+sys.path.append("/home/ubuntu/nykaa_scripts/sharedutils")
 from loopcounter import LoopCounter
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/nykaa")
 from pas.v2.utils import Utils, RecommendationsUtils
 from joblib import Parallel, delayed
 from datetime import datetime, timedelta
@@ -81,7 +81,7 @@ def insert_recommendations_2_db(recommendation_rows):
     """ % values_str
     Utils.mysql_write(insert_recommendations_query, values, Utils.mysqlConnection())
 
-def compute_recommendation_rows(customer_ids, entity_type, recommendation_type, algo, customer_2_product_chunks, recommendation_rows, product_2_recommendations):
+def compute_recommendation_rows(customer_ids, entity_type, recommendation_type, algo, recommendations_generation_time, customer_2_product_chunks, recommendation_rows, product_2_recommendations):
     for customer_id in customer_ids:
         recommendation_rows.append((customer_id, entity_type, recommendation_type, algo, json.dumps(RecommendationsUtils.customersAlsoBoughtWithMultipleProductsBuckets(customer_2_product_chunks[customer_id], algo, number_of_suggestions=200, product_2_recommendations=product_2_recommendations))))
 
@@ -117,8 +117,10 @@ def process_orders_df(start_datetime=None):
             else:
                 print("No products in order: %d" % order_id)
 
+    recommendations_generation_time = datetime.now()
     recommendation_rows = []
-    for algo in ['coccurence_direct', 'coccurence_simple', 'coccurence_log', 'coccurence_sqrt']:
+    #for algo in ['coccurence_direct', 'coccurence_simple', 'coccurence_log', 'coccurence_sqrt']:
+    for algo in ['coccurence_direct']:
         query = "SELECT entity_id, recommended_products_json FROM recommendations_v2 WHERE entity_type='product' AND recommendation_type='bought' AND algo='%s'" % algo
         rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 10000)
         
@@ -129,11 +131,13 @@ def process_orders_df(start_datetime=None):
         print("Computing recommendation rows")
         customer_ids = list(customer_2_product_chunks.keys())
         customer_ids_chunks = [customer_ids[i:i+1000] for i in range(0, len(customer_ids), 1000)]
-        Parallel(n_jobs=20, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(compute_recommendation_rows)(customer_ids_chunk, 'user', 'bought', algo, customer_2_product_chunks, recommendation_rows, product_2_recommendations) for customer_ids_chunk in customer_ids_chunks)
+        Parallel(n_jobs=20, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(compute_recommendation_rows)(customer_ids_chunk, 'user', 'bought', algo, str(recommendations_generation_time), customer_2_product_chunks, recommendation_rows, product_2_recommendations) for customer_ids_chunk in customer_ids_chunks)
 
     print("Total Recommendation rows: %d" % len(recommendation_rows))
     recommendation_rows_chunks = [recommendation_rows[i:i+1000] for i in range(0, len(recommendation_rows), 1000)]
-    Parallel(n_jobs=10, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(insert_recommendations_2_db)(recommendation_rows_chunk) for recommendation_rows_chunk in recommendation_rows_chunks)
+    for recommendation_rows_chunk in recommendation_rows_chunks:
+        insert_recommendations_2_db(recommendation_rows_chunk)
+    #Parallel(n_jobs=10, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(insert_recommendations_2_db)(recommendation_rows_chunk) for recommendation_rows_chunk in recommendation_rows_chunks)
     print(str(datetime.now()))
 
 
