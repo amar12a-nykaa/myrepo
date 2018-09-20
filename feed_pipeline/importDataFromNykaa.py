@@ -75,6 +75,7 @@ class NykaaImporter:
     query = """SELECT DISTINCT(cce.entity_id) AS category_id, cur.request_path AS category_url, 
             ci.app_sorting, ci.custom_sort, ci.art_banner_image, ci.art_banner_video, ci.art_banner_video_image, 
             ci.font_color, ci.art_title, ci.art_content, ci.art_url, ci.art_link_text, ci.categories, ci.art_position,
+            ci.android_landing_url, ci.ios_landing_url, ci.tip_tile, 
             (cce.level-2) AS level, (CASE WHEN nkb.brand_id > 0 THEN 'brand' ELSE 'category' END) AS type 
             FROM `catalog_category_entity` AS cce
             LEFT JOIN `category_information` AS ci ON ci.cat_id = cce.entity_id
@@ -88,7 +89,7 @@ class NykaaImporter:
       try:
         # Write to PWS DB
         field_list = ['id', 'sorting', 'featured_products', 'level', 'type', 'url', 'banner_image', 'banner_video', 'banner_video_image', 
-        'font_color', 'art_title', 'art_content', 'art_url', 'art_link_text', 'child_categories', 'art_pos']
+        'font_color', 'art_title', 'art_content', 'art_url', 'art_link_text', 'child_categories', 'art_pos', 'android_landing_url', 'ios_landing_url', 'tip_tile']
 
         fields = ''
         values = ''
@@ -105,7 +106,9 @@ class NykaaImporter:
         query = "INSERT INTO brand_category_information (" + fields + ") VALUES (" + values + ") ON DUPLICATE KEY UPDATE " + on_duplicate_values
         NykaaImporter.pws_cursor.execute(query, (item['category_id'], item['app_sorting'], item['custom_sort'], item['level'], item['type'], item['category_url'],
                                          item['art_banner_image'], item['art_banner_video'], item['art_banner_video_image'], item['font_color'],
-                                         item['art_title'], item['art_content'], item['art_url'], item['art_link_text'], item['categories'], item['art_position']))
+                                         item['art_title'], item['art_content'], item['art_url'], item['art_link_text'], item['categories'], item['art_position'],
+                                         item['android_landing_url'], item['ios_landing_url'], item['tip_tile']))
+
         NykaaImporter.pws_mysql_conn.commit()
         count += 1
 
@@ -146,9 +149,9 @@ class NykaaImporter:
     for item in results:
       try:
         # Write to PWS DB
-        query = """INSERT INTO offer_information (id, sorting, featured_products) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE 
-                   sorting=VALUES(sorting), featured_products=VALUES(featured_products)"""
-        NykaaImporter.pws_cursor.execute(query, (item['offer_id'], item['app_sorting'], item['custom_sort']))
+        query = """INSERT INTO offer_information (id, name, sorting, featured_products, filter_params, filter_values) VALUES (%s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE 
+                   name=VALUES(name), sorting=VALUES(sorting), featured_products=VALUES(featured_products), filter_params=VALUES(filter_params), filter_values=VALUES(filter_values)"""
+        NykaaImporter.pws_cursor.execute(query, (item['offer_id'], item['name'], item['app_sorting'], item['custom_sort'], item['filter_params'], item['filter_values']))
         NykaaImporter.pws_mysql_conn.commit()
         count += 1
 
