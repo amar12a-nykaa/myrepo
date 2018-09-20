@@ -143,7 +143,7 @@ class NykaaImporter:
   def importOfferAttributes():
     # Import offer attributes: featured_products and app_sorting
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
-    query = "SELECT entity_id AS offer_id, app_sorting, custom_sort FROM `nykaa_offers`"
+    query = "SELECT entity_id AS offer_id, name, app_sorting, custom_sort, filter_params, filter_values FROM `nykaa_offers`"
     results = Utils.fetchResults(nykaa_mysql_conn, query)
     count = 0
     for item in results:
