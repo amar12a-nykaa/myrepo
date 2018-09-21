@@ -226,7 +226,7 @@ class CatalogIndexer:
                           required_fields_from_csv, update_productids):
         input_docs = []
         pws_fetch_products = []
-        index_start = timeit.default_timer()
+        # index_start = timeit.default_timer()
         for index, row in enumerate(records):
             try:
                 CatalogIndexer.validate_catalog_feed_row(row)
@@ -585,25 +585,25 @@ class CatalogIndexer:
             except Exception as e:
                 print(traceback.format_exc())
                 print("Error with %s: %s" % (row['sku'], str(e)))
-        index_stop = timeit.default_timer()
-        index_duration = index_stop - index_start
-        print("for loop time: %s seconds." % (time.strftime("%M min %S seconds", time.gmtime(index_duration))))
+        # index_stop = timeit.default_timer()
+        # index_duration = index_stop - index_start
+        # print("for loop time: %s seconds." % (time.strftime("%M min %S seconds", time.gmtime(index_duration))))
         if input_docs:
-            index_start = timeit.default_timer()
+            # index_start = timeit.default_timer()
             (input_docs, errors) = CatalogIndexer.fetch_price_availability(input_docs, pws_fetch_products)
-            index_stop = timeit.default_timer()
-            index_duration = index_stop - index_start
-            print("fetch_price_availability time: %s seconds." % (
-                time.strftime("%M min %S seconds", time.gmtime(index_duration))))
+            # index_stop = timeit.default_timer()
+            # index_duration = index_stop - index_start
+            # print("fetch_price_availability time: %s seconds." % (
+            #     time.strftime("%M min %S seconds", time.gmtime(index_duration))))
 
             # index elastic search
             if search_engine == 'elasticsearch':
-                index_start = timeit.default_timer()
+                # index_start = timeit.default_timer()
                 CatalogIndexer.indexES(input_docs, collection)
-                index_stop = timeit.default_timer()
-                index_duration = index_stop - index_start
-                print("indexES time: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
-
+                # index_stop = timeit.default_timer()
+                # index_duration = index_stop - index_start
+                # print("indexES time: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
+                
             CatalogIndexer.print_errors(errors)
 
     def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None):
