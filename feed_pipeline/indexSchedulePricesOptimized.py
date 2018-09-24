@@ -77,7 +77,9 @@ class ScheduledPriceUpdater:
     chunk_results = list(ScheduledPriceUpdater.chunks(results, CHUNK_SIZE))
 
     for product in chunk_results:
-      products = sku_list = psku_list = []
+      products = []
+      sku_list = []
+      psku_list = []
 
       for single_product in product:
         print("sku: %s" % product['sku'])
@@ -100,8 +102,7 @@ class ScheduledPriceUpdater:
 
       update_docs = PipelineUtils.getProductsToIndex(products)
       if update_docs:
-        Utils.updateESCatalog(update_docs)
-      total_count += len(update_docs)    
+        Utils.updateESCatalog(update_docs) 
     
     # Code for bundle products
     products = []
