@@ -15,7 +15,7 @@ import json
 import time
 import pprint
 
-CHUNK_SIZE = 100
+CHUNK_SIZE = 500
 
 def getCurrentDateTime():
   current_datetime = datetime.utcnow()
@@ -75,19 +75,20 @@ class ScheduledPriceUpdater:
     print("[%s] Starting simple product updates" % getCurrentDateTime())
 
     chunk_results = list(ScheduledPriceUpdater.chunks(results, CHUNK_SIZE))
-    total_count = 0
+
     for product in chunk_results:
-      products = []
-      sku_list = []
-      psku_list = []
+      products = sku_list = psku_list = []
 
       for single_product in product:
+        product_updated_count += 1 
         sku_list.append(single_product['sku'])
         psku_list.append(single_product['psku'])
         products.append({'sku': single_product['sku'], 'type': single_product['type']})
         if single_product['psku'] and single_product['psku'] != single_product['sku']:
           products.append({'sku': single_product['psku'], 'type': 'configurable'})
-        
+        if product_updated_count % 100 == 0:
+          print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
+
       new_sku_list = sku_list + list(set(psku_list) - set(sku_list))
       sku_string = "','".join(new_sku_list)
       query = "SELECT product_sku, bundle_sku FROM bundle_products_mappings WHERE product_sku in('" + sku_string + "')"
@@ -99,22 +100,17 @@ class ScheduledPriceUpdater:
       update_docs = PipelineUtils.getProductsToIndex(products)
       if update_docs:
         Utils.updateESCatalog(update_docs)
-      total_count += len(update_docs)
-      
-
-      # product_updated_count += PipelineUtils.updateCatalog(product['sku'], product['psku'], product['type'])
-      # if product_updated_count % 100 == 0:
-      # print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
+      total_count += len(update_docs)    
     
-    
-    mysql_conn = Utils.mysqlConnection('r')
+    # Code for bundle products
     products = []
+    mysql_conn = Utils.mysqlConnection('r')    
     query = "SELECT sku FROM bundles" + where_clause
     results = Utils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime))
     print("[%s] Starting bundle product updates" % getCurrentDateTime())
     
     for bundle in results:
-      products.append({'sku': sku, 'type': 'bundle'})
+      products.append({'sku': bundle['sku'], 'type': 'bundle'})
       if product_updated_count % 100 == 0:
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
     
