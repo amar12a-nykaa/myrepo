@@ -272,6 +272,95 @@ def index_brands(collection, searchengine):
   index_docs(searchengine, docs, collection)
 
 def index_categories(collection, searchengine):
+  multicategoryList = {
+    "974": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
+    "962": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
+    "331": {"variant": ["Gels", "Waxes"], "name": "Gels & Waxes"},
+    "2041": {"variant": ["Hair Creams", "Hair Masks"], "name": "Hair Creams & Masks"},
+    "362": {"variant": ["Dryers", "Stylers"], "name": "Dryers & Stylers"},
+    "363": {"variant": ["Rollers", "Curlers"], "name": "Rollers & Curlers"},
+    "583": {"variant": ["Hand Creams", "Foot Creams"], "name": "Hand & Foot Creams"},
+    "529": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
+    "530": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
+    "3092": {"variant": ["Tanks", "Tees"], "name": "Tanks & Tees"},
+    "4528": {"variant": ["Tanks", "Camis"], "name": "Tanks & Camis"},
+    "3115": {"variant": ["Sarongs", "Cover-ups"], "name": "Sarongs & Cover-ups"},
+    "232": {"variant": ["BB Cream", "CC Cream"], "name": "BB & CC Cream"},
+    "3277": {"variant": ["Manicure Kits", "Pedicure Kits"], "name": "Manicure & Pedicure Kits"},
+    "271": {"variant": ["Sponges", "Applicators"], "name": "Sponges & Applicators"},
+    "1315": {"variant": ["Massage Oils", "Aromatherapy Oils"], "name": "Massage & Aromatherapy Oils"},
+    "1320": {"variant": ["Bath Tools", "Body Tools"], "name": "Bath & Body Tools"},
+    "1324": {"variant": ["Colognes", "Perfumes"], "name": "Colognes & Perfumes (EDT & EDP)"},
+    "1290": {"variant": ["Pre Shaves", "Post Shaves"], "name": "Pre & Post Shaves"},
+    "1287": {"variant": ["Razors", "Cartridges"], "name": "Razors & Cartridges"},
+    "1288": {"variant": ["Shavers", "Trimmers"], "name": "Shavers & Trimmers"},
+    "1303": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
+    "1304": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
+    "1675": {"variant": ["Buds", "Wipes"], "name": "Buds & Wipes"},
+    "1676": {"variant": ["Creams", "Lotions", "Oils"], "name": "Creams, Lotions & Oils"},
+    "746": {"variant": ["Teeth Care", "Dental Care"], "name": "Teeth & Dental Care"},
+    "430": {"variant": ["Cotton Buds", "Balls"], "name": "Cotton Buds & Balls"},
+    "369": {"variant": ["Scrubs", "Exfoliants"], "name": "Scrubs & Exfoliants"},
+    "368": {"variant": ["Shower Gels", "Body Wash"], "name": "Shower Gels & Body Wash"},
+    "371": {"variant": ["Lotions", "Creams"], "name": "Lotions & Creams"},
+    "375": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
+    "39": {"variant": ["Shaving", "Hair Removal"], "name": "Shaving & Hair Removal"},
+    "1410": {"variant": ["Pre Shaves", "Post Shaves"], "name": "Pre & Post Shaves"},
+    "1398": {"variant": ["Razors", "Cartridges"], "name": "Razors & Cartridges"},
+    "1553": {"variant": ["Shaving Cream", " Shaving Foams", " Shaving Gels"], "name": "Shaving Cream, Foams & Gels"},
+    "1386": {"variant": ["Body Scrubbers", "Brushes"], "name": "Body Scrubbers & Brushes"},
+    "396": {"variant": ["Loofahs", "Sponges"], "name": "Loofahs & Sponges"},
+    "688": {"variant": ["Manicure Kits", "Pedicure Kits"], "name": "Manicure & Pedicure Kits"},
+    "691": {"variant": ["Lotions", "Creams"], "name": "Lotions & Creams"},
+    "3568": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
+    "282": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
+    "227": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
+    "223": {"variant": ["Toners", "Astringents"], "name": "Toners & Astringents"},
+    "979": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-ons"},
+    "971": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-Ons"},
+    "554": {"variant": ["Massage Oils", "Carrier Oils"], "name": "Massage / Carrier Oils"},
+    "3077": {"variant": ["Pasties", "Stick-ons"], "name": "Pasties / Stick-ons"},
+    "3079": {"variant": ["Stockings", "Garters"], "name": "Stockings / Garters"},
+    "3094": {"variant": ["Leggings", "Pants"], "name": "Leggings / Pants"},
+    "3069": {"variant": ["Demi", "Balconette"], "name": "Demi / Balconette"},
+    "3097": {"variant": ["Bra", "Panty"], "name": "Bra / Panty"},
+    "4527": {"variant": ["Panties", "Shorts"], "name": "Panties/Girl Shorts"},
+    "3101": {"variant": ["Camis", "Tops"], "name": "Camis / Tops"},
+    "3105": {"variant": ["Wraps", "Gowns"], "name": "Wraps / Gowns"},
+    "3083": {"variant": ["Brief", "Hipster"], "name": "Brief / Hipster"},
+    "1311": {"variant": ["Bath Gels", "Shower Gels"], "name": "Bath / Shower Gels"},
+    "1323": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-ons"},
+    "1411": {"variant": ["Curling Irons", "Stylers"], "name": "Curling Irons/Stylers"},
+    "1422": {"variant": ["Body Mist", "Body Spray"], "name": "Body Mist/Spray"},
+    "377": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-Ons"},
+    "1644": {"variant": ["Body Mist", "Body Spray"], "name": "Body Mist/Spray"},
+    "1650": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-Ons"},
+    "2078": {"variant": ["Dark Circles", "Wrinkles"], "name": "Dark Circles / Wrinkles"},
+    "289": {"variant": ["Day Cream", "Night Cream"], "name": "Day/Night Cream"}
+  }
+
+  def getCategoryDoc(row, variant):
+    category_url = row['url']
+    category_men_url = row['men_url']
+    url = "http://www.nykaa.com/search/result/?q=" + variant.replace(" ", "+")
+    men_url = "http://www.nykaaman.com/search/result/?q=" + variant.replace(" ", "+")
+    is_men = False
+    if row['category_popularity_men'] > 0:
+      is_men = True
+    doc = {
+      "_id": createId(variant),
+      "entity": variant,
+      "weight": row['category_popularity'],
+      "weight_men": row['category_popularity_men'],
+      "type": "category",
+      "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url": category_url,
+                          "men_url": men_url, "category_men_url": category_men_url}),
+      "id": row['category_id'],
+      "is_men": is_men,
+      "source": "category"
+    }
+    return doc
+
   docs = []
 
   mysql_conn = Utils.mysqlConnection()
@@ -288,30 +377,15 @@ def index_categories(collection, searchengine):
       continue
     prev_cat = row['category_name']
 
-    category_url = row['url']
-    category_men_url = row['men_url']
-    url = "http://www.nykaa.com/search/result/?q=" + prev_cat.replace(" ", "+")
-    men_url = "http://www.nykaaman.com/search/result/?q=" + prev_cat.replace(" ", "+")
+    if row['category_id'] in multicategoryList:
+      for variant in multicategoryList[row['category_id']]['variant']:
+        categoryDoc = getCategoryDoc(row, variant)
+        docs.append(categoryDoc)
+    else:
+      categoryDoc = getCategoryDoc(row, prev_cat)
+      docs.append(categoryDoc)
 
-    is_men = False
-    if row['category_popularity_men'] > 0:
-      is_men = True
-
-#    if row['category_name'].lower() in ['concealer', 'lipstick', 'nail polish', 'eyeliner', 'kajal']:
-#      continue
-    docs.append({
-        "_id": createId(row['category_name']),
-        "entity": row['category_name'],
-        "weight": row['category_popularity'],
-        "weight_men" : row['category_popularity_men'],
-        "type": "category",
-        "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url" : category_url,
-                            "men_url":men_url, "category_men_url" : category_men_url}),
-        "id": row['category_id'],
-        "is_men" : is_men,
-        "source": "category"
-      })
-    if len(docs) == 100:
+    if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
       docs = []
 
