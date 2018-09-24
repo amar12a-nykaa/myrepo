@@ -80,6 +80,7 @@ class ScheduledPriceUpdater:
       products = sku_list = psku_list = []
 
       for single_product in product:
+        print("sku: %s" % product['sku'])
         product_updated_count += 1 
         sku_list.append(single_product['sku'])
         psku_list.append(single_product['psku'])
@@ -104,12 +105,15 @@ class ScheduledPriceUpdater:
     
     # Code for bundle products
     products = []
+    product_updated_count = 0
     mysql_conn = Utils.mysqlConnection('r')    
     query = "SELECT sku FROM bundles" + where_clause
     results = Utils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime))
     print("[%s] Starting bundle product updates" % getCurrentDateTime())
     
     for bundle in results:
+      product_updated_count += 1
+      print("sku: %s" % product['sku'])
       products.append({'sku': bundle['sku'], 'type': 'bundle'})
       if product_updated_count % 100 == 0:
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
