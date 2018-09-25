@@ -68,8 +68,6 @@ class ScheduledPriceUpdater:
                 f.write(str(current_datetime))
         except Exception as e:
             print("[ERROR] %s" % str(e))
-
-        last_datetime = '2018-03-21 16:00:32.765618+05:30'
         where_clause = " WHERE ((schedule_start > %s AND schedule_start <= %s) OR (schedule_end > %s AND schedule_end <= %s))"
         product_type_condition = " AND type = %s"
         product_updated_count = 0
@@ -90,7 +88,7 @@ class ScheduledPriceUpdater:
             psku_list = []
 
             for single_product in product:
-                print("sku: %s" % product['sku'])
+                print("sku: %s" % single_product['sku'])
                 product_updated_count += 1
                 sku_list.append(single_product['sku'])
                 psku_list.append(single_product['psku'])
@@ -114,7 +112,6 @@ class ScheduledPriceUpdater:
 
                 # Code for bundle products
         products = []
-        product_updated_count = 0
         mysql_conn = Utils.mysqlConnection('r')
         query = "SELECT sku FROM bundles" + where_clause
         results = Utils.fetchResults(mysql_conn, query,
@@ -123,7 +120,7 @@ class ScheduledPriceUpdater:
 
         for bundle in results:
             product_updated_count += 1
-            print("sku: %s" % product['sku'])
+            print("sku: %s" % bundle['sku'])
             products.append({'sku': bundle['sku'], 'type': 'bundle'})
             if product_updated_count % 100 == 0:
                 print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
