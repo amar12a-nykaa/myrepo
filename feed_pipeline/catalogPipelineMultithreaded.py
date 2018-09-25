@@ -98,9 +98,9 @@ def indexESData(file_path, force_run):
             print("Check of 5 percent is passed")
 
     if argv['no_swap'] == True:
-        resp = EsUtils.switch_index_alias(CATALOG_COLLECTION_ALIAS, active_index, inactive_index)
-    else:
         print("\n\nIndex switch is not allowed. ACTIVE INDEX: %s\n\n" % active_index)
+    else:
+        resp = EsUtils.switch_index_alias(CATALOG_COLLECTION_ALIAS, active_index, inactive_index)
 
     print("\n\nFinished running catalog pipeline for ElasticSearch. NEW ACTIVE INDEX: %s\n\n" % inactive_index)
 
