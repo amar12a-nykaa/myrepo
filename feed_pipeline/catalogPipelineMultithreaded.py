@@ -86,19 +86,22 @@ def indexESData(file_path, force_run):
     print('ES Number of documents in active index(%s): %s' % (active_index, num_docs_active))
     print('ES Number of documents in inactive index(%s): %s' % (inactive_index, num_docs_inactive))
 
-    if argv['no_swap'] == True:
-        if num_docs_active > 0:
-            if abs((num_docs_inactive - num_docs_active) / num_docs_active) > 0.05:
-                if not force_run:
-                    raise Exception("Difference in the number of docs on the active and inactive indices is more than 5%")
-                else:
-                    print("Warning!!!!  Difference in the number of docs on the active and inactive indices is more than 5%")
-                    print("Ignoring the difference because its a force run.")
+
+    if num_docs_active > 0:
+        if abs((num_docs_inactive - num_docs_active) / num_docs_active) > 0.05:
+            if not force_run:
+                raise Exception("Difference in the number of docs on the active and inactive indices is more than 5%")
             else:
-                print("Check of 5 percent is passed")
+                print("Warning!!!!  Difference in the number of docs on the active and inactive indices is more than 5%")
+                print("Ignoring the difference because its a force run.")
+        else:
+            print("Check of 5 percent is passed")
+
+    if argv['no_swap'] == True:
         resp = EsUtils.switch_index_alias(CATALOG_COLLECTION_ALIAS, active_index, inactive_index)
     else:
         print("\n\nIndex switch is not allowed. ACTIVE INDEX: %s\n\n" % active_index)
+
     print("\n\nFinished running catalog pipeline for ElasticSearch. NEW ACTIVE INDEX: %s\n\n" % inactive_index)
 
 
