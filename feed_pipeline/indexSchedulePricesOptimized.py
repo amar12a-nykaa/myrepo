@@ -7,14 +7,9 @@ from datetime import datetime, timedelta
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
 import argparse
-import re
-import sys
+
 import subprocess
-import math
-import os
-import json
-import time
-import pprint
+import traceback
 
 
 def getCurrentDateTime():
@@ -72,12 +67,14 @@ class ScheduledPriceUpdater:
         product_type_condition = " AND type = %s"
         product_updated_count = 0
 
-        mysql_conn = Utils.mysqlConnection('r')
+
         query = "SELECT sku, psku, type FROM products" + where_clause + product_type_condition
         print("[%s] " % getCurrentDateTime() + query % (
         last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
+        mysql_conn = Utils.mysqlConnection('r')
         results = Utils.fetchResults(mysql_conn, query,
                                      (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
+        mysql_conn.close()
         print("[%s] Starting simple product updates" % getCurrentDateTime())
         chunk_size = argv['batch_size']
         chunk_results = list(ScheduledPriceUpdater.chunks(results, chunk_size))
@@ -101,21 +98,26 @@ class ScheduledPriceUpdater:
             new_sku_list = sku_list + list(set(psku_list) - set(sku_list))
             sku_string = "','".join(new_sku_list)
             query = "SELECT product_sku, bundle_sku FROM bundle_products_mappings WHERE product_sku in('" + sku_string + "')"
+            mysql_conn = Utils.mysqlConnection('r')
             results = Utils.fetchResults(mysql_conn, query)
-
+            mysql_conn.close()
             for res in results:
                 products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
 
-            update_docs = PipelineUtils.getProductsToIndex(products)
-            if update_docs:
-                Utils.updateESCatalog(update_docs)
+            try:
+                update_docs = PipelineUtils.getProductsToIndex(products)
+                if update_docs:
+                    Utils.updateESCatalog(update_docs)
+            except Exception as e:
+                print(traceback.format_exc())
 
                 # Code for bundle products
         products = []
-        mysql_conn = Utils.mysqlConnection('r')
         query = "SELECT sku FROM bundles" + where_clause
+        mysql_conn = Utils.mysqlConnection('r')
         results = Utils.fetchResults(mysql_conn, query,
                                      (last_datetime, current_datetime, last_datetime, current_datetime))
+        mysql_conn.close()
         print("[%s] Starting bundle product updates" % getCurrentDateTime())
 
         for bundle in results:
@@ -125,11 +127,13 @@ class ScheduledPriceUpdater:
             if product_updated_count % 100 == 0:
                 print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
 
-        update_docs = PipelineUtils.getProductsToIndex(products)
-        if update_docs:
-            Utils.updateESCatalog(update_docs)
+        try:
+            update_docs = PipelineUtils.getProductsToIndex(products)
+            if update_docs:
+                Utils.updateESCatalog(update_docs)
+        except Exception as e:
+            print(traceback.format_exc())
 
-        mysql_conn.close()
         print("\n[%s] Total %s products updated." % (getCurrentDateTime(), product_updated_count))
 
 if __name__ == "__main__":
