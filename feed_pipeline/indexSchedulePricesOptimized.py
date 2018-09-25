@@ -77,6 +77,9 @@ class ScheduledPriceUpdater:
         mysql_conn.close()
         print("[%s] Starting simple product updates" % getCurrentDateTime())
         chunk_size = argv['batch_size']
+        if not chunk_size:
+            chunk_size = 500
+
         chunk_results = list(ScheduledPriceUpdater.chunks(results, chunk_size))
 
         for product in chunk_results:
