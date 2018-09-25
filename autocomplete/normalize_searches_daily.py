@@ -34,8 +34,13 @@ DAILY_THRESHOLD = 3
 client = Utils.mongoClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
-search_terms_normalized.remove({}) 
+search_terms_final = client['search']['search_terms_final']
+
 ensure_mongo_indices_now()
+
+cats_stemmed = set([ps.stem(x['name']) for x in Utils.mysql_read("select name from l3_categories ")])
+brands_stemmed = set([ps.stem(x['brand']) for x in Utils.mysql_read("select brand from brands")])
+cats_brands_stemmed = cats_stemmed | brands_stemmed
 
 def create_missing_indices():
   indices = search_terms_daily.list_indexes()
@@ -45,14 +50,43 @@ def create_missing_indices():
 
 create_missing_indices()
 
+def getQuerySuggestion(query, algo):
+    if algo == 'default':
+        es_query = """{
+             "size":0,
+             "suggest": 
+              { 
+                "text":"%s", 
+                "term_suggester": 
+                { 
+                  "term": { 
+                    "field": "title_brand_category"
+                  }
+                }
+              }
+        }""" % (query)
+        es_result = Utils.makeESRequest(es_query, "livecore")
+        if es_result.get('suggest', {}).get('term_suggester'):
+            modified_query = query.lower()
+            for term_suggestion in es_result['suggest']['term_suggester']:
+                if term_suggestion.get('options') and term_suggestion['options'][0]['score'] > 0.7:
+                    frequency = term_suggestion['options'][0]['freq']
+                    new_term = term_suggestion['options'][0]['text']
+                    for suggestion in term_suggestion['options'][1:]:
+                        if suggestion['freq'] > frequency and suggestion['score'] > 0.7:
+                            frequency = suggestion['freq']
+                            new_term = suggestion['text']
+                    modified_query = modified_query.replace(term_suggestion['text'], new_term)
+            return modified_query
+        return query
+    return query
+
 def normalize(a):
     if not max(a) - min(a):
         return 0
     return (a - min(a)) / (max(a) - min(a))
 
 def normalize_search_terms():
-
-
     date_buckets = [(0, 60), (61, 120), (121, 180), (181, 240)]
     dfs = []
 
@@ -128,15 +162,10 @@ def normalize_search_terms():
     #brand_index = normalize_array("select brand as term from nykaa.brands where brand like 'l%'")
     #category_index = normalize_array("select name as term from nykaa.l3_categories")
     search_terms_normalized.remove({})
-    cats_stemmed = set([ps.stem(x['name']) for x in Utils.mysql_read("select name from l3_categories ")])
-    brands_stemmed = set([ps.stem(x['brand']) for x in Utils.mysql_read("select brand from brands")])
-    cats_brands_stemmed = cats_stemmed | brands_stemmed
-
 
     for i, row in a.iterrows():
-        query = row['id'].lower()
-        if ps.stem(query) in cats_brands_stemmed:
-          a.drop(i, inplace=True)
+        if IsBrandCategory(row['id']):
+            a.drop(i, inplace=True)
     
     a['popularity'] = 100 * normalize(a['popularity'])
     for i, row in a.iterrows():
@@ -144,8 +173,10 @@ def normalize_search_terms():
         if ps.stem(query) in cats_brands_stemmed:
           continue
 
+        suggested_query = getQuerySuggestion(query, algo='default')
         try:
-            requests.append(UpdateOne({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())}, {"$set": {"query": row['id'].lower(), 'popularity': row['popularity']}}, upsert=True))
+            requests.append(UpdateOne({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())},
+                                      {"$set": {"original_query": row['id'].lower(), 'popularity': row['popularity'], "query": suggested_query.lower()}}, upsert=True))
         except:
             print(traceback.format_exc())
             print(row)
@@ -155,6 +186,8 @@ def normalize_search_terms():
 #        search_terms_normalized.update({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())}, {"query": row['id'].lower(), 'popularity': row['popularity']}, upsert=True)
     if requests:
         search_terms_normalized.bulk_write(requests)
+
+    create_final_search_aggregation()
 
 """
   current_month = arrow.now().format("YYYY-MM")
@@ -214,6 +247,50 @@ def normalize_search_terms():
 
   print("Terms not found: %s" % terms_not_found)
 """
+
+def IsBrandCategory(query):
+    global cats_brands_stemmed
+    if ps.stem(query.lower()) in cats_brands_stemmed:
+        return True
+    return False
+
+def create_final_search_aggregation():
+    search_terms_final.remove({})
+    bucket_results = []
+    for term in search_terms_normalized.aggregate([
+        {"$project": {"term": {"$toLower": "$query"},
+                      "popularity_prev": "$popularity"}},
+        {"$group": {"_id": "$term", "popularity_prev": {"$sum": "$popularity_prev"}}},
+        {"$sort": {"popularity_prev": -1}},
+    ], allowDiskUse=True):
+        term['id'] = term.pop("_id")
+        bucket_results.append(term)
+
+    if not bucket_results:
+        print("Skipping final popularity computation")
+        return
+
+    print("Computing final popularity")
+    df = pd.DataFrame(bucket_results)
+    for i, row in df.iterrows():
+        if IsBrandCategory(row['id']):
+            df.drop(i, inplace=True)
+
+    df['popularity'] = 100 * normalize(df['popularity'])
+
+    requests = []
+    for i, row in df.iterrows():
+        try:
+            requests.append(UpdateOne({"_id": re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())},
+                                      {"$set": {"query": row['id'].lower(), 'popularity': row['popularity']}}, upsert=True))
+        except:
+            print(traceback.format_exc())
+            print(row)
+        if i % 1000000 == 0:
+            search_terms_final.bulk_write(requests)
+            requests = []
+    if requests:
+        search_terms_final.bulk_write(requests)
 
 if __name__ == "__main__":
   normalize_search_terms()
