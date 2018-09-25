@@ -86,7 +86,7 @@ def indexESData(file_path, force_run):
     print('ES Number of documents in active index(%s): %s' % (active_index, num_docs_active))
     print('ES Number of documents in inactive index(%s): %s' % (inactive_index, num_docs_inactive))
 
-    if argv['change_index'] == 'true':
+    if argv['no_swap'] == True:
         if num_docs_active > 0:
             if abs((num_docs_inactive - num_docs_active) / num_docs_active) > 0.05:
                 if not force_run:
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     parser.add_argument("-g", "--generate-third-party-feeds", action='store_true')
     parser.add_argument("-s", "--search-engine", default="elasticsearch")
     parser.add_argument("-l", "--limit", default=0, help='number of docs to index', type=int)
-    parser.add_argument("-c", "--change_index", help="flag to check if index needs tobe switched")
+    parser.add_argument("--no-swap", action="store_true", help="Do not swap index")
     argv = vars(parser.parse_args())
 
     assert argv['search_engine'] in ['elasticsearch', None]
