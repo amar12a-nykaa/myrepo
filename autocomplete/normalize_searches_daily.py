@@ -34,6 +34,7 @@ DAILY_THRESHOLD = 3
 client = Utils.mongoClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
+corrected_search_query = client['search']['corrected_search_query']
 search_terms_normalized.remove({})
 ensure_mongo_indices_now()
 
@@ -46,6 +47,10 @@ def create_missing_indices():
 create_missing_indices()
 
 def getQuerySuggestion(query, algo):
+    for term in corrected_search_query.find({"query": query, "algo": algo}):
+        modified_query = term["suggested_query"]
+        return modified_query
+
     if algo == 'default':
         es_query = """{
              "size": 1,
@@ -66,7 +71,7 @@ def getQuerySuggestion(query, algo):
               }
         }""" % (query,query)
         es_result = Utils.makeESRequest(es_query, "livecore")
-        doc_found = es_result['hits']['hits']['_source']['title_brand_category'] if len(es_result['hits']['hits']) > 0 else ""
+        doc_found = es_result['hits']['hits'][0]['_source']['title_brand_category'] if len(es_result['hits']['hits']) > 0 else ""
         doc_found = doc_found.lower()
         if es_result.get('suggest', {}).get('term_suggester'):
             modified_query = query.lower()
@@ -164,7 +169,7 @@ def normalize_search_terms():
     a.popularity = a.popularity.fillna(0) 
 
     requests = []
-
+    corrections = []
     #brand_index = normalize_array("select brand as term from nykaa.brands where brand like 'l%'")
     #category_index = normalize_array("select name as term from nykaa.l3_categories")
     search_terms_normalized.remove({})
@@ -183,19 +188,25 @@ def normalize_search_terms():
         if ps.stem(query) in cats_brands_stemmed:
           continue
 
-        suggested_query = getQuerySuggestion(query, algo='default')
+        algo = 'default'
+        suggested_query = getQuerySuggestion(query, algo)
         try:
             requests.append(UpdateOne({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())},
                                       {"$set": {"query": row['id'].lower(), 'popularity': row['popularity'], "suggested_query": suggested_query.lower()}}, upsert=True))
+            corrections.append(UpdateOne({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())},
+                                      {"$set": {"query": row['id'].lower(), "suggested_query": suggested_query.lower(), "algo": algo}}, upsert=True))
         except:
             print(traceback.format_exc())
             print(row)
         if i % 1000000 == 0:
             search_terms_normalized.bulk_write(requests)
+            corrected_search_query.bulk_write(corrections)
             requests = []
+            corrections = []
 #        search_terms_normalized.update({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())}, {"query": row['id'].lower(), 'popularity': row['popularity']}, upsert=True)
     if requests:
         search_terms_normalized.bulk_write(requests)
+        corrected_search_query.bulk_write(corrections)
 
 """
   current_month = arrow.now().format("YYYY-MM")
