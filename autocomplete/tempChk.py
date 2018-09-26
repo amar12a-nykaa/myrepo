@@ -61,22 +61,32 @@ def getValue2(query):
 
 def getValue3(query):
     es_query = """{
-                     "size":0,
-                     "suggest": 
-                      { 
-                        "text":"%s", 
-                        "term_suggester": 
-                        { 
-                          "term": { 
-                            "field": "title_brand_category"
-                          }
-                        }
+                 "size": 1,
+                 "query": {
+                     "match": {
+                       "title_brand_category": "%s"
+                     }
+                 }, 
+                 "suggest": 
+                  { 
+                    "text":"%s", 
+                    "term_suggester": 
+                    { 
+                      "term": { 
+                        "field": "title_brand_category"
                       }
-                  }""" % (query)
+                    }
+                  }
+            }""" % (query, query)
     es_result = Utils.makeESRequest(es_query, "livecore")
+    doc_found = es_result['hits']['hits'][0]['_source']['title_brand_category'] if len(
+        es_result['hits']['hits']) > 0 else ""
+    doc_found = doc_found.lower()
     if es_result.get('suggest', {}).get('term_suggester'):
         modified_query = query.lower()
         for term_suggestion in es_result['suggest']['term_suggester']:
+            if term_suggestion.get('text') in doc_found:
+                continue
             if term_suggestion.get('options') and term_suggestion['options'][0]['score'] > 0.7:
                 frequency = term_suggestion['options'][0]['freq']
                 new_term = term_suggestion['options'][0]['text']
