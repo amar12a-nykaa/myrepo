@@ -210,7 +210,7 @@ def index_search_queries(collection, searchengine):
         is_corrected = True
       _type = 'search_query'
       url = "http://www.nykaa.com/search/result/?q=" + corrected_query.replace(" ", "+")
-      data = json.dumps({"type": _type, "url": url})
+      data = json.dumps({"type": _type, "url": url, "corrected_query" : corrected_query})
       entity = query 
       cnt_search += 1 
 
@@ -221,7 +221,6 @@ def index_search_queries(collection, searchengine):
         "_id" : createId(row['_id']),
         "id": createId(row['_id']),
         "entity": entity,
-        "corrected_query": corrected_query,
         "is_corrected": is_corrected,
         "weight": row['popularity'],
         "type": _type,
