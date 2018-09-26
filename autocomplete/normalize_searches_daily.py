@@ -48,7 +48,12 @@ create_missing_indices()
 def getQuerySuggestion(query, algo):
     if algo == 'default':
         es_query = """{
-             "size":0,
+             "size": 1,
+             "query": {
+                 "match": {
+                   "title_brand_category": "%s"
+                 }
+             }, 
              "suggest": 
               { 
                 "text":"%s", 
@@ -59,12 +64,16 @@ def getQuerySuggestion(query, algo):
                   }
                 }
               }
-        }""" % (query)
+        }""" % (query,query)
         es_result = Utils.makeESRequest(es_query, "livecore")
+        doc_found = es_result['hits']['hits']['_source']['title_brand_category'] if len(es_result['hits']['hits']) > 0 else ""
+        doc_found = doc_found.lower()
         if es_result.get('suggest', {}).get('term_suggester'):
             modified_query = query.lower()
             for term_suggestion in es_result['suggest']['term_suggester']:
                 if term_suggestion.get('options') and term_suggestion['options'][0]['score'] > 0.7:
+                    if query.lower() in doc_found:
+                        continue
                     frequency = term_suggestion['options'][0]['freq']
                     new_term = term_suggestion['options'][0]['text']
                     for suggestion in term_suggestion['options'][1:]:
