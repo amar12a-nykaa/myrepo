@@ -5,6 +5,8 @@ import pprint
 import socket
 import sys
 import traceback
+import ast
+from operator import itemgetter
 from collections import OrderedDict
 from datetime import datetime
 from urllib.parse import urlparse
@@ -35,13 +37,14 @@ conn = Utils.mysqlConnection()
 
 
 class Worker(threading.Thread):
-    def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv,
+    def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
                  update_productids):
         self.q = q
         self.search_engine = search_engine
         self.collection = collection
         self.skus = skus
         self.categoryFacetAttributesInfoMap = categoryFacetAttributesInfoMap
+        self.offersApiConfig = offersApiConfig
         self.required_fields_from_csv = required_fields_from_csv
         self.update_productids = update_productids
         super().__init__()
@@ -50,9 +53,7 @@ class Worker(threading.Thread):
         while True:
             try:
                 row = self.q.get(timeout=3)  # 3s timeout
-                CatalogIndexer.indexSingleRecord(row, self.search_engine, self.collection, self.skus,
-                                                 self.categoryFacetAttributesInfoMap, self.required_fields_from_csv,
-                                                 self.update_productids)
+                CatalogIndexer.indexSingleRecord(row, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids)
             except queue.Empty:
                 return
             # do whatever work you have to do on work
@@ -144,11 +145,31 @@ class CatalogIndexer:
 
         return cat_facet_attrs
 
+    def getOffersApiConfig():
+        mysql_conn = Utils.nykaaMysqlConnection()
+        query = "SELECT plain_value FROM core_variable_value cvv JOIN core_variable cv ON cv.variable_id = cvv.variable_id WHERE code = 'offers-api-config';"
+        results = Utils.fetchResults(mysql_conn, query)
+        offers_api_config = None
+        for key, config_value in enumerate(results):
+            if config_value['plain_value']:
+                offers_api_config = json.loads(config_value['plain_value'])
+                offers_api_config['product_ids'] = offers_api_config['product_ids'].split(',')
+        return offers_api_config
+
     def fetch_price_availability(input_docs, pws_fetch_products):
         request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
         request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
         req = Request(request_url, data=request_data, headers={'content-type': 'application/json'})
-        pas_object = json.loads(urlopen(req).read().decode('utf-8'))
+        attempts = 3
+        while (attempts):
+            try:
+                pas_object = json.loads(urlopen(req).read().decode('utf-8'))
+                break
+            except:
+                attempts -= 1
+                print("WARNING ... Attempts remaining: %s, Failed to fetch data: %s %s " % (
+                attempts, request_url, request_data))
+
         pas_object = pas_object['skus']
 
         pws_input_docs = []
@@ -222,8 +243,7 @@ class CatalogIndexer:
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
 
-    def indexSingleRecord(records, search_engine, collection, skus, categoryFacetAttributesInfoMap,
-                          required_fields_from_csv, update_productids):
+    def indexSingleRecord(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids):
         input_docs = []
         pws_fetch_products = []
         # index_start = timeit.default_timer()
@@ -295,8 +315,7 @@ class CatalogIndexer:
                             set_clause_arr.append("product_id='%s'" % doc.get('product_id'))
                         if set_clause_arr:
                             set_clause = " set " + ", ".join(set_clause_arr)
-                            query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause,
-                                                                                              sku=doc['sku'])
+                            query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause, sku=doc['sku'])
                             Utils.mysql_write(query)
                 except:
                     print(traceback.format_exc())
@@ -307,12 +326,12 @@ class CatalogIndexer:
                 popularity_obj = popularity_obj.get(doc['product_id'])
                 doc['popularity'] = 0
                 doc['viewcount_i'] = 0
-                doc['popularity_in_stock'] = 0
+                doc['popularity_recent'] = 0
                 if popularity_obj:
                     doc['popularity'] = popularity_obj['popularity']
                     # View based Popularity
                     doc['viewcount_i'] = popularity_obj.get('views', 0)
-                    doc['popularity_in_stock'] = popularity_obj.get('popularity_in_stock', 0)
+                    doc['popularity_recent'] = popularity_obj.get('popularity_recent', 0)
 
                 # Product URL and slug
                 product_url = row['product_url']
@@ -337,10 +356,8 @@ class CatalogIndexer:
                                         'position']:
                                 cat_facet[key] = str(info.get(key))
                             doc['category_facet'].append(cat_facet)
-                    doc['category_facet_searchable'] = " ".join(
-                        [x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
-                    doc['category_facet_searchable'] += " " + " ".join(
-                        [x for x in doc['category_values'] if 'parcos' in x.lower()])
+                    doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
+                    doc['category_facet_searchable'] += " " + " ".join([x for x in doc['category_values'] if 'parcos' in x.lower()])
 
                 elif len(category_ids) != len(category_names):
                     # with open("/data/inconsistent_cat.txt", "a") as f:
@@ -441,23 +458,22 @@ class CatalogIndexer:
                         variant_name_key = 'size'
                         variant_attr_id_key = 'size_id'
 
-                    variant_names = (row[variant_name_key] or "").split('|') if variant_name_key and row[
-                        variant_name_key] else []
-                    variant_icons = (row[variant_icon_key] or "").split('|') if variant_icon_key and row[
-                        variant_icon_key] else []
-                    variant_attr_ids = (row[variant_attr_id_key] or "").split('|') if variant_attr_id_key and row[
-                        variant_attr_id_key] else []
-                    if variant_type and variant_skus and len(variant_skus) == len(variant_names) and len(
-                            variant_skus) == len(variant_ids) and len(variant_skus) == len(variant_attr_ids):
-                        if variant_icons and len(variant_icons) != len(variant_skus):
-                            variant_icons = []
-                        variants_arr = []
-                        if not variant_icons:
-                            variant_icons = [""] * len(variant_skus)
-                        for i, sku in enumerate(variant_skus):
-                            variants_arr.append({'sku': variant_skus[i], 'id': variant_ids[i], 'name': variant_names[i],
-                                                 'icon': variant_icons[i], 'variant_id': variant_attr_ids[i]})
-                        doc['variants'] = {variant_type: variants_arr}
+                    variant_names = (row[variant_name_key] or "").split('|') if variant_name_key and row[variant_name_key] else []
+                    variant_icons = (row[variant_icon_key] or "").split('|') if variant_icon_key and row[variant_icon_key] else []
+                    variant_attr_ids = (row[variant_attr_id_key] or "").split('|') if variant_attr_id_key and row[variant_attr_id_key] else []
+                    try:
+                        if variant_type and variant_skus and len(variant_skus) == len(variant_names) and len(variant_skus) == len(variant_ids) and len(variant_skus) == len(variant_attr_ids):
+                            if variant_icons and len(variant_icons) != len(variant_skus):
+                                variant_icons = []
+                            variants_arr = []
+                            if not variant_icons:
+                                variant_icons = [""] * len(variant_skus)
+                            for i, sku in enumerate(variant_skus):
+                                variants_arr.append({'sku': variant_skus[i], 'id': variant_ids[i], 'name': variant_names[i],'icon': variant_icons[i], 'variant_id': variant_attr_ids[i]})
+                            doc['variants'] = {variant_type: variants_arr}
+                    except:
+                        print("[ERROR] variants field not formed for SKU: %s" % doc['sku'])
+                        pass
                     doc['variant_type'] = variant_type
                     doc['option_count'] = len(variant_skus)
                 elif doc['type'] == 'simple':
@@ -509,6 +525,63 @@ class CatalogIndexer:
                 #  f.write("%s\n"%doc['sku'])
                 # print('inconsistent offer values for %s'%doc['sku'])
                 doc['offer_count'] = len(doc['offers'])
+                # print(doc['offers'])
+                new_offer_status = 0
+                if offersApiConfig and offersApiConfig['status']:
+                    if offersApiConfig['status'] == 1 and offersApiConfig['product_ids'] and len(
+                            offersApiConfig['product_ids']) > 0:
+                        if doc['product_id'] in offersApiConfig['product_ids']:
+                            new_offer_status = 1
+                    elif offersApiConfig['status'] == 2:
+                        new_offer_status = 1
+                    else:
+                        new_offer_status = 0
+                else:
+                    new_offer_status = 0
+
+                if new_offer_status == 1:
+                    # New offer Json
+                    doc['offers'] = []
+                    doc['offer_ids'] = []
+                    doc['offer_facet'] = []
+                    doc['nykaaman_offers'] = []
+                    doc['nykaaman_offer_ids'] = []
+                    doc['nykaaman_offer_facet'] = []
+
+                    try:
+                        if row['offers']:
+                            product_offers = row['offers'].replace("\\\\", "\\")
+                            product = {}
+                            product['offers'] = ast.literal_eval(product_offers)
+                            for i in product['offers']:
+                                prefix = i
+                                if product['offers'][prefix]:
+                                    for i in product['offers'][prefix]:
+                                        if prefix == 'nykaa':
+                                            key = 'offer_facet'
+                                        else:
+                                            key = prefix + '_offer_facet'
+                                        doc['key'] = []
+                                        key = OrderedDict()
+                                        key['id'] = i['id']
+                                        key['name'] = i['name']
+                                        key['offer_start_date'] = i['offer_start_date']
+                                        key['offer_end_date'] = i['offer_end_date']
+                                        doc['key'].append(key)
+                                        if prefix == 'nykaa':
+                                            doc['offer_ids'].append(i['id'])
+                                        else:
+                                            doc[prefix + '_offer_ids'].append(i['id'])
+
+                                    product['offers'][prefix] = sorted(product['offers'][prefix], key=itemgetter('priority'), reverse=True)
+                                    if prefix == 'nykaa':
+                                        doc['offers'] = product['offers'][prefix]
+                                    else:
+                                        doc[prefix + '_offers'] = product['offers'][prefix]
+                    except Exception as e:
+                        print(traceback.format_exc())
+                    doc['offer_count'] = len(doc['offers'])
+                    doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
 
                 # facets: dynamic fields
                 facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1")]
@@ -572,11 +645,15 @@ class CatalogIndexer:
                         doc[k] = None
 
                 try:
-                    doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""),
-                                                                        doc.get("brand_facet_searchable", ""),
-                                                                        doc.get("category_facet_searchable", "")] if x])
+                    doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""),doc.get("brand_facet_searchable", ""),doc.get("category_facet_searchable", "")] if x])
                 except:
                     pass
+
+                for facet in ['color_facet', 'finish_facet', 'formulation_facet']:
+                    try:
+                        doc['title_brand_category'] += " " + doc[facet][0]['name']
+                    except:
+                        pass
 
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
@@ -637,6 +714,8 @@ class CatalogIndexer:
         input_docs = []
         pws_fetch_products = []
         categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
+        offersApiConfig = CatalogIndexer.getOffersApiConfig()
+
         ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
         q = queue.Queue(maxsize=0)
         all_rows = numpy.array_split(numpy.array(all_rows), numpy_count)
@@ -649,7 +728,7 @@ class CatalogIndexer:
             q.put_nowait(row)
 
         for _ in range(NUMBER_OF_THREADS):
-            Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv,
+            Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
                    update_productids).start()
         q.join()
 
@@ -659,9 +738,8 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--filepath", required=True, help='path to csv file')
     parser.add_argument("-c", "--collection", help='name of collection to index to')
     parser.add_argument("-s", "--searchengine", default='elasticsearch')
-    parser.add_argument("--update_productids", action='store_true',
-                        help='Adds product_id and parent_id to products table')
-    parser.add_argument("--sku", type=str)
+    parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
+    parser.add_argument("--sku", type=str, default="")
     argv = vars(parser.parse_args())
     file_path = argv['filepath']
     collection = argv['collection']
