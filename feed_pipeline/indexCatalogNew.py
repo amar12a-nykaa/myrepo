@@ -689,22 +689,14 @@ class CatalogIndexer:
             print("Running catalog pipeline for selected skus: %s" % skus)
         validate_popularity_data_health()
 
-        required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url',
-                                    'price', 'special_price', 'discount', 'is_in_stock',
-                                    'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count',
-                                    'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
-                                    'variant_type', 'offer_name', 'offer_id', 'product_expiry', 'created_at',
-                                    'category_id', 'category', 'brand_v1', 'brand', 'shop_the_look_product',
-                                    'style_divas',
-                                    'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern',
-                                    'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
-                                    'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone',
-                                    'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
-                                    'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent',
-                                    'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
-                                    'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls',
-                                    'is_subscribable', 'bucket_discount_percent', 'list_offer_id', 'max_allowed_qty',
-                                    'beauty_partner_v1', 'beauty_partner', 'is_kit_combo', 'primary_categories']
+        required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
+        'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
+        'variant_type', 'offer_name', 'offer_id', 'product_expiry', 'created_at', 'category_id', 'category', 'brand_v1', 'brand', 'shop_the_look_product', 'style_divas',
+        'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern', 'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
+        'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
+        'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
+        'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1',
+        'beauty_partner', 'primary_categories', 'offers']
 
         all_rows = read_csv_from_file(file_path)
         columns = all_rows[0].keys()
