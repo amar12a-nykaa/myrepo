@@ -841,10 +841,6 @@
               "type": "text",
               "analyzer": "shingle_analyzer",
               "search_analyzer": "default_search"
-            },
-            "phonetic" : {
-              "type": "keyword",
-              "analyzer": "phonetic_analyzer"
             }
           }
         },
@@ -859,6 +855,10 @@
               "type": "text",
               "analyzer": "shingle_analyzer",
               "search_analyzer": "default_search"
+            },
+            "phonetic" : {
+              "type": "keyword",
+              "analyzer": "phonetic_analyzer"
             }
           }
         },
