@@ -88,26 +88,38 @@ def compute_recommendation_rows(customer_ids, entity_type, recommendation_type, 
 def process_orders_df(start_datetime=None):
     print(str(datetime.now()))
     if start_datetime:
-        query = "SELECT sfo.customer_id, sfoi.order_id, sfoi.product_id FROM sales_flat_order_item sfoi INNER JOIN sales_flat_order sfo ON sfo.entity_id=sfoi.order_id WHERE sfoi.order_id <> 0 AND sfoi.mrp > 1 AND sfoi.parent_item_id IS NULL AND sfo.customer_id IS NOT NULL AND sfo.customer_id IN (SELECT DISTINCT(customer_id) FROM sales_flat_order WHERE created_at > '%s') ORDER BY sfo.created_at DESC;" % start_datetime
+        query = "SELECT fact_order_new.order_customerid, fact_order_new.nykaa_orderno, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.order_customerid IN (SELECT DISTINCT(order_customerid) FROM fact_order_new WHERE order_date > '%s') AND fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL ORDER BY order_date DESC" % start_datetime
     else:
-        query = "SELECT sfo.customer_id, sfoi.order_id, sfoi.product_id FROM sales_flat_order_item sfoi INNER JOIN sales_flat_order sfo ON sfo.entity_id=sfoi.order_id WHERE sfoi.order_id <> 0 AND sfoi.mrp > 1 AND sfoi.parent_item_id IS NULL AND sfo.customer_id IS NOT NULL ORDER BY sfo.created_at DESC;"
-    rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), query, 10000)
+        query = "SELECT fact_order_new.order_customerid, fact_order_new.nykaa_orderno, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL ORDER BY order_date DESC"
+
+    rows = Utils.fetchResultsInBatch(Utils.redshiftConnection(), query, 10000)
     if not rows:
         print("No orders to process")
         return
     df = pd.DataFrame(rows)
-    df.columns = ['customer_id', 'order_id', 'product_id']
+    df.columns = ['customer_id', 'order_id', 'product_id', 'sku']
+
+    scroll_results = Utils.scrollESForResults()
+    sku_2_product_id = scroll_results['sku_2_product_id']
+    child_2_parent = scroll_results['child_2_parent']
+
+    df['product_id'] = df.apply(lambda row: sku_2_product_id.get(row['sku'], row['product_id']), axis=1)
+    df['product_id'] = df.apply(lambda row: child_2_parent.get(row['product_id'], row['product_id']), axis=1)
+    df = df.drop(['sku'], axis=1)
+    df['group_count'] = 1
+    df = df.groupby(['customer_id', 'order_id', 'product_id']).agg({'group_count': 'sum'}).reset_index().drop(['group_count'], axis=1)
+
     print("Processing for %d customers" % len(df['customer_id'].unique()))
     print("Total orders processing: %d" % len(df['order_id'].unique()))
 
     customer_2_orders = defaultdict(lambda: [])
     for row in df.filter(['customer_id', 'order_id']).to_dict(orient='records'):
         if len(customer_2_orders[row['customer_id']]) <= 10:
-            customer_2_orders[int(row['customer_id'])].append(int(row['order_id']))
+            customer_2_orders[int(row['customer_id'])].append(row['order_id'])
 
     order_2_products = defaultdict(lambda: [])
     for row in df.filter(['order_id', 'product_id']).to_dict(orient='records'):
-        order_2_products[int(row['order_id'])].append(int(row['product_id']))
+        order_2_products[row['order_id']].append(int(row['product_id']))
 
     customer_2_product_chunks = defaultdict(lambda: [])
     for customer_id, order_ids in customer_2_orders.items():
