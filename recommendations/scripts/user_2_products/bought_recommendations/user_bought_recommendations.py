@@ -79,7 +79,7 @@ def insert_recommendations_2_db(recommendation_rows):
     insert_recommendations_query = """ INSERT INTO recommendations_v2(entity_id, entity_type, recommendation_type, algo, recommended_products_json)
             VALUES %s ON DUPLICATE KEY UPDATE recommended_products_json=VALUES(recommended_products_json)
     """ % values_str
-    Utils.mysql_write(insert_recommendations_query, values, Utils.mysqlConnection())
+    Utils.mysql_write(insert_recommendations_query, values, Utils.mysqlConnection('w'))
 
 def compute_recommendation_rows(customer_ids, entity_type, recommendation_type, algo, recommendations_generation_time, customer_2_product_chunks, recommendation_rows, product_2_recommendations):
     for customer_id in customer_ids:
