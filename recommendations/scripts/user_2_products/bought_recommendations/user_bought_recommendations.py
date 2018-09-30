@@ -108,6 +108,9 @@ def process_orders_df(start_datetime=None):
     df = df.drop(['sku'], axis=1)
     df['group_count'] = 1
     df = df.groupby(['customer_id', 'order_id', 'product_id']).agg({'group_count': 'sum'}).reset_index().drop(['group_count'], axis=1)
+    print("Total dataframe rows: %d" % len(df))
+    df = df[df.product_id.notnull()]
+    print("Total dataframe rows after filtering product_id is not null: %d" % len(df))
 
     print("Processing for %d customers" % len(df['customer_id'].unique()))
     print("Total orders processing: %d" % len(df['order_id'].unique()))
