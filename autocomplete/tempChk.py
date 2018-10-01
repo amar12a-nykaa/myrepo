@@ -3,6 +3,17 @@ import sys
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
+correct_term_list = ["everyuth","kerastase","farsali","krylon","armaf","Cosrx","focallure","ennscloset","studiowest","odonil","gucci","kryolan",
+                     "sephora","foreo","footwear","rhoda","Fenty","Hilary","spoolie","jovees","devacurl","biore","quirky","stay","parampara","dermadew",
+                     "kokoglam","embryolisse","tigi","mediker","dermacol","Anastasia","essie","sale","bajaj","burberry","sesa","sigma","spencer","puna",
+                     "modicare","hugo","gelatin","stila","ordinary","spawake","mederma","mauri","benetint","amaira","meon","tony","renee","boxes","aashka",
+                     "prepair","meilin","krea","dress","sivanna","mosturiser","etude","kadhi","laneige","gucci","jaclyn","hilary","anastasia","becca","sigma",
+                     "farsali","majirel","satthwa","fenty","vibrator","focallure","krylon","tigi","armaf","cosrx","soumis","studiowest","evion","darmacol","odonil",
+                     "comedogenic","suthol","suwasthi","kerastase","nexus","footwear","badescu","rebonding","jeffree","devacurl","odbo","sesderma","tilbury","dildo",
+                     "glatt","essie","ethiglo","prada","dermadew","trylo","nycil","cipla","biore","giambattista","luxliss","parampara","dyson","episoft","vcare",
+                     "ofra","nizoral","elnett","mediker","photostable","urbangabru","ketomac","popfeel","igora","wishtrend","jefree","hillary","skeyndor","raga"]
+
+
 
 def getValue1(query):
     es_query = """{
@@ -61,31 +72,32 @@ def getValue2(query):
 
 def getValue3(query):
     es_query = """{
-                 "size": 1,
-                 "query": {
-                     "match": {
-                       "title_brand_category": "%s"
-                     }
-                 }, 
-                 "suggest": 
-                  { 
-                    "text":"%s", 
-                    "term_suggester": 
-                    { 
-                      "term": { 
-                        "field": "title_brand_category"
-                      }
-                    }
-                  }
-            }""" % (query, query)
+         "size": 1,
+         "query": {
+             "match": {
+               "title_brand_category": "%s"
+             }
+         }, 
+         "suggest": 
+          { 
+            "text":"%s", 
+            "term_suggester": 
+            { 
+              "term": { 
+                "field": "title_brand_category"
+              }
+            }
+          }
+    }""" % (query,query)
     es_result = Utils.makeESRequest(es_query, "livecore")
-    doc_found = es_result['hits']['hits'][0]['_source']['title_brand_category'] if len(
-        es_result['hits']['hits']) > 0 else ""
+    doc_found = es_result['hits']['hits'][0]['_source']['title_brand_category'] if len(es_result['hits']['hits']) > 0 else ""
     doc_found = doc_found.lower()
     if es_result.get('suggest', {}).get('term_suggester'):
         modified_query = query.lower()
         for term_suggestion in es_result['suggest']['term_suggester']:
             if term_suggestion.get('text') in doc_found:
+                continue
+            if term_suggestion.get('text') in correct_term_list:
                 continue
             if term_suggestion.get('options') and term_suggestion['options'][0]['score'] > 0.7:
                 frequency = term_suggestion['options'][0]['freq']
@@ -339,4 +351,6 @@ def chkPositive():
 
 if __name__ == '__main__':
     #chk()
-    chkPositive()
+    # chkPositive()
+    s = getValue3("blue haven")
+    print(s)
