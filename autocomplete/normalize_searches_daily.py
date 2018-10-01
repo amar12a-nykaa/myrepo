@@ -38,15 +38,20 @@ corrected_search_query = client['search']['corrected_search_query']
 search_terms_normalized.remove({})
 ensure_mongo_indices_now()
 
-correct_term_list = ["everyuth","kerastase","farsali","krylon","armaf","Cosrx","focallure","ennscloset","studiowest","odonil","gucci","kryolan",
-                     "sephora","foreo","footwear","rhoda","Fenty","Hilary","spoolie","jovees","devacurl","biore","quirky","stay","parampara","dermadew",
-                     "kokoglam","embryolisse","tigi","mediker","dermacol","Anastasia","essie","sale","bajaj","burberry","sesa","sigma","spencer","puna",
-                     "modicare","hugo","gelatin","stila","ordinary","spawake","mederma","mauri","benetint","amaira","meon","tony","renee","boxes","aashka",
-                     "prepair","meilin","krea","dress","sivanna","mosturiser","etude","kadhi","laneige","gucci","jaclyn","hilary","anastasia","becca","sigma",
-                     "farsali","majirel","satthwa","fenty","vibrator","focallure","krylon","tigi","armaf","cosrx","soumis","studiowest","evion","darmacol","odonil",
-                     "comedogenic","suthol","suwasthi","kerastase","nexus","footwear","badescu","rebonding","jeffree","devacurl","odbo","sesderma","tilbury","dildo",
-                     "glatt","essie","ethiglo","prada","dermadew","trylo","nycil","cipla","biore","giambattista","luxliss","parampara","dyson","episoft","vcare",
-                     "ofra","nizoral","elnett","mediker","photostable","urbangabru","ketomac","popfeel","igora","wishtrend","jefree","hillary","skeyndor","raga"]
+correct_term_list = ["correct words","everyuth","kerastase","farsali","krylon","armaf","Cosrx","focallure","ennscloset",
+                     "studiowest","odonil","gucci","kryolan","sephora","foreo","footwear","rhoda","Fenty","Hilary","spoolie","jovees","devacurl","biore",
+                     "quirky","stay","parampara","dermadew","kokoglam","embryolisse","tigi","mediker","dermacol","Anastasia","essie","sale","bajaj","burberry",
+                     "sesa","sigma","spencer","puna","modicare","hugo","gelatin","stila","ordinary","spawake","mederma","mauri","benetint","amaira","meon","tony",
+                     "renee","boxes","aashka","prepair","meilin","krea","dress","sivanna","etude","kadhi","laneige","gucci","jaclyn","hilary",
+                     "anastasia","becca","sigma","farsali","majirel","satthwa","fenty","vibrator","focallure","krylon","tigi","armaf","cosrx","soumis","studiowest",
+                     "evion","darmacol","odonil","comedogenic","suthol","suwasthi","kerastase","nexus","footwear","badescu","rebonding","jeffree","devacurl","odbo",
+                     "sesderma","tilbury","dildo","glatt","essie","ethiglo","prada","dermadew","trylo","nycil","cipla","biore","giambattista","luxliss","parampara",
+                     "dyson","episoft","vcare","ofra","nizoral","elnett","mediker","photostable","urbangabru","ketomac","popfeel","igora","wishtrend","jefree",
+                     "hillary","skeyndor","raga","dresses","protectant","boroline","burts","seth","gelatin","panstick","goradia","policy","crimping","bajaj",
+                     "spencer","glue","reloaded","dior","hoola","opticare","mario","bees","prepair","clothes","oxyglow","chapstick","stencil","smokers","clutcher",
+                     "supra","artistry","cerave","suncross","suncare","stilla","skinfood","caprese","cantu","cameleon","glamego","hamdard","arish","soda","benzoyl",
+                     "tape","catrice","liplove","clarina","glister","colorista","mistral","scholl","bathrobe","fastrack","christian","mauri","emolene","bioaqua",
+                     "lodhradi","chance","bedhead","dawn","bake","persistence","bloating","carmex","roulette","acnestar","safi","flormar","margo","nudestix","instaglam"]
 
 def create_missing_indices():
   indices = search_terms_daily.list_indexes()
@@ -83,6 +88,7 @@ def getQuerySuggestion(query, algo):
         es_result = Utils.makeESRequest(es_query, "livecore")
         doc_found = es_result['hits']['hits'][0]['_source']['title_brand_category'] if len(es_result['hits']['hits']) > 0 else ""
         doc_found = doc_found.lower()
+        doc_found = doc_found.split()
         if es_result.get('suggest', {}).get('term_suggester'):
             modified_query = query.lower()
             for term_suggestion in es_result['suggest']['term_suggester']:
