@@ -38,6 +38,16 @@ corrected_search_query = client['search']['corrected_search_query']
 search_terms_normalized.remove({})
 ensure_mongo_indices_now()
 
+correct_term_list = ["everyuth","kerastase","farsali","krylon","armaf","Cosrx","focallure","ennscloset","studiowest","odonil","gucci","kryolan",
+                     "sephora","foreo","footwear","rhoda","Fenty","Hilary","spoolie","jovees","devacurl","biore","quirky","stay","parampara","dermadew",
+                     "kokoglam","embryolisse","tigi","mediker","dermacol","Anastasia","essie","sale","bajaj","burberry","sesa","sigma","spencer","puna",
+                     "modicare","hugo","gelatin","stila","ordinary","spawake","mederma","mauri","benetint","amaira","meon","tony","renee","boxes","aashka",
+                     "prepair","meilin","krea","dress","sivanna","mosturiser","etude","kadhi","laneige","gucci","jaclyn","hilary","anastasia","becca","sigma",
+                     "farsali","majirel","satthwa","fenty","vibrator","focallure","krylon","tigi","armaf","cosrx","soumis","studiowest","evion","darmacol","odonil",
+                     "comedogenic","suthol","suwasthi","kerastase","nexus","footwear","badescu","rebonding","jeffree","devacurl","odbo","sesderma","tilbury","dildo",
+                     "glatt","essie","ethiglo","prada","dermadew","trylo","nycil","cipla","biore","giambattista","luxliss","parampara","dyson","episoft","vcare",
+                     "ofra","nizoral","elnett","mediker","photostable","urbangabru","ketomac","popfeel","igora","wishtrend","jefree","hillary","skeyndor","raga"]
+
 def create_missing_indices():
   indices = search_terms_daily.list_indexes()
   if 'query_1' not in [x['name'] for x in indices]:
@@ -77,6 +87,8 @@ def getQuerySuggestion(query, algo):
             modified_query = query.lower()
             for term_suggestion in es_result['suggest']['term_suggester']:
                 if term_suggestion.get('text') in doc_found:
+                    continue
+                if term_suggestion.get('text') in correct_term_list:
                     continue
                 if term_suggestion.get('options') and term_suggestion['options'][0]['score'] > 0.7:
                     frequency = term_suggestion['options'][0]['freq']
