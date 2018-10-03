@@ -21,7 +21,7 @@ sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
 
 #FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
-FEED_URL_PREPROD = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
+#FEED_URL_PREPROD = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_URL_PREPROD = "http://preprod-2012758952.ap-southeast-1.elb.amazonaws.com/media/feed/master_feed_gludo.csv"
 FEED_URL = "http://adminpanel.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
@@ -29,7 +29,15 @@ hostname = socket.gethostname()
 
 myname = os.path.basename(__file__)
 def getCount():
-  return int(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep' |  awk '{ print $4 }' | sort -n  | uniq | wc -l " % myname, shell=True).strip())
+  print("== List of processes running at the moment ==")
+  print(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep'  " % myname, shell=True).strip())
+  print("== List of parent IDs running at the moment == ")
+  print(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep' |  awk '{ print $4 }' | sort -n  " % myname, shell=True).strip())
+  num =  int(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep' |  awk '{ print $4 }' | sort -n  | uniq | wc -l " % myname, shell=True).strip())
+  print("== Number of processes running ==")
+  print(num)
+  print("====")
+  return num
 
 if getCount() > 1:
   print()
@@ -38,18 +46,7 @@ if getCount() > 1:
   print("This script is already running. Exiting without doing anything")
   #print(str(subprocess.check_output("ps xao ppid,pid,pgid,sid,comm -o args |  grep python | grep %s| grep -vE 'vim|grep'" % myname, shell=True)))
   print("This means that your intented changes might still be in progress!!!")
-  exit()
-
-def addESScripts(es_client):
-
-  product_id_order_maintain_score_script = {
-    "script": {
-      "lang": "painless",
-      "source": "params.ranking_dict[doc[\"product_id.keyword\"].value]"
-    }
-  }
-
-  es_client.put_script(id='product_id_order_maintain_score_script', body=product_id_order_maintain_score_script)
+  raise Exception("Pipeline is already running. Exiting without doing anything")
 
 def indexESData(file_path, force_run):
   indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
@@ -84,6 +81,15 @@ def indexESData(file_path, force_run):
   num_docs_inactive = Utils.makeESRequest(body, inactive_index)['hits']['total']
   print('ES Number of documents in active index(%s): %s'%(active_index, num_docs_active))
   print('ES Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
+
+  if (num_docs_active-num_docs_inactive)/(num_docs_active + 1) > 0.05:
+    if not force_run:
+      raise Exception("Difference in the number of docs on the active and inactive indices is more than 5%")
+    else:
+      print("Warning!!!!  Difference in the number of docs on the active and inactive indices is more than 5%")
+      print("Ignoring the difference because its a force run.")
+  else:
+      print("Check of 5 percent is passed")
 
   # Update alias CATALOG_COLLECTION_ALIAS to point to freshly generated index
   # and do basic verification
