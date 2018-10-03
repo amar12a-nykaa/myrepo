@@ -133,6 +133,23 @@ def ensure_mongo_indices_now():
                   },
                   "name" : "date_1_platform_1_product_id_1",
                   "ns" : "search.raw_data"
+          },
+          {
+                  "v": 2,
+                  "key": {
+                          "_id": 1
+                  },
+                  "name": "_id_",
+                  "ns": "search.corrected_search_query"
+          },
+          {
+                  "v": 2,
+                  "key": {
+                          "query": 1,
+                          "algo": 1
+                  },
+                  "name": "query_1_algo_1",
+                  "ns": "search.corrected_search_query"
           }]
 
 

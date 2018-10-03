@@ -61,8 +61,8 @@ def create_missing_indices():
 
 create_missing_indices()
 
-def getQuerySuggestion(query, algo):
-    for term in corrected_search_query.find({"query": query, "algo": algo}):
+def getQuerySuggestion(query_id, query, algo):
+    for term in corrected_search_query.find({"_id": query_id}):
         modified_query = term["suggested_query"]
         return modified_query
 
@@ -207,11 +207,13 @@ def normalize_search_terms():
           continue
 
         algo = 'default'
-        suggested_query = getQuerySuggestion(query, algo)
+        query_id = re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())
+
         try:
-            requests.append(UpdateOne({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())},
+            suggested_query = getQuerySuggestion(query_id, query, algo)
+            requests.append(UpdateOne({"_id":  query_id},
                                       {"$set": {"query": row['id'].lower(), 'popularity': row['popularity'], "suggested_query": suggested_query.lower()}}, upsert=True))
-            corrections.append(UpdateOne({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())},
+            corrections.append(UpdateOne({"_id":  query_id},
                                       {"$set": {"query": row['id'].lower(), "suggested_query": suggested_query.lower(), "algo": algo}}, upsert=True))
         except:
             print(traceback.format_exc())
@@ -221,7 +223,6 @@ def normalize_search_terms():
             corrected_search_query.bulk_write(corrections)
             requests = []
             corrections = []
-#        search_terms_normalized.update({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())}, {"query": row['id'].lower(), 'popularity': row['popularity']}, upsert=True)
     if requests:
         search_terms_normalized.bulk_write(requests)
         corrected_search_query.bulk_write(corrections)
