@@ -6,7 +6,17 @@ from pas.v2.utils import Utils
 
 client = Utils.mongoClient()
 
+
+def ensure_mongo_collection(collection_list, db):
+  existing_list = client['search'].collection_names()
+  for collection in collection_list:
+    if collection not in existing_list:
+      print("creating collection: ", collection)
+      col = client[db].create_collection(collection)
+
 def ensure_mongo_indices_now():
+  collection_list = ["search_terms_daily", "search_terms_normalized_daily", "processed_data", "raw_data", "corrected_search_query"]
+  ensure_mongo_collection(collection_list, "search")
   indexes = [
           {
                   "v" : 2,
