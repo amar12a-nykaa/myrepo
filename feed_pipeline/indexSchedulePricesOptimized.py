@@ -7,14 +7,9 @@ from datetime import datetime, timedelta
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
 import argparse
-import re
-import sys
+
 import subprocess
-import math
-import os
-import json
-import time
-import pprint
+
 import traceback
 
 
@@ -38,7 +33,7 @@ if getCount() >= 2:
     print("getCount(): %r" % getCount())
     print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
     print(str(
-        subprocess.check_output("ps aux | grep python | grep indexScheduledPrices.py | grep -vE 'vim|grep|/bin/sh' ",
+        subprocess.check_source_output("ps aux | grep python | grep indexScheduledPricesOptimized.py | grep -vE 'vim|grep|/bin/sh' ",
                                 shell=True)))
     exit()
 
