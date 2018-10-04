@@ -79,7 +79,7 @@ def indexESData(file_path, force_run):
     sett = {'refresh_interval': '1s'}
     index_client.put_settings(sett, inactive_index)
     try:
-        index_client.refresh(index=inactive_index, request_timeout=30)
+        index_client.refresh(index=inactive_index, request_timeout=120)
     except Exception as e:
         print(traceback.format_exc())
         raise Exception("Index refresh failed.....")
