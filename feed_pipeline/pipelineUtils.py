@@ -87,6 +87,7 @@ class PipelineUtils:
         sku_should_query.append({'term' : {'sku.keyword' : sku}})
       querydsl['query'] = {'bool':{'should':sku_should_query}}
       querydsl['_source'] = ['sku','type']
+      querydsl['size'] = len(product_skus) + 1
       response = Utils.makeESRequest(querydsl, index='livecore')
       docs = response['hits']['hits']
       for doc in docs:

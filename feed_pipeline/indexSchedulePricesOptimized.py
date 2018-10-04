@@ -7,8 +7,14 @@ from datetime import datetime, timedelta
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
 import argparse
-
+import re
+import sys
 import subprocess
+import math
+import os
+import json
+import time
+import pprint
 import traceback
 
 
@@ -78,8 +84,7 @@ class ScheduledPriceUpdater:
         print("[%s] Starting simple product updates" % getCurrentDateTime())
         chunk_size = argv['batch_size']
         if not chunk_size:
-            chunk_size = 500
-
+            chunk_size = 200
         chunk_results = list(ScheduledPriceUpdater.chunks(results, chunk_size))
 
         for product in chunk_results:
@@ -88,15 +93,11 @@ class ScheduledPriceUpdater:
             psku_list = []
 
             for single_product in product:
-                print("sku: %s" % single_product['sku'])
-                product_updated_count += 1
                 sku_list.append(single_product['sku'])
                 psku_list.append(single_product['psku'])
                 products.append({'sku': single_product['sku'], 'type': single_product['type']})
                 if single_product['psku'] and single_product['psku'] != single_product['sku']:
                     products.append({'sku': single_product['psku'], 'type': 'configurable'})
-                if product_updated_count % 100 == 0:
-                    print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
 
             new_sku_list = sku_list + list(set(psku_list) - set(sku_list))
             sku_string = "','".join(new_sku_list)
@@ -107,12 +108,14 @@ class ScheduledPriceUpdater:
             for res in results:
                 products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
 
-            try:
-                update_docs = PipelineUtils.getProductsToIndex(products)
-                if update_docs:
-                    Utils.updateESCatalog(update_docs)
-            except Exception as e:
-                print(traceback.format_exc())
+            update_docs = PipelineUtils.getProductsToIndex(products)
+            if update_docs:
+                Utils.updateESCatalog(update_docs)
+            for single_sku in update_docs:
+                product_updated_count += 1
+                print("sku: %s" % single_sku['sku'])
+                if product_updated_count % 100 == 0:
+                    print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
 
                 # Code for bundle products
         products = []
@@ -141,6 +144,6 @@ class ScheduledPriceUpdater:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--batch_size", help='number of records in single index request')
+    parser.add_argument("-l", "--batch_size", type=int, help='number of records in single index request')
     argv = vars(parser.parse_args())
     ScheduledPriceUpdater.update()
