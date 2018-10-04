@@ -257,9 +257,10 @@ def calculate_popularity():
   df = df.set_index("parent_id") 
 
   a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
-  a.popularity_recent = a.popularity_recent.fillna(0)
   a['popularity'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
+  a['popularity_recent'] = 100 * normalize(0.2 * a['popularity_total'] + 0.8 * a['popularity_recent'])
   a.popularity= a.popularity.fillna(0)
+  a.popularity_recent = a.popularity_recent.fillna(0)
   a.popularity_conversion = a.popularity_conversion.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
