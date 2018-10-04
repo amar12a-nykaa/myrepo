@@ -78,7 +78,11 @@ def indexESData(file_path, force_run):
 
     sett = {'refresh_interval': '1s'}
     index_client.put_settings(sett, inactive_index)
-    index_client.refresh(index=inactive_index)
+    try:
+        index_client.refresh(index=inactive_index, request_timeout=120)
+    except Exception as e:
+        print(traceback.format_exc())
+        raise Exception("Index refresh failed.....")
     index_stop = timeit.default_timer()
     index_duration = index_stop - index_start
     print("Time taken to index data to ElasticSearch: %s seconds" % time.strftime("%M min %S seconds",
