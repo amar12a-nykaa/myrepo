@@ -8,6 +8,7 @@ sys.path.append("/home/apis/nykaa")
 from pas.v2.utils import Utils
 sys.path.append("/home/ubuntu/nykaa_scripts/utils")
 from gensimutils import GensimUtils
+from IPython import embed
 
 def _add_embedding_vectors_in_mysql(cursor, table, rows):
     values_str = ", ".join(["(%s, %s, %s, %s)" for i in range(len(rows))]) 
@@ -27,21 +28,36 @@ def add_embedding_vectors_in_mysql(db, table, rows):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Argument parser for generating topics')
     parser.add_argument('--verbose', '-v', action='store_true')
-    parser.add_argument('--bucket-name', required=True) 
-    parser.add_argument('--input-dir', required=True) 
-    parser.add_argument('--vector-len', required=True, type=int) 
+    parser.add_argument('--add-vectors-from-mysql-to-es', action='store_true') 
+    parser.add_argument('--bucket-name') 
+    parser.add_argument('--input-dir') 
+    parser.add_argument('--vector-len', type=int) 
     parser.add_argument('--product-json') 
     parser.add_argument('--user-json') 
     parser.add_argument('--store-in-db', action='store_true')
+    parser.add_argument('--add-in-es', action='store_true')
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
+    if argv['add_vectors_from_mysql_to_es']:
+        query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='lsi'"
+        rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 1000)
+        print("Total number of products from mysql: %d" % len(rows))
+        product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
+        docs = []
+        for row in rows:
+            if product_id_2_sku.get(row[0]):
+                docs.append({'sku': product_id_2_sku[row[0]], 'embedding_vector': json.loads(row[1])})
+        Utils.updateESCatalog(docs)
+        exit()
+
     bucket_name = argv['bucket_name']
     input_dir = argv['input_dir']
     vector_len = argv['vector_len']
     product_json = argv.get('product_json')
     user_json = argv.get('user_json')
-    store_in_db = argv.get('store_in_db')
+    store_in_db = argv.get('store_in_db', False)
+    add_in_es = argv.get('add_in_es', False)
 
     print("Downloading the models")
     user_corpus_dict, user_tfidf, user_tfidf_lsi, user_lsi = GensimUtils.get_models(bucket_name, input_dir)
@@ -75,3 +91,12 @@ if __name__ == '__main__':
             rows.append((product_id, 'product', 'lsi', json.dumps(vector)))
 
         add_embedding_vectors_in_mysql(Utils.mysqlConnection('w'), 'embedding_vectors', rows)
+
+    if add_in_es:
+        product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
+
+        docs = []
+        for product_id, vector in product_vectors.items():
+            docs.append({'sku': product_id_2_sku['product_id'], 'embedding_vector': vector})
+
+        Utils.updateESCatalog(docs)
