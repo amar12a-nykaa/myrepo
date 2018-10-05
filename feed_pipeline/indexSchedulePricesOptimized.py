@@ -13,7 +13,7 @@ import queue
 import threading
 import traceback
 
-NUMBER_OF_THREADS = 10
+NUMBER_OF_THREADS = 4
 
 class Worker(threading.Thread):
     def __init__(self, q):
@@ -89,6 +89,7 @@ class ScheduledPriceUpdater:
 
         for single_sku in update_docs:
             print("sku: %s" % single_sku['sku'])
+        print("batch executed successfully")
 
 
 
@@ -125,7 +126,7 @@ class ScheduledPriceUpdater:
         print("[%s] Starting simple product updates" % getCurrentDateTime())
         chunk_size = argv['batch_size']
         if not chunk_size:
-            chunk_size = 200
+            chunk_size = 500
 
         chunk_results = list(ScheduledPriceUpdater.chunks(results, chunk_size))
 
