@@ -13,7 +13,6 @@ import queue
 import threading
 import traceback
 
-NUMBER_OF_THREADS = 4
 
 class Worker(threading.Thread):
     def __init__(self, q):
@@ -63,6 +62,7 @@ class ScheduledPriceUpdater:
             yield l[i:i + n]
 
     def updateChunkPrice(product_chunk):
+        product_updated_count = 0
         products = []
         sku_list = []
         psku_list = []
@@ -82,13 +82,15 @@ class ScheduledPriceUpdater:
         mysql_conn.close()
         for res in results:
             products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
-
+        print("count of products array : %s" %(len(products)))
         update_docs = PipelineUtils.getProductsToIndex(products)
         if update_docs:
             Utils.updateESCatalog(update_docs)
 
         for single_sku in update_docs:
             print("sku: %s" % single_sku['sku'])
+            if product_updated_count % 100 == 0:
+                print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
         print("batch executed successfully")
 
 
@@ -125,15 +127,20 @@ class ScheduledPriceUpdater:
 
         print("[%s] Starting simple product updates" % getCurrentDateTime())
         chunk_size = argv['batch_size']
+        num_of_threads = argv['threads']
+        
         if not chunk_size:
             chunk_size = 500
+
+        if not num_of_threads:
+            num_of_threads = 10
 
         chunk_results = list(ScheduledPriceUpdater.chunks(results, chunk_size))
 
         for product in chunk_results:
             q.put_nowait(product)
 
-        for _ in range(NUMBER_OF_THREADS):
+        for _ in range(num_of_threads):
             Worker(q).start()
         q.join()
 
@@ -205,5 +212,6 @@ class ScheduledPriceUpdater:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--batch_size", type=int, help='number of records in single index request')
+    parser.add_argument("--threads", type=int, help='number of records in single index request')
     argv = vars(parser.parse_args())
     ScheduledPriceUpdater.update()
