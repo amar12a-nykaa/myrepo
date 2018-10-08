@@ -28,6 +28,7 @@ def add_embedding_vectors_in_mysql(db, table, rows):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Argument parser for generating topics')
     parser.add_argument('--verbose', '-v', action='store_true')
+    parser.add_argument('--algo', required=True)
     parser.add_argument('--add-vectors-from-mysql-to-es', action='store_true') 
     parser.add_argument('--bucket-name') 
     parser.add_argument('--input-dir') 
@@ -36,13 +37,12 @@ if __name__ == '__main__':
     parser.add_argument('--user-json') 
     parser.add_argument('--store-in-db', action='store_true')
     parser.add_argument('--add-in-es', action='store_true')
-    parser.add_argument('--algo')
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
     if argv['add_vectors_from_mysql_to_es']:
         print("Adding vectors from mysql to es")
-        query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='lsi_100'"
+        query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='%s'" % algo
         rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 1000)
         print("Total number of products from mysql: %d" % len(rows))
         product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
