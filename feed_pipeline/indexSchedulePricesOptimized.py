@@ -145,10 +145,10 @@ class ScheduledPriceUpdater:
         num_of_threads = argv['threads']
         
         if not chunk_size:
-            chunk_size = 500
+            chunk_size = 200
 
         if not num_of_threads:
-            num_of_threads = 10
+            num_of_threads = 4
 
         chunk_results = list(ScheduledPriceUpdater.chunks(results, chunk_size))
 

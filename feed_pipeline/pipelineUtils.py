@@ -12,6 +12,11 @@ from IPython import embed
 
 class PipelineUtils:
 
+  def chunks(l, n):
+    """Yield successive n-sized chunks from list l."""
+    for i in range(0, len(l), n):
+      yield l[i:i + n]
+
   def getAPIHost():
     host = 'localhost'
     if socket.gethostname().startswith('admin'):
@@ -78,22 +83,24 @@ class PipelineUtils:
     update_docs = []
 
     # Check if to-be-updated skus are actually present in ES, ignore skus not present
-    final_products_to_update = []
-    product_skus = [product['sku'].upper() for product in products]
-    querydsl = {}
-    if product_skus:
-      sku_should_query = []
-      for sku in product_skus:
-        sku_should_query.append({'term' : {'sku.keyword' : sku}})
-      querydsl['query'] = {'bool':{'should':sku_should_query}}
-      querydsl['_source'] = ['sku','type']
-      querydsl['size'] = len(product_skus) + 1
-      response = Utils.makeESRequest(querydsl, index='livecore')
-      docs = response['hits']['hits']
-      for doc in docs:
-        final_products_to_update.append({'sku': doc['_source']['sku'], 'type': doc['_source']['type']})
+    chunk_results = list(PipelineUtils.chunks(products, 1000))
+    for chunk_list in chunk_results:
+      final_products_to_update = []
+      product_skus = [product['sku'].upper() for product in chunk_list]
+      querydsl = {}
+      if product_skus:
+        sku_should_query = []
+        for sku in product_skus:
+          sku_should_query.append({'term' : {'sku.keyword' : sku}})
+        querydsl['query'] = {'bool':{'should':sku_should_query}}
+        querydsl['_source'] = ['sku','type']
+        querydsl['size'] = len(product_skus) + 1
+        response = Utils.makeESRequest(querydsl, index='livecore')
+        docs = response['hits']['hits']
+        for doc in docs:
+          final_products_to_update.append({'sku': doc['_source']['sku'], 'type': doc['_source']['type']})
 
-    #pas_object = Product.getPAS(final_products_to_update)
+      #pas_object = Product.getPAS(final_products_to_update)
 
     params = json.dumps({"products": final_products_to_update}).encode('utf8')
     req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get", data=params, headers={'content-type': 'application/json'})
