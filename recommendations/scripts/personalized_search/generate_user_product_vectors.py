@@ -8,6 +8,7 @@ sys.path.append("/home/apis/nykaa")
 from pas.v2.utils import Utils
 sys.path.append("/home/ubuntu/nykaa_scripts/utils")
 from gensimutils import GensimUtils
+from gensim import models
 from IPython import embed
 
 def _add_embedding_vectors_in_mysql(cursor, table, rows):
@@ -36,6 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('--product-json') 
     parser.add_argument('--user-json') 
     parser.add_argument('--store-in-db', action='store_true')
+    parser.add_argument('--add-product-children', action='store_true')
     parser.add_argument('--add-in-es', action='store_true')
 
     argv = vars(parser.parse_args())
@@ -65,14 +67,17 @@ if __name__ == '__main__':
     user_json = argv.get('user_json')
     store_in_db = argv['store_in_db']
     add_in_es = argv['add_in_es']
+    add_product_children = argv['add_product_children']
 
     print("Downloading the models")
     user_corpus_dict, user_tfidf, user_tfidf_lsi, user_lsi = GensimUtils.get_models(bucket_name, input_dir)
 
     print("Generating user vectors")
     user_vectors = {}
+
+    norm_model = models.NormModel()
     for user_id, product_ids_bow in user_corpus_dict.items():
-        user_vectors[user_id] = GensimUtils.generate_complete_vectors(user_lsi[product_ids_bow], vector_len)
+        user_vectors[user_id] = GensimUtils.generate_complete_vectors(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)
 
     product_ids = list(set([product_tuple[0] for products_bow in user_corpus_dict.values() for product_tuple in products_bow]))
 
@@ -81,10 +86,11 @@ if __name__ == '__main__':
     for product_id in product_ids:
         product_vectors[str(product_id)] = GensimUtils.generate_complete_vectors(user_lsi[[[product_id, 1]]], vector_len)
 
-    child_2_parent = Utils.scrollESForResults()['child_2_parent']
-    for child_id, parent_id in child_2_parent.items():
-        if product_vectors.get(str(parent_id)):
-            product_vectors[str(child_id)] = product_vectors[str(parent_id)]
+    if add_product_children:
+        child_2_parent = Utils.scrollESForResults()['child_2_parent']
+        for child_id, parent_id in child_2_parent.items():
+            if product_vectors.get(str(parent_id)):
+                product_vectors[str(child_id)] = product_vectors[str(parent_id)]
 
     if product_json and user_json:
         print("Writing json file")
