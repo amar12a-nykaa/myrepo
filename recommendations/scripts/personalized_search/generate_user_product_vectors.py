@@ -42,7 +42,7 @@ if __name__ == '__main__':
     verbose = argv['verbose']
     if argv['add_vectors_from_mysql_to_es']:
         print("Adding vectors from mysql to es")
-        query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='lsi'"
+        query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='lsi_100'"
         rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 1000)
         print("Total number of products from mysql: %d" % len(rows))
         product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
