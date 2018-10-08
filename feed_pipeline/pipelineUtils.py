@@ -81,27 +81,56 @@ class PipelineUtils:
 
   def getProductsToIndex(products):
     update_docs = []
-    final_products_to_update = []
+
     # Check if to-be-updated skus are actually present in ES, ignore skus not present
-    chunk_results = list(PipelineUtils.chunks(products, 1000))
-    for chunk_list in chunk_results:
-      final_products_to_update = []
-      product_skus = [product['sku'].upper() for product in chunk_list]
-      querydsl = {}
-      if product_skus:
-        sku_should_query = []
-        for sku in product_skus:
-          sku_should_query.append({'term' : {'sku.keyword' : sku}})
-        querydsl['query'] = {'bool':{'should':sku_should_query}}
-        querydsl['_source'] = ['sku','type']
-        querydsl['size'] = len(product_skus) + 1
-        response = Utils.makeESRequest(querydsl, index='livecore')
-        docs = response['hits']['hits']
-        for doc in docs:
-          final_products_to_update.append({'sku': doc['_source']['sku'], 'type': doc['_source']['type']})
+    final_products_to_update = []
+    product_skus = [product['sku'].upper() for product in products]
+    querydsl = {}
+    if product_skus:
+      sku_should_query = []
+      for sku in product_skus:
+        sku_should_query.append({'term': {'sku.keyword': sku}})
+      querydsl['query'] = {'bool': {'should': sku_should_query}}
+      querydsl['_source'] = ['sku', 'type']
+      response = Utils.makeESRequest(querydsl, index='livecore')
+      docs = response['hits']['hits']
+      for doc in docs:
+        final_products_to_update.append({'sku': doc['_source']['sku'], 'type': doc['_source']['type']})
 
-      #pas_object = Product.getPAS(final_products_to_update)
+    # pas_object = Product.getPAS(final_products_to_update)
 
+    params = json.dumps({"products": final_products_to_update}).encode('utf8')
+    req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get", data=params,
+                                 headers={'content-type': 'application/json'})
+    pas_object = json.loads(urllib.request.urlopen(req, params).read().decode('utf-8')).get('skus', {})
+
+    for product in final_products_to_update:
+      update_fields = {}
+      sku = product['sku']
+      product_type = product['type']
+      pas = pas_object.get(sku) or {}
+      swap_keys = {'sp': 'price', 'discount': 'discount', 'mrp': 'mrp', 'is_in_stock': 'in_stock',
+                   'quantity': 'quantity', 'backorders': 'backorders', 'disabled': 'disabled'}
+      for key in swap_keys.keys():
+        if pas.get(key) is not None:
+          update_fields[swap_keys[key]] = pas[key]
+        if key == 'is_in_stock':
+          update_fields[swap_keys[key]] = bool(pas[key])
+      update_fields.update({'sku': sku})
+      update_fields['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+      if product_type == 'bundle':
+        bundle_products = pas.get('products', {})
+        product_qty_map = {}
+        for product_sku, bundle_prod in bundle_products.items():
+          product_qty_map[product_sku] = bundle_prod.get('quantity_in_bundle', 0)
+        update_fields['product_qty_map'] = json.dumps(product_qty_map)
+      update_docs.append(update_fields)
+
+    return update_docs
+
+  def getProductsToIndexBulk(final_products_to_update):
+    update_docs = []
+    final_products_to_update = []
     params = json.dumps({"products": final_products_to_update}).encode('utf8')
     req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get", data=params, headers={'content-type': 'application/json'})
     pas_object = json.loads(urllib.request.urlopen(req, params).read().decode('utf-8')).get('skus', {})

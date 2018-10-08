@@ -98,10 +98,10 @@ class ScheduledPriceUpdater:
         mysql_conn.close()
         for res in results:
             products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
-        print("count of products array : %s" %(len(products)))
-        update_docs = PipelineUtils.getProductsToIndex(products)
+
+        update_docs = PipelineUtils.getProductsToIndexBulk(products)
         if update_docs:
-            Utils.updateESCatalog(update_docs)
+            Utils.updateESCatalogParallel(update_docs)
 
         for single_sku in update_docs:
             print("sku: %s" % single_sku['sku'])
