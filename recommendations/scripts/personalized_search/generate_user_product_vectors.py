@@ -36,10 +36,12 @@ if __name__ == '__main__':
     parser.add_argument('--user-json') 
     parser.add_argument('--store-in-db', action='store_true')
     parser.add_argument('--add-in-es', action='store_true')
+    parser.add_argument('--algo')
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
     if argv['add_vectors_from_mysql_to_es']:
+        print("Adding vectors from mysql to es")
         query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='lsi'"
         rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 1000)
         print("Total number of products from mysql: %d" % len(rows))
@@ -56,8 +58,9 @@ if __name__ == '__main__':
     vector_len = argv['vector_len']
     product_json = argv.get('product_json')
     user_json = argv.get('user_json')
-    store_in_db = argv.get('store_in_db', False)
-    add_in_es = argv.get('add_in_es', False)
+    algo = argv['algo']
+    store_in_db = argv['store_in_db']
+    add_in_es = argv['add_in_es']
 
     print("Downloading the models")
     user_corpus_dict, user_tfidf, user_tfidf_lsi, user_lsi = GensimUtils.get_models(bucket_name, input_dir)
@@ -74,6 +77,11 @@ if __name__ == '__main__':
     for product_id in product_ids:
         product_vectors[str(product_id)] = GensimUtils.generate_complete_vectors(user_lsi[[[product_id, 1]]], vector_len)
 
+    child_2_parent = Utils.scrollESForResults()['child_2_parent']
+    for child_id, parent_id in child_2_parent.items():
+        if product_vectors.get(str(parent_id)):
+            product_vectors[str(child_id)] = product_vectors[str(parent_id)]
+
     if product_json and user_json:
         print("Writing json file")
         with open(user_json, 'w') as f:
@@ -83,16 +91,18 @@ if __name__ == '__main__':
             json.dump(product_vectors, f)
 
     if store_in_db:
+        print("Storing results in mysql DB")
         rows = []
         for user_id, vector in user_vectors.items():
-            rows.append((user_id, 'user', 'lsi', json.dumps(vector)))
+            rows.append((user_id, 'user', algo, json.dumps(vector)))
 
         for product_id, vector in product_vectors.items():
-            rows.append((product_id, 'product', 'lsi', json.dumps(vector)))
+            rows.append((product_id, 'product', algo, json.dumps(vector)))
 
         add_embedding_vectors_in_mysql(Utils.mysqlConnection('w'), 'embedding_vectors', rows)
 
     if add_in_es:
+        print("Adding results in ES")
         product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
 
         docs = []
