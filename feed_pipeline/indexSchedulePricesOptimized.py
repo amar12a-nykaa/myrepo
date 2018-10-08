@@ -160,45 +160,6 @@ class ScheduledPriceUpdater:
         q.join()
 
 
-
-
-
-
-        #
-        # for product in chunk_results:
-        #     products = []
-        #     sku_list = []
-        #     psku_list = []
-        #
-        #     for single_product in product:
-        #         sku_list.append(single_product['sku'])
-        #         psku_list.append(single_product['psku'])
-        #         products.append({'sku': single_product['sku'], 'type': single_product['type']})
-        #         if single_product['psku'] and single_product['psku'] != single_product['sku']:
-        #             products.append({'sku': single_product['psku'], 'type': 'configurable'})
-        #
-        #     new_sku_list = sku_list + list(set(psku_list) - set(sku_list))
-        #     sku_string = "','".join(new_sku_list)
-        #     query = "SELECT product_sku, bundle_sku FROM bundle_products_mappings WHERE product_sku in('" + sku_string + "')"
-        #     mysql_conn = Utils.mysqlConnection('r')
-        #     results = Utils.fetchResults(mysql_conn, query)
-        #     mysql_conn.close()
-        #     for res in results:
-        #         products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
-        #
-        #     update_docs = PipelineUtils.getProductsToIndex(products)
-        #     if update_docs:
-        #         Utils.updateESCatalog(update_docs)
-        #     for single_sku in update_docs:
-        #         product_updated_count += 1
-        #         print("sku: %s" % single_sku['sku'])
-        #         if product_updated_count % 100 == 0:
-        #             print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
-
-
-
-
-
         # Code for bundle products
         products = []
         query = "SELECT sku FROM bundles" + where_clause
