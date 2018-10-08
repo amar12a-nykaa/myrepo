@@ -13,6 +13,23 @@ import queue
 import threading
 import traceback
 
+total = 0
+
+def synchronized(func):
+    func.__lock__ = threading.Lock()
+
+    def synced_func(*args, **kws):
+        with func.__lock__:
+            return func(*args, **kws)
+
+    return synced_func
+
+@synchronized
+def count(increment):
+    global total
+    curr = total + increment
+    total = curr
+    return total
 
 class Worker(threading.Thread):
     def __init__(self, q):
@@ -62,7 +79,6 @@ class ScheduledPriceUpdater:
             yield l[i:i + n]
 
     def updateChunkPrice(product_chunk):
-        product_updated_count = 0
         products = []
         sku_list = []
         psku_list = []
@@ -89,10 +105,9 @@ class ScheduledPriceUpdater:
 
         for single_sku in update_docs:
             print("sku: %s" % single_sku['sku'])
-            if product_updated_count % 100 == 0:
-                print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
-        print("batch executed successfully")
 
+        total_count = count(len(update_docs))
+        print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
 
 
     def update():
@@ -188,8 +203,7 @@ class ScheduledPriceUpdater:
         products = []
         query = "SELECT sku FROM bundles" + where_clause
         mysql_conn = Utils.mysqlConnection('r')
-        results = Utils.fetchResults(mysql_conn, query,
-                                     (last_datetime, current_datetime, last_datetime, current_datetime))
+        results = Utils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime))
         mysql_conn.close()
         print("[%s] Starting bundle product updates" % getCurrentDateTime())
 
