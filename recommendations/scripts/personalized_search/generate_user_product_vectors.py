@@ -40,6 +40,8 @@ if __name__ == '__main__':
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
+    algo = argv['algo']
+
     if argv['add_vectors_from_mysql_to_es']:
         print("Adding vectors from mysql to es")
         query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='%s'" % algo
@@ -50,7 +52,10 @@ if __name__ == '__main__':
         for row in rows:
             if product_id_2_sku.get(row[0]):
                 docs.append({'sku': product_id_2_sku[row[0]], 'embedding_vector': json.loads(row[1])})
-        Utils.updateESCatalog(docs)
+
+        for i in range(0, len(docs), 1000):
+            Utils.updateESCatalog(docs[i:i+1000])
+
         exit()
 
     bucket_name = argv['bucket_name']
@@ -58,7 +63,6 @@ if __name__ == '__main__':
     vector_len = argv['vector_len']
     product_json = argv.get('product_json')
     user_json = argv.get('user_json')
-    algo = argv['algo']
     store_in_db = argv['store_in_db']
     add_in_es = argv['add_in_es']
 
