@@ -130,7 +130,6 @@ class PipelineUtils:
 
   def getProductsToIndexBulk(final_products_to_update):
     update_docs = []
-    final_products_to_update = []
     params = json.dumps({"products": final_products_to_update}).encode('utf8')
     req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get", data=params, headers={'content-type': 'application/json'})
     pas_object = json.loads(urllib.request.urlopen(req, params).read().decode('utf-8')).get('skus', {})
@@ -145,7 +144,7 @@ class PipelineUtils:
         if pas.get(key) is not None:
           update_fields[swap_keys[key]] = pas[key]
         if key == 'is_in_stock':
-          update_fields[swap_keys[key]] = bool(pas[key])
+          update_fields[swap_keys[key]] = bool(pas.get(key, False))
       update_fields.update({'sku': sku})
       update_fields['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
       if product_type=='bundle':
@@ -175,7 +174,7 @@ class PipelineUtils:
 
     update_docs = PipelineUtils.getProductsToIndex(products)
     if update_docs:
-      Utils.updateESCatalog(update_docs)
+      Utils.updateESCatalogParallel(update_docs)
     return len(update_docs)
 
 
