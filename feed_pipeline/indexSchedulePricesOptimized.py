@@ -225,7 +225,7 @@ class ScheduledPriceUpdater:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--batch_size", type=int, help='number of records in single index request')
+    parser.add_argument("--batch_size", type=int, help='number of records in single index request')
     parser.add_argument("--threads", type=int, help='number of records in single index request')
     argv = vars(parser.parse_args())
     ScheduledPriceUpdater.update()

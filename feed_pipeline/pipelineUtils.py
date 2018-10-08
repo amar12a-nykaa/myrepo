@@ -81,7 +81,7 @@ class PipelineUtils:
 
   def getProductsToIndex(products):
     update_docs = []
-
+    final_products_to_update = []
     # Check if to-be-updated skus are actually present in ES, ignore skus not present
     chunk_results = list(PipelineUtils.chunks(products, 1000))
     for chunk_list in chunk_results:
