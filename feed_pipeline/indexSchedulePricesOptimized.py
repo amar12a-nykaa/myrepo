@@ -14,6 +14,8 @@ import threading
 import traceback
 
 total = 0
+CHUNK_SIZE = 200
+NUMBER_OF_THREADS = 4
 
 def synchronized(func):
     func.__lock__ = threading.Lock()
@@ -25,7 +27,7 @@ def synchronized(func):
     return synced_func
 
 @synchronized
-def count(increment):
+def incrementGlobalCounter(increment):
     global total
     curr = total + increment
     total = curr
@@ -73,10 +75,11 @@ if getCount() >= 2:
 
 class ScheduledPriceUpdater:
 
-    def chunks(l, n):
+    @classmethod
+    def getChunks(cls, data_list, chunk_size):
         """Yield successive n-sized chunks from list l."""
-        for i in range(0, len(l), n):
-            yield l[i:i + n]
+        for i in range(0, len(data_list), chunk_size):
+            yield data_list[i:i + chunk_size]
 
     def updateChunkPrice(product_chunk):
         products = []
@@ -90,7 +93,7 @@ class ScheduledPriceUpdater:
             if single_product['psku'] and single_product['psku'] != single_product['sku']:
                 products.append({'sku': single_product['psku'], 'type': 'configurable'})
 
-        new_sku_list = sku_list + list(set(psku_list) - set(sku_list))
+        new_sku_list = list(set(sku_list) | set(psku_list))
         sku_string = "','".join(new_sku_list)
         query = "SELECT product_sku, bundle_sku FROM bundle_products_mappings WHERE product_sku in('" + sku_string + "')"
         mysql_conn = Utils.mysqlConnection('r')
@@ -99,14 +102,15 @@ class ScheduledPriceUpdater:
         for res in results:
             products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
 
+        products = [dict(t) for t in {tuple(d.items()) for d in products}]
         update_docs = PipelineUtils.getProductsToIndexBulk(products)
         if update_docs:
-            Utils.updateESCatalogParallel(update_docs)
+            Utils.updateESCatalog(update_docs, parallel = True)
 
         for single_sku in update_docs:
             print("sku: %s" % single_sku['sku'])
 
-        total_count = count(len(update_docs))
+        total_count = incrementGlobalCounter(len(update_docs))
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
 
 
@@ -145,20 +149,19 @@ class ScheduledPriceUpdater:
         num_of_threads = argv['threads']
         
         if not chunk_size:
-            chunk_size = 200
+            chunk_size = CHUNK_SIZE
 
         if not num_of_threads:
-            num_of_threads = 4
+            num_of_threads = NUMBER_OF_THREADS
 
-        chunk_results = list(ScheduledPriceUpdater.chunks(results, chunk_size))
+        chunk_results = list(ScheduledPriceUpdater.getChunks(results, chunk_size))
 
-        for product in chunk_results:
-            q.put_nowait(product)
+        for single_chunk in chunk_results:
+            q.put_nowait(single_chunk)
 
         for _ in range(num_of_threads):
             Worker(q).start()
         q.join()
-
 
         # Code for bundle products
         products = []
