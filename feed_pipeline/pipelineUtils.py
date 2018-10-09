@@ -174,7 +174,7 @@ class PipelineUtils:
 
     update_docs = PipelineUtils.getProductsToIndex(products)
     if update_docs:
-      Utils.updateESCatalogParallel(update_docs)
+      Utils.updateESCatalog(update_docs)
     return len(update_docs)
 
 
