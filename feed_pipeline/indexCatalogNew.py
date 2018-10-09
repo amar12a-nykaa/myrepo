@@ -30,7 +30,7 @@ from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
 from esutils import EsUtils
 
-NUMBER_OF_THREADS = 40
+NUMBER_OF_THREADS = 20
 RECORD_GROUP_SIZE = 100
 
 conn = Utils.mysqlConnection()
