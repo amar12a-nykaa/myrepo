@@ -34,8 +34,24 @@ DAILY_THRESHOLD = 3
 client = Utils.mongoClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
-search_terms_normalized.remove({}) 
+corrected_search_query = client['search']['corrected_search_query']
+search_terms_normalized.remove({})
 ensure_mongo_indices_now()
+
+correct_term_list = ["correct words","everyuth","kerastase","farsali","krylon","armaf","Cosrx","focallure","ennscloset",
+                     "studiowest","odonil","gucci","kryolan","sephora","foreo","footwear","rhoda","Fenty","Hilary","spoolie","jovees","devacurl","biore",
+                     "quirky","stay","parampara","dermadew","kokoglam","embryolisse","tigi","mediker","dermacol","Anastasia","essie","sale","bajaj","burberry",
+                     "sesa","sigma","spencer","puna","modicare","hugo","gelatin","stila","ordinary","spawake","mederma","mauri","benetint","amaira","meon","tony",
+                     "renee","boxes","aashka","prepair","meilin","krea","dress","sivanna","etude","kadhi","laneige","gucci","jaclyn","hilary",
+                     "anastasia","becca","sigma","farsali","majirel","satthwa","fenty","vibrator","focallure","krylon","tigi","armaf","cosrx","soumis","studiowest",
+                     "evion","darmacol","odonil","comedogenic","suthol","suwasthi","kerastase","nexus","footwear","badescu","rebonding","jeffree","devacurl","odbo",
+                     "sesderma","tilbury","dildo","glatt","essie","ethiglo","prada","dermadew","trylo","nycil","cipla","biore","giambattista","luxliss","parampara",
+                     "dyson","episoft","vcare","ofra","nizoral","elnett","mediker","photostable","urbangabru","ketomac","popfeel","igora","wishtrend","jefree",
+                     "hillary","skeyndor","raga","dresses","protectant","boroline","burts","seth","gelatin","panstick","goradia","policy","crimping","bajaj",
+                     "spencer","glue","reloaded","dior","hoola","opticare","mario","bees","prepair","clothes","oxyglow","chapstick","stencil","smokers","clutcher",
+                     "supra","artistry","cerave","suncross","suncare","stilla","skinfood","caprese","cantu","cameleon","glamego","hamdard","arish","soda","benzoyl",
+                     "tape","catrice","liplove","clarina","glister","colorista","mistral","scholl","bathrobe","fastrack","christian","mauri","emolene","bioaqua",
+                     "lodhradi","chance","bedhead","dawn","bake","persistence","bloating","carmex","roulette","acnestar","safi","flormar","margo","nudestix","instaglam"]
 
 def create_missing_indices():
   indices = search_terms_daily.list_indexes()
@@ -44,6 +60,53 @@ def create_missing_indices():
     search_terms_daily.create_index([("query", pymongo.ASCENDING)])
 
 create_missing_indices()
+
+def getQuerySuggestion(query_id, query, algo):
+    for term in corrected_search_query.find({"_id": query_id}):
+        modified_query = term["suggested_query"]
+        return modified_query
+
+    if algo == 'default':
+        es_query = """{
+             "size": 1,
+             "query": {
+                 "match": {
+                   "title_brand_category": "%s"
+                 }
+             }, 
+             "suggest": 
+              { 
+                "text":"%s", 
+                "term_suggester": 
+                { 
+                  "term": { 
+                    "field": "title_brand_category"
+                  }
+                }
+              }
+        }""" % (query,query)
+        es_result = Utils.makeESRequest(es_query, "livecore")
+        doc_found = es_result['hits']['hits'][0]['_source']['title_brand_category'] if len(es_result['hits']['hits']) > 0 else ""
+        doc_found = doc_found.lower()
+        doc_found = doc_found.split()
+        if es_result.get('suggest', {}).get('term_suggester'):
+            modified_query = query.lower()
+            for term_suggestion in es_result['suggest']['term_suggester']:
+                if term_suggestion.get('text') in doc_found:
+                    continue
+                if term_suggestion.get('text') in correct_term_list:
+                    continue
+                if term_suggestion.get('options') and term_suggestion['options'][0]['score'] > 0.7:
+                    frequency = term_suggestion['options'][0]['freq']
+                    new_term = term_suggestion['options'][0]['text']
+                    for suggestion in term_suggestion['options'][1:]:
+                        if suggestion['freq'] > frequency and suggestion['score'] > 0.7:
+                            frequency = suggestion['freq']
+                            new_term = suggestion['text']
+                    modified_query = modified_query.replace(term_suggestion['text'], new_term)
+            return modified_query
+        return query
+    return query
 
 def normalize(a):
     if not max(a) - min(a):
@@ -124,7 +187,7 @@ def normalize_search_terms():
     a.popularity = a.popularity.fillna(0) 
 
     requests = []
-
+    corrections = []
     #brand_index = normalize_array("select brand as term from nykaa.brands where brand like 'l%'")
     #category_index = normalize_array("select name as term from nykaa.l3_categories")
     search_terms_normalized.remove({})
@@ -132,11 +195,10 @@ def normalize_search_terms():
     brands_stemmed = set([ps.stem(x['brand']) for x in Utils.mysql_read("select brand from brands")])
     cats_brands_stemmed = cats_stemmed | brands_stemmed
 
-
     for i, row in a.iterrows():
         query = row['id'].lower()
         if ps.stem(query) in cats_brands_stemmed:
-          a.drop(i, inplace=True)
+            a.drop(i, inplace=True)
     
     a['popularity'] = 100 * normalize(a['popularity'])
     for i, row in a.iterrows():
@@ -144,17 +206,26 @@ def normalize_search_terms():
         if ps.stem(query) in cats_brands_stemmed:
           continue
 
+        algo = 'default'
+        query_id = re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())
+
         try:
-            requests.append(UpdateOne({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())}, {"$set": {"query": row['id'].lower(), 'popularity': row['popularity']}}, upsert=True))
+            suggested_query = getQuerySuggestion(query_id, query, algo)
+            requests.append(UpdateOne({"_id":  query_id},
+                                      {"$set": {"query": row['id'].lower(), 'popularity': row['popularity'], "suggested_query": suggested_query.lower()}}, upsert=True))
+            corrections.append(UpdateOne({"_id":  query_id},
+                                      {"$set": {"query": row['id'].lower(), "suggested_query": suggested_query.lower(), "algo": algo}}, upsert=True))
         except:
             print(traceback.format_exc())
             print(row)
         if i % 1000000 == 0:
             search_terms_normalized.bulk_write(requests)
+            corrected_search_query.bulk_write(corrections)
             requests = []
-#        search_terms_normalized.update({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['id'].lower())}, {"query": row['id'].lower(), 'popularity': row['popularity']}, upsert=True)
+            corrections = []
     if requests:
         search_terms_normalized.bulk_write(requests)
+        corrected_search_query.bulk_write(corrections)
 
 """
   current_month = arrow.now().format("YYYY-MM")

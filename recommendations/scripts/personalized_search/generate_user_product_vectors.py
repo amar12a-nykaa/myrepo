@@ -51,9 +51,10 @@ if __name__ == '__main__':
         print("Total number of products from mysql: %d" % len(rows))
         product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
         docs = []
+        embedding_vector_field_name = 'embedding_vector_%s' % algo
         for row in rows:
             if product_id_2_sku.get(row[0]):
-                docs.append({'sku': product_id_2_sku[row[0]], 'embedding_vector': json.loads(row[1])})
+                docs.append({'sku': product_id_2_sku[row[0]], embedding_vector_field_name: json.loads(row[1])})
 
         for i in range(0, len(docs), 1000):
             Utils.updateESCatalog(docs[i:i+1000])
@@ -116,7 +117,8 @@ if __name__ == '__main__':
         product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
 
         docs = []
+        embedding_vector_field_name = "embedding_vector_" % algo
         for product_id, vector in product_vectors.items():
-            docs.append({'sku': product_id_2_sku['product_id'], 'embedding_vector': vector})
+            docs.append({'sku': product_id_2_sku['product_id'], embedding_vector_field_name: vector})
 
         Utils.updateESCatalog(docs)
