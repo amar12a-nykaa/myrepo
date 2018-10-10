@@ -48,7 +48,6 @@ if getCount() > 1:
   print("This means that your intented changes might still be in progress!!!")
   raise Exception("Pipeline is already running. Exiting without doing anything")
 
-
 def indexESData(file_path, force_run):
   indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
   active_index = indexes['active_index']
@@ -64,6 +63,8 @@ def indexESData(file_path, force_run):
   schema = json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
   index_client.create(inactive_index, schema)
   print("Creating index: %s" % inactive_index)
+
+  addESScripts(EsUtils.get_connection())
 
   index_start = timeit.default_timer()
 
