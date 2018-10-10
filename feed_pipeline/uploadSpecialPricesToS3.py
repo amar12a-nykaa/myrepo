@@ -26,15 +26,15 @@ def upload_special_price_to_s3(batch_size = 1000):
         print(line)
         f.write(line)
 
-  query = "SELECT " \
-          "bundles.sku, " \
-          "((100-bundles.discount)/100)*SUM(products.sp *products.quantity) special_price " \
+  query = "SELECT bundles.sku, " \
+          "round((100-bundles.discount)/100* SUM( products.mrp * mappings.quantity)) " \
           "FROM bundles as bundles " \
           "join bundle_products_mappings mappings " \
           "on bundles.sku = mappings.bundle_sku " \
           "join products " \
           "on products.sku = mappings.product_sku " \
-          "group by bundles.sku;"
+          "GROUP by bundles.sku;"
+
   connection = Utils.mysqlConnection()
   with closing(connection.cursor()) as cursor:
     cursor.execute(query)
