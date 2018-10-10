@@ -2,14 +2,14 @@
 #python generate_user_product_vectors.py --bucket-name=nykaa-dev-recommendations --input-dir="gensim_models/raw_cab_2018_till_11_sept/metric_customer_id/similarity_product_id/topics_100" --vector-len=100 --store-in-db --user-json="user_vectors.json" --product-json="product_vectors.json"
 import argparse
 import json
+from gensim import models, matutils
+from IPython import embed
 
 import sys
 sys.path.append("/home/apis/nykaa")
 from pas.v2.utils import Utils
 sys.path.append("/home/ubuntu/nykaa_scripts/utils")
 from gensimutils import GensimUtils
-from gensim import models
-from IPython import embed
 
 def _add_embedding_vectors_in_mysql(cursor, table, rows):
     values_str = ", ".join(["(%s, %s, %s, %s)" for i in range(len(rows))]) 
@@ -22,8 +22,8 @@ def _add_embedding_vectors_in_mysql(cursor, table, rows):
 
 def add_embedding_vectors_in_mysql(db, table, rows):
     cursor = db.cursor() 
-    for i in range(0, len(rows), 1000):
-        _add_embedding_vectors_in_mysql(cursor, table, rows[i:i+1000]) 
+    for i in range(0, len(rows), 500):
+        _add_embedding_vectors_in_mysql(cursor, table, rows[i:i+500]) 
         db.commit()
 
 if __name__ == '__main__':
@@ -77,14 +77,14 @@ if __name__ == '__main__':
 
     norm_model = models.NormModel()
     for user_id, product_ids_bow in user_corpus_dict.items():
-        user_vectors[user_id] = GensimUtils.generate_complete_vectors(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)
+        user_vectors[user_id] = matutils.unitvec(matutils.sparse2full(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)).tolist() #GensimUtils.generate_complete_vectors(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)
 
     product_ids = list(set([product_tuple[0] for products_bow in user_corpus_dict.values() for product_tuple in products_bow]))
 
     print("Generating product vectors")
     product_vectors = {}
     for product_id in product_ids:
-        product_vectors[str(product_id)] = GensimUtils.generate_complete_vectors(user_lsi[[[product_id, 1]]], vector_len)
+        product_vectors[str(product_id)] = matutils.unitvec(matutils.sparse2full(user_lsi[[[product_id, 1]]], vector_len)).tolist() #GensimUtils.generate_complete_vectors(user_lsi[[[product_id, 1]]], vector_len)
 
     if add_product_children:
         child_2_parent = Utils.scrollESForResults()['child_2_parent']
