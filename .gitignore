@@ -98,3 +98,4 @@ feed_pipeline/missing_skus.txt
 *.csv
 error_log
 last_update_time.txt
+tags
