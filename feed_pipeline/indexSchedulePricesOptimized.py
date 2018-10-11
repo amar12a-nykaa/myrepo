@@ -105,10 +105,10 @@ class ScheduledPriceUpdater:
         products = [dict(t) for t in {tuple(d.items()) for d in products}]
         update_docs = PipelineUtils.getProductsToIndexBulk(products)
         if update_docs:
-            Utils.updateESCatalog(update_docs, parallel = True)
+            Utils.updateESCatalog(update_docs)
 
-        for single_sku in update_docs:
-            print("sku: %s" % single_sku['sku'])
+        # for single_sku in update_docs:
+        #     print("sku: %s" % single_sku['sku'])
 
         total_count = incrementGlobalCounter(len(update_docs))
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
