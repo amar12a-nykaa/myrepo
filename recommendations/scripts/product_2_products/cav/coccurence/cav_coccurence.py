@@ -13,6 +13,7 @@ import argparse
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for CAV script')
     parser.add_argument('--verbose', '-v', action='store_true')
+    parser.add_argument('--desktop', action='store_true')
     parser.add_argument('--files', nargs='+')
     parser.add_argument('--output', '-o', required=True) 
     parser.add_argument('--luxe', nargs='+') 
@@ -26,6 +27,7 @@ if __name__ == "__main__":
     mrp_bucket = argv['mrp'][0]
     mrp_key = argv['mrp'][1]
     output_file = argv['output']
+    desktop = argv.get('desktop')
 
     s3 = boto3.client('s3')
 
@@ -200,10 +202,16 @@ if __name__ == "__main__":
         log_similar_products = list(map(lambda e: e[0], sorted(log_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
         sqrt_similar_products = list(map(lambda e: e[0], sorted(sqrt_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
 
-        rows.append((product_id, 'coccurence_simple', str(simple_similar_products)))
-        rows.append((product_id, 'coccurence_direct', str(direct_similar_products)))
-        rows.append((product_id, 'coccurence_log', str(log_similar_products)))
-        rows.append((product_id, 'coccurence_sqrt', str(sqrt_similar_products)))
+        if desktop:
+            rows.append((product_id, 'coccurence_simple_desktop', str(simple_similar_products)))
+            rows.append((product_id, 'coccurence_direct_desktop', str(direct_similar_products)))
+            rows.append((product_id, 'coccurence_log_desktop', str(log_similar_products)))
+            rows.append((product_id, 'coccurence_sqrt_desktop', str(sqrt_similar_products)))
+        else:
+            rows.append((product_id, 'coccurence_simple', str(simple_similar_products)))
+            rows.append((product_id, 'coccurence_direct', str(direct_similar_products)))
+            rows.append((product_id, 'coccurence_log', str(log_similar_products)))
+            rows.append((product_id, 'coccurence_sqrt', str(sqrt_similar_products)))
 
     for product_id in direct_similar_products_mrp_cons_dict:
         simple_similar_products = list(map(lambda e: e[0], sorted(simple_similar_products_mrp_cons_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
@@ -211,10 +219,16 @@ if __name__ == "__main__":
         log_similar_products = list(map(lambda e: e[0], sorted(log_similar_products_mrp_cons_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
         sqrt_similar_products = list(map(lambda e: e[0], sorted(sqrt_similar_products_mrp_cons_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
 
-        rows.append((product_id, 'coccurence_simple_mrp_cons', str(simple_similar_products)))
-        rows.append((product_id, 'coccurence_direct_mrp_cons', str(direct_similar_products)))
-        rows.append((product_id, 'coccurence_log_mrp_cons', str(log_similar_products)))
-        rows.append((product_id, 'coccurence_sqrt_mrp_cons', str(sqrt_similar_products)))
+        if desktop:
+            rows.append((product_id, 'coccurence_simple_mrp_cons_desktop', str(simple_similar_products)))
+            rows.append((product_id, 'coccurence_direct_mrp_cons_desktop', str(direct_similar_products)))
+            rows.append((product_id, 'coccurence_log_mrp_cons_desktop', str(log_similar_products)))
+            rows.append((product_id, 'coccurence_sqrt_mrp_cons_desktop', str(sqrt_similar_products)))
+        else:
+            rows.append((product_id, 'coccurence_simple_mrp_cons', str(simple_similar_products)))
+            rows.append((product_id, 'coccurence_direct_mrp_cons', str(direct_similar_products)))
+            rows.append((product_id, 'coccurence_log_mrp_cons', str(log_similar_products)))
+            rows.append((product_id, 'coccurence_sqrt_mrp_cons', str(sqrt_similar_products)))
 
     s3.put_object(Bucket='nykaa-dev-recommendations', Key=output_file, Body=json.dumps(rows, indent=4))
 
