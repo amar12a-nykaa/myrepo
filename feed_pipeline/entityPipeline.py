@@ -17,7 +17,7 @@ from esutils import EsUtils
 from indexEntities import EntityIndexer
 
 from importDataFromNykaa import NykaaImporter
-from indexCatalog import CatalogIndexer
+
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils
 
