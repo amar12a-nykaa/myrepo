@@ -105,7 +105,7 @@ class ScheduledPriceUpdater:
         products = [dict(t) for t in {tuple(d.items()) for d in products}]
         update_docs = PipelineUtils.getProductsToIndexBulk(products)
         if update_docs:
-            Utils.updateESCatalog(update_docs)
+            Utils.updateESCatalog(update_docs, raise_error=False)
 
         # for single_sku in update_docs:
         #     print("sku: %s" % single_sku['sku'])
