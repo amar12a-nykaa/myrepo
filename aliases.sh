@@ -22,5 +22,5 @@ alias fp='cd /home/ubuntu/nykaa_scripts/feed_pipeline'
 
 
 alias popularity="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py"
-alias catalog_pipeline="/usr/bin/python /nykaa/scripts/feed_pipeline/catalogPipeline.py"
+alias catalog_pipeline="/usr/bin/python /nykaa/scripts/feed_pipeline/catalogPipelineMultithreaded.py"
 python /nykaa/scripts/shortcuts.py

@@ -18,7 +18,7 @@ CD	mysqlremote.py	/^CD = conn_details;$/;"	v
 COUNT	sharedutils/loopcounter.py	/^COUNT = '{COUNT}'$/;"	v
 COUNT	utils/loopcounter.py	/^COUNT = '{COUNT}'$/;"	v
 CROSS_BRAND_BOOSTING_FACTOR	frequently_bought.py	/^CROSS_BRAND_BOOSTING_FACTOR = 0$/;"	v
-CatalogIndexer	feed_pipeline/indexCatalog.py	/^class CatalogIndexer:$/;"	c
+CatalogIndexer	feed_pipeline/indexCatalogNew.py	/^class CatalogIndexer:$/;"	c
 CliUtils	sharedutils/cliutils.py	/^class CliUtils(object):$/;"	c
 DAILY_COUNT_THRESHOLD	autocomplete/read_past_searches_data.py	/^DAILY_COUNT_THRESHOLD = 2 $/;"	v
 DAILY_THRESHOLD	autocomplete/normalize_searches_daily.py	/^DAILY_THRESHOLD = 3$/;"	v
@@ -30,7 +30,7 @@ DEBUG_PRODUCT_DATA_UPDATED	frequently_bought.py	/^        DEBUG_PRODUCT_DATA_UPD
 DEBUG_PRODUCT_DATA_UPDATED	frequently_bought.py	/^DEBUG_PRODUCT_DATA_UPDATED = False$/;"	v
 DIR	quantity_decrement.py	/^DIR = "\/tmp\/error_logs_api_machines"$/;"	v
 DOCS_BATCH_SIZE	autocomplete/indexEntities.py	/^  DOCS_BATCH_SIZE = 1000$/;"	v	class:EntityIndexer
-DOCS_BATCH_SIZE	feed_pipeline/indexCatalog.py	/^  DOCS_BATCH_SIZE = 2000$/;"	v	class:CatalogIndexer
+DOCS_BATCH_SIZE	feed_pipeline/indexCatalogNew.py	/^  DOCS_BATCH_SIZE = 2000$/;"	v	class:CatalogIndexer
 DUUMPFILE	mysqlremote.py	/^DUUMPFILE = "\/tmp\/sqldump.sql"$/;"	v
 ES_BATCH_SIZE	frequently_bought.py	/^ES_BATCH_SIZE = 10000$/;"	v
 ES_BATCH_SIZE	get_es_dump.py	/^ES_BATCH_SIZE = 10000$/;"	v
@@ -39,12 +39,12 @@ ES_SCHEMA	autocomplete/index_search_qy_copy.py	/^ES_SCHEMA =  json.load(open(  o
 ES_SCHEMA	autocomplete/index_search_qy_copy_dup.py	/^ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))$/;"	v
 EntityIndexer	autocomplete/indexEntities.py	/^class EntityIndexer:$/;"	c
 EsUtils	sharedutils/esutils.py	/^class EsUtils:$/;"	c
-FEED_LOCATION	feed_pipeline/catalogPipeline.py	/^FEED_LOCATION = '\/data\/nykaa\/master_feed_gludo.csv'$/;"	v
+FEED_LOCATION	feed_pipeline/catalogPipelineMultithreaded.py	/^FEED_LOCATION = '\/data\/nykaa\/master_feed_gludo.csv'$/;"	v
 FEED_LOCATION	feed_pipeline/entityPipeline.py	/^FEED_LOCATION = '\/data\/nykaa\/master_feed_gludo.csv'$/;"	v
-FEED_URL	feed_pipeline/catalogPipeline.py	/^FEED_URL = "http:\/\/adminpanel.nykaa.com\/media\/feed\/master_feed_gludo.csv"$/;"	v
+FEED_URL	feed_pipeline/catalogPipelineMultithreaded.py	/^FEED_URL = "http:\/\/adminpanel.nykaa.com\/media\/feed\/master_feed_gludo.csv"$/;"	v
 FEED_URL	feed_pipeline/entityPipeline.py	/^FEED_URL = "http:\/\/www.nykaa.com\/media\/feed\/master_feed_gludo.csv"$/;"	v
-FEED_URL_PREPROD	feed_pipeline/catalogPipeline.py	/^FEED_URL_PREPROD = "http:\/\/preprod-2012758952.ap-southeast-1.elb.amazonaws.com\/media\/feed\/master_feed_gludo.csv"$/;"	v
-FEED_URL_PREPROD	feed_pipeline/catalogPipeline.py	/^FEED_URL_PREPROD = "http:\/\/preprod.nykaa.com\/media\/feed\/master_feed_gludo.csv"$/;"	v
+FEED_URL_PREPROD	feed_pipeline/catalogPipelineMultithreaded.py	/^FEED_URL_PREPROD = "http:\/\/preprod-2012758952.ap-southeast-1.elb.amazonaws.com\/media\/feed\/master_feed_gludo.csv"$/;"	v
+FEED_URL_PREPROD	feed_pipeline/catalogPipelineMultithreaded.py	/^FEED_URL_PREPROD = "http:\/\/preprod.nykaa.com\/media\/feed\/master_feed_gludo.csv"$/;"	v
 GLOBAL_FAST_INDEXING	autocomplete/index.py	/^  GLOBAL_FAST_INDEXING = argv['fast']$/;"	v
 GLOBAL_FAST_INDEXING	autocomplete/index.py	/^GLOBAL_FAST_INDEXING = False$/;"	v
 LoopCounter	sharedutils/loopcounter.py	/^class LoopCounter(object):$/;"	c
@@ -62,7 +62,7 @@ OmnitureUtils	sharedutils/omnitureutils.py	/^class OmnitureUtils:$/;"	c
 OmnitureUtils	utils/omnitureutils.py	/^class OmnitureUtils:$/;"	c
 POPULARITY_THRESHOLD	autocomplete/generate_brand_category_mapping.py	/^POPULARITY_THRESHOLD = 0.1$/;"	v
 PRINT_CONSTANTS	search_data.py	/^PRINT_CONSTANTS = False$/;"	v
-PRODUCT_TYPES	feed_pipeline/indexCatalog.py	/^  PRODUCT_TYPES = ['simple', 'configurable', 'bundle']$/;"	v	class:CatalogIndexer
+PRODUCT_TYPES	feed_pipeline/indexCatalogNew.py	/^  PRODUCT_TYPES = ['simple', 'configurable', 'bundle']$/;"	v	class:CatalogIndexer
 PipelineUtils	feed_pipeline/pipelineUtils.py	/^class PipelineUtils:$/;"	c
 SOLR_GROUPS	sharedutils/solrutils.py	/^SOLR_GROUPS = {$/;"	v
 SPEED	sharedutils/loopcounter.py	/^SPEED = '{SPEED}'$/;"	v
@@ -78,7 +78,7 @@ TOTAL	utils/loopcounter.py	/^  TOTAL = 1000$/;"	v
 USER	ssh_keys/add_public_keys_to_authorized_keys.py	/^  USER = argv['user']$/;"	v
 USER	ssh_keys/add_public_keys_to_authorized_keys.py	/^USER = getpass.getuser()$/;"	v
 VARIANTS_LIMIT	frequently_bought.py	/^VARIANTS_LIMIT = 100$/;"	v
-VISIBILITY_TYPES	feed_pipeline/indexCatalog.py	/^  VISIBILITY_TYPES = ['visible', 'not_visible']$/;"	v	class:CatalogIndexer
+VISIBILITY_TYPES	feed_pipeline/indexCatalogNew.py	/^  VISIBILITY_TYPES = ['visible', 'not_visible']$/;"	v	class:CatalogIndexer
 WEIGHT_CART_ADDITIONS	feed_pipeline/popularity.py	/^WEIGHT_CART_ADDITIONS = 10$/;"	v
 WEIGHT_CATEGORY_FACET	autocomplete/generate_brand_category_mapping.py	/^WEIGHT_CATEGORY_FACET = 100$/;"	v
 WEIGHT_REVENUE	feed_pipeline/popularity.py	/^WEIGHT_REVENUE = 20$/;"	v
@@ -125,11 +125,11 @@ argv	autocomplete/index.py	/^  argv = vars(parser.parse_args())$/;"	v
 argv	autocomplete/indexEntities.py	/^  argv = vars(parser.parse_args())$/;"	v	class:EntityIndexer
 argv	autocomplete/pipeline.py	/^argv = vars(parser.parse_args())$/;"	v
 argv	bin/scpny.py	/^argv = sys.argv[1:]$/;"	v
-argv	feed_pipeline/catalogPipeline.py	/^  argv = vars(parser.parse_args())$/;"	v
+argv	feed_pipeline/catalogPipelineMultithreaded.py	/^  argv = vars(parser.parse_args())$/;"	v
 argv	feed_pipeline/cron_runner.py	/^argv = vars(parser.parse_args())$/;"	v
 argv	feed_pipeline/entityPipeline.py	/^  argv = vars(parser.parse_args())$/;"	v
 argv	feed_pipeline/health_check.py	/^  argv = vars(parser.parse_args())$/;"	v
-argv	feed_pipeline/indexCatalog.py	/^  argv = vars(parser.parse_args())$/;"	v	class:CatalogIndexer
+argv	feed_pipeline/indexCatalogNew.py	/^  argv = vars(parser.parse_args())$/;"	v	class:CatalogIndexer
 argv	feed_pipeline/popularity.py	/^argv = vars(parser.parse_args())$/;"	v
 argv	generateMissingOrders.py	/^argv = vars(parser.parse_args())$/;"	v
 argv	mysqlremote.py	/^argv = vars(parser.parse_args())$/;"	v
@@ -199,14 +199,14 @@ collection	autocomplete/index.py	/^collection='autocomplete'$/;"	v
 collection	autocomplete/index_search_qy_copy.py	/^collection='autocomplete'$/;"	v
 collection	autocomplete/index_search_qy_copy_dup.py	/^collection='autocomplete'$/;"	v
 collection	bin/solrreload.py	/^collection = read_collection_as_first_arg()$/;"	v
-collection	feed_pipeline/indexCatalog.py	/^  collection = argv['collection']$/;"	v	class:CatalogIndexer
+collection	feed_pipeline/indexCatalogNew.py	/^  collection = argv['collection']$/;"	v	class:CatalogIndexer
 collection_state	autocomplete/index.py	/^  collection_state = parser.add_mutually_exclusive_group(required=True)$/;"	v
 collection_state	autocomplete/indexEntities.py	/^  collection_state = parser.add_mutually_exclusive_group(required=True)$/;"	v	class:EntityIndexer
 collections	feed_pipeline/swap_core.py	/^collections = SolrUtils.get_active_inactive_collections()$/;"	v
 config	bin/solrdown.py	/^config = read_config_as_first_arg()$/;"	v
 config	bin/solrup.py	/^config = read_config_as_first_arg()$/;"	v
 conn	autocomplete/adhoc/update_product_ids.py	/^conn =  Utils.mysqlConnection()$/;"	v
-conn	feed_pipeline/indexCatalog.py	/^conn =  Utils.mysqlConnection()$/;"	v
+conn	feed_pipeline/indexCatalogNew.py	/^conn =  Utils.mysqlConnection()$/;"	v
 conn	mysqlnykaa.py	/^conn = Utils.nykaaMysqlConnection(connection_details=conn_details)$/;"	v
 conn	mysqlremote.py	/^conn = Utils.mysqlConnection(mode='w', connection_details = conn_details)$/;"	v
 conn_details	mysqlnykaa.py	/^conn_details = {}$/;"	v
@@ -308,12 +308,12 @@ f2	feed_pipeline/popularity.py	/^  f2 = filename$/;"	v
 f3	feed_pipeline/popularity.py	/^  f3 = filename$/;"	v
 fetchNykaaProducts	findMismatches.php	/^function fetchNykaaProducts() {$/;"	f
 fetchPWSProduct	findMismatches.php	/^function fetchPWSProduct($sku, $type) {$/;"	f
-fetch_price_availability	feed_pipeline/indexCatalog.py	/^  def fetch_price_availability(input_docs, pws_fetch_products):$/;"	m	class:CatalogIndexer
+fetch_price_availability	feed_pipeline/indexCatalogNew.py	/^  def fetch_price_availability(input_docs, pws_fetch_products):$/;"	m	class:CatalogIndexer
 fetch_product_by_parentids	autocomplete/index.py	/^def fetch_product_by_parentids(parent_ids):$/;"	f
-field_type_pattens	feed_pipeline/indexCatalog.py	/^  field_type_pattens = {$/;"	v	class:CatalogIndexer
-file_path	feed_pipeline/catalogPipeline.py	/^      file_path = FEED_LOCATION$/;"	v
-file_path	feed_pipeline/catalogPipeline.py	/^  file_path = argv['filepath']$/;"	v
-file_path	feed_pipeline/indexCatalog.py	/^  file_path = argv['filepath']$/;"	v	class:CatalogIndexer
+field_type_pattens	feed_pipeline/indexCatalogNew.py	/^  field_type_pattens = {$/;"	v	class:CatalogIndexer
+file_path	feed_pipeline/catalogPipelineMultithreaded.py	/^      file_path = FEED_LOCATION$/;"	v
+file_path	feed_pipeline/catalogPipelineMultithreaded.py	/^  file_path = argv['filepath']$/;"	v
+file_path	feed_pipeline/indexCatalogNew.py	/^  file_path = argv['filepath']$/;"	v	class:CatalogIndexer
 file_path	syncAvailability.py	/^file_path = argv['filepath']$/;"	v
 filename	feed_pipeline/popularity.py	/^  filename = os.path.join(dir_path, "analytics.suites.txt")$/;"	v
 filename	feed_pipeline/popularity.py	/^  filename = os.path.join(dir_path, "elements.txt")$/;"	v
@@ -330,8 +330,8 @@ final_df	item_similarity_coccurence_matrix.py	/^final_df = pd.DataFrame([])$/;"	
 flush	feed_pipeline/popularity.py	/^  def flush(self ):$/;"	m	class:SolrPostManager
 flush_index_products	autocomplete/index.py	/^  def flush_index_products(rows):$/;"	f	function:index_products
 force_run	autocomplete/pipeline.py	/^force_run = argv['force_run']$/;"	v
-force_run	feed_pipeline/catalogPipeline.py	/^  force_run = argv.get('force', False)$/;"	v
-formatESDoc	feed_pipeline/indexCatalog.py	/^  def formatESDoc(doc):$/;"	m	class:CatalogIndexer
+force_run	feed_pipeline/catalogPipelineMultithreaded.py	/^  force_run = argv.get('force', False)$/;"	v
+formatESDoc	feed_pipeline/indexCatalogNew.py	/^  def formatESDoc(doc):$/;"	m	class:CatalogIndexer
 format_term	autocomplete/read_past_searches_data.py	/^def format_term(term):$/;"	f
 formatted	sharedutils/loopcounter.py	/^  def formatted(self, formatstr, minimum=None, maximum=None):$/;"	m	class:LoopCounter
 formatted	utils/loopcounter.py	/^  def formatted(self, formatstr, minimum=None, maximum=None):$/;"	m	class:LoopCounter
@@ -377,7 +377,7 @@ host	feed_pipeline/health_check.py	/^host = socket.gethostname()$/;"	v
 host	findMismatches.php	/^  $host = "priceapi.nyk00-int.network";$/;"	v
 hostname	autocomplete/adhoc/dump_databases.py	/^hostname = socket.gethostname()$/;"	v
 hostname	bin/solrhost.py	/^hostname = socket.gethostname()$/;"	v
-hostname	feed_pipeline/catalogPipeline.py	/^hostname = socket.gethostname()$/;"	v
+hostname	feed_pipeline/catalogPipelineMultithreaded.py	/^hostname = socket.gethostname()$/;"	v
 hostname	feed_pipeline/entityPipeline.py	/^hostname = socket.gethostname()$/;"	v
 hour	quantity_decrement.py	/^  hour = str(hour).zfill(2)$/;"	v
 hour	quantity_decrement.py	/^hour = argv['hour']$/;"	v
@@ -389,23 +389,23 @@ importBrandCategoryAttributes	feed_pipeline/importDataFromNykaa.py	/^  def impor
 importData	feed_pipeline/importDataFromNykaa.py	/^  def importData():$/;"	m	class:NykaaImporter
 importMetaInformation	feed_pipeline/importDataFromNykaa.py	/^  def importMetaInformation():$/;"	m	class:NykaaImporter
 importOfferAttributes	feed_pipeline/importDataFromNykaa.py	/^  def importOfferAttributes():$/;"	m	class:NykaaImporter
-import_attrs	feed_pipeline/catalogPipeline.py	/^  import_attrs = argv.get('importattrs', False)$/;"	v
-import_duration	feed_pipeline/catalogPipeline.py	/^  import_duration = import_stop - import_start$/;"	v
-import_start	feed_pipeline/catalogPipeline.py	/^  import_start = timeit.default_timer()$/;"	v
-import_stop	feed_pipeline/catalogPipeline.py	/^  import_stop = timeit.default_timer()$/;"	v
+import_attrs	feed_pipeline/catalogPipelineMultithreaded.py	/^  import_attrs = argv.get('importattrs', False)$/;"	v
+import_duration	feed_pipeline/catalogPipelineMultithreaded.py	/^  import_duration = import_stop - import_start$/;"	v
+import_start	feed_pipeline/catalogPipelineMultithreaded.py	/^  import_start = timeit.default_timer()$/;"	v
+import_stop	feed_pipeline/catalogPipelineMultithreaded.py	/^  import_stop = timeit.default_timer()$/;"	v
 inactive_collection	feed_pipeline/swap_core.py	/^inactive_collection = collections['inactive_collection']$/;"	v
 inactive_index	autocomplete/pipeline.py	/^inactive_index = indexes['inactive_index']$/;"	v
 incremental_feed	feed_third_party/price_inventory_incremental.py	/^def incremental_feed():$/;"	f
 incremental_feed_run	feed_third_party/price_inventory_incremental.py	/^incremental_feed_run = incremental_feed()/;"	v
-index	feed_pipeline/indexCatalog.py	/^  def index(search_engine, file_path, collection, update_productids=False):$/;"	m	class:CatalogIndexer
+index	feed_pipeline/indexCatalogNew.py	/^  def index(search_engine, file_path, collection, update_productids=False):$/;"	m	class:CatalogIndexer
 indexDocs	sharedutils/esutils.py	/^  def indexDocs(docs, index):$/;"	m	class:EsUtils
 indexDocs	sharedutils/solrutils.py	/^  def indexDocs(docs, collection):$/;"	m	class:SolrUtils
-indexES	feed_pipeline/indexCatalog.py	/^  def indexES(docs, index):$/;"	m	class:CatalogIndexer
-indexESData	feed_pipeline/catalogPipeline.py	/^def indexESData(file_path, force_run):$/;"	f
+indexES	feed_pipeline/indexCatalogNew.py	/^  def indexES(docs, index):$/;"	m	class:CatalogIndexer
+indexESData	feed_pipeline/catalogPipelineMultithreaded.py	/^def indexESData(file_path, force_run):$/;"	f
 indexESData	feed_pipeline/entityPipeline.py	/^def indexESData():$/;"	f
 indexEntities	autocomplete/indexEntities.py	/^  def indexEntities(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_all=False):$/;"	m	class:EntityIndexer
-indexSolr	feed_pipeline/indexCatalog.py	/^  def indexSolr(docs, collection):$/;"	m	class:CatalogIndexer
-indexSolrData	feed_pipeline/catalogPipeline.py	/^def indexSolrData(file_path, force_run):$/;"	f
+indexSolr	feed_pipeline/indexCatalogNew.py	/^  def indexSolr(docs, collection):$/;"	m	class:CatalogIndexer
+indexSolrData	feed_pipeline/catalogPipelineMultithreaded.py	/^def indexSolrData(file_path, force_run):$/;"	f
 index_alias_config	sharedutils/esutils.py	/^index_alias_config = {$/;"	v
 index_all	autocomplete/index.py	/^  index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']$/;"	v
 index_all	autocomplete/indexEntities.py	/^  index_all = not any([argv[x] for x in required_args])$/;"	v	class:EntityIndexer
@@ -470,8 +470,8 @@ missing_dates	feed_pipeline/health_check.py	/^    missing_dates = get_missing_da
 missing_dates	feed_pipeline/health_check.py	/^  missing_dates = get_missing_dates('processed_data')$/;"	v
 missing_keys	ssh_keys/add_public_keys_to_authorized_keys.py	/^missing_keys = keys_github - keys_authorized_keys$/;"	v
 msg	autocomplete/pipeline.py	/^  msg = "[ERROR] Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."$/;"	v
-msg	feed_pipeline/catalogPipeline.py	/^    msg = "Either of filepath[-p] or url[-u] of the feed needs to be provided."$/;"	v
-msg	feed_pipeline/catalogPipeline.py	/^    msg = "Please provide only one of filepath[-p] or url[-u] for the feed"$/;"	v
+msg	feed_pipeline/catalogPipelineMultithreaded.py	/^    msg = "Either of filepath[-p] or url[-u] of the feed needs to be provided."$/;"	v
+msg	feed_pipeline/catalogPipelineMultithreaded.py	/^    msg = "Please provide only one of filepath[-p] or url[-u] for the feed"$/;"	v
 msg	feed_pipeline/health_check.py	/^  msg = ""$/;"	v
 msg	syncAvailability.py	/^  msg = "Either of filepath[-p] or --db option needs to specified!"$/;"	v
 msg	syncAvailability.py	/^  msg = "Please provide only one of filepath[-p] or --db option."$/;"	v
@@ -507,11 +507,11 @@ parser	autocomplete/cron_runner.py	/^parser = argparse.ArgumentParser()$/;"	v
 parser	autocomplete/index.py	/^  parser = argparse.ArgumentParser()$/;"	v
 parser	autocomplete/indexEntities.py	/^  parser = argparse.ArgumentParser()$/;"	v	class:EntityIndexer
 parser	autocomplete/pipeline.py	/^parser = argparse.ArgumentParser()$/;"	v
-parser	feed_pipeline/catalogPipeline.py	/^  parser = argparse.ArgumentParser()$/;"	v
+parser	feed_pipeline/catalogPipelineMultithreaded.py	/^  parser = argparse.ArgumentParser()$/;"	v
 parser	feed_pipeline/cron_runner.py	/^parser = argparse.ArgumentParser()$/;"	v
 parser	feed_pipeline/entityPipeline.py	/^  parser = argparse.ArgumentParser()$/;"	v
 parser	feed_pipeline/health_check.py	/^  parser = argparse.ArgumentParser()$/;"	v
-parser	feed_pipeline/indexCatalog.py	/^  parser = argparse.ArgumentParser()$/;"	v	class:CatalogIndexer
+parser	feed_pipeline/indexCatalogNew.py	/^  parser = argparse.ArgumentParser()$/;"	v	class:CatalogIndexer
 parser	feed_pipeline/popularity.py	/^parser = argparse.ArgumentParser()$/;"	v
 parser	generateMissingOrders.py	/^parser = argparse.ArgumentParser()$/;"	v
 parser	mysqlremote.py	/^parser = argparse.ArgumentParser()$/;"	v
@@ -538,7 +538,7 @@ prepare_cursor_for_current_orders_table	frequently_bought.py	/^def prepare_curso
 preprocess_data	feed_pipeline/popularity.py	/^def preprocess_data():$/;"	f
 printProgress	findMismatches.php	/^function printProgress() {$/;"	f
 printReport	findMismatches.php	/^function printReport() {$/;"	f
-print_errors	feed_pipeline/indexCatalog.py	/^  def print_errors(errors):$/;"	m	class:CatalogIndexer
+print_errors	feed_pipeline/indexCatalogNew.py	/^  def print_errors(errors):$/;"	m	class:CatalogIndexer
 process	frequently_bought.py	/^    process = psutil.Process(os.getpid())$/;"	v
 processNykaaProduct	findMismatches.php	/^function processNykaaProduct($product) {$/;"	f
 processPWSProduct	findMismatches.php	/^function processPWSProduct($product) {$/;"	f
@@ -635,12 +635,12 @@ rows	item_similarity_coccurence_matrix.py	/^        rows = []$/;"	v
 rows	item_similarity_coccurence_matrix.py	/^rows = []$/;"	v
 saveMappings	autocomplete/generate_brand_category_mapping.py	/^def saveMappings(brand_category_mappings):$/;"	f
 script_duration	autocomplete/pipeline.py	/^script_duration = script_stop - script_start$/;"	v
-script_duration	feed_pipeline/catalogPipeline.py	/^  script_duration = script_stop - script_start$/;"	v
+script_duration	feed_pipeline/catalogPipelineMultithreaded.py	/^  script_duration = script_stop - script_start$/;"	v
 script_duration	feed_pipeline/entityPipeline.py	/^  script_duration = script_stop - script_start$/;"	v
 script_start	autocomplete/pipeline.py	/^script_start = timeit.default_timer()$/;"	v
-script_start	feed_pipeline/catalogPipeline.py	/^  script_start = timeit.default_timer()$/;"	v
+script_start	feed_pipeline/catalogPipelineMultithreaded.py	/^  script_start = timeit.default_timer()$/;"	v
 script_stop	autocomplete/pipeline.py	/^script_stop = timeit.default_timer()$/;"	v
-script_stop	feed_pipeline/catalogPipeline.py	/^  script_stop = timeit.default_timer()$/;"	v
+script_stop	feed_pipeline/catalogPipelineMultithreaded.py	/^  script_stop = timeit.default_timer()$/;"	v
 script_stop	feed_pipeline/entityPipeline.py	/^  script_stop = timeit.default_timer()$/;"	v
 scroll_id	get_es_dump.py	/^    scroll_id = response['_scroll_id']$/;"	v
 scroll_id	get_es_dump.py	/^scroll_id = None$/;"	v
@@ -649,7 +649,7 @@ search_terms_daily	autocomplete/read_past_searches_data.py	/^search_terms_daily 
 search_terms_formatted	autocomplete/read_past_searches_data.py	/^search_terms_formatted = client['search']['search_terms_daily_formatted']$/;"	v
 search_terms_normalized	autocomplete/normalize_searches_daily.py	/^search_terms_normalized = client['search']['search_terms_normalized_daily']$/;"	v
 search_terms_normalized_daily	autocomplete/index.py	/^search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']$/;"	v
-searchengine	feed_pipeline/indexCatalog.py	/^  searchengine = argv['searchengine']$/;"	v	class:CatalogIndexer
+searchengine	feed_pipeline/indexCatalogNew.py	/^  searchengine = argv['searchengine']$/;"	v	class:CatalogIndexer
 sendMail	findMismatches.php	/^    $sendMail = True;$/;"	v
 sendMail	findMismatches.php	/^  $sendMail = False;$/;"	v
 sendReportEmail	findMismatches.php	/^function sendReportEmail() {$/;"	f
@@ -726,9 +726,9 @@ updatefields	feed_third_party/feed4_updateFields.py	/^updatefields=updateFields_
 updatefields	feed_third_party/feed_updateFields.py	/^updatefields=updateFields_feed3()$/;"	v
 updatewislist	feed_third_party/feed_new4_updateWishlist.py	/^updatewislist = updatewislist_feed4()$/;"	v
 updatewislist_feed4	feed_third_party/feed_new4_updateWishlist.py	/^def updatewislist_feed4():$/;"	f
-url	feed_pipeline/catalogPipeline.py	/^      url = FEED_URL $/;"	v
-url	feed_pipeline/catalogPipeline.py	/^      url = FEED_URL_PREPROD$/;"	v
-url	feed_pipeline/catalogPipeline.py	/^  url = argv['url']$/;"	v
+url	feed_pipeline/catalogPipelineMultithreaded.py	/^      url = FEED_URL $/;"	v
+url	feed_pipeline/catalogPipelineMultithreaded.py	/^      url = FEED_URL_PREPROD$/;"	v
+url	feed_pipeline/catalogPipelineMultithreaded.py	/^  url = argv['url']$/;"	v
 url	findMismatches.php	/^  $url = "http:\/\/$host\/apis\/v2\/pas.get?sku=" . urlencode($sku) . "&type=$type";$/;"	v
 urls	syncAvailability.py	/^      urls = []$/;"	v
 user	autocomplete/generate_brand_category_mapping.py	/^user = "analytics"$/;"	v
@@ -738,7 +738,7 @@ valid_date	sharedutils/cliutils.py	/^  def valid_date(s):$/;"	m	class:CliUtils
 valid_date	sharedutils/dateutils.py	/^def valid_date(s):$/;"	f
 valid_date	sharedutils/omnitureutils.py	/^	def valid_date(cls, s): $/;"	m	class:OmnitureUtils
 valid_date	utils/omnitureutils.py	/^	def valid_date(cls, s): $/;"	m	class:OmnitureUtils
-validate_catalog_feed_row	feed_pipeline/indexCatalog.py	/^  def validate_catalog_feed_row(row):$/;"	m	class:CatalogIndexer
+validate_catalog_feed_row	feed_pipeline/indexCatalogNew.py	/^  def validate_catalog_feed_row(row):$/;"	m	class:CatalogIndexer
 validate_popularity_data_health	feed_pipeline/popularity_api.py	/^def validate_popularity_data_health():$/;"	f
 values	item_similarity_coccurence_matrix.py	/^        values = tuple([_i for row in rows for _i in row])$/;"	v
 values	item_similarity_coccurence_matrix.py	/^        values = tuple([str(_i) for row in rows for _i in row])$/;"	v
