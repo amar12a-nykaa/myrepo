@@ -26,6 +26,21 @@ def add_embedding_vectors_in_mysql(db, table, rows):
         _add_embedding_vectors_in_mysql(cursor, table, rows[i:i+500]) 
         db.commit()
 
+def get_vectors_from_mysql_for_es(algo):
+    print("Getting vectors from mysql for es")
+    query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='%s'" % algo
+    rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 1000)
+    print("Total number of products from mysql: %d" % len(rows))
+    product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
+    docs = []
+    embedding_vector_field_name = 'embedding_vector_%s' % algo
+    for row in rows:
+        if product_id_2_sku.get(row[0]):
+            docs.append({'sku': product_id_2_sku[row[0]], embedding_vector_field_name: json.loads(row[1])})
+    return docs
+
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Argument parser for generating topics')
     parser.add_argument('--verbose', '-v', action='store_true')
@@ -45,20 +60,9 @@ if __name__ == '__main__':
     algo = argv['algo']
 
     if argv['add_vectors_from_mysql_to_es']:
-        print("Adding vectors from mysql to es")
-        query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='%s'" % algo
-        rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 1000)
-        print("Total number of products from mysql: %d" % len(rows))
-        product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
-        docs = []
-        embedding_vector_field_name = 'embedding_vector_%s' % algo
-        for row in rows:
-            if product_id_2_sku.get(row[0]):
-                docs.append({'sku': product_id_2_sku[row[0]], embedding_vector_field_name: json.loads(row[1])})
-
+        docs = get_vectors_from_mysql_for_es(algo)
         for i in range(0, len(docs), 1000):
             Utils.updateESCatalog(docs[i:i+1000])
-
         exit()
 
     bucket_name = argv['bucket_name']
