@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 sys.path.append("/nykaa/api")
 from pipelineUtils import PipelineUtils
 from pas.v2.utils import Utils
+from popularity_api import get_popularity_for_id, validate_popularity_data_health
 
 quantile_lower_limit = .25
 quantile_upper_limit = .75
@@ -25,7 +26,7 @@ WEEKLY_CATEGORY_LIMIT = 1500
 WEEKLY_BRAND_LIMIT = 15
 MAX_INT = 100000000
 
-cat3_ids = ['233','234','228','231','4140','229','235','236','232','237','6761','239','687','240','241','242','245','1995','247','931','244','2440','1513','1514','4036','249','263','5079','250','251','252','253','254','255','256','257','259','260','3277','267','269','268','270','266','271','272','4037','283','282','222','224','284','285','933','227','5486','2063','521','1649','376','691','380','379','372','1650','1644','2084','2069','288','536','2080','289','287','226','281','225','2065','2066','2067','2068','632','286','316','317','319','2040','320','2041','364','363','2444','2043','332','331','329','346','1214','1222','2046','2746','2045','7305','2089','525','583','545','550','367','551','370','1495','554','555','2458','6168','2110','572','3859','2092','364','1543','1399','1400','1401','1404','1405','41','1517','43','44','368','369','367','370','316','319','691','374','376','283','224','584','385','2084','382','1650','1644','975','2057','1673','1676','1675','1546','4874','1664','636','637','635','638','1274','6919','6917','6922', '223', '1411', '1650','962','1392','1388','1387','377','371', '527','547','1393', '979', '1323','7336', '971', '539', '571', '531', '1301', '529', '7313', '541', '1302','7306']
+cat3_ids = ['233','234','228','231','4140','229','235','236','232','237','6761','239','687','240','241','242','245','1995','247','931','244','2440','1513','1514','4036','249','263','5079','250','251','252','253','254','255','256','257','259','260','3277','267','269','268','270','266','271','272','4037','283','282','222','224','284','285','933','227','5486','2063','521','1649','376','691','380','379','372','1650','1644','2084','2069','288','536','2080','289','287','226','281','225','2065','2066','2067','2068','632','286','316','317','319','2040','320','2041','364','363','2444','2043','332','331','329','346','1214','1222','2046','2746','2045','7305','2089','525','583','545','550','367','551','370','1495','554','555','572','3859','2092','364','1543','1399','1400','1401','1404','1405','41','1517','43','44','368','369','367','370','316','319','691','374','376','283','224','2084','1650','1644','975','2057','1673','1676','1675','1546','4874','1664','636','637','635','638','1274','6919','6917','6922', '223', '1411', '1650','962','1392','1388','1387','377','371', '527','547','1393', '979', '1323','7336', '971', '539', '571', '531', '1301', '529', '7313', '541', '1302','7306','524','526', '528','532', '533', '530', '544', '549', '552', '2108', '2109', '2111', '1559', '2096', '2107','581', '535', '2095', '574', '573', '5746']
 
 global back_date_7_days  ##default
 global date_today 
@@ -131,7 +132,7 @@ def get_sales_data():
   and ds.product_id is not null
   group by 1;""".format(back_date_7_days, date_today)
   product_sales_data =  pd.read_sql(query, redshift_conn)
-  product_sales_data['flag'] = (product_sales_data['count'] >= product_sales_data['count'].quantile(quantile_mid_limit))
+  product_sales_data['flag'] = (product_sales_data['count'] >= product_sales_data['count'].quantile(quantile_upper_limit))
   product_sales_data_set =  pd.DataFrame(product_sales_data[product_sales_data['flag'] == True]['entity_id'])
   product_sales_data_set['entity_id'] =  pd.to_numeric(product_sales_data_set['entity_id'])
   return product_sales_data_set
@@ -161,16 +162,18 @@ def get_pas_data(product_details):
   temp_product_details = []
   for counter, p in enumerate(product_details):
     temp_product_details.append(p)
-    if (counter + 1)%500 == 0 or counter == n-1:
+    if (counter + 1)%100 == 0 or counter == n-1:
       request_data = json.dumps({'products': temp_product_details}).encode('utf-8')
       #print (json.loads(request_data.decode('utf-8')))
-
-      req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
-      pas_object = json.loads(urlopen(req).read().decode('utf-8'))
-      #print (pas_object)
-      pas_object = pas_object['skus']
-      old_dict.update(pas_object)
-      temp_product_details = []
+      try:
+        req = Request(request_url, data = request_data, headers = {'content-type': 'application/json'})
+        pas_object = json.loads(urlopen(req).read().decode('utf-8'))
+        #print (pas_object)
+        pas_object = pas_object['skus']
+        old_dict.update(pas_object)
+        temp_product_details = []
+      except:
+        pass
 
   return old_dict
 
@@ -178,7 +181,7 @@ def get_product_detail(product_id):
   request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/product.list?id={0}".format(product_id)
 
   r =  requests.get(request_url, headers = {'content-type': 'application/json'})
-  req_fields = ['category_levels', 'brand_name', 'brand_ids', 'is_luxe', 'catalog_tag']
+  req_fields = ['category_levels', 'brand_name', 'brand_ids', 'is_luxe', 'catalog_tag', 'parent_id']
   try:
     data = (json.loads(r.content.decode('utf-8')).get('result'))
     row  = {}
@@ -434,8 +437,26 @@ if __name__ == '__main__':
         if 'men' in row.get('catalog_tag'):
           continue
         docs.append(row)
-  new_docs=  sorted(docs, key=lambda x: float(x.get('discount', 0)), reverse=True)
+ 
+  #print (docs[:20])
+  for i, doc in enumerate(docs):
+    pop_obj = get_popularity_for_id(product_id  = doc.get('parent_id'), parent_id =  doc.get('parent_id'))
+    print (pop_obj)
+    popularity = 0 
+    if pop_obj.get(doc.get('parent_id')):
+      popularity = float(pop_obj[doc.get('parent_id')].get('popularity', .01))
+
+    score  =  float(doc.get('discount',0))* popularity
+    doc['pop_score'] = score
+    doc['popularity'] = popularity
+    docs[i]= doc
+    if (i+1)%500 ==0:
+      import time
+      time.sleep(2)
+
+  new_docs=  sorted(docs, key=lambda x: float(x.get('pop_score', 0)), reverse=True)
   print (len(new_docs))
+  print (new_docs[:10])
   new_docs = get_final_eligible_product_list(new_docs, dt)
 
   #csv_data  = []
