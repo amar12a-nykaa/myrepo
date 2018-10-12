@@ -110,9 +110,6 @@ class ScheduledPriceUpdater:
         except Exception as e:
             print(traceback.format_exc())
 
-        # for single_sku in update_docs:
-        #     print("sku: %s" % single_sku['sku'])
-
         total_count = incrementGlobalCounter(len(update_docs))
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
 
