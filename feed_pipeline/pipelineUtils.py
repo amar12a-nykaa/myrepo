@@ -129,21 +129,6 @@ class PipelineUtils:
     return update_docs
 
   def getProductsToIndexBulk(final_products_to_update):
-
-    # final_products_to_update = []
-    # product_skus = [product['sku'].upper() for product in products]
-    # querydsl = {}
-    # if product_skus:
-    #   sku_should_query = []
-    #   for sku in product_skus:
-    #     sku_should_query.append({'term': {'sku.keyword': sku}})
-    #   querydsl['query'] = {'bool': {'should': sku_should_query}}
-    #   querydsl['_source'] = ['sku', 'type']
-    #   querydsl['size'] = len(product_skus) + 1
-    #   response = Utils.makeESRequest(querydsl, index='livecore')
-    #   docs = response['hits']['hits']
-    #   for doc in docs:
-    #     final_products_to_update.append({'sku': doc['_source']['sku'], 'type': doc['_source']['type']})
     update_docs = []
     params = json.dumps({"products": final_products_to_update}).encode('utf8')
     req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get", data=params, headers={'content-type': 'application/json'})

@@ -103,9 +103,12 @@ class ScheduledPriceUpdater:
             products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
 
         products = [dict(t) for t in {tuple(d.items()) for d in products}]
-        update_docs = PipelineUtils.getProductsToIndexBulk(products)
-        if update_docs:
-            Utils.updateESCatalog(update_docs, raise_error=False)
+        try:
+            update_docs = PipelineUtils.getProductsToIndexBulk(products)
+            if update_docs:
+                Utils.updateESCatalog(update_docs, raise_error=False)
+        except Exception as e:
+            print(traceback.format_exc())
 
         # for single_sku in update_docs:
         #     print("sku: %s" % single_sku['sku'])
