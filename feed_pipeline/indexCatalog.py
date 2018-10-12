@@ -664,6 +664,8 @@ class CatalogIndexer:
 
                 try:
                     doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""),doc.get("brand_facet_searchable", ""),doc.get("category_facet_searchable", "")] if x])
+                    if ("faces" in doc.get("brand_facet_searchable", "")):
+                        doc['title_brand_category'].append("canada")
                 except:
                     pass
 
