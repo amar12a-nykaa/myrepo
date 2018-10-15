@@ -19,7 +19,6 @@ from importDataFromNykaa import NykaaImporter
 from indexCatalog import CatalogIndexer
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
-from feed_pipeline.uploadSpecialPricesToS3 import upload_special_price_to_s3
 
 #FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
 #FEED_URL_PREPROD = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
@@ -106,12 +105,9 @@ if __name__ == "__main__":
   parser.add_argument("-g", "--generate-third-party-feeds", action='store_true')
   parser.add_argument("-s", "--search-engine", default="elasticsearch")
   parser.add_argument("-l", "--limit", default=0, help='number of docs to index', type=int)
-  parser.add_argument("-b", "--batch-size", default=2000, type=int)
   argv = vars(parser.parse_args())
   
   assert argv['search_engine'] in ['elasticsearch', None]
-
-  upload_special_price_to_s3(argv['batch-size'])
 
   file_path = argv['filepath']
   url = argv['url']
