@@ -118,7 +118,7 @@ class PipelineUtils:
         if pas.get(key) is not None:
           update_fields[swap_keys[key]] = pas[key]
         if key == 'is_in_stock':
-          update_fields[swap_keys[key]] = bool(pas[key])
+          update_fields[swap_keys[key]] = bool(pas.get(key, False))
       update_fields.update({'sku': sku})
       update_fields['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
       if product_type == 'bundle':
