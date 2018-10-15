@@ -106,7 +106,7 @@ class ScheduledPriceUpdater:
         try:
             update_docs = PipelineUtils.getProductsToIndexBulk(products)
             if update_docs:
-                Utils.updateESCatalog(update_docs, raise_error=False)
+                Utils.updateESCatalog(update_docs)
         except Exception as e:
             print(traceback.format_exc())
 
