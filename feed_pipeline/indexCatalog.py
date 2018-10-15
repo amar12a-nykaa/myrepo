@@ -40,7 +40,7 @@ conn = Utils.mysqlConnection()
 
 class Worker(threading.Thread):
     def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
-                 update_productids, sku_2_vector_lsi_100, sku_2_vector_lsi_200, sku_2_vector_lsi_300):
+                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300):
         self.q = q
         self.search_engine = search_engine
         self.collection = collection
@@ -49,9 +49,9 @@ class Worker(threading.Thread):
         self.offersApiConfig = offersApiConfig
         self.required_fields_from_csv = required_fields_from_csv
         self.update_productids = update_productids
-        self.sku_2_vector_lsi_100 = sku_2_vector_lsi_100 
-        self.sku_2_vector_lsi_200 = sku_2_vector_lsi_200 
-        self.sku_2_vector_lsi_300 = sku_2_vector_lsi_300 
+        self.product_2_vector_lsi_100 = product_2_vector_lsi_100 
+        self.product_2_vector_lsi_200 = product_2_vector_lsi_200 
+        self.product_2_vector_lsi_300 = product_2_vector_lsi_300 
 
         super().__init__()
 
@@ -59,7 +59,7 @@ class Worker(threading.Thread):
         while True:
             try:
                 row = self.q.get(timeout=3)  # 3s timeout
-                CatalogIndexer.indexSingleRecord(row, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.sku_2_vector_lsi_100, self.sku_2_vector_lsi_200, self.sku_2_vector_lsi_300)
+                CatalogIndexer.indexSingleRecord(row, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300)
             except queue.Empty:
                 return
             # do whatever work you have to do on work
@@ -249,7 +249,7 @@ class CatalogIndexer:
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
 
-    def indexSingleRecord(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, sku_2_vector_lsi_100, sku_2_vector_lsi_200, sku_2_vector_lsi_300):
+    def indexSingleRecord(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300):
         input_docs = []
         pws_fetch_products = []
         # index_start = timeit.default_timer()
@@ -262,14 +262,15 @@ class CatalogIndexer:
                     continue
                 doc['product_id'] = row['product_id']
 
-                if sku_2_vector_lsi_100.get(doc['sku']):
-                    doc.update(sku_2_vector_lsi_100[doc['sku']])
+                product_id = int(doc['product_id'])
+                if product_2_vector_lsi_100.get(product_id):
+                    doc.update(product_2_vector_lsi_100[product_id])
 
-                if sku_2_vector_lsi_200.get(doc['sku']):
-                    doc.update(sku_2_vector_lsi_200[doc['sku']])
+                if product_2_vector_lsi_200.get(product_id):
+                    doc.update(product_2_vector_lsi_200[product_id])
 
-                if sku_2_vector_lsi_300.get(doc['sku']):
-                    doc.update(sku_2_vector_lsi_300[doc['sku']])
+                if product_2_vector_lsi_300.get(product_id):
+                    doc.update(product_2_vector_lsi_300[product_id])
 
                 doc['type'] = row['type_id']
                 doc['psku'] = row['parent_sku'] if doc['type'] == 'simple' and row['parent_sku'] else row['sku']
@@ -726,9 +727,9 @@ class CatalogIndexer:
         categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
         offersApiConfig = CatalogIndexer.getOffersApiConfig()
 
-        sku_2_vector_lsi_100 = {doc['sku']: doc for doc in get_vectors_from_mysql_for_es('lsi_100')}
-        sku_2_vector_lsi_200 = {doc['sku']: doc for doc in get_vectors_from_mysql_for_es('lsi_200')}
-        sku_2_vector_lsi_300 = {doc['sku']: doc for doc in get_vectors_from_mysql_for_es('lsi_300')}
+        product_2_vector_lsi_100 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_100', False)}
+        product_2_vector_lsi_200 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_200', False)}
+        product_2_vector_lsi_300 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_300', False)}
 
         ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
         q = queue.Queue(maxsize=0)
@@ -743,7 +744,7 @@ class CatalogIndexer:
 
         for _ in range(NUMBER_OF_THREADS):
             Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
-                   update_productids, sku_2_vector_lsi_100, sku_2_vector_lsi_200, sku_2_vector_lsi_300).start()
+                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300).start()
         q.join()
 
 
