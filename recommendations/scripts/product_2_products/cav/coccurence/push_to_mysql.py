@@ -86,7 +86,7 @@ if __name__ == "__main__":
         rows = []
         for variant in variants:
             for algo in ['coccurence_simple', 'coccurence_direct', 'coccurence_log', 'coccurence_sqrt', 'coccurence_direct_mrp_cons', 'coccurence_log_mrp_cons', 
-                         'coccurence_simple_mrp_cons', 'coccurence_sqrt_mrp_cons']:
+                         'coccurence_simple_mrp_cons', 'coccurence_sqrt_mrp_cons', 'coccurence_simple_desktop']:
                 if recommendations_dict.get(str(parent) + "_" + algo):
                     rows.append((variant, 'product', 'viewed', algo, recommendations_dict[str(parent) + "_" + algo]))
         store_in_mysql(rows)
