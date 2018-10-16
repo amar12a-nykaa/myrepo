@@ -2,7 +2,7 @@ SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 0 8 * * * root /usr/bin/python3 -u /home/ubuntu/nykaa_scripts/feed_pipeline/popularity.py --fetch-omniture --preprocess --popularity --startdate -1 -n0 -y 2>&1 >> /tmp/popularity.log 
-* * * * * root /usr/bin/python /home/ubuntu/nykaa_scripts/feed_pipeline/indexScheduledPrices.py 2>&1 >> /var/log/nykaa/schedule_price_cron.log
+* * * * * root /usr/bin/python /home/ubuntu/nykaa_scripts/feed_pipeline/indexSchedulePricesOptimized.py --threads 4 --batch_size 100 2>&1 >> /var/log/nykaa/schedule_price_cron.log
 
 # 30 1 * * * root python /home/ubuntu/nykaa_scripts/feed_pipeline/catalogPipeline.py --importattrs -u "http://www.nykaa.com/media/feed/master_feed_gludo.csv"  >> /var/log/nykaa/catalog_pipeline.log
 
