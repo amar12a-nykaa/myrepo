@@ -27,10 +27,13 @@ def getDataFromDb(skus):
     mysql_conn.close()
     return results
 
-def getDataFromES(skus, offset, size):
+def getDataFromES(skus, size, sort_limit):
     querydsl = {}
     docs = []
     response = {}
+    querydsl['sort'] = {'_id': 'asc'}
+    if sort_limit is not None:
+        querydsl['search_after'] = sort_limit
     if skus:
         product_skus = [product.upper() for product in skus]
         if product_skus:
@@ -43,16 +46,16 @@ def getDataFromES(skus, offset, size):
     else:
         querydsl['_source'] = ['sku', 'mrp', 'price', 'discount']
         querydsl['size'] = size
-        querydsl['from'] = offset
-
+        querydsl['from'] = -1
     esResponse = Utils.makeESRequest(querydsl, index='livecore')
     docs = esResponse['hits']['hits']
     for single_doc in docs:
         sku_unit = single_doc['_source']['sku']
         response[sku_unit] = single_doc['_source']
+        sort_values = single_doc['sort']
     if not response:
         print("No data found in ES")
-    return response
+    return (response, sort_values)
 
 def getESTotalCount(indexName):
     body = {"query": {"match_all": {}}, "size": 0}
@@ -64,9 +67,9 @@ def compareData(skus, batch_limit, limitEsRecords):
         totalDocs = int(limitEsRecords)
     else:
         totalDocs = getESTotalCount('livecore')
-
+    sort_limit = None
     while count < totalDocs:
-        esData = getDataFromES(skus, count, batch_limit)
+        esData, sort_limit = getDataFromES(skus, batch_limit, sort_limit)
         if esData:
             sku_list = list(esData.keys())
             db_data = getDataFromDb(sku_list)
