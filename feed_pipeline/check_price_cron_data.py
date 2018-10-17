@@ -94,6 +94,6 @@ if __name__ == "__main__":
         skus = skus.split(",")
     if not limit:
         limit = 500
-    if not upto:
-        upto = 10000
-    compareData(skus, limit, upto)
+    if upto:
+        restrictLimit = upto
+    compareData(skus, limit, restrictLimit)
