@@ -61,10 +61,10 @@ def getESTotalCount(indexName):
     body = {"query": {"match_all": {}}, "size": 0}
     return Utils.makeESRequest(body, indexName)['hits']['total']
 
-def compareData(skus, batch_limit, limitEsRecords):
+def compareData(skus, batch_limit, upto):
     count = 0
-    if limitEsRecords:
-        totalDocs = int(limitEsRecords)
+    if upto:
+        totalDocs = int(upto)
     else:
         totalDocs = getESTotalCount('livecore')
     sort_limit = None
@@ -98,12 +98,10 @@ if __name__ == "__main__":
     parser.add_argument("--upto", help='restrict number of records instead of whole es count')
     argv = vars(parser.parse_args())
     skus = argv.get('skus', None)
-    limit = argv.get('batch_limit', None)
+    batch_limit = argv.get('batch_limit', None)
     upto = argv.get('upto', None)
     if skus:
         skus = skus.split(",")
-    if not limit:
-        limit = 500
-    if upto:
-        restrictLimit = upto
-    compareData(skus, limit, restrictLimit)
+    if not batch_limit:
+        batch_limit = 500
+    compareData(skus, batch_limit, upto)
