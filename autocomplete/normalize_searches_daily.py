@@ -201,6 +201,7 @@ def normalize_search_terms():
             a.drop(i, inplace=True)
     
     a['popularity'] = 100 * normalize(a['popularity'])
+    a = a.sort_values(by='popularity')
     for i, row in a.iterrows():
         query = row['id'].lower()
         if ps.stem(query) in cats_brands_stemmed:
@@ -218,7 +219,7 @@ def normalize_search_terms():
         except:
             print(traceback.format_exc())
             print(row)
-        if i % 1000000 == 0:
+        if i % 10000 == 0:
             search_terms_normalized.bulk_write(requests)
             corrected_search_query.bulk_write(corrections)
             requests = []
