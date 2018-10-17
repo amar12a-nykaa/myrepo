@@ -61,7 +61,7 @@ def getESTotalCount(indexName):
 def compareData(skus, batch_limit, limitEsRecords):
     count = 0
     if limitEsRecords:
-        totalDocs = limitEsRecords
+        totalDocs = int(limitEsRecords)
     else:
         totalDocs = getESTotalCount('livecore')
 
@@ -77,8 +77,9 @@ def compareData(skus, batch_limit, limitEsRecords):
                 esDiscount = esData[singleDbRecord['sku']]['discount']
                 if dbPrice != esPrice or dbDiscount != esDiscount:
                     print(":( Not matching sku:%s ---- db_price:%s ------es_price:%s------db_discount:%s------es_discount:%s" %(singleDbRecord['sku'], dbPrice, esPrice, dbDiscount, esDiscount))
-                else:
-                    print("Yay...matching sku:%s ---- db_price:%s ------es_price:%s------db_discount:%s------es_discount:%s" %(singleDbRecord['sku'], dbPrice, esPrice, dbDiscount, esDiscount))
+                # else:
+                #     pass
+                    #print("Yay...matching sku:%s ---- db_price:%s ------es_price:%s------db_discount:%s------es_discount:%s" %(singleDbRecord['sku'], dbPrice, esPrice, dbDiscount, esDiscount))
         count = count + int(batch_limit)
 
 if __name__ == "__main__":
