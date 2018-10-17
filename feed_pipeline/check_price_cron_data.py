@@ -58,13 +58,14 @@ def getESTotalCount(indexName):
     body = {"query": {"match_all": {}}, "size": 0}
     return Utils.makeESRequest(body, indexName)['hits']['total']
 
-def compareData(skus, batch_limit):
+def compareData(skus, batch_limit, limitEsRecords):
     count = 0
-    totalDocs = getESTotalCount('livecore')
-    totalDocs = 208
+    if limitEsRecords:
+        totalDocs = limitEsRecords
+    else:
+        totalDocs = getESTotalCount('livecore')
+
     while count < totalDocs:
-        print("inside while loop.....")
-        print("count is :%s" %count)
         esData = getDataFromES(skus, count, batch_limit)
         if esData:
             sku_list = list(esData.keys())
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     if skus:
         skus = skus.split(",")
     if not limit:
-        limit = 1000
+        limit = 500
     if not upto:
-        upto=10000
-    response = compareData(skus, limit)
+        upto = 10000
+    compareData(skus, limit, upto)
