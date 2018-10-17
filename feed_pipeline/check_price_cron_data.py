@@ -8,11 +8,11 @@ def getDataFromDb(skus):
     mysql_conn = Utils.mysqlConnection('r')
     sku_string = "','".join(skus)
 
-    query = """SELECT sku, type, mrp, 
+    query = """SELECT sku, type, mrp, msp,  
                 CASE 
                     WHEN CURRENT_TIMESTAMP() BETWEEN schedule_start AND schedule_end AND scheduled_discount IS NOT NULL
-                        THEN scheduled_discount 
-                    ELSE discount 
+                        THEN round(scheduled_discount,2)
+                    ELSE round(discount,2) 
                 END AS 'discount', 
                 CASE 
                     WHEN CURRENT_TIMESTAMP() BETWEEN schedule_start AND schedule_end AND scheduled_discount IS NOT NULL 
@@ -71,11 +71,17 @@ def compareData(skus, batch_limit, limitEsRecords):
             sku_list = list(esData.keys())
             db_data = getDataFromDb(sku_list)
             for singleDbRecord in db_data:
-                dbPrice = singleDbRecord['price']
+                if singleDbRecord['msp'] is not None and singleDbRecord['price'] is not None:
+                    dbPrice = min(float(singleDbRecord['price']), float(singleDbRecord['msp']))
+                else:
+                    dbPrice = singleDbRecord['price']
                 dbDiscount = singleDbRecord['discount']
                 esPrice = esData[singleDbRecord['sku']]['price']
                 esDiscount = esData[singleDbRecord['sku']]['discount']
-                if dbPrice != esPrice or dbDiscount != esDiscount:
+                if (dbPrice != esPrice or dbDiscount != esDiscount) and dbPrice is not None and dbDiscount is not None and esPrice is not None and esDiscount is not None:
+#                if dbPrice != esPrice or dbDiscount != esDiscount:
+                    if dbDiscount == esDiscount and abs(dbPrice - esPrice) <= 1:
+                        continue
                     print(":( Not matching sku:%s ---- db_price:%s ------es_price:%s------db_discount:%s------es_discount:%s" %(singleDbRecord['sku'], dbPrice, esPrice, dbDiscount, esDiscount))
                 # else:
                 #     pass
