@@ -176,7 +176,7 @@ class CatalogIndexer:
                 print("WARNING ... Attempts remaining: %s, Failed to fetch data: %s %s " % (
                 attempts, request_url, request_data))
 
-        pas_object = pas_object['skus']
+        pas_object = pas_object.get('skus')
 
         pws_input_docs = []
         errors = []
