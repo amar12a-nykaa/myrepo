@@ -7,7 +7,6 @@ import datetime
 sys.path.append('/home/apis/nykaa/')
 
 from pas.v2.utils import Utils
-from pas.v2.models import calculateSP
 
 from contextlib import closing
 
@@ -17,7 +16,7 @@ def upload_special_price_to_s3(batch_size = 1000):
   local_date = datetime.datetime.now(tz=tz).strftime('%d-%m-%Y')
   file_name = 'special_price_{}.csv'.format(local_date)
   f = open(file_name, "w")
-  query = "SELECT sku, mrp, discount, msp, type FROM products;"
+  query = "SELECT sku, sp, type FROM products;"
   connection = Utils.mysqlConnection()
   with closing(connection.cursor()) as cursor:
     cursor.execute(query)
@@ -27,8 +26,7 @@ def upload_special_price_to_s3(batch_size = 1000):
       if not results:
         break
       for result in results:
-        special_price = calculateSP(mrp=result[1], discount=result[2], msp=result[3])
-        line = '"{}", "{}", "{}"\n'.format(result[0], special_price, result[4])
+        line = '"{}", "{}", "{}"\n'.format(result[0], result[1], result[2])
         print(line)
         f.write(line)
 
