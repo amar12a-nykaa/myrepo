@@ -75,6 +75,10 @@ class CatalogIndexer:
         ".*_i$": int,
     }
 
+    replace_brand_dict = {
+        "faces": "faces canada"
+    }
+
     def print_errors(errors):
         for err in errors:
             print("[ERROR]: " + err)
@@ -635,6 +639,11 @@ class CatalogIndexer:
                 if not doc['brand_facet_searchable']:
                     doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
 
+                global replace_brand_dict
+                for key, value in replace_brand_dict.items():
+                    if key in doc.get("brand_facet_searchable", ""):
+                        doc['brand_facet_searchable'].replace(key, value)
+
                 # meta info: dynamic fields
                 meta_fields = [field for field in row.keys() if field.startswith("meta_")]
                 for field in meta_fields:
@@ -664,8 +673,6 @@ class CatalogIndexer:
 
                 try:
                     doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""),doc.get("brand_facet_searchable", ""),doc.get("category_facet_searchable", "")] if x])
-                    if ("faces" in doc.get("brand_facet_searchable", "")):
-                        doc['title_brand_category'].append("canada")
                 except:
                     pass
 
