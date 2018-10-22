@@ -3,11 +3,12 @@ import sys
 import os
 import pytz
 import datetime
-from decimal import ROUND_HALF_UP, Decimal
 
 sys.path.append('/home/apis/nykaa/')
 
 from pas.v2.utils import Utils
+from pas.v2.models import calculateSP
+
 from contextlib import closing
 
 
@@ -26,7 +27,7 @@ def upload_special_price_to_s3(batch_size = 1000):
       if not results:
         break
       for result in results:
-        special_price = calculate_sp(mrp=result[1], discount=result[2], msp=result[3])
+        special_price = calculateSP(mrp=result[1], discount=result[2], msp=result[3])
         line = '"{}", "{}", "{}"\n'.format(result[0], special_price, result[4])
         print(line)
         f.write(line)
@@ -55,15 +56,6 @@ def upload_special_price_to_s3(batch_size = 1000):
   f.close()
   Utils.upload_file_to_s3(file_name)
   os.remove(file_name)
-
-
-def calculate_sp(mrp, discount, msp):
-  if discount is None:
-    return msp
-  sp = Decimal(str(mrp)) - Decimal(str(mrp)) * Decimal(str(discount)) / Decimal(str(100))
-  if msp:
-    sp = min(Decimal(str(msp)), sp)
-  return float(sp.quantize(0, ROUND_HALF_UP))
 
 
 if __name__ == "__main__":
