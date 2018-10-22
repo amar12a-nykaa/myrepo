@@ -62,7 +62,7 @@ def create_missing_indices():
 create_missing_indices()
 
 def getQuerySuggestion(query_id, query, algo):
-    for term in corrected_search_query.find({"_id": query_id}):
+    for term in corrected_search_query.find({"_id": query_id, "query" : query}):
         modified_query = term["suggested_query"]
         return modified_query
 
