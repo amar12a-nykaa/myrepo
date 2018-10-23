@@ -262,7 +262,7 @@ class CatalogIndexer:
                     continue
                 doc['product_id'] = row['product_id']
 
-                product_id = int(doc['product_id'])
+                product_id = str(doc['product_id'])
                 if product_2_vector_lsi_100.get(product_id):
                     doc.update(product_2_vector_lsi_100[product_id])
 
