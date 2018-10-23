@@ -1,5 +1,3 @@
-import urllib
-import csv
 import boto3
 import os
 import sys
@@ -42,6 +40,10 @@ for date in dates_to_process:
         unzip_file(filename_zip)
     os.system('sed -i "s/, 201/ 201/g" %s' % filepath)
     os.system('sed -i "s/\\"//g" %s' % filepath)
+    os.system('sed -i "s/,Typed Search Term (evar77),/,typed_term,/g" %s' % filepath)
+    os.system('sed -i "s/,Internal Search Term (Conversion) (evar6),/,search_term,/g" %s' % filepath)
+    os.system('sed -i "s/,Internal Search Term (Conversion) Instance (Instance of evar6)/,click_count/g" %s' % filepath)
+
     uploadToS3(filepath, filename)
 
 
