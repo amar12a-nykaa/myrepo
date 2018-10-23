@@ -26,14 +26,16 @@ def add_embedding_vectors_in_mysql(db, table, rows):
         _add_embedding_vectors_in_mysql(cursor, table, rows[i:i+500]) 
         db.commit()
 
-def get_vectors_from_mysql_for_es(algo):
+def get_vectors_from_mysql_for_es(algo, sku=True):
     print("Getting vectors from mysql for es")
     query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='%s'" % algo
     rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 1000)
     print("Total number of products from mysql: %d" % len(rows))
+    embedding_vector_field_name = 'embedding_vector_%s' % algo
+    if not sku:
+        return [{'product_id': str(row[0]), embedding_vector_field_name: json.loads(row[1])} for row in rows]
     product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
     docs = []
-    embedding_vector_field_name = 'embedding_vector_%s' % algo
     for row in rows:
         if product_id_2_sku.get(row[0]):
             docs.append({'sku': product_id_2_sku[row[0]], embedding_vector_field_name: json.loads(row[1])})
