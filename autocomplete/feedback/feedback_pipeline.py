@@ -24,8 +24,7 @@ if __name__ == "__main__":
     days = argv['days']
     output_file = argv['output']
 
-    s3 = boto3.client('s3', aws_access_key_id="AKIAJPTLSOQJMU64CPFQ",
-                      aws_secret_access_key="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", region_name='ap-southeast-1')
+    s3 = boto3.client('s3')
 
     spark = SparkSession.builder.appName("Feedback").getOrCreate()
     sc = spark.sparkContext
@@ -44,7 +43,7 @@ if __name__ == "__main__":
         i = -i
         date = arrow.now().replace(days=i, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
             tzinfo=None)
-        filename = 's3://nykaa-feedback-autocomplete/autocompleteFeedback%s.csv' % date.strftime("%Y%m%d")
+        filename = 's3://nykaa-nonprod-feedback-autocomplete/autocompleteFeedback%s.csv' % date.strftime("%Y%m%d")
         try:
             df = spark.read.load(filename, header=True, format='csv', schema=schema)
             if df.count() > 0:
@@ -79,4 +78,4 @@ if __name__ == "__main__":
                 final_dict[current_term] = {}
             final_dict[current_term][row['typed_term']] = row['click_count']
 
-        s3.put_object(Bucket='nykaa-feedback-autocomplete', Key=output_file, Body=final_dict)
+        s3.put_object(Bucket='nykaa-nonprod-feedback-autocomplete', Key=output_file, Body=final_dict)

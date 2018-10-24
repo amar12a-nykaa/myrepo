@@ -14,9 +14,8 @@ argv = vars(parser.parse_args())
 days = -1 * argv['days']
 
 dates_to_process = enumerate_dates(days, -1)
-s3 = boto3.client('s3', aws_access_key_id="AKIAJPTLSOQJMU64CPFQ",
-                      aws_secret_access_key="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", region_name='ap-southeast-1')
-bucket_name = 'nykaa-feedback-autocomplete'
+s3 = boto3.client('s3')
+bucket_name = 'nykaa-nonprod-feedback-autocomplete'
 
 def unzip_file(path_to_zip_file):
     zip_ref = zipfile.ZipFile(path_to_zip_file, 'r')
@@ -29,7 +28,6 @@ def uploadToS3(filepath, filename):
 
 for date in dates_to_process:
     print("=== READING CSV FOR : %s ====" % date)
-    date_string = datetime.datetime.strptime(date, "%Y-%m-%d") if isinstance(date, str) else date
     filename = 'autocompleteFeedback%s.csv' % date.strftime("%Y%m%d")
     filepath = '/nykaa/adminftp/autocompleteFeedback%s.csv' % date.strftime("%Y%m%d")
     if not os.path.exists(filepath):
