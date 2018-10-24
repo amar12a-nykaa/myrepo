@@ -3,6 +3,7 @@ import sys
 import os
 import pytz
 import datetime
+from decimal import ROUND_HALF_UP, Decimal
 
 sys.path.append('/home/apis/nykaa/')
 
@@ -31,7 +32,7 @@ def upload_special_price_to_s3(batch_size = 1000):
         f.write(line)
 
   query = "SELECT bundles.sku, " \
-          "round((100-bundles.discount)/100* SUM( products.mrp * mappings.quantity)) " \
+          "(100-bundles.discount)/100* SUM( products.mrp * mappings.quantity) " \
           "FROM bundles as bundles " \
           "join bundle_products_mappings mappings " \
           "on bundles.sku = mappings.bundle_sku " \
@@ -47,7 +48,8 @@ def upload_special_price_to_s3(batch_size = 1000):
       if not results:
         break
       for result in results:
-        line = '"{}", "{}", "bundle"\n'.format(result[0], result[1])
+        special_price = Decimal(result[1]).quantize(0, ROUND_HALF_UP)
+        line = '"{}", "{}", "bundle"\n'.format(result[0], special_price)
         print(line)
         f.write(line)
 
