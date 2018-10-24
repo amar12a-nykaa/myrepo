@@ -89,5 +89,5 @@ if __name__ == "__main__":
         for key, value in final_dict.items():
             final_list.append({"search_term" : key, "typed_terms" : value})
 
-        s3.put_object(Bucket='nykaa-nonprod-feedback-autocomplete', Key=output_file, Body=json.dumps(list))
+        s3.put_object(Bucket='nykaa-nonprod-feedback-autocomplete', Key=output_file, Body=json.dumps(final_list))
         print("done")
