@@ -48,7 +48,6 @@ if getCount() > 1:
   print("This means that your intented changes might still be in progress!!!")
   raise Exception("Pipeline is already running. Exiting without doing anything")
 
-
 def indexESData(file_path, force_run):
   indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
   active_index = indexes['active_index']

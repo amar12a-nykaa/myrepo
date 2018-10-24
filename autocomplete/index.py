@@ -737,7 +737,8 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
 
       kwargs = {k:v for k,v in locals().items() if 'index_' in k}
       index_parallel(['search_queries', 'products'], **kwargs)
-      index_parallel(['categories', 'brands', 'brands_categories', 'category_facets'], **kwargs)
+      index_parallel(['category_facets'], **kwargs)
+      index_parallel(['categories', 'brands', 'brands_categories'], **kwargs)
     
 
 

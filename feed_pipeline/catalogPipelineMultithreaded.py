@@ -16,7 +16,7 @@ sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
 from importDataFromNykaa import NykaaImporter
-from indexCatalogNew import CatalogIndexer
+from indexCatalog import CatalogIndexer
 
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
