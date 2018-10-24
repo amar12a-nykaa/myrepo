@@ -47,6 +47,7 @@ if __name__ == "__main__":
         try:
             df = spark.read.load(filename, header=True, format='csv', schema=schema)
             if df.count() > 0:
+                print("appending for %s"%filename)
                 dfs.append(df)
         except:
             continue
@@ -62,10 +63,15 @@ if __name__ == "__main__":
             print("Rows count: " + str(final_df.count()))
 
         print("Filtering out typed_query with length less than threshold")
-        final_df = final_df.filter((len(final_df["typed_term"]) >= TYPED_QUERY_LENGTH_THRESHOLD))
+        final_df["typed_term"] = final_df["typed_term"].astype('str')
+        mask = (final_df["typed_term"].str.len() >= TYPED_QUERY_LENGTH_THRESHOLD)
+        final_df = final_df.loc[mask]
+        # final_df = final_df.filter((len(final_df["typed_term"]) >= TYPED_QUERY_LENGTH_THRESHOLD))
+        if verbose:
+            print("Rows count: " + str(final_df.count()))
 
+        print("Taking distinct pair of typed_term and search_term")
         final_df = final_df.groupBy(['typed_term', 'search_term']).agg({'click_count' : sum}).withColumnRenamed('sum(click_count)', 'click_count').toPandas()
-
         if verbose:
             print("Rows count: " + str(final_df.count()))
 
