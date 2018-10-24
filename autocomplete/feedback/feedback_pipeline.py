@@ -64,12 +64,12 @@ if __name__ == "__main__":
 
         print("Filtering out typed_query with length less than threshold")
         final_df = final_df.withColumn("typed_term", final_df["typed_term"].cast(StringType()))
-        final_df.filter(length('typed_term') >= TYPED_QUERY_LENGTH_THRESHOLD)
+        final_df = final_df.filter(length('typed_term') >= TYPED_QUERY_LENGTH_THRESHOLD)
         if verbose:
             print("Rows count: " + str(final_df.count()))
 
         print("Taking distinct pair of typed_term and search_term")
-        final_df = final_df.groupBy(['typed_term', 'search_term']).agg({'click_count' : sum}).withColumnRenamed('sum(click_count)', 'click_count').toPandas()
+        final_df = final_df.groupBy(['typed_term', 'search_term']).agg(sum('click_count').alias('click_count'))
         if verbose:
             print("Rows count: " + str(final_df.count()))
 
