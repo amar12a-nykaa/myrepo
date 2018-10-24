@@ -2,7 +2,7 @@ import os
 import sys
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType
-from pyspark.sql.functions import length
+from pyspark.sql.functions import length, sum
 import math
 import boto3
 import arrow
@@ -63,7 +63,6 @@ if __name__ == "__main__":
             print("Rows count: " + str(final_df.count()))
 
         print("Filtering out typed_query with length less than threshold")
-        final_df = final_df.withColumn("typed_term", final_df["typed_term"].cast(StringType()))
         final_df = final_df.filter(length('typed_term') >= TYPED_QUERY_LENGTH_THRESHOLD)
         if verbose:
             print("Rows count: " + str(final_df.count()))
