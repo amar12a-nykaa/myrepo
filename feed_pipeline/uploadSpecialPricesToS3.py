@@ -22,7 +22,7 @@ def upload_special_price_to_s3(batch_size = 1000):
   write_to_result_to_file(query=query1, file=f, batch_size=batchsize)
   print('----Query1-----')
 
-  query2 = "select parent.sku, min(child.sp)  " \
+  query2 = "select parent.sku, min(child.sp), 'configurable'  " \
            "from products parent " \
            "join products child " \
            "on parent.psku = child.psku " \
