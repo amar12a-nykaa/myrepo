@@ -725,7 +725,7 @@ class CatalogIndexer:
         'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
         'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
         'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1',
-        'beauty_partner', 'primary_categories', 'offers']
+        'beauty_partner', 'primary_categories', 'offers', 'filter_size_v1', 'filter_size', 'speciality_search_v1', 'speciality_search', 'filter_product_v1', 'filter_product', 'usage_period_v1', 'usage_period']
 
         all_rows = read_csv_from_file(file_path)
         columns = all_rows[0].keys()
