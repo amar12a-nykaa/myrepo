@@ -8,6 +8,7 @@ from pas.v2.utils import Utils
 
 client = Utils.mongoClient()
 feedback_data_autocomplete = client['search']['feedback_data_autocomplete']
+feedback_data_autocomplete.remove({})
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Argument parser for feedback result')
@@ -28,4 +29,4 @@ if __name__ == '__main__':
     with open(filename) as f:
         file_data = json.load(f)
 
-    feedback_data_autocomplete.insert(file_data)
+    feedback_data_autocomplete.insert(file_data, check_keys=False)
