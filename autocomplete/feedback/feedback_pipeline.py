@@ -2,7 +2,7 @@ import os
 import sys
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType
-from pyspark.sql.functions import length, sum
+from pyspark.sql.functions import length, sum, lower, col
 import math
 import boto3
 import arrow
@@ -65,6 +65,8 @@ if __name__ == "__main__":
 
         print("Filtering out typed_query with length less than threshold")
         final_df = final_df.filter(length('typed_term') >= TYPED_QUERY_LENGTH_THRESHOLD)
+        final_df = final_df.withColumn('search_term', lower(col('search_term')))
+        final_df = final_df.withColumn('typed_term', lower(col('typed_term')))
         if verbose:
             print("Rows count: " + str(final_df.count()))
 
@@ -83,4 +85,9 @@ if __name__ == "__main__":
                 final_dict[current_term] = {}
             final_dict[current_term][row['typed_term']] = row['click_count']
 
-        s3.put_object(Bucket='nykaa-nonprod-feedback-autocomplete', Key=output_file, Body=json.dumps(final_dict))
+        final_list = []
+        for key, value in final_dict.items():
+            final_list.append({"search_term" : key, "typed_terms" : value})
+
+        s3.put_object(Bucket='nykaa-nonprod-feedback-autocomplete', Key=output_file, Body=json.dumps(list))
+        print("done")

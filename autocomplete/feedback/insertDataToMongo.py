@@ -18,7 +18,7 @@ if __name__ == '__main__':
     bucket = argv['bucket']
     filename = argv['filename']
 
-    s3 = boto3.client('s3')
+    s3 = boto3.resource('s3')
     try:
         s3.Bucket(bucket).download_file(filename, filename)
     except:
