@@ -33,7 +33,7 @@ def get_vectors_from_mysql_for_es(algo, sku=True):
     print("Total number of products from mysql: %d" % len(rows))
     embedding_vector_field_name = 'embedding_vector_%s' % algo
     if not sku:
-        return [{'product_id': str(row[0]), embedding_vector_field_name: row[1]} for row in rows]
+        return [{'product_id': str(row[0]), embedding_vector_field_name: json.loads(row[1])} for row in rows]
     product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
     docs = []
     for row in rows:

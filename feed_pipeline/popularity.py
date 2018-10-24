@@ -29,8 +29,8 @@ from loopcounter import LoopCounter
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from popularity_api import get_popularity_for_id  
 
-WEIGHT_VIEWS = 25 # 35
-WEIGHT_UNITS = 25 # 35
+WEIGHT_VIEWS = 35
+WEIGHT_UNITS = 35
 WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 20
 WEIGHT_UNITS_BY_VIEWS = 20 
