@@ -12,6 +12,7 @@ from collections import defaultdict
 import argparse
 
 TYPED_QUERY_LENGTH_THRESHOLD = 3
+CLICK_COUNT_THRESHOLD = 3
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for feedback script')
@@ -69,6 +70,7 @@ if __name__ == "__main__":
 
         print("Taking distinct pair of typed_term and search_term")
         final_df = final_df.groupBy(['typed_term', 'search_term']).agg(sum('click_count').alias('click_count'))
+        final_df = final_df.filter(final_df.click_count > CLICK_COUNT_THRESHOLD)
         if verbose:
             print("Rows count: " + str(final_df.count()))
 
@@ -81,4 +83,4 @@ if __name__ == "__main__":
                 final_dict[current_term] = {}
             final_dict[current_term][row['typed_term']] = row['click_count']
 
-        s3.put_object(Bucket='nykaa-nonprod-feedback-autocomplete', Key=output_file, Body=final_dict)
+        s3.put_object(Bucket='nykaa-nonprod-feedback-autocomplete', Key=output_file, Body=json.dumps(final_dict))
