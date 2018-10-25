@@ -28,7 +28,10 @@ for date in recent_missing_dates:
   read_file_by_date(date, 'app')
 
 
-if recent_missing_dates :
+if recent_missing_dates:
+  cmd="/usr/bin/python /nykaa/scripts/autocomplete/feedback/insertDataToMongo.py --bucket=nykaa-nonprod-feedback-autocomplete"
+  print(cmd)
+  os.system(cmd)
   cmd="/usr/bin/python /nykaa/scripts/autocomplete/pipeline.py"
   print(cmd)
   os.system(cmd)

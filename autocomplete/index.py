@@ -39,6 +39,7 @@ collection='autocomplete'
 search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']
 query_product_map_table = Utils.mongoClient()['search']['query_product_map']
 query_product_not_found_table = Utils.mongoClient()['search']['query_product_not_found']
+feedback_data_autocomplete = Utils.mongoClient()['search']['feedback_data_autocomplete']
 top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = Utils.esConn()
@@ -122,6 +123,13 @@ multicategoryList = {
     "289": {"variant": ["Day Cream", "Night Cream"], "name": "Day/Night Cream"}
   }
 
+def get_feedback_data(entity):
+    search_term = entity.lower()
+    feedback_data = feedback_data_autocomplete.find_one({"search_term": search_term})
+    if feedback_data:
+        return feedback_data['typed_terms']
+    return {}
+
 def restart_apache_memcached():
   print("Restarting Apache and Memcached")
   os.system("/etc/init.d/apache2 restart")
@@ -135,6 +143,7 @@ def write_dict_to_csv(dictname, filename):
 
 def index_docs(searchengine, docs, collection):
   for doc in docs:
+    doc['typed_terms'] = get_feedback_data(doc['entity'])
     doc['entity'] += " s" # This is a trick to hnadle sideeffect of combining shingles and edge ngram token filters
   assert searchengine == 'elasticsearch'
   EsUtils.indexDocs(docs, collection)
