@@ -22,6 +22,10 @@ def upload_special_price_to_s3(batch_size = 1000):
   write_to_result_to_file(query=query1, file=f, batch_size=batchsize)
   print('----Query1-----')
 
+  '''
+  Configurable SKUs having 'lowest_price' price criteria 
+  and has atleast one childern such that it's (enabled and is_in_stock or backorders)
+  '''
   query2 = "select parent.sku, min(child.sp), 'configurable'  " \
            "from products parent " \
            "join products child " \
@@ -29,12 +33,17 @@ def upload_special_price_to_s3(batch_size = 1000):
            "where parent.type = 'configurable' " \
            "and child.type = 'simple' " \
            "and parent.price_criteria = 'lowest_price' " \
+           "and child.disabled != 1 " \
            "and (child.is_in_stock = 1 or child.backorders = 1) " \
            "group by parent.sku;"
 
   write_to_result_to_file(query=query2, file=f, batch_size=batchsize)
   print('----Query2-----')
 
+  '''
+  Configurable SKUs having 'lowest_price' price criteria 
+  and has DON'T has any children such that it's (enabled and is_in_stock or backorders)
+  '''
   query3 = "select parent.sku, min(child.sp), 'configurable'  " \
            "from products parent " \
            "join products child " \
@@ -49,12 +58,17 @@ def upload_special_price_to_s3(batch_size = 1000):
            "where parent.type = 'configurable' " \
            "and child.type = 'simple' " \
            "and parent.price_criteria = 'lowest_price' " \
+           "and child.disabled != 1 " \
            "and (child.is_in_stock = 1 or child.backorders = 1))" \
            "group by parent.sku;"
 
   write_to_result_to_file(query=query3, file=f, batch_size=batchsize)
   print('----Query3-----')
 
+  '''
+    Configurable SKUs having 'highest_discount' price criteria 
+    and has at least one children such that it's (enabled and is_in_stock or backorders)
+  '''
   query4 = "select parent.sku, child.sp, 'configurable' " \
            "from (select parent.sku sku, MAX(child.discount) max_discount " \
            "from products parent " \
@@ -63,6 +77,7 @@ def upload_special_price_to_s3(batch_size = 1000):
            "where parent.type = 'configurable' " \
            "and child.type = 'simple' " \
            "and parent.price_criteria = 'highest_discount' " \
+           "and child.disabled != 1 " \
            "and (child.is_in_stock = 1 or child.backorders = 1) " \
            "group by parent.sku ) sub " \
            "join products parent " \
@@ -70,6 +85,7 @@ def upload_special_price_to_s3(batch_size = 1000):
            "join products child " \
            "on parent.sku = child.psku " \
            "where child.type = 'simple' " \
+           "and child.disabled != 1 " \
            "and (child.is_in_stock = 1 or child.backorders = 1) " \
            "and child.discount = sub.max_discount " \
            "group by parent.sku;"
@@ -77,6 +93,10 @@ def upload_special_price_to_s3(batch_size = 1000):
   write_to_result_to_file(query=query4, file=f, batch_size=batchsize)
   print('----Query4-----')
 
+  '''
+    Configurable SKUs having 'highest_discount' price criteria 
+    and has NO children which is (enabled and is_in_stock or backorders)
+  '''
   query5 = "select parent.sku, child.sp, 'configurable' " \
            "from (select parent.sku sku, MAX(child.discount) max_discount " \
            "from products parent " \
@@ -93,6 +113,7 @@ def upload_special_price_to_s3(batch_size = 1000):
            "where parent.type = 'configurable' " \
            "and child.type = 'simple' " \
            "and parent.price_criteria = 'highest_discount' " \
+           "and child.disabled != 1 " \
            "and (child.is_in_stock = 1 or child.backorders = 1)) " \
            "group by parent.sku ) sub " \
            "join products parent " \
