@@ -2,6 +2,7 @@ import json
 import boto3
 import argparse
 import sys
+import pymongo
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
@@ -29,7 +30,7 @@ def insertInMongo(bucket='nykaa-nonprod-feedback-autocomplete', filename='feedba
     indices = feedback_data_autocomplete.list_indexes()
     if 'search_term_1' not in [x['name'] for x in indices]:
         print("Creating index on search_term")
-        feedback_data_autocomplete.create_index([("search_term")])
+        feedback_data_autocomplete.create_index([("search_term", pymongo.ASCENDING)])
 
     #truncate collection
     feedback_data_autocomplete.remove({})
