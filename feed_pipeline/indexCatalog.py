@@ -643,8 +643,8 @@ class CatalogIndexer:
                     doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
 
                 for key, value in CatalogIndexer.replace_brand_dict.items():
-                    if key in doc.get("brand_facet_searchable", ""):
-                        doc['brand_facet_searchable'] = doc['brand_facet_searchable'].replace(key, value)
+                    if key in doc.get("brand_facet_searchable", "").lower():
+                        doc['brand_facet_searchable'] = doc['brand_facet_searchable'].lower().replace(key, value)
 
                 # meta info: dynamic fields
                 meta_fields = [field for field in row.keys() if field.startswith("meta_")]
