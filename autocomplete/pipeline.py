@@ -12,6 +12,9 @@ import urllib.request
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
+sys.path.append('/nykaa/scripts/autocomplete/feedback')
+from insertDataToMongo import insertFeedBackDataInMongo
+
 sys.path.append('/nykaa/api/')
 from pas.v2.utils import Utils
 
@@ -23,6 +26,7 @@ AUTOCOMPLETE = 'autocomplete'
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--force-run", action='store_true')
+parser.add_argument('--bucket', '-b', type=str, default='nykaa-nonprod-feedback-autocomplete')
 argv = vars(parser.parse_args())
 
 force_run = argv['force_run']
@@ -30,6 +34,7 @@ script_start = timeit.default_timer()
 
 normalize_search_terms()
 generate_brand_category_mapping()
+insertFeedBackDataInMongo(argv['bucket'])
 
 indexes = EsUtils.get_active_inactive_indexes(AUTOCOMPLETE)
 print(indexes)
