@@ -44,7 +44,7 @@ if __name__ == "__main__":
         i = -i
         date = arrow.now().replace(days=i, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
             tzinfo=None)
-        filename = 's3://nykaa-nonprod-feedback-autocomplete/autocompleteFeedback%s.csv' % date.strftime("%Y%m%d")
+        filename = 's3://nykaa-nonprod-feedback-autocomplete/dt=%s/autocompleteFeedback.csv' % date.strftime("%Y%m%d")
         try:
             df = spark.read.load(filename, header=True, format='csv', schema=schema)
             if df.count() > 0:

@@ -10,7 +10,7 @@ from pas.v2.utils import Utils
 client = Utils.mongoClient()
 collection_name = 'feedback_data_autocomplete'
 
-def insertInMongo(bucket='nykaa-nonprod-feedback-autocomplete', filename='feedback_autocomplete_result.json'):
+def insertFeedBackDataInMongo(bucket='nykaa-nonprod-feedback-autocomplete', filename='feedback_autocomplete_result.json'):
     s3 = boto3.resource('s3')
     try:
         s3.Bucket(bucket).download_file(filename, filename)
@@ -47,4 +47,4 @@ if __name__ == '__main__':
     bucket = argv['bucket']
     filename = argv['filename']
 
-    insertInMongo(bucket, filename)
+    insertFeedBackDataInMongo(bucket, filename)

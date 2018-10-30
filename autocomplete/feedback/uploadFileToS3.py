@@ -43,7 +43,8 @@ for date in dates_to_process:
     os.system('sed -i "s/,Internal Search Term (Conversion) (evar6),/,search_term,/g" %s' % filepath)
     os.system('sed -i "s/,Internal Search Term (Conversion) Instance (Instance of evar6)/,click_count/g" %s' % filepath)
 
-    uploadToS3(filepath, filename)
+    s3_file_location = 'dt=%s/autocompleteFeedback.csv' % date.strftime("%Y%m%d")
+    uploadToS3(filepath, s3_file_location)
 
 
 
