@@ -36,7 +36,7 @@ def insertFeedBackDataInMongo(bucket='nykaa-nonprod-feedback-autocomplete', file
     feedback_data_autocomplete.remove({})
 
     #insert data in collection
-    feedback_data_autocomplete.insert(file_data, check_keys=False)
+    feedback_data_autocomplete.insert(file_data, {"ordered": False})
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Argument parser for feedback result')

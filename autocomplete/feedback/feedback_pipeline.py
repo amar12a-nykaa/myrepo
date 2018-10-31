@@ -2,7 +2,7 @@ import os
 import sys
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType
-from pyspark.sql.functions import length, sum, lower, col
+from pyspark.sql.functions import length, sum, lower, col, udf
 import math
 import boto3
 import arrow
@@ -71,6 +71,12 @@ if __name__ == "__main__":
         if verbose:
             print("Rows count: " + str(final_df.count()))
 
+        def normalize_data(data):
+            return re.sub(pattern='[.$]+', repl="_", string=data)
+
+        normalize_typed_term_udf = udf(normalize_data, StringType())
+        final_df = final_df.withColumn("typed_term", normalize_typed_term_udf(final_df['typed_term']))
+
         print("Taking distinct pair of typed_term and search_term")
         final_df = final_df.groupBy(['typed_term', 'search_term']).agg(sum('click_count').alias('click_count'))
         final_df = final_df.filter(final_df.click_count > CLICK_COUNT_THRESHOLD)
@@ -89,7 +95,6 @@ if __name__ == "__main__":
         final_list = []
         for key, value in final_dict.items():
             try:
-                key = re.sub(pattern='[.$]+', repl="", string=str(key))
                 final_list.append({"search_term": key, "typed_terms" : value})
             except Exception as e:
                 print("exception occured for %s", key)
