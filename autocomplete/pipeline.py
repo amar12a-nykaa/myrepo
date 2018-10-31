@@ -26,7 +26,6 @@ AUTOCOMPLETE = 'autocomplete'
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--force-run", action='store_true')
-parser.add_argument('--bucket', '-b', type=str, default='nykaa-nonprod-feedback-autocomplete')
 argv = vars(parser.parse_args())
 
 force_run = argv['force_run']
@@ -34,7 +33,7 @@ script_start = timeit.default_timer()
 
 normalize_search_terms()
 generate_brand_category_mapping()
-insertFeedBackDataInMongo(argv['bucket'])
+insertFeedBackDataInMongo()
 
 indexes = EsUtils.get_active_inactive_indexes(AUTOCOMPLETE)
 print(indexes)

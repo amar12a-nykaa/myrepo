@@ -31,7 +31,7 @@ for date in recent_missing_dates:
 
 
 if recent_missing_dates:
-  cmd="/usr/bin/python /nykaa/scripts/autocomplete/pipeline.py --bucket=%s"%(bucket)
+  cmd="/usr/bin/python /nykaa/scripts/autocomplete/pipeline.py"
   print(cmd)
   os.system(cmd)
 else:

@@ -7,7 +7,7 @@ import zipfile
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from health_check import enumerate_dates
-from feed_pipeline.pipelineUtils import PipelineUtils
+from pipelineUtils import PipelineUtils
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--days", type=int, default=15)

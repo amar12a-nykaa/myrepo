@@ -23,7 +23,7 @@ class PipelineUtils:
       host = 'priceapi.nyk00-int.network'
     return host 
 
-  def getBucketNameForFeedback(self):
+  def getBucketNameForFeedback():
     bucket_name = 'nykaa-nonprod-feedback-autocomplete'
     if socket.gethostname().startswith('admin'):
       bucket_name = 'nykaa-prod-feedback-autocomplete'

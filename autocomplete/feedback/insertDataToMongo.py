@@ -6,11 +6,14 @@ import pymongo
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
+sys.path.append("/nykaa/scripts/feed_pipeline")
+from pipelineUtils import PipelineUtils
 
 client = Utils.mongoClient()
 collection_name = 'feedback_data_autocomplete'
 
-def insertFeedBackDataInMongo(bucket='nykaa-nonprod-feedback-autocomplete', filename='feedback_autocomplete_result.json'):
+def insertFeedBackDataInMongo(filename='feedback_autocomplete_result.json'):
+    bucket = PipelineUtils.getBucketNameForFeedback()
     s3 = boto3.resource('s3')
     try:
         s3.Bucket(bucket).download_file(filename, filename)
@@ -40,11 +43,9 @@ def insertFeedBackDataInMongo(bucket='nykaa-nonprod-feedback-autocomplete', file
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Argument parser for feedback result')
-    parser.add_argument('--bucket', '-b', type=str, default='nykaa-nonprod-feedback-autocomplete')
     parser.add_argument('--filename', '-f', type=str, default='feedback_autocomplete_result.json')
 
     argv = vars(parser.parse_args())
-    bucket = argv['bucket']
     filename = argv['filename']
 
-    insertFeedBackDataInMongo(bucket, filename)
+    insertFeedBackDataInMongo(filename)
