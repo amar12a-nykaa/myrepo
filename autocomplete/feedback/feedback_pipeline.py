@@ -10,6 +10,7 @@ import json
 import pandas
 from collections import defaultdict
 import argparse
+import re
 
 TYPED_QUERY_LENGTH_THRESHOLD = 3
 CLICK_COUNT_THRESHOLD = 3
@@ -87,7 +88,11 @@ if __name__ == "__main__":
 
         final_list = []
         for key, value in final_dict.items():
-            final_list.append({"search_term" : key, "typed_terms" : value})
+            try:
+                key = re.sub(pattern='[.$]+', repl="", string=str(key))
+                final_list.append({"search_term": key, "typed_terms" : value})
+            except Exception as e:
+                print("exception occured for %s", key)
 
         s3.put_object(Bucket='nykaa-nonprod-feedback-autocomplete', Key=output_file, Body=json.dumps(final_list))
         print("done")
