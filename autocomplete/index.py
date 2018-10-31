@@ -125,6 +125,7 @@ multicategoryList = {
 
 def get_feedback_data(entity):
     search_term = entity.lower()
+    search_term = re.sub('[.$]+', '', search_term)
     feedback_data = feedback_data_autocomplete.find_one({"search_term": search_term})
     if feedback_data:
         return feedback_data['typed_terms']
