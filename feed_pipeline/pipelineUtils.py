@@ -21,7 +21,13 @@ class PipelineUtils:
     host = 'localhost'
     if socket.gethostname().startswith('admin'):
       host = 'priceapi.nyk00-int.network'
-    return host 
+    return host
+
+  def getAdPlatformEndPoint():
+    host = 'nykaa-widgets-staging.nykaa.com'
+    if socket.gethostname().startswith('admin'):
+      host = 'nykaa-widgets.nykaa.com'
+    return host
 
   def getOptionAttributes(option_ids):
     option_attrs = {}

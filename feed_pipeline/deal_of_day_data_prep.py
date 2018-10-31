@@ -381,6 +381,26 @@ def dump_to_redshift(docs, dt):
       cur.execute(query)
   redshift_conn.commit()
 
+def get_featured_products():
+  inventories = list()
+
+  query = {"page_type": "adhoc-data", "page_section": "deals-of-the-day", "page_data": "featured-products"}
+  inventories.append(query)
+
+  requestBody = {'inventories': inventories}
+
+  url = 'https://' + PipelineUtils.getAdPlatformEndPoint() + '/inventory/data/json/'
+  response = requests.post(url, json=requestBody, headers={'Content-Type':'application/json'})
+
+  if (response.ok):
+    result = json.loads(response.content.decode('utf-8')).get('result')[0]
+    for inventory in result['inventories']:
+      if inventory['widget_data']['wtype'] == "DATA_WIDGET":
+        product_id_list = inventory['widget_data']['parameters']["data_"]
+        return product_id_list
+
+  return ""
+
 if __name__ == '__main__':
   global back_date_7_days
   global date_today
@@ -473,16 +493,32 @@ if __name__ == '__main__':
   #  writer.writerows(csv_data)
   print (len(new_docs))
   if len(new_docs) < 20:
-    print("Selected product are not sufficient, Please check")  
-  for counter, doc in enumerate(new_docs[:30]):
+    print("Selected product are not sufficient, Please check")
+
+  starttime = str(date_today) + ' 10:00:00'
+  endtime = str(date_today) + ' 22:00:00'
+  position = 0
+  featured_list = get_featured_products().split(',')
+  for pid in featured_list:
+    pid = str(pid)
+    if pid in product_id_sku_details_map:
+      query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') 
+                on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.\
+                format(pid, product_id_sku_details_map.get(pid), starttime, endtime, position)
+      Utils.mysql_write(query)
+      position = position + 1
+  remaining_length = 30-position
+  for counter, doc in enumerate(new_docs[:remaining_length]):
     if doc.get('product_id'):
+      if doc.get('product_id') in featured_list:
+        continue
       print (doc) 
       mysql_conn =  Utils.mysqlConnection('w')
       product_id = str(doc.get('product_id'))
       sku = doc.get('sku')
-      starttime = str(date_today)+' 10:00:00'
-      endtime = str(date_today) +' 22:00:00'
-      query =  """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.format(product_id, sku, starttime, endtime,counter)
+      query =  """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') 
+                  on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.\
+                  format(product_id, sku, starttime, endtime,counter)
       ans  = Utils.mysql_write(query)
 
       sets_list = []
@@ -500,4 +536,4 @@ if __name__ == '__main__':
       doc['sets'] =  ','.join(sets_list)
       new_docs[counter] = doc
 
-  dump_to_redshift(new_docs[:30], dt)
+  dump_to_redshift(new_docs[:remaining_length], dt)
