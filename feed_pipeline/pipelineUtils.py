@@ -23,6 +23,12 @@ class PipelineUtils:
       host = 'priceapi.nyk00-int.network'
     return host 
 
+  def getBucketNameForFeedback(self):
+    bucket_name = 'nykaa-nonprod-feedback-autocomplete'
+    if socket.gethostname().startswith('admin'):
+      bucket_name = 'nykaa-prod-feedback-autocomplete'
+    return bucket_name
+
   def getOptionAttributes(option_ids):
     option_attrs = {}
     missing_option_ids = []
