@@ -1,5 +1,6 @@
 import argparse
 import sys
+import os
 import pytz
 import datetime
 import requests
@@ -8,13 +9,12 @@ import time
 
 sys.path.append('/home/apis/nykaa/')
 
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils, hostname
 
 from contextlib import closing
 
 
 def get_gludo_url():
-    hostname = Utils.hostname
 
     if hostname.startswith('api') or hostname.startswith('admin'):
         gludo_base_url = 'http://priceapi.nyk00-int.network/apis/v2'
@@ -45,6 +45,10 @@ def upload_special_price_to_s3(batch_size = 1000):
   write_to_result_to_file(query=query2, file=f, batch_size=batchsize)
   print('----Query2-----')
 
+  f.close()
+  Utils.upload_file_to_s3(file_name)
+  os.remove(file_name)
+
 
 
 def write_to_result_to_file(query, file, batch_size):
@@ -71,8 +75,9 @@ def write_to_result_to_file(query, file, batch_size):
           response = requests.post(url=gludo_url, json=request_data, headers={'Content-Type': 'application/json'})
           if (response.ok):
             response_data = json.loads(response.text)
-            for sku in response_data.skus:
-              line = '"{}", "{}", "{}"\n'.format(sku, response_data['sp'], response_data['type'], response_data['disabled'])
+            skus = response_data['skus']
+            for sku in skus:
+              line = '"{}", "{}", "{}", "{}"\n'.format(sku, skus[sku]['sp'], skus[sku]['type'], skus[sku]['disabled'])
               print(line)
               file.write(line)
             break
