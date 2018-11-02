@@ -123,7 +123,7 @@ multicategoryList = {
     "289": {"variant": ["Day Cream", "Night Cream"], "name": "Day/Night Cream"}
   }
 
-brandLandingMap = {"hermes" : "https://www.nykaa.com/hermes?ptype=lst&id=7917"}
+brandLandingMap = {"herm" : "https://www.nykaa.com/hermes?ptype=lst&id=7917"}
 
 def get_feedback_data(entity):
     search_term = entity.lower()
