@@ -45,7 +45,7 @@ if __name__ == "__main__":
         i = -i
         date = arrow.now().replace(days=i, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
             tzinfo=None)
-        filename = 's3://nykaa-nonprod-feedback-autocomplete/dt=%s/autocompleteFeedback.csv' % date.strftime("%Y%m%d")
+        filename = 's3://nykaa-prod-feedback-autocomplete/dt=%s/autocompleteFeedback.csv' % date.strftime("%Y%m%d")
         try:
             df = spark.read.load(filename, header=True, format='csv', schema=schema)
             if df.count() > 0:
@@ -99,5 +99,5 @@ if __name__ == "__main__":
             except Exception as e:
                 print("exception occured for %s", key)
 
-        s3.put_object(Bucket='nykaa-nonprod-feedback-autocomplete', Key=output_file, Body=json.dumps(final_list))
+        s3.put_object(Bucket='nykaa-prod-feedback-autocomplete', Key=output_file, Body=json.dumps(final_list))
         print("done")

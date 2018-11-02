@@ -7,16 +7,16 @@ import zipfile
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from health_check import enumerate_dates
+from pipelineUtils import PipelineUtils
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--days", type=int, default=15)
-parser.add_argument("--bucket", '-b', type=str, default='nykaa-nonprod-feedback-autocomplete')
 argv = vars(parser.parse_args())
 days = -1 * argv['days']
 
 dates_to_process = enumerate_dates(days, -1)
 s3 = boto3.client('s3')
-bucket_name = argv['bucket']
+bucket_name = PipelineUtils.getBucketNameForFeedback()
 
 def unzip_file(path_to_zip_file):
     zip_ref = zipfile.ZipFile(path_to_zip_file, 'r')
