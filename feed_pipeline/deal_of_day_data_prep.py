@@ -504,7 +504,7 @@ if __name__ == '__main__':
     if pid in product_id_sku_details_map:
       query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') 
                 on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.\
-                format(pid, product_id_sku_details_map.get(pid), starttime, endtime, position)
+                format(pid, product_id_sku_details_map.get(pid).get('sku'), starttime, endtime, position)
       Utils.mysql_write(query)
       position = position + 1
   remaining_length = 30-position
