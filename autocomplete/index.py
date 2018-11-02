@@ -123,6 +123,8 @@ multicategoryList = {
     "289": {"variant": ["Day Cream", "Night Cream"], "name": "Day/Night Cream"}
   }
 
+brandLandingMap = {"herm" : "https://www.nykaa.com/hermes?ptype=lst&id=7917"}
+
 def get_feedback_data(entity):
     search_term = entity.lower()
     feedback_data = feedback_data_autocomplete.find_one({"search_term": search_term})
@@ -330,12 +332,16 @@ def index_brands(collection, searchengine):
     if row['brand_popularity_men'] > 0:
       is_men = True
 
+    id = createId(row['brand'])
+    url = row['brand_url']
+    if id in brandLandingMap.keys():
+        url = brandLandingMap[id]
     docs.append({"_id": createId(row['brand']), 
         "entity": row['brand'], 
         "weight": row['brand_popularity'],
         "weight_men" : row['brand_popularity_men'],
         "type": "brand",
-        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
+        "data": json.dumps({"url": url, "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
         "id": row['brand_id'],
         "is_men" : is_men,
         "source": "brand"
