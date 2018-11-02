@@ -332,9 +332,10 @@ def index_brands(collection, searchengine):
     if row['brand_popularity_men'] > 0:
       is_men = True
 
+    id = createId(row['brand'])
     url = row['brand_url']
-    if row['brand'].lower() in brandLandingMap.keys():
-        url = brandLandingMap[row['brand']]
+    if id in brandLandingMap.keys():
+        url = brandLandingMap[id]
     docs.append({"_id": createId(row['brand']), 
         "entity": row['brand'], 
         "weight": row['brand_popularity'],
