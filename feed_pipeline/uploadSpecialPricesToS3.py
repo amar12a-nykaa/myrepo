@@ -1,9 +1,10 @@
 import argparse
 import sys
-import os
 import pytz
 import datetime
-from decimal import ROUND_HALF_UP, Decimal
+import requests
+import json
+import time
 
 sys.path.append('/home/apis/nykaa/')
 
@@ -12,149 +13,42 @@ from pas.v2.utils import Utils
 from contextlib import closing
 
 
+def get_gludo_url():
+    hostname = Utils.hostname
+
+    if hostname.startswith('api') or hostname.startswith('admin'):
+        gludo_base_url = 'http://priceapi.nyk00-int.network/apis/v2'
+
+    elif hostname.startswith('preprod') or hostname.startswith('dl'):
+        gludo_base_url = 'http://preprod-api.nyk00-int.network/apis/v2'
+
+    elif hostname.startswith('qa'):
+        gludo_base_url = 'http://qa-api.nyk00-int.network/apis/v2'
+
+    else:
+        gludo_base_url = 'http://qa-api.nyk00-int.network/apis/v2'
+
+    return gludo_base_url + '/pas.get'
+
+
 def upload_special_price_to_s3(batch_size = 1000):
   tz = pytz.timezone('Asia/Kolkata')
   local_date = datetime.datetime.now(tz=tz).strftime('%d-%m-%Y')
   file_name = 'special_price_{}.csv'.format(local_date)
   f = open(file_name, "w")
 
-  query1 = "SELECT sku, sp, type FROM products where type = 'simple';"
+  query1 = "SELECT sku, type FROM products;"
   write_to_result_to_file(query=query1, file=f, batch_size=batchsize)
   print('----Query1-----')
 
-  '''
-  Configurable SKUs having 'lowest_price' price criteria 
-  and has atleast one childern such that it's (enabled and is_in_stock or backorders)
-  '''
-  query2 = "select parent.sku, min(child.sp), 'configurable'  " \
-           "from products parent " \
-           "join products child " \
-           "on parent.psku = child.psku " \
-           "where parent.type = 'configurable' " \
-           "and child.type = 'simple' " \
-           "and parent.price_criteria = 'lowest_price' " \
-           "and child.disabled != 1 " \
-           "and (child.is_in_stock = 1 or child.backorders = 1) " \
-           "group by parent.sku;"
-
+  query2 = "SELECT sku, 'bundle' FROM nykaa.bundles;"
   write_to_result_to_file(query=query2, file=f, batch_size=batchsize)
   print('----Query2-----')
 
-  '''
-  Configurable SKUs having 'lowest_price' price criteria 
-  and has DON'T has any children such that it's (enabled and is_in_stock or backorders)
-  '''
-  query3 = "select parent.sku, min(child.sp), 'configurable'  " \
-           "from products parent " \
-           "join products child " \
-           "on parent.psku = child.psku " \
-           "where parent.type = 'configurable' " \
-           "and child.type = 'simple' " \
-           "and parent.price_criteria = 'lowest_price' " \
-           "and parent.sku not in (" \
-           "select parent.sku from products parent " \
-           "join products child " \
-           "on parent.psku = child.psku " \
-           "where parent.type = 'configurable' " \
-           "and child.type = 'simple' " \
-           "and parent.price_criteria = 'lowest_price' " \
-           "and child.disabled != 1 " \
-           "and (child.is_in_stock = 1 or child.backorders = 1))" \
-           "group by parent.sku;"
-
-  write_to_result_to_file(query=query3, file=f, batch_size=batchsize)
-  print('----Query3-----')
-
-  '''
-    Configurable SKUs having 'highest_discount' price criteria 
-    and has at least one children such that it's (enabled and is_in_stock or backorders)
-  '''
-  query4 = "select parent.sku, child.sp, 'configurable' " \
-           "from (select parent.sku sku, MAX(child.discount) max_discount " \
-           "from products parent " \
-           "join products child " \
-           "on parent.psku = child.psku " \
-           "where parent.type = 'configurable' " \
-           "and child.type = 'simple' " \
-           "and parent.price_criteria = 'highest_discount' " \
-           "and child.disabled != 1 " \
-           "and (child.is_in_stock = 1 or child.backorders = 1) " \
-           "group by parent.sku ) sub " \
-           "join products parent " \
-           "on parent.sku = sub.sku " \
-           "join products child " \
-           "on parent.sku = child.psku " \
-           "where child.type = 'simple' " \
-           "and child.disabled != 1 " \
-           "and (child.is_in_stock = 1 or child.backorders = 1) " \
-           "and child.discount = sub.max_discount " \
-           "group by parent.sku;"
-
-  write_to_result_to_file(query=query4, file=f, batch_size=batchsize)
-  print('----Query4-----')
-
-  '''
-    Configurable SKUs having 'highest_discount' price criteria 
-    and has NO children which is (enabled and is_in_stock or backorders)
-  '''
-  query5 = "select parent.sku, child.sp, 'configurable' " \
-           "from (select parent.sku sku, MAX(child.discount) max_discount " \
-           "from products parent " \
-           "join products child " \
-           "on parent.psku = child.psku " \
-           "where parent.type = 'configurable' " \
-           "and child.type = 'simple' " \
-           "and parent.price_criteria = 'highest_discount' " \
-           "and parent.sku  not in ( " \
-           "select distinct(parent.sku) sku " \
-           "from products parent  " \
-           "join products child  " \
-           "on parent.psku = child.psku " \
-           "where parent.type = 'configurable' " \
-           "and child.type = 'simple' " \
-           "and parent.price_criteria = 'highest_discount' " \
-           "and child.disabled != 1 " \
-           "and (child.is_in_stock = 1 or child.backorders = 1)) " \
-           "group by parent.sku ) sub " \
-           "join products parent " \
-           "on parent.sku = sub.sku " \
-           "join products child " \
-           "on parent.sku = child.psku " \
-           "where child.type = 'simple' " \
-           "and child.discount = sub.max_discount " \
-           "group by parent.sku"
-
-  write_to_result_to_file(query=query5, file=f, batch_size=batchsize)
-  print('----Query5-----')
-
-  query = "SELECT bundles.sku, " \
-          "(100-bundles.discount)/100* SUM( products.mrp * mappings.quantity) " \
-          "FROM bundles as bundles " \
-          "join bundle_products_mappings mappings " \
-          "on bundles.sku = mappings.bundle_sku " \
-          "join products " \
-          "on products.sku = mappings.product_sku " \
-          "GROUP by bundles.sku;"
-
-  connection = Utils.mysqlConnection()
-  with closing(connection.cursor()) as cursor:
-    cursor.execute(query)
-    while True:
-      results = cursor.fetchmany(batch_size)
-      if not results:
-        break
-      for result in results:
-        special_price = Decimal(result[1]).quantize(0, ROUND_HALF_UP)
-        line = '"{}", "{}", "bundle"\n'.format(result[0], special_price)
-        print(line)
-        f.write(line)
-
-  f.close()
-  Utils.upload_file_to_s3(file_name)
-  os.remove(file_name)
 
 
 def write_to_result_to_file(query, file, batch_size):
+  gludo_url = get_gludo_url()
   connection = Utils.mysqlConnection()
   with closing(connection.cursor()) as cursor:
     cursor.execute(query)
@@ -163,10 +57,32 @@ def write_to_result_to_file(query, file, batch_size):
       results = cursor.fetchmany(batch_size)
       if not results:
         break
+
+      products = []
       for result in results:
-        line = '"{}", "{}", "{}"\n'.format(result[0], result[1], result[2])
-        print(line)
-        file.write(line)
+        products.append({
+          "sku": result[0],
+          "type": result[1]
+        })
+      request_data = {"products": products}
+
+      for attempt in range(1, 4):
+        try:
+          response = requests.post(url=gludo_url, json=request_data, headers={'Content-Type': 'application/json'})
+          if (response.ok):
+            response_data = json.loads(response.text)
+            for sku in response_data.skus:
+              line = '"{}", "{}", "{}"\n'.format(sku, response_data['sp'], response_data['type'], response_data['disabled'])
+              print(line)
+              file.write(line)
+            break
+        except Exception as e:
+          print(e)
+
+        if attempt == 4:
+          print('request_data', request_data)
+          sys.exit(10)
+        time.sleep(5*attempt)
 
 
 if __name__ == "__main__":
