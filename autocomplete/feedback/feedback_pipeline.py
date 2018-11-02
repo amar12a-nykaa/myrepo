@@ -2,7 +2,7 @@ import os
 import sys
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType
-from pyspark.sql.functions import length, sum, lower, col
+from pyspark.sql.functions import length, sum, lower, col, udf
 import math
 import boto3
 import arrow
@@ -10,6 +10,7 @@ import json
 import pandas
 from collections import defaultdict
 import argparse
+import re
 
 TYPED_QUERY_LENGTH_THRESHOLD = 3
 CLICK_COUNT_THRESHOLD = 3
@@ -44,7 +45,7 @@ if __name__ == "__main__":
         i = -i
         date = arrow.now().replace(days=i, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
             tzinfo=None)
-        filename = 's3://nykaa-nonprod-feedback-autocomplete/dt=%s/autocompleteFeedback.csv' % date.strftime("%Y%m%d")
+        filename = 's3://nykaa-prod-feedback-autocomplete/dt=%s/autocompleteFeedback.csv' % date.strftime("%Y%m%d")
         try:
             df = spark.read.load(filename, header=True, format='csv', schema=schema)
             if df.count() > 0:
@@ -70,6 +71,12 @@ if __name__ == "__main__":
         if verbose:
             print("Rows count: " + str(final_df.count()))
 
+        def normalize_data(data):
+            return re.sub(pattern='[.$]+', repl="_", string=data)
+
+        normalize_typed_term_udf = udf(normalize_data, StringType())
+        final_df = final_df.withColumn("typed_term", normalize_typed_term_udf(final_df['typed_term']))
+
         print("Taking distinct pair of typed_term and search_term")
         final_df = final_df.groupBy(['typed_term', 'search_term']).agg(sum('click_count').alias('click_count'))
         final_df = final_df.filter(final_df.click_count > CLICK_COUNT_THRESHOLD)
@@ -87,7 +94,10 @@ if __name__ == "__main__":
 
         final_list = []
         for key, value in final_dict.items():
-            final_list.append({"search_term" : key, "typed_terms" : value})
+            try:
+                final_list.append({"search_term": key, "typed_terms" : value})
+            except Exception as e:
+                print("exception occured for %s", key)
 
-        s3.put_object(Bucket='nykaa-nonprod-feedback-autocomplete', Key=output_file, Body=json.dumps(final_list))
+        s3.put_object(Bucket='nykaa-prod-feedback-autocomplete', Key=output_file, Body=json.dumps(final_list))
         print("done")
