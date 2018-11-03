@@ -53,21 +53,24 @@ def upload_special_price_to_s3(batch_size = 1000):
 
 def write_to_result_to_file(query, file, batch_size):
   gludo_url = get_gludo_url()
+  print('gludo_url', gludo_url)
   connection = Utils.mysqlConnection()
   with closing(connection.cursor()) as cursor:
     cursor.execute(query)
-
+    products_array = []
     while True:
       results = cursor.fetchmany(batch_size)
       if not results:
         break
-
       products = []
       for result in results:
         products.append({
           "sku": result[0],
           "type": result[1]
         })
+      products_array.append(products)
+
+    for products in products_array:
       request_data = {"products": products}
 
       for attempt in range(1, 4):
