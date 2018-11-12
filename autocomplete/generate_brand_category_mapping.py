@@ -528,6 +528,14 @@ def update_category_facets_table():
   tempArr, max_pop, max_pop_men = getFacetPopularityArray(results, max_pop, max_pop_men)
   arr.extend(tempArr)
 
+  results = getAggQueryResult("filter_size_facet", "speciality_search_facet")
+  tempArr, max_pop, max_pop_men = getFacetPopularityArray(results, max_pop, max_pop_men)
+  arr.extend(tempArr)
+
+  results = getAggQueryResult("filter_product_facet", "usage_period_facet")
+  tempArr, max_pop, max_pop_men = getFacetPopularityArray(results, max_pop, max_pop_men)
+  arr.extend(tempArr)
+
   results = getAggQueryResult("spf_facet", "preference_facet")
   tempArr, max_pop, max_pop_men = getFacetPopularityArray(results, max_pop, max_pop_men)
   arr.extend(tempArr)

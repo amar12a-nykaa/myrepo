@@ -39,6 +39,7 @@ collection='autocomplete'
 search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']
 query_product_map_table = Utils.mongoClient()['search']['query_product_map']
 query_product_not_found_table = Utils.mongoClient()['search']['query_product_not_found']
+feedback_data_autocomplete = Utils.mongoClient()['search']['feedback_data_autocomplete']
 top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = Utils.esConn()
@@ -122,6 +123,15 @@ multicategoryList = {
     "289": {"variant": ["Day Cream", "Night Cream"], "name": "Day/Night Cream"}
   }
 
+brandLandingMap = {"herm" : "https://www.nykaa.com/hermes?ptype=lst&id=7917"}
+
+def get_feedback_data(entity):
+    search_term = entity.lower()
+    feedback_data = feedback_data_autocomplete.find_one({"search_term": search_term})
+    if feedback_data:
+        return feedback_data['typed_terms']
+    return {}
+
 def restart_apache_memcached():
   print("Restarting Apache and Memcached")
   os.system("/etc/init.d/apache2 restart")
@@ -135,6 +145,7 @@ def write_dict_to_csv(dictname, filename):
 
 def index_docs(searchengine, docs, collection):
   for doc in docs:
+    doc['typed_terms'] = get_feedback_data(doc['entity'])
     doc['entity'] += " s" # This is a trick to hnadle sideeffect of combining shingles and edge ngram token filters
   assert searchengine == 'elasticsearch'
   EsUtils.indexDocs(docs, collection)
@@ -321,12 +332,16 @@ def index_brands(collection, searchengine):
     if row['brand_popularity_men'] > 0:
       is_men = True
 
+    id = createId(row['brand'])
+    url = row['brand_url']
+    if id in brandLandingMap.keys():
+        url = brandLandingMap[id]
     docs.append({"_id": createId(row['brand']), 
         "entity": row['brand'], 
         "weight": row['brand_popularity'],
         "weight_men" : row['brand_popularity_men'],
         "type": "brand",
-        "data": json.dumps({"url": row['brand_url'], "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
+        "data": json.dumps({"url": url, "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
         "id": row['brand_id'],
         "is_men" : is_men,
         "source": "brand"

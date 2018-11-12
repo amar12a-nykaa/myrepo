@@ -12,6 +12,9 @@ import urllib.request
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
+sys.path.append('/nykaa/scripts/autocomplete/feedback')
+from insertDataToMongo import insertFeedBackDataInMongo
+
 sys.path.append('/nykaa/api/')
 from pas.v2.utils import Utils
 
@@ -30,6 +33,7 @@ script_start = timeit.default_timer()
 
 normalize_search_terms()
 generate_brand_category_mapping()
+insertFeedBackDataInMongo()
 
 indexes = EsUtils.get_active_inactive_indexes(AUTOCOMPLETE)
 print(indexes)

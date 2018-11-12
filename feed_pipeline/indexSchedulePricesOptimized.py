@@ -60,7 +60,7 @@ print("=" * 30 + " %s ======= " % getCurrentDateTime())
 
 def getCount():
     return int(subprocess.check_output(
-        "ps aux | grep python | grep indexScheduledPrices.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
+        "ps aux | grep python | grep indexScheduledPricesOptimized.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
         shell=True).strip())
 
 

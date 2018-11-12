@@ -10,8 +10,10 @@ from health_check import get_missing_dates, enumerate_dates
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--days", type=int, default=5)
+parser.add_argument('--bucket', '-b', type=str, default='nykaa-nonprod-feedback-autocomplete')
 argv = vars(parser.parse_args())
 days = -1 * argv['days']
+bucket = argv['bucket']
 
 missing_dates = get_missing_dates('search_terms_daily')
 print("data missing_dates in last 6 months: %s" % missing_dates)
@@ -28,7 +30,7 @@ for date in recent_missing_dates:
   read_file_by_date(date, 'app')
 
 
-if recent_missing_dates :
+if recent_missing_dates:
   cmd="/usr/bin/python /nykaa/scripts/autocomplete/pipeline.py"
   print(cmd)
   os.system(cmd)

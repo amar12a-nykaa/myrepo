@@ -17,13 +17,13 @@ from popularity_api import get_popularity_for_id, validate_popularity_data_healt
 quantile_lower_limit = .25
 quantile_upper_limit = .75
 quantile_mid_limit = .50
-min_discount = 10
-max_discount = 50
+min_discount = 30
+max_discount = 60
 DAILY_CATEGORY_LIMIT = 5
 DAILY_BRAND_LIMIT = 3
 DAILY_CATEGORY_BRAND_LIMIT = 1
 WEEKLY_CATEGORY_LIMIT = 1500
-WEEKLY_BRAND_LIMIT = 15
+WEEKLY_BRAND_LIMIT = 9
 MAX_INT = 100000000
 
 cat3_ids = ['233','234','228','231','4140','229','235','236','232','237','6761','239','687','240','241','242','245','1995','247','931','244','2440','1513','1514','4036','249','263','5079','250','251','252','253','254','255','256','257','259','260','3277','267','269','268','270','266','271','272','4037','283','282','222','224','284','285','933','227','5486','2063','521','1649','376','691','380','379','372','1650','1644','2084','2069','288','536','2080','289','287','226','281','225','2065','2066','2067','2068','632','286','316','317','319','2040','320','2041','364','363','2444','2043','332','331','329','346','1214','1222','2046','2746','2045','7305','2089','525','583','545','550','367','551','370','1495','554','555','572','3859','2092','364','1543','1399','1400','1401','1404','1405','41','1517','43','44','368','369','367','370','316','319','691','374','376','283','224','2084','1650','1644','975','2057','1673','1676','1675','1546','4874','1664','636','637','635','638','1274','6919','6917','6922', '223', '1411', '1650','962','1392','1388','1387','377','371', '527','547','1393', '979', '1323','7336', '971', '539', '571', '531', '1301', '529', '7313', '541', '1302','7306','524','526', '528','532', '533', '530', '544', '549', '552', '2108', '2109', '2111', '1559', '2096', '2107','581', '535', '2095', '574', '573', '5746']
@@ -132,7 +132,7 @@ def get_sales_data():
   and ds.product_id is not null
   group by 1;""".format(back_date_7_days, date_today)
   product_sales_data =  pd.read_sql(query, redshift_conn)
-  product_sales_data['flag'] = (product_sales_data['count'] >= product_sales_data['count'].quantile(quantile_upper_limit))
+  product_sales_data['flag'] = (product_sales_data['count'] >= product_sales_data['count'].quantile(quantile_lower_limit))
   product_sales_data_set =  pd.DataFrame(product_sales_data[product_sales_data['flag'] == True]['entity_id'])
   product_sales_data_set['entity_id'] =  pd.to_numeric(product_sales_data_set['entity_id'])
   return product_sales_data_set
@@ -381,6 +381,26 @@ def dump_to_redshift(docs, dt):
       cur.execute(query)
   redshift_conn.commit()
 
+def get_featured_products():
+  inventories = list()
+
+  query = {"page_type": "adhoc-data", "page_section": "deals-of-the-day", "page_data": "featured-products"}
+  inventories.append(query)
+
+  requestBody = {'inventories': inventories}
+
+  url = 'https://' + PipelineUtils.getAdPlatformEndPoint() + '/inventory/data/json/'
+  response = requests.post(url, json=requestBody, headers={'Content-Type':'application/json'})
+
+  if (response.ok):
+    result = json.loads(response.content.decode('utf-8')).get('result')[0]
+    for inventory in result['inventories']:
+      if inventory['widget_data']['wtype'] == "DATA_WIDGET":
+        product_id_list = inventory['widget_data']['parameters']["data_"]
+        return product_id_list
+
+  return ""
+
 if __name__ == '__main__':
   global back_date_7_days
   global date_today
@@ -473,16 +493,32 @@ if __name__ == '__main__':
   #  writer.writerows(csv_data)
   print (len(new_docs))
   if len(new_docs) < 20:
-    print("Selected product are not sufficient, Please check")  
-  for counter, doc in enumerate(new_docs[:30]):
+    print("Selected product are not sufficient, Please check")
+
+  starttime = str(date_today) + ' 10:00:00'
+  endtime = str(date_today) + ' 22:00:00'
+  position = 0
+  featured_list = get_featured_products().split(',')
+  for pid in featured_list:
+    pid = str(pid)
+    if pid in product_id_sku_details_map:
+      query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') 
+                on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.\
+                format(pid, product_id_sku_details_map.get(pid).get('sku'), starttime, endtime, position)
+      Utils.mysql_write(query)
+      position = position + 1
+  remaining_length = 30-position
+  for counter, doc in enumerate(new_docs[:remaining_length]):
     if doc.get('product_id'):
+      if doc.get('product_id') in featured_list:
+        continue
       print (doc) 
       mysql_conn =  Utils.mysqlConnection('w')
       product_id = str(doc.get('product_id'))
       sku = doc.get('sku')
-      starttime = str(date_today)+' 10:00:00'
-      endtime = str(date_today) +' 22:00:00'
-      query =  """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.format(product_id, sku, starttime, endtime,counter)
+      query =  """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') 
+                  on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.\
+                  format(product_id, sku, starttime, endtime,counter)
       ans  = Utils.mysql_write(query)
 
       sets_list = []
@@ -500,4 +536,4 @@ if __name__ == '__main__':
       doc['sets'] =  ','.join(sets_list)
       new_docs[counter] = doc
 
-  dump_to_redshift(new_docs[:30], dt)
+  dump_to_redshift(new_docs[:remaining_length], dt)
