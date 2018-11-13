@@ -124,6 +124,8 @@ platforms = argv["platform"].split(",")
 
 build_product_sales_map(str(back_date_90_days_time))
 print(len(product_sales_map))
+build_parent_child_distribution_map()
+print(len(parent_child_distribution_map))
 
 if argv['dump_metrics']:
   analytics = omniture.authenticate('soumen.seth:FSN E-Commerce', '770f388b78d019017d5e8bd7a63883fb')
@@ -285,6 +287,7 @@ def calculate_popularity():
   a.popularity_conversion = a.popularity_conversion.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
+  a = a.sort(columns='popularity', ascending=True)
   for i, row in a.iterrows():
     ctr += 1
     if ctr.should_print():
@@ -311,12 +314,11 @@ def calculate_popularity():
       popularity_table.replace_one({"_id": row['parent_id'], "parent_id": row['parent_id']}, row, upsert=True)
       if parent_id in parent_child_distribution_map:
         for child_id, sale_ratio in parent_child_distribution_map[parent_id].items():
-          new_row = {}
-          new_row['last_calculated'] = timestamp
-          new_row['popularity'] = row['popularity'] * sale_ratio
-          new_row['popularity_recent'] = row['popularity_recent'] * sale_ratio
-          new_row['popularity_conversion'] = row['popularity_conversion'] * sale_ratio
-          popularity_table.replace_one({"_id": child_id, "parent_id": parent_id}, new_row, upsert=True)
+          popularity_table.update({"_id": child_id}, {"$set": {'last_calculated': timestamp, 'parent_id': parent_id},
+                                                      "$max": {'popularity': row['popularity'] * sale_ratio,
+                                                               'popularity_recent': row['popularity_recent'] * sale_ratio,
+                                                               'popularity_conversion': row['popularity_conversion'] * sale_ratio}
+                                                      }, upsert=True)
 
   popularity_table.remove({"last_calculated": {"$ne": timestamp}})
 
