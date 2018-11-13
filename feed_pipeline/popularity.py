@@ -287,7 +287,7 @@ def calculate_popularity():
   a.popularity_conversion = a.popularity_conversion.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
-  a = a.sort(columns='popularity', ascending=True)
+  a = a.sort_values(by='popularity', ascending=True)
   for i, row in a.iterrows():
     ctr += 1
     if ctr.should_print():
