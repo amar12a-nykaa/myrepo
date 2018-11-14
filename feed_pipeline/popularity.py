@@ -18,6 +18,7 @@ import mysql.connector
 import numpy
 import omniture
 import pandas as pd
+from pandas.io import sql
 from pymongo import MongoClient
 from pipelineUtils import PipelineUtils
 sys.path.append("/nykaa/api")
@@ -45,6 +46,7 @@ processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']
 
 product_sales_map = {}
+parent_child_distribution_map = {}
 
 def build_product_sales_map(startdate='2018-04-01'):
   global product_sales_map
@@ -59,7 +61,26 @@ def build_product_sales_map(startdate='2018-04-01'):
 
   for row in cur.fetchall():
     product_sales_map[str(row[0])] = float(row[1])
-   
+
+def build_parent_child_distribution_map():
+  global parent_child_distribution_map
+
+  query = """select parent_product_id, product_id, count(distinct nykaa_orderno) as orders from fact_order_detail_new
+              where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 60) group by 1,2;"""
+  print(query)
+  redshift_conn = Utils.redshiftConnection()
+  data = pd.read_sql(query,con=redshift_conn)
+  parent_data = data.groupby('parent_product_id', as_index=False)['orders'].sum()
+  parent_data.rename(columns={'orders': 'total_order'}, inplace=True)
+  data = pd.merge(data, parent_data, on='parent_product_id', how='inner')
+
+  for index, row in data.iterrows():
+    parent_id  = str(row['parent_product_id'])
+    product_id = str(row['product_id'])
+    if parent_id not in parent_child_distribution_map:
+      parent_child_distribution_map[parent_id] = {}
+    parent_child_distribution_map[parent_id][product_id] = float(row['orders'])/row['total_order']
+
 def valid_date(s):
   try:
     if re.search("^-?[0-9]+$", s):
@@ -103,6 +124,8 @@ platforms = argv["platform"].split(",")
 
 build_product_sales_map(str(back_date_90_days_time))
 print(len(product_sales_map))
+build_parent_child_distribution_map()
+print(len(parent_child_distribution_map))
 
 if argv['dump_metrics']:
   analytics = omniture.authenticate('soumen.seth:FSN E-Commerce', '770f388b78d019017d5e8bd7a63883fb')
@@ -257,13 +280,14 @@ def calculate_popularity():
   df = df.set_index("parent_id") 
 
   a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
-  a['popularity'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
-  a['popularity_recent'] = 100 * normalize(0.3 * a['popularity_total'] + 0.7 * a['popularity_recent'])
+  a['popularity'] = 100 * normalize(0.3 * a['popularity_total'] + 0.7 * a['popularity_recent'])
+  a['popularity_recent'] = 100 * normalize(0.1 * a['popularity_total'] + 0.9 * a['popularity_recent'])
   a.popularity= a.popularity.fillna(0)
   a.popularity_recent = a.popularity_recent.fillna(0)
   a.popularity_conversion = a.popularity_conversion.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
+  a = a.sort_values(by='popularity', ascending=True)
   for i, row in a.iterrows():
     ctr += 1
     if ctr.should_print():
@@ -273,7 +297,7 @@ def calculate_popularity():
 
     if row.get('parent_id'):
       child_product_list = get_all_the_child_products(row.get('parent_id'))
-      if len(child_product_list) >0:
+      if len(child_product_list) > 0:
         popularity_multiplier_factor = get_popularity_multiplier(child_product_list)
       else:
         popularity_multiplier_factor = 1
@@ -285,8 +309,16 @@ def calculate_popularity():
     row['popularity_recent'] = row['popularity_recent']* float(popularity_multiplier_factor)
     row['popularity_conversion'] = row['popularity_conversion']* float(popularity_multiplier_factor)
 
-    if row.get('parent_id'):
-      popularity_table.replace_one({"_id": row['parent_id'], "parent_id": row['parent_id']}, row, upsert=True)
+    parent_id = row.get('parent_id')
+    if parent_id:
+      popularity_table.replace_one({"_id": parent_id}, row, upsert=True)
+      if parent_id in parent_child_distribution_map:
+        for child_id, sale_ratio in parent_child_distribution_map[parent_id].items():
+          popularity_table.update({"_id": child_id}, {"$set": {'last_calculated': timestamp, 'parent_id': parent_id},
+                                                      "$max": {'popularity': row['popularity'] * sale_ratio,
+                                                               'popularity_recent': row['popularity_recent'] * sale_ratio,
+                                                               'popularity_conversion': row['popularity_conversion'] * sale_ratio}
+                                                      }, upsert=True)
 
   popularity_table.remove({"last_calculated": {"$ne": timestamp}})
 
