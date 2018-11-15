@@ -496,7 +496,7 @@ if __name__ == '__main__':
     print("Selected product are not sufficient, Please check")
 
   starttime = str(date_today) + ' 10:00:00'
-  endtime = str(date_today) + ' 22:00:00'
+  endtime = str(date_today) + ' 23:59:59'
   position = 0
   featured_list = get_featured_products().split(',')
   for pid in featured_list:
