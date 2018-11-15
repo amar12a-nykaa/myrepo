@@ -281,7 +281,7 @@ def helper_function(weekly_category_wise_count_map, weekly_category_brand_count_
 
 def get_dotd_products(dt):
   redshift_conn = Utils.redshiftConnection()
-  query =  "select distinct product_id,sku from deal_of_the_day_data where date_time >={0} and date_time <'{1}'".format( back_date_7_days, dt)
+  query =  "select distinct product_id,sku from deal_of_the_day_data where date_time >='{0}' and date_time <'{1}'".format( back_date_7_days, dt)
   cur  = redshift_conn.cursor()
   cur.execute(query)
 
@@ -496,7 +496,7 @@ if __name__ == '__main__':
     print("Selected product are not sufficient, Please check")
 
   starttime = str(date_today) + ' 10:00:00'
-  endtime = str(date_today) + ' 22:00:00'
+  endtime = str(date_today) + ' 23:59:59'
   position = 0
   featured_list = get_featured_products().split(',')
   for pid in featured_list:
@@ -508,7 +508,9 @@ if __name__ == '__main__':
       Utils.mysql_write(query)
       position = position + 1
   remaining_length = 30-position
-  for counter, doc in enumerate(new_docs[:remaining_length]):
+  for counter, doc in enumerate(new_docs[:30]):
+    if(position >= 30):
+      break
     if doc.get('product_id'):
       if doc.get('product_id') in featured_list:
         continue
@@ -518,9 +520,9 @@ if __name__ == '__main__':
       sku = doc.get('sku')
       query =  """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') 
                   on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.\
-                  format(product_id, sku, starttime, endtime,counter)
+                  format(product_id, sku, starttime, endtime,position)
       ans  = Utils.mysql_write(query)
-
+      position = position + 1
       sets_list = []
       if int(product_id) in list(rating_set['entity_id']):
         print ( str(product_id)+ " in rating set")

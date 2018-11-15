@@ -9,9 +9,6 @@ client = Utils.mongoClient()
 popularity_table = client['search']['popularity']
 
 def get_popularity_for_id(product_id, parent_id=None):
-  if product_id != parent_id:
-    return {}
-  
   res = list(popularity_table.find({"_id": product_id}))
   ret = {}
   for obj in res:
@@ -27,10 +24,10 @@ def get_popularity_for_id(product_id, parent_id=None):
       "popularity_conversion":obj['popularity_conversion'], 
     }
 
-  parent_obj = ret.pop(parent_id, None)
-
-  if not ret.get(product_id) and parent_obj:
-    ret[product_id] = parent_obj
+  # parent_obj = ret.pop(parent_id, None)
+  #
+  # if not ret.get(product_id) and parent_obj:
+  #   ret[product_id] = parent_obj
 
   return ret
 

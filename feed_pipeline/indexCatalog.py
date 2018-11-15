@@ -19,6 +19,9 @@ import timeit
 import queue
 import threading
 import numpy
+from collections import defaultdict 
+from dateutil import tz
+
 
 sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
@@ -37,6 +40,32 @@ RECORD_GROUP_SIZE = 100
 
 conn = Utils.mysqlConnection()
 
+total = 0
+def synchronized(func):
+    func.__lock__ = threading.Lock()
+
+    def synced_func(*args, **kws):
+        with func.__lock__:
+            return func(*args, **kws)
+
+    return synced_func
+
+@synchronized
+def incrementGlobalCounter(increment):
+    global total
+    curr = total + increment
+    total = curr
+    return total
+
+def getCurrentDateTime():
+    current_datetime = datetime.utcnow()
+    from_zone = tz.gettz('UTC')
+    to_zone = tz.gettz('Asia/Kolkata')
+    current_datetime = current_datetime.replace(tzinfo=from_zone)
+    current_datetime = current_datetime.astimezone(to_zone)
+    return current_datetime
+
+
 
 class Worker(threading.Thread):
     def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
@@ -44,7 +73,7 @@ class Worker(threading.Thread):
         self.q = q
         self.search_engine = search_engine
         self.collection = collection
-        self.skus = skus
+        self.skus = [x for x in skus if x]
         self.categoryFacetAttributesInfoMap = categoryFacetAttributesInfoMap
         self.offersApiConfig = offersApiConfig
         self.required_fields_from_csv = required_fields_from_csv
@@ -64,6 +93,8 @@ class Worker(threading.Thread):
                 return
             # do whatever work you have to do on work
             self.q.task_done()
+            total_count = incrementGlobalCounter(len(row))
+            print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
 
 
 class CatalogIndexer:
@@ -77,6 +108,12 @@ class CatalogIndexer:
 
     replace_brand_dict = {
         "faces": "faces canada"
+    }
+
+    final_replace_dict = {
+        "makeup": "makeup make up",
+        "make up": "makeup make up",
+        "skingenius": "skingenius skin genius"
     }
 
     def print_errors(errors):
@@ -674,9 +711,18 @@ class CatalogIndexer:
                         doc[k] = None
 
                 try:
-                    doc['title_brand_category'] = " ".join([x for x in [doc.get('title', ""),doc.get("brand_facet_searchable", ""),doc.get("category_facet_searchable", "")] if x])
+                    brand = doc.get("brand_facet_searchable", "") or ""
+                    if not brand: 
+                      print("ERROR ... Could not extract brand for peoduct_id: %s" % doc['product_id'])
+                    title_searchable = row.get('title_searchable', "") if  "Nykaa Naturals" in brand else row.get('name', "")
+                    doc['title_brand_category'] = " ".join([x for x in [title_searchable, doc.get("brand_facet_searchable", ""),doc.get("category_facet_searchable", "")] if x])
                 except:
-                    pass
+                    print(traceback.format_exc())
+                    print("product_id: %s " % doc['product_id'])
+
+                for key, value in CatalogIndexer.final_replace_dict.items():
+                    if key in doc.get("title_brand_category", "").lower():
+                        doc['title_brand_category'] = doc['title_brand_category'].lower().replace(key, value)
 
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet']:
                     try:
@@ -743,6 +789,29 @@ class CatalogIndexer:
 
         ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
         q = queue.Queue(maxsize=0)
+
+        searchable_info = defaultdict(list)
+        for index, row in enumerate(all_rows):
+          psku = row['parent_sku']
+          sku = row['sku']
+          if psku == sku:
+            continue
+          name_arr = row['name'].split(" ")
+          for word in row['name'].split(" "):
+            if word and word not in searchable_info[psku]:
+              searchable_info[psku].append(word)
+
+        for index, row in enumerate(all_rows):
+          psku = row['parent_sku']
+          sku = row['sku']
+          title_searchable = row['name'].split(" ")
+          if sku in searchable_info:
+            for word in searchable_info[sku]:
+              if word and word not in searchable_info[psku]:
+                title_searchable.append(word)
+
+          all_rows[index]['title_searchable'] = " ".join(title_searchable)
+
         all_rows = numpy.array_split(numpy.array(all_rows), numpy_count)
         for index, row in enumerate(all_rows):
             if limit and ctr.count == limit:
@@ -756,6 +825,7 @@ class CatalogIndexer:
             Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
                    update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300).start()
         q.join()
+        print("Index Catalog Finished!")
 
 
 if __name__ == "__main__":
