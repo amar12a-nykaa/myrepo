@@ -110,6 +110,12 @@ class CatalogIndexer:
         "faces": "faces canada"
     }
 
+    final_replace_dict = {
+        "makeup": "makeup make up",
+        "make up": "makeup make up",
+        "skingenius": "skingenius skin genius"
+    }
+
     def print_errors(errors):
         for err in errors:
             print("[ERROR]: " + err)
@@ -714,6 +720,9 @@ class CatalogIndexer:
                     print(traceback.format_exc())
                     print("product_id: %s " % doc['product_id'])
 
+                for key, value in CatalogIndexer.final_replace_dict.items():
+                    if key in doc.get("title_brand_category", "").lower():
+                        doc['title_brand_category'] = doc['title_brand_category'].lower().replace(key, value)
 
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet']:
                     try:
