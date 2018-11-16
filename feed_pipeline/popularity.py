@@ -38,6 +38,7 @@ WEIGHT_UNITS_BY_VIEWS = 20
 #WEIGHT_UNITS = 10
 #WEIGHT_CART_ADDITIONS = 10
 #WEIGHT_REVENUE = 70
+POPULARITY_DECAY_FACTOR = 0.8 
 
 client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
@@ -102,7 +103,7 @@ print(enddatetime)
 platforms = argv["platform"].split(",")
 
 build_product_sales_map(str(back_date_90_days_time))
-print(len(product_sales_map))
+print("product_sales_map len: %s" % len(product_sales_map))
 
 if argv['dump_metrics']:
   analytics = omniture.authenticate('soumen.seth:FSN E-Commerce', '770f388b78d019017d5e8bd7a63883fb')
@@ -172,7 +173,8 @@ def calculate_popularity():
   results = []
   ctr = LoopCounter(name='Popularity: ')
 
-  date_buckets = [(0,60), (61, 120), (121, 180)]
+  #date_buckets = [(0,60), (61, 120), (121, 180)]
+  date_buckets = [(0,30), (31,60), (61,90), (91,120) ,(121, 150), (151, 180)]
   dfs = []
   for bucket_id, date_bucket in enumerate(date_buckets):
     startday = date_bucket[1] * -1
@@ -195,23 +197,26 @@ def calculate_popularity():
       bucket_results.append(p)
 
     if not bucket_results:
-      print("Skipping :", date_bucket)
-    else:
-      print("Processing:", date_bucket)
-      df = pd.DataFrame(bucket_results)
-      df['Vn'] = normalize(df['views'])
-      df['Cn'] = normalize(df['cart_additions'])
-      df['On'] = normalize(df['orders'])
-      df['Rn'] = normalize(df['revenue'])
-      df['Un'] = normalize(df['units'])
-      df['UVn'] = df['units']/ df['views']
-      df['UVn'] = normalize(df['UVn'])
+      print("Skipping bucket:", date_bucket)
+      continue
+    print("Processing:", date_bucket)
+    df = pd.DataFrame(bucket_results)
+    df['Vn'] = normalize(df['views'])
+    df['Cn'] = normalize(df['cart_additions'])
+    df['On'] = normalize(df['orders'])
+    df['Rn'] = normalize(df['revenue'])
+    df['Un'] = normalize(df['units'])
+    df['UVn'] = df['units']/ df['views']
+    df['UVn'] = normalize(df['UVn'])
 
-      df['popularity'] = (len(date_buckets) - bucket_id) *\
-        normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
-      df['popularity_conversion'] = (len(date_buckets) - bucket_id) *\
-        normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'] + WEIGHT_UNITS_BY_VIEWS * df['UVn'])) * 100
-      dfs.append(df.loc[:, ['parent_id', 'popularity', 'popularity_conversion']].set_index('parent_id'))
+    multiplication_factor = POPULARITY_DECAY_FACTOR ** (bucket_id + 1)
+    print("date_bucket: %s" % str(date_bucket))
+    print("bucket_id: %s multiplication_factor: %s" % (bucket_id, multiplication_factor))
+    df['popularity'] = multiplication_factor *\
+      normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
+    df['popularity_conversion'] = multiplication_factor *\
+      normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'] + WEIGHT_UNITS_BY_VIEWS * df['UVn'])) * 100
+    dfs.append(df.loc[:, ['parent_id', 'popularity', 'popularity_conversion']].set_index('parent_id'))
         
   if argv['print_popularity_ids']:
     ids = [x.strip() for x in argv['print_popularity_ids'].split(",") if x]
