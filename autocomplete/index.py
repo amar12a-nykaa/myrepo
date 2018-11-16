@@ -698,7 +698,6 @@ def index_products(collection, searchengine):
   limit = 50000 if not GLOBAL_FAST_INDEXING else 5000
   count = 0 
   for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]):# .limit(limit):
-    ctr += 1
     if ctr.should_print():
       print(ctr.summary)
     rows_untested[row['_id']] = row
@@ -708,6 +707,7 @@ def index_products(collection, searchengine):
         if product['price'] < 1 or product['pro_flag'] == 1 or product['is_service'] == True:
           continue
         rows_1k.append(rows_untested[product['product_id']])
+        ctr += 1
       flush_index_products(rows_1k)
       rows_1k = []
       rows_untested = {}
