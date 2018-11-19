@@ -626,7 +626,7 @@ def index_products(collection, searchengine):
 
 
   popularity = Utils.mongoClient()['search']['popularity']
-
+  count = {'value': 0}
     
   def flush_index_products(rows):
     docs = []
@@ -667,7 +667,7 @@ def index_products(collection, searchengine):
         weight_men = row['popularity']
         is_men = True
       data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id, "men_url" : men_url})
-      #cnt_product += 1 
+      count['value'] += 1
       docs.append({
           "_id": createId(product['title']),
           "entity": product['title'], 
@@ -696,8 +696,8 @@ def index_products(collection, searchengine):
 
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
   limit = 50000 if not GLOBAL_FAST_INDEXING else 5000
-  count = 0 
   for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]):# .limit(limit):
+    ctr += 1
     if ctr.should_print():
       print(ctr.summary)
     rows_untested[row['_id']] = row
@@ -707,12 +707,11 @@ def index_products(collection, searchengine):
         if product['price'] < 1 or product['pro_flag'] == 1 or product['is_service'] == True:
           continue
         rows_1k.append(rows_untested[product['product_id']])
-        ctr += 1
       flush_index_products(rows_1k)
       rows_1k = []
       rows_untested = {}
 
-    if ctr.count >= limit:
+    if count['value'] >= limit:
       break
   flush_index_products(rows_1k)
     
