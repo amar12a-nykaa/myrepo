@@ -39,7 +39,7 @@ WEIGHT_UNITS_BY_VIEWS = 20
 #WEIGHT_UNITS = 10
 #WEIGHT_CART_ADDITIONS = 10
 #WEIGHT_REVENUE = 70
-POPULARITY_DECAY_FACTOR = 0.8 
+POPULARITY_DECAY_FACTOR = 0.7
 
 client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
