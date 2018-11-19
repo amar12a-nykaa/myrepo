@@ -40,6 +40,9 @@ WEIGHT_UNITS_BY_VIEWS = 20
 #WEIGHT_CART_ADDITIONS = 10
 #WEIGHT_REVENUE = 70
 
+PUNISH_FACTOR=0.8
+BOOST_FACTOR=1.2
+
 client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
@@ -93,6 +96,13 @@ def valid_date(s):
   except ValueError:
     msg = "Not a valid date: '{0}'.".format(s)
     raise argparse.ArgumentTypeError(msg)
+
+def create_product_attribute():
+  query = """select product_id, sku_type, brand_code, mrp, l3_id from dim_sku"""
+  print(query)
+  redshift_conn = Utils.redshiftConnection()
+  product_attribute = pd.read_sql(query, con=redshift_conn)
+  return product_attribute
 
 
 parser = argparse.ArgumentParser()
@@ -287,6 +297,7 @@ def calculate_popularity():
   a.popularity_conversion = a.popularity_conversion.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
+  a = applyBoost(a)
   a = a.sort_values(by='popularity', ascending=True)
   for i, row in a.iterrows():
     ctr += 1
@@ -365,7 +376,27 @@ def get_popularity_multiplier(product_list):
   else:
     return 0
 
-    
+def applyBoost(df):
+  product_attr = create_product_attribute()
+  temp_df = pd.merge(df, product_attr, how='left', left_on=['parent_id'], right_on=['product_id'])
+
+  #punish combo products
+  def punish_combos(row):
+    if row['sku_type'] and row['sku_type'].lower() == 'bundle':
+      row['popularity'] = row['popularity'] * PUNISH_FACTOR
+    return row
+  temp_df = temp_df.apply(punish_combos, axis=1)
+
+  #promote nykaa products
+  def promote_nykaa_products(row):
+    if row['brand_code'] in [1937, 13754, 7666, 71596]:
+      row['popularity'] = row['popularity'] * BOOST_FACTOR
+    return row
+  temp_df = temp_df.apply(promote_nykaa_products, axis=1)
+
+  temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'])
+
+  return temp_df
 
 if argv['preprocess']:
   print("preprocess start: %s" % arrow.now())
