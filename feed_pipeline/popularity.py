@@ -382,19 +382,19 @@ def applyBoost(df):
 
   #punish combo products
   def punish_combos(row):
-    if row['sku_type'] and row['sku_type'].lower() == 'bundle':
+    if row['sku_type'] and str(row['sku_type']).lower() == 'bundle':
       row['popularity'] = row['popularity'] * PUNISH_FACTOR
     return row
   temp_df = temp_df.apply(punish_combos, axis=1)
 
   #promote nykaa products
   def promote_nykaa_products(row):
-    if row['brand_code'] in [1937, 13754, 7666, 71596]:
+    if row['brand_code'] in ['1937', '13754', '7666', '71596']:
       row['popularity'] = row['popularity'] * BOOST_FACTOR
     return row
   temp_df = temp_df.apply(promote_nykaa_products, axis=1)
 
-  temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'])
+  temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
 
   return temp_df
 
