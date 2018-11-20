@@ -624,7 +624,6 @@ def validate_min_count(force_run, allowed_min_docs):
 
 def index_products(collection, searchengine):
 
-
   popularity = Utils.mongoClient()['search']['popularity']
   count = {'value': 0}
     
@@ -637,15 +636,14 @@ def index_products(collection, searchengine):
     ids = [x['_id'] for x in rows]
     if not ids:
       return
-    products = fetch_product_by_parentids(ids)
+    products = fetch_product_by_ids(ids)
     for row in rows:
-
-      parent_id = row['parent_id']
+      id = row['_id']
       #print(parent_id)
       if not row['_id']:
         continue
 
-      product = products.get(parent_id)
+      product = products.get(id)
       if not product:
         continue
       required_keys = set(["product_url", 'image', 'title', 'image_base'])
@@ -666,17 +664,17 @@ def index_products(collection, searchengine):
         men_url = url.replace(".nykaa.com", ".nykaaman.com")
         weight_men = row['popularity']
         is_men = True
-      data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": parent_id, "men_url" : men_url})
+      data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": id, "men_url": men_url})
       count['value'] += 1
       docs.append({
           "_id": createId(product['title']),
           "entity": product['title'], 
           "weight": row['popularity'],
-          "weight_men" : weight_men,
+          "weight_men": weight_men,
           "type": _type,
           "data": data,
-          "id": parent_id,
-          "is_men" : is_men,
+          "id": id,
+          "is_men": is_men,
           "source": "product"
         })
 
@@ -695,7 +693,7 @@ def index_products(collection, searchengine):
   ids = []
 
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
-  limit = 50000 if not GLOBAL_FAST_INDEXING else 5000
+  limit = 150000 if not GLOBAL_FAST_INDEXING else 5000
   for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]):# .limit(limit):
     ctr += 1
     if ctr.should_print():
@@ -717,17 +715,16 @@ def index_products(collection, searchengine):
     
 
 
-def fetch_product_by_parentids(parent_ids):
+def fetch_product_by_ids(ids):
   DEBUG = False 
   queries = []
-  for parent_id in parent_ids:
+  for id in ids:
     query = {
       "query": {
         "bool": 
           {
             "must":[
-              {"term":{"product_id": parent_id}},
-              {"term":{"parent_id": parent_id}}
+              {"term":{"product_id": id}}
             ],
             "must_not": [
               {"term":{"category_ids": "2413"}}
@@ -745,16 +742,16 @@ def fetch_product_by_parentids(parent_ids):
 
   product = {}
   response = Utils.makeESRequest(queries, 'livecore', msearch=True)
-  response['responses'][0]['hits']['hits']
   final_docs = {}
   for docs in [x['hits']['hits'] for x in response['responses']]:
     if docs:
-      assert len(docs) == 1, "More than 1 docs foud for query %s" % parent_id
+      product_id = docs[0]['_source']['product_id']
+      assert len(docs) == 1, "More than 1 docs found for query %s" %product_id
       
       doc = docs[0]['_source']
 
       if DEBUG:
-        print(parent_id)
+        print(product_id)
         print(doc['title'])
         print("===========")
 
@@ -770,8 +767,8 @@ def fetch_product_by_parentids(parent_ids):
 
       doc['image'] = image 
       doc['image_base'] = image_base 
-      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'parent_id', 'catalog_tag']}
-      final_docs[doc['parent_id']] = doc
+      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'parent_id', 'catalog_tag', 'product_id']}
+      final_docs[doc['product_id']] = doc
   return final_docs
 
 
