@@ -108,6 +108,8 @@ class ScheduledPriceUpdater:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit = True)
             if update_docs:
                 Utils.updateESCatalog(update_docs)
+                for single_doc in update_docs:
+                    print("sku : %s" % single_doc['sku'])
         except Exception as e:
             print(traceback.format_exc())
 
@@ -174,7 +176,6 @@ class ScheduledPriceUpdater:
 
         for bundle in results:
             product_updated_count += 1
-            print("sku: %s" % bundle['sku'])
             products.append({'sku': bundle['sku'], 'type': 'bundle'})
             if product_updated_count % 100 == 0:
                 print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
@@ -183,6 +184,8 @@ class ScheduledPriceUpdater:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit=True)
             if update_docs:
                 Utils.updateESCatalog(update_docs)
+                for singleBundle in update_docs:
+                    print("bundle sku: %s" % singleBundle['sku'])
         except Exception as e:
             print(traceback.format_exc())
 
