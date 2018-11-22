@@ -180,7 +180,7 @@ class CatalogIndexer:
                 row[key] = value
             except:
                 print("[ERROR] Could not process row: %s" % row)
-                print(traceback.format_exc())
+                raise 
 
     def getCategoryFacetAttributesMap():
         cat_facet_attrs = {}
