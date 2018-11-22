@@ -180,7 +180,7 @@ class ScheduledPriceUpdater:
                 print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
 
         try:
-            update_docs = PipelineUtils.getProductsToIndex(products)
+            update_docs = PipelineUtils.getProductsToIndex(products, add_limit=True)
             if update_docs:
                 Utils.updateESCatalog(update_docs)
         except Exception as e:
