@@ -10,8 +10,6 @@ import threading
 import traceback
 from collections import defaultdict 
 
-
-
 import arrow
 import editdistance
 import elasticsearch
@@ -64,30 +62,28 @@ def w_shingle(string, w):
 
 
 products = helpers.scan(es,
-    query={"query": {"match_all": {}}, "_source": "title",},
+    query={"query": {"match_all": {}}, "_source": "title", "size": 1000},
     index=es_index,
     doc_type="product"
 )
 
-for prod in products: 
-	title = prod['_source']['title']
-	title = re.sub("[^a-zA-Z0-9 ]", " ", title)    
-	title = re.sub(" +", " ", title)    
-	title = title.lower()
-	shingles_tuple = w_shingle(title, 2)
-	#embed()
-	#exit()
-	for w, content in shingles_tuple:
-		doubles[w] = content
-	for w in title.split(" "):
-		singles[w] += 1
+for i, prod in enumerate(products): 
+  title = prod['_source']['title']
+  title = re.sub("[^a-zA-Z0-9 ]", " ", title)    
+  title = re.sub(" +", " ", title)    
+  title = title.lower()
+  shingles_tuple = w_shingle(title, 2)
 
+  for w, content in shingles_tuple:
+    doubles[w] = content
+  for w in title.split(" "):
+    singles[w] += 1
 
-	#print(title)
 
 S = set(list(singles.keys()))
 D = set(list(doubles.keys()))
 matches = S & D
+matches = sorted(list(matches), key=lambda x:doubles[x] )
 with open("/tmp/reverse_shingles.txt", "w") as f:
-	for match in matches:
-		f.write(match + " -> " + " ".join(doubles[match]) +  "\n")
+  for match in matches:
+    f.write(match + " -> " + " ".join(doubles[match]) +"  ... " +str(singles[match]) +  "\n")
