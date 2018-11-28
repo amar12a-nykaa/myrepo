@@ -9,6 +9,7 @@ from read_csv_popularity_data import read_file_by_date
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--days", type=int, default=5)
+parser.add_argument("--force-run", action='store_true')
 argv = vars(parser.parse_args())
 days = -1 * argv['days']
 
@@ -41,7 +42,9 @@ for date in recent_missing_dates_preprocess:
   cmd="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py --startdate %s --enddate %s --preprocess -n0 -y " % (d, d)
   print(cmd)
   os.system(cmd)
-if recent_missing_dates_raw or recent_missing_dates_preprocess:
+if recent_missing_dates_raw or recent_missing_dates_preprocess or argv['force_run']:
+  if argv['force_run']:
+    print("Force running popularity calculation .. ")
   cmd="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py --popularity -n0 -y " 
   print(cmd)
   os.system(cmd)
