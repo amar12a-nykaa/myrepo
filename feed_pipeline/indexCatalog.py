@@ -87,13 +87,13 @@ class Worker(threading.Thread):
     def run(self):
         while True:
             try:
-                row = self.q.get(timeout=3)  # 3s timeout
-                CatalogIndexer.indexSingleRecord(row, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300)
+                rows = self.q.get(timeout=3)  # 3s timeout
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300)
             except queue.Empty:
                 return
             # do whatever work you have to do on work
             self.q.task_done()
-            total_count = incrementGlobalCounter(len(row))
+            total_count = incrementGlobalCounter(len(rows))
             print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
 
 
@@ -290,7 +290,7 @@ class CatalogIndexer:
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
 
-    def indexSingleRecord(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300):
+    def indexRecords(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300):
         input_docs = []
         pws_fetch_products = []
         # index_start = timeit.default_timer()
@@ -713,7 +713,7 @@ class CatalogIndexer:
                 try:
                     brand = doc.get("brand_facet_searchable", "") or ""
                     if not brand: 
-                      print("ERROR ... Could not extract brand for peoduct_id: %s" % doc['product_id'])
+                      print("ERROR ... Could not extract brand for product_id: %s" % doc['product_id'])
                     title_searchable = row.get('title_searchable', "") if  "Nykaa Naturals" in brand else row.get('name', "")
                     doc['title_brand_category'] = " ".join([x for x in [title_searchable, doc.get("brand_facet_searchable", ""),doc.get("category_facet_searchable", "")] if x])
                 except:
@@ -726,7 +726,8 @@ class CatalogIndexer:
 
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet']:
                     try:
-                        doc['title_brand_category'] += " " + doc[facet][0]['name']
+                        doc['title_brand_category'] += " " + " ".join([x['name'] for x in doc[facet]]) 
+                        print("Adding: %s" % doc[facet][0]['name'])
                     except:
                         pass
 
@@ -761,7 +762,7 @@ class CatalogIndexer:
     def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None):
         skus = skus or []
         if skus:
-            print("Running catalog pipeline for selected skus: %s" % skus)
+            print("Running Index Catalog for selected skus: %s" % skus)
         validate_popularity_data_health()
 
         required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
@@ -773,19 +774,25 @@ class CatalogIndexer:
         'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1',
         'beauty_partner', 'primary_categories', 'offers', 'filter_size_v1', 'filter_size', 'speciality_search_v1', 'speciality_search', 'filter_product_v1', 'filter_product', 'usage_period_v1', 'usage_period']
 
+        print("Reading CSV .. ")
         all_rows = read_csv_from_file(file_path)
+        print("Processing CSV .. ")
         columns = all_rows[0].keys()
         PipelineUtils.check_required_fields(columns, required_fields_from_csv)
+        all_rows = [x for x in all_rows if x['sku'] in skus] 
         count = len(all_rows)
-        numpy_count = int(count / RECORD_GROUP_SIZE)
+        numpy_count = int(count / RECORD_GROUP_SIZE) or 1
         input_docs = []
         pws_fetch_products = []
         categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
         offersApiConfig = CatalogIndexer.getOffersApiConfig()
-
-        product_2_vector_lsi_100 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_100', False)}
-        product_2_vector_lsi_200 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_200', False)}
-        product_2_vector_lsi_300 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_300', False)}
+        
+        product_2_vector_lsi_100 = {}
+        product_2_vector_lsi_200 = {}
+        product_2_vector_lsi_300 = {}
+        #product_2_vector_lsi_100 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_100', False)}
+        #product_2_vector_lsi_200 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_200', False)}
+        #product_2_vector_lsi_300 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_300', False)}
 
         ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
         q = queue.Queue(maxsize=0)
@@ -841,6 +848,7 @@ if __name__ == "__main__":
     searchengine = argv['searchengine']
 
     argv['update_productids'] = True
-
+    if argv['sku']:
+      NUMBER_OF_THREADS = 1
     CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'],
                          skus=argv['sku'].split(","))
