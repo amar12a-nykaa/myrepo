@@ -39,7 +39,7 @@ WEIGHT_UNITS_BY_VIEWS = 20
 #WEIGHT_UNITS = 10
 #WEIGHT_CART_ADDITIONS = 10
 #WEIGHT_REVENUE = 70
-POPULARITY_DECAY_FACTOR = 0.7
+POPULARITY_DECAY_FACTOR = 0.8
 
 client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
@@ -197,8 +197,17 @@ def calculate_popularity():
   results = []
   ctr = LoopCounter(name='Popularity: ')
 
-  #date_buckets = [(0,60), (61, 120), (121, 180)]
-  date_buckets = [(0,30), (31,60), (61,90), (91,120) ,(121, 150), (151, 180)]
+  bucket_start_day = 0 
+  bucket_end_day = 180 
+  bucket_batch_size = 15
+  date_buckets = []
+  i = bucket_start_day
+  while i < bucket_end_day:
+    date_buckets.append((i, i+bucket_batch_size -1))
+    i += bucket_batch_size
+
+  print(date_buckets)
+
   dfs = []
   for bucket_id, date_bucket in enumerate(date_buckets):
     startday = date_bucket[1] * -1
