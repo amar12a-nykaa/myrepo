@@ -41,7 +41,7 @@ WEIGHT_UNITS_BY_VIEWS = 20
 #WEIGHT_REVENUE = 70
 
 PUNISH_FACTOR=0.8
-BOOST_FACTOR=1.2
+BOOST_FACTOR=1
 
 client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
