@@ -727,7 +727,6 @@ class CatalogIndexer:
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet']:
                     try:
                         doc['title_brand_category'] += " " + " ".join([x['name'] for x in doc[facet]]) 
-                        print("Adding: %s" % doc[facet][0]['name'])
                     except:
                         pass
 
