@@ -180,7 +180,7 @@ class CatalogIndexer:
                 row[key] = value
             except:
                 print("[ERROR] Could not process row: %s" % row)
-                print(traceback.format_exc())
+                raise 
 
     def getCategoryFacetAttributesMap():
         cat_facet_attrs = {}
@@ -778,7 +778,8 @@ class CatalogIndexer:
         print("Processing CSV .. ")
         columns = all_rows[0].keys()
         PipelineUtils.check_required_fields(columns, required_fields_from_csv)
-        all_rows = [x for x in all_rows if x['sku'] in skus] 
+        if skus:
+          all_rows = [x for x in all_rows if x['sku'] in skus] 
         count = len(all_rows)
         numpy_count = int(count / RECORD_GROUP_SIZE) or 1
         input_docs = []
@@ -818,8 +819,10 @@ class CatalogIndexer:
 
           all_rows[index]['title_searchable'] = " ".join(title_searchable)
 
-        all_rows = numpy.array_split(numpy.array(all_rows), numpy_count)
-        for index, row in enumerate(all_rows):
+        print("Number of rows to process from csv: %s" % len(all_rows))
+        chunks = numpy.array_split(numpy.array(all_rows), numpy_count)
+        print("Number of chunks created from csv: %s" % len(chunks))
+        for index, row in enumerate(chunks):
             if limit and ctr.count == limit:
                 break
             ctr += 1

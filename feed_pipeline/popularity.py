@@ -30,10 +30,10 @@ from loopcounter import LoopCounter
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from popularity_api import get_popularity_for_id  
 
-WEIGHT_VIEWS = 35
-WEIGHT_UNITS = 35
+WEIGHT_VIEWS = 20
+WEIGHT_UNITS = 40
 WEIGHT_CART_ADDITIONS = 10
-WEIGHT_REVENUE = 20
+WEIGHT_REVENUE = 30
 WEIGHT_UNITS_BY_VIEWS = 20 
 #WEIGHT_VIEWS = 10
 #WEIGHT_UNITS = 10
@@ -67,13 +67,15 @@ def build_parent_child_distribution_map():
   global parent_child_distribution_map
 
   query = """select parent_product_id, product_id, count(distinct nykaa_orderno) as orders from fact_order_detail_new
-              where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 60) group by 1,2;"""
+              where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 60) and product_id is not null 
+              group by 1,2;"""
   print(query)
   redshift_conn = Utils.redshiftConnection()
   data = pd.read_sql(query,con=redshift_conn)
   parent_data = data.groupby('parent_product_id', as_index=False)['orders'].sum()
   parent_data.rename(columns={'orders': 'total_order'}, inplace=True)
   data = pd.merge(data, parent_data, on='parent_product_id', how='inner')
+  data[['product_id']] = data[['product_id']].astype(int)
 
   for index, row in data.iterrows():
     parent_id  = str(row['parent_product_id'])
