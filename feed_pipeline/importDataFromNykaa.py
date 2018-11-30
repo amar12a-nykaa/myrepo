@@ -75,7 +75,7 @@ class NykaaImporter:
     query = """SELECT cce.entity_id AS category_id, cur.request_path AS category_url, 
             ci.app_sorting, ci.custom_sort, ci.art_banner_image, ci.art_banner_video, ci.art_banner_video_image, 
             ci.font_color, ci.art_title, ci.art_content, ci.art_url, ci.art_link_text, ci.categories, ci.art_position,
-            ci.android_landing_url, ci.ios_landing_url, ci.tip_tile, 
+            ci.android_landing_url, ci.ios_landing_url, ci.tip_tile, ci.url as desktop_tip_tile,
             (cce.level-2) AS level, (CASE WHEN nkb.brand_id > 0 THEN 'brand' ELSE 'category' END) AS type 
             FROM `catalog_category_entity` AS cce
             LEFT JOIN `category_information` AS ci ON ci.cat_id = cce.entity_id
@@ -89,7 +89,7 @@ class NykaaImporter:
       try:
         # Write to PWS DB
         field_list = ['id', 'sorting', 'featured_products', 'level', 'type', 'url', 'banner_image', 'banner_video', 'banner_video_image', 
-        'font_color', 'art_title', 'art_content', 'art_url', 'art_link_text', 'child_categories', 'art_pos', 'android_landing_url', 'ios_landing_url', 'tip_tile']
+        'font_color', 'art_title', 'art_content', 'art_url', 'art_link_text', 'child_categories', 'art_pos', 'android_landing_url', 'ios_landing_url', 'tip_tile', 'desktop_tip_tile']
 
         fields = ''
         values = ''
@@ -107,7 +107,7 @@ class NykaaImporter:
         NykaaImporter.pws_cursor.execute(query, (item['category_id'], item['app_sorting'], item['custom_sort'], item['level'], item['type'], item['category_url'],
                                          item['art_banner_image'], item['art_banner_video'], item['art_banner_video_image'], item['font_color'],
                                          item['art_title'], item['art_content'], item['art_url'], item['art_link_text'], item['categories'], item['art_position'],
-                                         item['android_landing_url'], item['ios_landing_url'], item['tip_tile']))
+                                         item['android_landing_url'], item['ios_landing_url'], item['tip_tile'], item['desktop_tip_tile']))
 
         NykaaImporter.pws_mysql_conn.commit()
         count += 1
