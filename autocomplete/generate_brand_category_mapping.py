@@ -63,11 +63,15 @@ def get_category_details():
   nykaa_analytics_db_conn = mysql.connector.connect(host='nykaa-analytics.nyk00-int.network', user='analytics',
                                                     password='P1u8Sxh7kNr', database='analytics')
   #Category id - name mapping
-  query = "SELECT DISTINCT l4, l4_id FROM analytics.sku_l4;"
+  query = """select distinct l3_id, primary_l3 from dim_sku as t1
+              left join
+             (select distinct l1_id as id from dim_sku UNION ALL select distinct l2_id as id from dim_sku) t2
+              on t1.l3_id=t2.id
+              where t2.id is NULL and l3_id != 'LEVEL'"""
   results = Utils.fetchResults(nykaa_analytics_db_conn, query)
   for row in results:
-    _id = str(row['l4_id'])
-    name = row['l4'].strip()
+    _id = str(row['l3_id'])
+    name = row['primary_l3'].strip()
 
     cat_id_index[_id]['name'] = name
 
