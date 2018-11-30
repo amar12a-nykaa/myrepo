@@ -39,6 +39,10 @@ WEIGHT_UNITS_BY_VIEWS = 20
 #WEIGHT_UNITS = 10
 #WEIGHT_CART_ADDITIONS = 10
 #WEIGHT_REVENUE = 70
+POPULARITY_DECAY_FACTOR = 0.8
+
+PUNISH_FACTOR=0.8
+BOOST_FACTOR=1
 
 client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
@@ -66,13 +70,15 @@ def build_parent_child_distribution_map():
   global parent_child_distribution_map
 
   query = """select parent_product_id, product_id, count(distinct nykaa_orderno) as orders from fact_order_detail_new
-              where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 60) group by 1,2;"""
+              where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 60) and product_id is not null 
+              group by 1,2;"""
   print(query)
   redshift_conn = Utils.redshiftConnection()
   data = pd.read_sql(query,con=redshift_conn)
   parent_data = data.groupby('parent_product_id', as_index=False)['orders'].sum()
   parent_data.rename(columns={'orders': 'total_order'}, inplace=True)
   data = pd.merge(data, parent_data, on='parent_product_id', how='inner')
+  data[['product_id']] = data[['product_id']].astype(int)
 
   for index, row in data.iterrows():
     parent_id  = str(row['parent_product_id'])
@@ -93,6 +99,13 @@ def valid_date(s):
   except ValueError:
     msg = "Not a valid date: '{0}'.".format(s)
     raise argparse.ArgumentTypeError(msg)
+
+def create_product_attribute():
+  query = """select product_id, sku_type, brand_code, mrp, l3_id from dim_sku"""
+  print(query)
+  redshift_conn = Utils.redshiftConnection()
+  product_attribute = pd.read_sql(query, con=redshift_conn)
+  return product_attribute
 
 
 parser = argparse.ArgumentParser()
@@ -123,9 +136,8 @@ print(enddatetime)
 platforms = argv["platform"].split(",")
 
 build_product_sales_map(str(back_date_90_days_time))
-print(len(product_sales_map))
 build_parent_child_distribution_map()
-print(len(parent_child_distribution_map))
+print("product_sales_map len: %s" % len(product_sales_map))
 
 if argv['dump_metrics']:
   analytics = omniture.authenticate('soumen.seth:FSN E-Commerce', '770f388b78d019017d5e8bd7a63883fb')
@@ -195,7 +207,17 @@ def calculate_popularity():
   results = []
   ctr = LoopCounter(name='Popularity: ')
 
-  date_buckets = [(0,60), (61, 120), (121, 180)]
+  bucket_start_day = 0 
+  bucket_end_day = 180 
+  bucket_batch_size = 15
+  date_buckets = []
+  i = bucket_start_day
+  while i < bucket_end_day:
+    date_buckets.append((i, i+bucket_batch_size -1))
+    i += bucket_batch_size
+
+  print(date_buckets)
+
   dfs = []
   for bucket_id, date_bucket in enumerate(date_buckets):
     startday = date_bucket[1] * -1
@@ -218,23 +240,26 @@ def calculate_popularity():
       bucket_results.append(p)
 
     if not bucket_results:
-      print("Skipping :", date_bucket)
-    else:
-      print("Processing:", date_bucket)
-      df = pd.DataFrame(bucket_results)
-      df['Vn'] = normalize(df['views'])
-      df['Cn'] = normalize(df['cart_additions'])
-      df['On'] = normalize(df['orders'])
-      df['Rn'] = normalize(df['revenue'])
-      df['Un'] = normalize(df['units'])
-      df['UVn'] = df['units']/ df['views']
-      df['UVn'] = normalize(df['UVn'])
+      print("Skipping bucket:", date_bucket)
+      continue
+    print("Processing:", date_bucket)
+    df = pd.DataFrame(bucket_results)
+    df['Vn'] = normalize(df['views'])
+    df['Cn'] = normalize(df['cart_additions'])
+    df['On'] = normalize(df['orders'])
+    df['Rn'] = normalize(df['revenue'])
+    df['Un'] = normalize(df['units'])
+    df['UVn'] = df['units']/ df['views']
+    df['UVn'] = normalize(df['UVn'])
 
-      df['popularity'] = (len(date_buckets) - bucket_id) *\
-        normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
-      df['popularity_conversion'] = (len(date_buckets) - bucket_id) *\
-        normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'] + WEIGHT_UNITS_BY_VIEWS * df['UVn'])) * 100
-      dfs.append(df.loc[:, ['parent_id', 'popularity', 'popularity_conversion']].set_index('parent_id'))
+    multiplication_factor = POPULARITY_DECAY_FACTOR ** (bucket_id + 1)
+    print("date_bucket: %s" % str(date_bucket))
+    print("bucket_id: %s multiplication_factor: %s" % (bucket_id, multiplication_factor))
+    df['popularity'] = multiplication_factor *\
+      normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
+    df['popularity_conversion'] = multiplication_factor *\
+      normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'] + WEIGHT_UNITS_BY_VIEWS * df['UVn'])) * 100
+    dfs.append(df.loc[:, ['parent_id', 'popularity', 'popularity_conversion']].set_index('parent_id'))
         
   if argv['print_popularity_ids']:
     ids = [x.strip() for x in argv['print_popularity_ids'].split(",") if x]
@@ -287,6 +312,7 @@ def calculate_popularity():
   a.popularity_conversion = a.popularity_conversion.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
+  a = applyBoost(a)
   a = a.sort_values(by='popularity', ascending=True)
   for i, row in a.iterrows():
     ctr += 1
@@ -365,7 +391,27 @@ def get_popularity_multiplier(product_list):
   else:
     return 0
 
-    
+def applyBoost(df):
+  product_attr = create_product_attribute()
+  temp_df = pd.merge(df, product_attr, how='left', left_on=['parent_id'], right_on=['product_id'])
+
+  #punish combo products
+  def punish_combos(row):
+    if row['sku_type'] and str(row['sku_type']).lower() == 'bundle':
+      row['popularity'] = row['popularity'] * PUNISH_FACTOR
+    return row
+  temp_df = temp_df.apply(punish_combos, axis=1)
+
+  #promote nykaa products
+  def promote_nykaa_products(row):
+    if row['brand_code'] in ['1937', '13754', '7666', '71596']:
+      row['popularity'] = row['popularity'] * BOOST_FACTOR
+    return row
+  temp_df = temp_df.apply(promote_nykaa_products, axis=1)
+
+  temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
+
+  return temp_df
 
 if argv['preprocess']:
   print("preprocess start: %s" % arrow.now())
