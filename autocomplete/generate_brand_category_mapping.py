@@ -60,21 +60,21 @@ def get_category_details():
   global cat_id_index
   global nykaa_replica_db_conn
 
-  nykaa_analytics_db_conn = mysql.connector.connect(host='nykaa-analytics.nyk00-int.network', user='analytics',
-                                                    password='P1u8Sxh7kNr', database='analytics')
+  nykaa_redshift_connection = Utils.redshiftConnection()
   #Category id - name mapping
   query = """select distinct l3_id, primary_l3 from dim_sku as t1
               left join
              (select distinct l1_id as id from dim_sku UNION ALL select distinct l2_id as id from dim_sku) t2
               on t1.l3_id=t2.id
               where t2.id is NULL and l3_id != 'LEVEL'"""
-  results = Utils.fetchResults(nykaa_analytics_db_conn, query)
+  results = Utils.fetchResults(nykaa_redshift_connection, query)
   for row in results:
     _id = str(row['l3_id'])
     name = row['primary_l3'].strip()
 
     cat_id_index[_id]['name'] = name
 
+  nykaa_redshift_connection.close()
   #Category name-url mapping
   query = "SELECT DISTINCT category_id, request_path AS url FROM nykaalive1.core_url_rewrite WHERE product_id IS NULL AND category_id IS NOT NULL"
   results = Utils.fetchResults(nykaa_replica_db_conn, query)
@@ -85,7 +85,6 @@ def get_category_details():
     if _id in cat_id_index:
       cat_id_index[_id]['url'] = url
       cat_id_index[_id]['men_url'] = men_url
-  nykaa_analytics_db_conn.close()
 
 def update_category_table(products):
   """
