@@ -759,8 +759,7 @@ def fetch_product_by_ids(ids):
       image_base = ""
       try:
         image = json.loads(doc['media'][0])['url']
-        image = re.sub("w-[0-9]*", "w-60", image)
-        image = re.sub("h-[0-9]*", "h-60", image)
+        image = re.sub("h-[0-9]*,w-[0-9]*,cm", "h-60,w-60,cm", image)
         image_base = re.sub("\/tr[^\/]*", "",  image) 
       except:
         print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
@@ -826,8 +825,9 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
           print("Thread %s is complete" % _type)
 
       kwargs = {k:v for k,v in locals().items() if 'index_' in k}
-      index_parallel(['search_queries', 'products'], **kwargs)
+      index_parallel(['search_queries'], **kwargs)
       index_parallel(['category_facets'], **kwargs)
+      index_parallel(['products'], **kwargs)
       index_parallel(['categories', 'brands', 'brands_categories'], **kwargs)
     
 
