@@ -34,11 +34,12 @@ WEIGHT_VIEWS = 20
 WEIGHT_UNITS = 40
 WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 30
-WEIGHT_UNITS_BY_VIEWS = 20 
-#WEIGHT_VIEWS = 10
-#WEIGHT_UNITS = 10
-#WEIGHT_CART_ADDITIONS = 10
-#WEIGHT_REVENUE = 70
+
+WEIGHT_VIEWS_NEW = 20
+WEIGHT_UNITS_NEW = 40
+WEIGHT_CART_ADDITIONS_NEW = 10
+WEIGHT_REVENUE_NEW = 30
+
 POPULARITY_DECAY_FACTOR = 0.8
 
 PUNISH_FACTOR=0.8
@@ -202,10 +203,53 @@ def preprocess_data():
 def normalize(a):
   return (a-min(a))/(max(a)-min(a))
 
+
+def get_bucket_results(date_bucket=None):
+  if date_bucket:
+    startday = date_bucket[1] * -1
+    endday = date_bucket[0] * -1
+    startdate = arrow.now().replace(days=startday, hour=0, minute=0, second=0, microsecond=0,
+                                  tzinfo=None).datetime.replace(tzinfo=None)
+    enddate = arrow.now().replace(days=endday, hour=0, minute=0, second=0, microsecond=0,
+                                  tzinfo=None).datetime.replace(tzinfo=None)
+
+  else:
+    startdate = arrow.get('2011-01-01', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
+    enddate = arrow.now().replace(days=0, hour=0, minute=0, second=0, microsecond=0,
+                                  tzinfo=None).datetime.replace(tzinfo=None)
+
+  bucket_results = []
+  for p in processed_data.aggregate([{"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
+                                       {"$group": {"_id": "$parent_id",
+                                        "views": {"$sum": "$views"},
+                                        "cart_additions": {"$sum": "$cart_additions"},
+                                        "orders": {"$sum": "$orders"},
+                                        "revenue": {"$sum": "$revenue"},
+                                        "units": {"$sum": "$units"},
+                                        }},
+  ]):
+    p['parent_id'] = p.pop("_id")
+    bucket_results.append(p)
+
+  if not bucket_results:
+    print("Skipping bucket:", date_bucket)
+    return None
+
+  print("Processing:", date_bucket)
+  df = pd.DataFrame(bucket_results)
+  df['Vn'] = normalize(df['views'])
+  df['Cn'] = normalize(df['cart_additions'])
+  df['On'] = normalize(df['orders'])
+  df['Rn'] = normalize(df['revenue'])
+  df['Un'] = normalize(df['units'])
+  df['UVn'] = df['units'] / df['views']
+  df['UVn'] = normalize(df['UVn'])
+
+  return df
+
 def calculate_popularity():
   timestamp = arrow.now().datetime
   results = []
-  ctr = LoopCounter(name='Popularity: ')
 
   bucket_start_day = 0 
   bucket_end_day = 180 
@@ -220,45 +264,20 @@ def calculate_popularity():
 
   dfs = []
   for bucket_id, date_bucket in enumerate(date_buckets):
-    startday = date_bucket[1] * -1
-    endday = date_bucket[0] * -1
-    startdate = arrow.now().replace(days=startday, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(tzinfo=None)
-    enddate = arrow.now().replace(days=endday, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(tzinfo=None)
-
-    bucket_results = []
-    for p in processed_data.aggregate([
-        {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
-        {"$group": {"_id": "$parent_id", 
-          "views": {"$sum": "$views"}, 
-          "cart_additions": {"$sum": "$cart_additions"}, 
-          "orders": {"$sum": "$orders"},
-          "revenue": {"$sum": "$revenue"},
-          "units": {"$sum": "$units"},
-        }},\
-      ]):
-      p['parent_id'] = p.pop("_id")
-      bucket_results.append(p)
-
-    if not bucket_results:
-      print("Skipping bucket:", date_bucket)
+    df = get_bucket_results(date_bucket)
+    if not df:
       continue
-    print("Processing:", date_bucket)
-    df = pd.DataFrame(bucket_results)
-    df['Vn'] = normalize(df['views'])
-    df['Cn'] = normalize(df['cart_additions'])
-    df['On'] = normalize(df['orders'])
-    df['Rn'] = normalize(df['revenue'])
-    df['Un'] = normalize(df['units'])
-    df['UVn'] = df['units']/ df['views']
-    df['UVn'] = normalize(df['UVn'])
-
     multiplication_factor = POPULARITY_DECAY_FACTOR ** (bucket_id + 1)
     print("date_bucket: %s" % str(date_bucket))
     print("bucket_id: %s multiplication_factor: %s" % (bucket_id, multiplication_factor))
-    df['popularity'] = multiplication_factor *\
-      normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
-    df['popularity_conversion'] = multiplication_factor *\
-      normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'] + WEIGHT_UNITS_BY_VIEWS * df['UVn'])) * 100
+
+    df['popularity'] = multiplication_factor * normalize(numpy.log(1 +
+                       WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS *
+                       df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
+    df['popularity_new'] = multiplication_factor * normalize(numpy.log(1 +
+                       WEIGHT_VIEWS_NEW * df['Vn'] + WEIGHT_UNITS_NEW * df['Un'] + WEIGHT_CART_ADDITIONS_NEW *
+                       df['Cn'] + WEIGHT_REVENUE_NEW * df['Rn'])) * 100
+
     dfs.append(df.loc[:, ['parent_id', 'popularity', 'popularity_conversion']].set_index('parent_id'))
         
   if argv['print_popularity_ids']:
@@ -277,39 +296,20 @@ def calculate_popularity():
   final_df.popularity = final_df.popularity.fillna(0)
   final_df.popularity_conversion = final_df.popularity_conversion.fillna(0)
 
-  final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
-  final_df['popularity_conversion'] = 100 * normalize(final_df['popularity_conversion'])
-  final_df.drop(['popularity'], axis = 1, inplace = True)
+  final_df['popularity_bucket'] = 100 * normalize(final_df['popularity'])
+  final_df['popularity_new_bucket'] = 100 * normalize(final_df['popularity_new'])
+  final_df.drop(['popularity', 'popularity_new'], axis = 1, inplace = True)
 
-  # Calculate total popularity
-  for p in processed_data.aggregate(
-      [{"$group": {
-        "_id": "$parent_id", 
-        "views": {"$sum": "$views"}, 
-        "cart_additions": {"$sum": "$cart_additions"}, 
-        "orders": {"$sum": "$orders"},
-        "revenue": {"$sum": "$revenue"},
-        "units": {"$sum": "$units"},
-        }},\
-      ]):
-    p['parent_id'] = p.pop("_id")
-    results.append(p)
-
-  df = pd.DataFrame(results)
-  df['Vn'] = normalize(df['views'])
-  df['Cn'] = normalize(df['cart_additions'])
-  df['On'] = normalize(df['orders'])
-  df['Rn'] = normalize(df['revenue'])
-  df['Un'] = normalize(df['units'])
+  df = get_bucket_results()
   df['popularity_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS * df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
-  df = df.set_index("parent_id") 
+  df['popularity_new_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS_NEW * df['Vn'] + WEIGHT_UNITS_NEW * df['Un'] + WEIGHT_CART_ADDITIONS_NEW * df['Cn'] + WEIGHT_REVENUE_NEW * df['Rn'])) * 100
+  df = df.set_index("parent_id")
 
   a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
-  a['popularity'] = 100 * normalize(0.1 * a['popularity_total'] + 0.9 * a['popularity_recent'])
-  a['popularity_recent'] = 100 * normalize(0.3 * a['popularity_total'] + 0.7 * a['popularity_recent'])
+  a['popularity'] = 100 * normalize(0.1 * a['popularity_total'] + 0.9 * a['popularity_bucket'])
+  a['popularity_new'] = 100 * normalize(0.1 * a['popularity_new_total'] + 0.7 * a['popularity_new_bucket'])
   a.popularity= a.popularity.fillna(0)
-  a.popularity_recent = a.popularity_recent.fillna(0)
-  a.popularity_conversion = a.popularity_conversion.fillna(0)
+  a.popularity_new = a.popularity_new.fillna(0)
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
   a = applyBoost(a)
