@@ -34,16 +34,18 @@ WEIGHT_VIEWS = 20
 WEIGHT_UNITS = 40
 WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 30
+PUNISH_FACTOR=0.8
+BOOST_FACTOR=1
+POPULARITY_DECAY_FACTOR = 0.8
 
 WEIGHT_VIEWS_NEW = 20
 WEIGHT_UNITS_NEW = 40
 WEIGHT_CART_ADDITIONS_NEW = 10
 WEIGHT_REVENUE_NEW = 30
+PUNISH_FACTOR_NEW=0.8
+BOOST_FACTOR_NEW=1
+POPULARITY_DECAY_FACTOR_NEW = 0.8
 
-POPULARITY_DECAY_FACTOR = 0.8
-
-PUNISH_FACTOR=0.8
-BOOST_FACTOR=1
 
 client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
@@ -274,7 +276,8 @@ def calculate_popularity():
     df['popularity'] = multiplication_factor * normalize(numpy.log(1 +
                        WEIGHT_VIEWS * df['Vn'] + WEIGHT_UNITS * df['Un'] + WEIGHT_CART_ADDITIONS *
                        df['Cn'] + WEIGHT_REVENUE * df['Rn'])) * 100
-    df['popularity_new'] = multiplication_factor * normalize(numpy.log(1 +
+    multiplication_factor_new = POPULARITY_DECAY_FACTOR_NEW ** (bucket_id + 1)
+    df['popularity_new'] = multiplication_factor_new * normalize(numpy.log(1 +
                        WEIGHT_VIEWS_NEW * df['Vn'] + WEIGHT_UNITS_NEW * df['Un'] + WEIGHT_CART_ADDITIONS_NEW *
                        df['Cn'] + WEIGHT_REVENUE_NEW * df['Rn'])) * 100
 
@@ -313,6 +316,7 @@ def calculate_popularity():
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
   a = applyBoost(a)
+  a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
   for i, row in a.iterrows():
     ctr += 1
@@ -333,7 +337,6 @@ def calculate_popularity():
     row['popularity_multiplier_factor'] =  popularity_multiplier_factor
     row['popularity'] = row['popularity']* float(popularity_multiplier_factor)
     row['popularity_recent'] = row['popularity_recent']* float(popularity_multiplier_factor)
-    row['popularity_conversion'] = row['popularity_conversion']* float(popularity_multiplier_factor)
 
     parent_id = row.get('parent_id')
     if parent_id:
@@ -342,8 +345,7 @@ def calculate_popularity():
         for child_id, sale_ratio in parent_child_distribution_map[parent_id].items():
           popularity_table.update({"_id": child_id}, {"$set": {'last_calculated': timestamp, 'parent_id': parent_id},
                                                       "$max": {'popularity': row['popularity'] * sale_ratio,
-                                                               'popularity_recent': row['popularity_recent'] * sale_ratio,
-                                                               'popularity_conversion': row['popularity_conversion'] * sale_ratio}
+                                                            'popularity_recent': row['popularity_recent'] * sale_ratio}
                                                       }, upsert=True)
 
   popularity_table.remove({"last_calculated": {"$ne": timestamp}})
@@ -399,6 +401,7 @@ def applyBoost(df):
   def punish_combos(row):
     if row['sku_type'] and str(row['sku_type']).lower() == 'bundle':
       row['popularity'] = row['popularity'] * PUNISH_FACTOR
+      row['popularity_new'] = row['popularity_new'] * PUNISH_FACTOR_NEW
     return row
   temp_df = temp_df.apply(punish_combos, axis=1)
 
@@ -406,6 +409,7 @@ def applyBoost(df):
   def promote_nykaa_products(row):
     if row['brand_code'] in ['1937', '13754', '7666', '71596']:
       row['popularity'] = row['popularity'] * BOOST_FACTOR
+      row['popularity_new'] = row['popularity_new'] * BOOST_FACTOR_NEW
     return row
   temp_df = temp_df.apply(promote_nykaa_products, axis=1)
 
