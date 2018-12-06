@@ -267,7 +267,7 @@ def calculate_popularity():
   dfs = []
   for bucket_id, date_bucket in enumerate(date_buckets):
     df = get_bucket_results(date_bucket)
-    if not df:
+    if df is None:
       continue
     multiplication_factor = POPULARITY_DECAY_FACTOR ** (bucket_id + 1)
     print("date_bucket: %s" % str(date_bucket))
@@ -281,7 +281,7 @@ def calculate_popularity():
                        WEIGHT_VIEWS_NEW * df['Vn'] + WEIGHT_UNITS_NEW * df['Un'] + WEIGHT_CART_ADDITIONS_NEW *
                        df['Cn'] + WEIGHT_REVENUE_NEW * df['Rn'])) * 100
 
-    dfs.append(df.loc[:, ['parent_id', 'popularity', 'popularity_conversion']].set_index('parent_id'))
+    dfs.append(df.loc[:, ['parent_id', 'popularity', 'popularity_new']].set_index('parent_id'))
         
   if argv['print_popularity_ids']:
     ids = [x.strip() for x in argv['print_popularity_ids'].split(",") if x]
@@ -297,7 +297,7 @@ def calculate_popularity():
   for i in range(1, len(dfs)):
     final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
   final_df.popularity = final_df.popularity.fillna(0)
-  final_df.popularity_conversion = final_df.popularity_conversion.fillna(0)
+  final_df.popularity_new = final_df.popularity_new.fillna(0)
 
   final_df['popularity_bucket'] = 100 * normalize(final_df['popularity'])
   final_df['popularity_new_bucket'] = 100 * normalize(final_df['popularity_new'])
