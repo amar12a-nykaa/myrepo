@@ -310,7 +310,7 @@ def calculate_popularity():
 
   a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
   a['popularity'] = 100 * normalize(0.1 * a['popularity_total'] + 0.9 * a['popularity_bucket'])
-  a['popularity_new'] = 100 * normalize(0.1 * a['popularity_new_total'] + 0.7 * a['popularity_new_bucket'])
+  a['popularity_new'] = 100 * normalize(0.7 * a['popularity_new_total'] + 0.3 * a['popularity_new_bucket'])
   a.popularity= a.popularity.fillna(0)
   a.popularity_new = a.popularity_new.fillna(0)
 
