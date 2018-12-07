@@ -700,6 +700,10 @@ class CatalogIndexer:
                 doc['object_type'] = "product"
                 doc['top_reviews'] = row.get('top_reviews', '')
                 doc['review_splitup'] = row.get('review_splitup', '')
+                if doc.get('type') == 'simple' or doc.get('type') == 'configurable':
+                    doc['manufacturer_name'] = row.get('manufacturer_name', '')
+                    doc['manufacturer_address'] = row.get('manufacturer_address', '')
+                    doc['country_of_manufacture'] = row.get('country_of_manufacture')
 
                 for k, v in doc.items():
                     for pattern, _type in CatalogIndexer.field_type_pattens.items():
