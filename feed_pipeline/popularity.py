@@ -36,7 +36,7 @@ WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 60
 PUNISH_FACTOR=0.6
 BOOST_FACTOR=1.05
-POPULARITY_DECAY_FACTOR = 0.5
+POPULARITY_DECAY_FACTOR = 0.7
 
 WEIGHT_VIEWS_NEW = 35
 WEIGHT_UNITS_NEW = 35
@@ -44,7 +44,7 @@ WEIGHT_CART_ADDITIONS_NEW = 10
 WEIGHT_REVENUE_NEW = 20
 PUNISH_FACTOR_NEW=1
 BOOST_FACTOR_NEW=1
-POPULARITY_DECAY_FACTOR_NEW = 0.8
+POPULARITY_DECAY_FACTOR_NEW = 0.9
 
 
 client = Utils.mongoClient()
@@ -395,7 +395,8 @@ def get_popularity_multiplier(product_list):
 
 def applyBoost(df):
   product_attr = create_product_attribute()
-  temp_df = pd.merge(df, product_attr, how='left', left_on=['parent_id'], right_on=['product_id'])
+  dtype = dict(parent_id=int)
+  temp_df = pd.merge(df.astype(dtype), product_attr, how='left', left_on=['parent_id'], right_on=['product_id'])
 
   #punish combo products
   def punish_combos(row):
