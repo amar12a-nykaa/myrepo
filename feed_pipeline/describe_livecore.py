@@ -17,4 +17,4 @@ resp = {
 	"active_index": active_index,
 	"number_docs_active_index": num_docs_active
 }
-print(resp)
+print(json.dumps(resp))
