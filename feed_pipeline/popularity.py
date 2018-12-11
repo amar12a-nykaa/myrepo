@@ -415,6 +415,7 @@ def applyBoost(df):
   temp_df = temp_df.apply(promote_nykaa_products, axis=1)
 
   temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
+  temp_df = temp_df.astype({'parent_id' : str})
 
   return temp_df
 
