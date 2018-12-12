@@ -138,6 +138,7 @@ class NykaaImporter:
         cat_info['android_landing_url'] = item['android_landing_url']
         cat_info['ios_landing_url'] = item['ios_landing_url']
         cat_info['tip_tile'] = item['tip_tile']
+        cat_info['desktop_tip_tile'] = item['desktop_tip_tile']
         MemcacheUtils.set(memcache_key, json.dumps(cat_info), update_prod_memcache=True)
       except Exception as e:
         print("[Brand-Category Info Import ERROR]problem with %s: %s"%(item['category_id'], str(e)))
