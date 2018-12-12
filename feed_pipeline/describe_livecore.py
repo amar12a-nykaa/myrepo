@@ -1,5 +1,6 @@
 """This script is made for devops purpose to easily find details about currently live cluster to send as email header"""
 
+import json
 import sys
 from IPython import embed
 
