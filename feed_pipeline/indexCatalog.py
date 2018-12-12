@@ -113,7 +113,11 @@ class CatalogIndexer:
     final_replace_dict = {
         "makeup": "makeup make up",
         "make up": "makeup make up",
-        "skingenius": "skingenius skin genius"
+        "skingenius": "skingenius skin genius",
+        "body wash": "bodywash body wash",
+        "bodywash": "body wash bodywash",
+        "face wash": "facewash face wash",
+        "facewash": "facewash face wash",
     }
 
     def print_errors(errors):
