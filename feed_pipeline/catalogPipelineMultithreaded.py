@@ -125,7 +125,11 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--search-engine", default="elasticsearch")
     parser.add_argument("-l", "--limit", default=0, help='number of docs to index', type=int)
     parser.add_argument("--no-swap", action="store_true", help="Do not swap index")
+    parser.add_argument("--throw-dummy-error", action="store_true", help="Throws an dummy error for testing purpose")
     argv = vars(parser.parse_args())
+
+    if argv['throw_dummy_error']:
+      raise Exception("This is a dummy error")
 
     assert argv['search_engine'] in ['elasticsearch', None]
 
