@@ -247,7 +247,13 @@ class CatalogIndexer:
                         doc['mrp_freeze'] = pas.get('mrp_freeze')
 
                     if pas.get('expdt') is not None:
-                        doc['expdt'] = pas.get('expdt')
+                        try:
+                            if doc['primary_categories'][0]['l1']['id'] == APPLIANCE_MAIN_CATEGORY_ID:
+                                doc['expdt'] = None
+                            else:
+                                doc['expdt'] = pas.get('expdt')
+                        except:
+                            print("Error in getting primary key")
 
                     # if bundle, get qty of each product also
                     if doc['type'] == 'bundle':
