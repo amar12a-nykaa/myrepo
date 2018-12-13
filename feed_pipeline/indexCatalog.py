@@ -253,7 +253,7 @@ class CatalogIndexer:
                             else:
                                 doc['expdt'] = pas.get('expdt')
                         except:
-                            print("Error in getting primary key")
+                            print("primary_categories key missing for sku: %s" % pas.get('sku'))
 
                     # if bundle, get qty of each product also
                     if doc['type'] == 'bundle':
