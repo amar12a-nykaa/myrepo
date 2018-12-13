@@ -317,6 +317,7 @@ def calculate_popularity():
 
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
   a = applyBoost(a)
+  a = handleColdStart(a)
   a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
   for i, row in a.iterrows():
@@ -437,9 +438,9 @@ def handleColdStart(df):
 
   product_data = pd.merge(product_category_mapping, product_creation, on='product_id')
   product_data = pd.merge(product_data, category_popularity, on='l3_id')
-  product_popularity = product_data.groupby('parent_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
+  product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
   product_popularity.rename(columns={'popularity': 'median_popularity', 'popularity_new': 'median_popularity_new'}, inplace=True)
-  result = pd.merge(temp_df, product_popularity, on='parent_id')
+  result = pd.merge(temp_df, product_popularity, left_on='parent_id', right_on='product_id')
 
   def calculate_new_popularity(row):
     date_diff = abs(datetime.datetime.utcnow() - datetime.datetime.strptime(row['created'], "%Y-%m-%d %H:%M:%S")).days
@@ -451,10 +452,12 @@ def handleColdStart(df):
   result['calculated_popularity_new'] = 0
   result = result.apply(calculate_new_popularity, axis=1)
 
-  final_df = pd.merge(df.astype({'parent_id': int}), result, on='parent_id', how='left')
+  result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new']]
+  final_df = pd.merge(df.astype({'parent_id': int}), result.astype({'product_id': int}), left_on='parent_id',
+                      right_on='product_id', how='left')
   # final_df['calculated_popularity'] = final_df.calculated_popularity.fillna(-1)
   final_df['popularity'] = np.where(final_df.calculated_popularity.notnull(), final_df.calculated_popularity, final_df.popularity)
-  final_df.drop(['l3_id', 'sku_created', 'calculated_popularity', 'calculated_popularity_new'], axis=1, inplace=True)
+  final_df.drop(['calculated_popularity', 'calculated_popularity_new', 'product_id'], axis=1, inplace=True)
   final_df = final_df.astype({'parent_id' : str})
   return final_df
 
