@@ -37,7 +37,7 @@ from generate_user_product_vectors import get_vectors_from_mysql_for_es
 
 NUMBER_OF_THREADS = 20
 RECORD_GROUP_SIZE = 100
-APPLIANCE_MAIN_CATEGORY_ID = 1390
+APPLIANCE_MAIN_CATEGORY_ID = "1390"
 
 conn = Utils.mysqlConnection()
 
