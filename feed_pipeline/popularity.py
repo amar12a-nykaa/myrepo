@@ -15,7 +15,7 @@ from contextlib import closing
 import arrow
 from IPython import embed
 import mysql.connector
-import numpy
+import numpy as np
 import omniture
 import pandas as pd
 from pandas.io import sql
@@ -37,6 +37,7 @@ WEIGHT_REVENUE = 60
 PUNISH_FACTOR=0.7
 BOOST_FACTOR=1.05
 POPULARITY_DECAY_FACTOR = 0.5
+COLD_START_DECAY_FACTOR = 0.8
 
 WEIGHT_VIEWS_NEW = 35
 WEIGHT_UNITS_NEW = 35
@@ -45,6 +46,7 @@ WEIGHT_REVENUE_NEW = 20
 PUNISH_FACTOR_NEW=1
 BOOST_FACTOR_NEW=1
 POPULARITY_DECAY_FACTOR_NEW = 0.9
+COLD_START_DECAY_FACTOR_NEW = 0.8
 
 
 client = Utils.mongoClient()
@@ -109,7 +111,6 @@ def create_product_attribute():
   redshift_conn = Utils.redshiftConnection()
   product_attribute = pd.read_sql(query, con=redshift_conn)
   return product_attribute
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--back_date_90_days", help="90 days back date in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-90).format('YYYY-MM-DD'))
@@ -418,6 +419,44 @@ def applyBoost(df):
   temp_df = temp_df.astype({'parent_id' : str})
 
   return temp_df
+
+def handleColdStart(df):
+  temp_df = df[['parent_id', 'popularity', 'popularity_new']]
+  temp_df.astype({'parent_id': int, 'popularity': float, 'popularity_new' : float})
+
+  query = """select product_id, l3_id from product_category_mapping"""
+  redshift_conn = Utils.redshiftConnection()
+  product_category_mapping = pd.read_sql(query, con=redshift_conn)
+
+  product_data = pd.merge(temp_df, product_category_mapping, left_on=['parent_id'], right_on=['product_id'])
+  category_popularity = product_data.groupby('l3_id').agg({'popularity': 'median', 'popularity_new': 'median'}).reset_index()
+
+  query = """select product_id, sku_created from dim_sku where sku_type != 'sku_type' and sku_created > dateadd(day,-15,current_date)"""
+  redshift_conn = Utils.redshiftConnection()
+  product_creation = pd.read_sql(query, con=redshift_conn)
+
+  product_data = pd.merge(product_category_mapping, product_creation, on='product_id')
+  product_data = pd.merge(product_data, category_popularity, on='l3_id')
+  product_popularity = product_data.groupby('parent_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
+  product_popularity.rename(columns={'popularity': 'median_popularity', 'popularity_new': 'median_popularity_new'}, inplace=True)
+  result = pd.merge(temp_df, product_popularity, on='parent_id')
+
+  def calculate_new_popularity(row):
+    date_diff = abs(datetime.datetime.utcnow() - datetime.datetime.strptime(row['created'], "%Y-%m-%d %H:%M:%S")).days
+    row['calculated_popularity'] = row['popularity'] + row['median_popularity']*(COLD_START_DECAY_FACTOR ** date_diff)
+    row['calculated_popularity_new'] = row['popularity_new'] + row['median_popularity_new'] * (COLD_START_DECAY_FACTOR_NEW ** date_diff)
+    return row
+
+  result['calculated_popularity'] = 0
+  result['calculated_popularity_new'] = 0
+  result = result.apply(calculate_new_popularity, axis=1)
+
+  final_df = pd.merge(df.astype({'parent_id': int}), result, on='parent_id', how='left')
+  # final_df['calculated_popularity'] = final_df.calculated_popularity.fillna(-1)
+  final_df['popularity'] = np.where(final_df.calculated_popularity.notnull(), final_df.calculated_popularity, final_df.popularity)
+  final_df.drop(['l3_id', 'sku_created', 'calculated_popularity', 'calculated_popularity_new'], axis=1, inplace=True)
+  final_df = final_df.astype({'parent_id' : str})
+  return final_df
 
 if argv['preprocess']:
   print("preprocess start: %s" % arrow.now())
