@@ -521,12 +521,9 @@ class CatalogIndexer:
                 size_filter_flag = 0
                 if category_ids:
                     size_filter_cat_ids = size_filter['category_ids'].split(',')
-                    print(category_ids)
-                    print(size_filter_cat_ids)
                     diff = list(set(category_ids) & set(size_filter_cat_ids))
                     if len(diff)>0 and size_filter['status'] == '1':
                         size_filter_flag = 1
-                        print("adding size filter")
 
                 # variant stuff
                 if doc['type'] == 'configurable':
