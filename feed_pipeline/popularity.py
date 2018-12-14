@@ -432,18 +432,19 @@ def handleColdStart(df):
   product_data = pd.merge(temp_df, product_category_mapping, left_on=['parent_id'], right_on=['product_id'])
   category_popularity = product_data.groupby('l3_id').agg({'popularity': 'median', 'popularity_new': 'median'}).reset_index()
 
-  query = """select product_id, sku_created from dim_sku where sku_type != 'sku_type' and sku_created > dateadd(day,-15,current_date)"""
-  redshift_conn = Utils.redshiftConnection()
-  product_creation = pd.read_sql(query, con=redshift_conn)
-
-  product_data = pd.merge(product_category_mapping, product_creation, on='product_id')
-  product_data = pd.merge(product_data, category_popularity, on='l3_id')
+  product_data = pd.merge(product_category_mapping, category_popularity, on='l3_id')
   product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
   product_popularity.rename(columns={'popularity': 'median_popularity', 'popularity_new': 'median_popularity_new'}, inplace=True)
   result = pd.merge(temp_df, product_popularity, left_on='parent_id', right_on='product_id')
 
+  query = """select product_id, sku_created from dim_sku where sku_type != 'sku_type' and sku_created > dateadd(day,-15,current_date)"""
+  redshift_conn = Utils.redshiftConnection()
+  product_creation = pd.read_sql(query, con=redshift_conn)
+
+  result = pd.merge(result, product_creation, on='product_id')
+
   def calculate_new_popularity(row):
-    date_diff = abs(datetime.datetime.utcnow() - datetime.datetime.strptime(row['created'], "%Y-%m-%d %H:%M:%S")).days
+    date_diff = abs(datetime.datetime.utcnow() - datetime.datetime.strptime(row['sku_created'], "%Y-%m-%d %H:%M:%S")).days
     row['calculated_popularity'] = row['popularity'] + row['median_popularity']*(COLD_START_DECAY_FACTOR ** date_diff)
     row['calculated_popularity_new'] = row['popularity_new'] + row['median_popularity_new'] * (COLD_START_DECAY_FACTOR_NEW ** date_diff)
     return row
