@@ -24,4 +24,7 @@ alias fp='cd /home/ubuntu/nykaa_scripts/feed_pipeline'
 
 alias popularity="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py"
 alias catalog_pipeline="/usr/bin/python /nykaa/scripts/feed_pipeline/catalogPipelineMultithreaded.py"
+
+alias redshift="psql --host dwhcluster.cy0qwrxs0juz.ap-southeast-1.redshift.amazonaws.com --username dwh_redshift_ro -p 5439 -d datawarehouse"
+
 python /nykaa/scripts/shortcuts.py
