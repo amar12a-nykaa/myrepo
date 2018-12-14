@@ -78,7 +78,7 @@ def build_parent_child_distribution_map():
   global parent_child_distribution_map
 
   query = """select parent_product_id, product_id, count(distinct nykaa_orderno) as orders from fact_order_detail_new
-              where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 60) and product_id is not null 
+              where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 30) and product_id is not null 
               group by 1,2;"""
   print(query)
   redshift_conn = Utils.redshiftConnection()
