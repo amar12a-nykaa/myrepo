@@ -444,7 +444,7 @@ def handleColdStart(df):
   result = pd.merge(result, product_creation, on='product_id')
 
   def calculate_new_popularity(row):
-    date_diff = abs(datetime.datetime.utcnow() - datetime.datetime.strptime(row['sku_created'], "%Y-%m-%d %H:%M:%S")).days
+    date_diff = abs(datetime.datetime.utcnow() - (np.datetime64(row['sku_created']).astype(datetime.datetime))).days
     row['calculated_popularity'] = row['popularity'] + row['median_popularity']*(COLD_START_DECAY_FACTOR ** date_diff)
     row['calculated_popularity_new'] = row['popularity_new'] + row['median_popularity_new'] * (COLD_START_DECAY_FACTOR_NEW ** date_diff)
     return row
