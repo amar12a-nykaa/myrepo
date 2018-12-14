@@ -36,6 +36,7 @@ WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 60
 PUNISH_FACTOR=0.7
 BOOST_FACTOR=1.05
+PRODUCT_PUNISH_FACTOR = 0.5
 POPULARITY_DECAY_FACTOR = 0.5
 
 WEIGHT_VIEWS_NEW = 35
@@ -44,7 +45,11 @@ WEIGHT_CART_ADDITIONS_NEW = 10
 WEIGHT_REVENUE_NEW = 20
 PUNISH_FACTOR_NEW=1
 BOOST_FACTOR_NEW=1
+PRODUCT_PUNISH_FACTOR_NEW = 0.5
 POPULARITY_DECAY_FACTOR_NEW = 0.9
+
+BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
+PRODUCT_PUNISH_LIST = [303813,262768,262770,262769]
 
 
 client = Utils.mongoClient()
@@ -408,11 +413,19 @@ def applyBoost(df):
 
   #promote nykaa products
   def promote_nykaa_products(row):
-    if row['brand_code'] in ['1937', '13754', '7666', '71596']:
+    if row['brand_code'] in BRAND_PROMOTION_LIST:
       row['popularity'] = row['popularity'] * BOOST_FACTOR
       row['popularity_new'] = row['popularity_new'] * BOOST_FACTOR_NEW
     return row
   temp_df = temp_df.apply(promote_nykaa_products, axis=1)
+
+  #promote indivisual products
+  def punish_products_by_id(row):
+    if row['product_id'] in PRODUCT_PUNISH_LIST:
+      row['popularity'] = row['popularity'] * PRODUCT_PUNISH_FACTOR
+      row['popularity_new'] = row['popularity_new'] * PRODUCT_PUNISH_FACTOR_NEW
+    return row
+  temp_df = temp_df.apply(punish_products_by_id, axis=1)
 
   temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
   temp_df = temp_df.astype({'parent_id' : str})
