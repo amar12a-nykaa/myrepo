@@ -25,7 +25,7 @@ with open('SampleCSVFile.csv') as csv_file:
         new_data = {}
         for column in range(1,len(columns)):
             new_data[columns[column]] = user[columns[column]]
-        print(new_data)
+ #       print(new_data)
         user_data = table.get_item(Key={'userId':user['customer_id']})
         if 'privy' in user_data['Item'].keys():
           privy_data = user_data['Item']['privy']
@@ -33,6 +33,6 @@ with open('SampleCSVFile.csv') as csv_file:
           privy_data={}
         for key in new_data.keys():
             privy_data[key]=new_data[key]
-        table.update_item(Key={'userId':  user_data['Item']['userId']},AttributeUpdates={"privy":{"Action": "PUT","Value":privy_data}})  
+        table.update_item(Key={'user_id':  user_data['Item']['user_id']},AttributeUpdates={"privy":{"Action": "PUT","Value":privy_data}})  
 
 
