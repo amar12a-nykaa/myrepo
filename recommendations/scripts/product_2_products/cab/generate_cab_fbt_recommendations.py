@@ -20,13 +20,7 @@ import pyspark.sql.functions as func
 #sys.path.append("/home/apis/nykaa")
 #from pas.v2.utils import Utils, RecommendationsUtils
 
-spark = SparkSession.builder \
-            .master("local[12]") \
-            .appName("CAB") \
-            .config("spark.driver.memory", "10G") \
-            .getOrCreate()
-            #.config("spark.executor.memory", "6G") \
-            #.config("spark.storage.memoryFraction", 0.2) \
+spark = SparkSession.builder.appName("CAB").getOrCreate()
  
 sc = spark.sparkContext
 print(sc.getConf().getAll())
@@ -57,8 +51,12 @@ class Utils:
     def mysqlConnection(env, connection_details=None):
         if env == 'prod':
             host = "dbmaster.ciel4c1bqlwh.ap-southeast-1.rds.amazonaws.com"
-        else:
+        elif env in ['non_prod', 'preprod']:
             host = 'price-api-preprod.cjmplqztt198.ap-southeast-1.rds.amazonaws.com'
+        elif env == 'qa':
+            host = 'price-api-qa.cjmplqztt198.ap-southeast-1.rds.amazonaws.com'
+        else:
+            raise Exception('Unknow env')
         user = 'recommendation'
         password = 'yNKNy33xG'
         #user = 'api'
@@ -84,8 +82,12 @@ class Utils:
     def esConn(env):
         if env == 'prod':
             ES_ENDPOINT = 'vpc-prod-api-vzcc4i4e4zk2w4z45mqkisjo4u.ap-southeast-1.es.amazonaws.com'
-        else:
+        elif env in ['non_prod', 'preprod']:
             ES_ENDPOINT = 'search-preprod-api-ub7noqs5xxaerxm6vhv5yjuc7u.ap-southeast-1.es.amazonaws.com'
+        elif env == 'qa':
+            ES_ENDPOINT = 'search-qa-api-fvmcnxoaknewsdvt6gxgdtmodq.ap-southeast-1.es.amazonaws.com'
+        else:
+            raise Exception('Unknown env')
         print(ES_ENDPOINT)
         es = Elasticsearch(['http://%s:80' % ES_ENDPOINT])
         return es
@@ -133,8 +135,10 @@ class Utils:
     def redshiftConnection(env):
         if env == 'prod':
             host = 'dwhcluster.cy0qwrxs0juz.ap-southeast-1.redshift.amazonaws.com'
-        else:
+        elif env in ['non_prod', 'preprod', 'qa']:
             host = 'nka-preprod-dwhcluster.c742iibw9j1g.ap-southeast-1.redshift.amazonaws.com'
+        else:
+            raise Exception('Unknown env')
         port = 5439
         username = 'dwh_redshift_ro'
         password = 'GSrjC7hYPC9V'
