@@ -112,7 +112,7 @@ def create_product_attribute():
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--back_date_90_days", help="90 days back date in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-90).format('YYYY-MM-DD'))
+parser.add_argument("--back_date_30_days", help="90 days back date in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-30).format('YYYY-MM-DD'))
 parser.add_argument("--startdate", help="startdate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-30).format('YYYY-MM-DD'))
 parser.add_argument("--enddate", help="enddate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace().format('YYYY-MM-DD'))
 parser.add_argument("--preprocess", help="Only runs the report and prints.", action='store_true')
@@ -131,14 +131,14 @@ argv = vars(parser.parse_args())
 
 debug = argv['debug']
 TABLE = argv['table']
-back_date_90_days_time = arrow.get(argv['back_date_90_days']).datetime
+back_date_30_days_time = arrow.get(argv['back_date_30_days']).datetime
 startdatetime = arrow.get(argv['startdate']).datetime
 enddatetime = arrow.get(argv['enddate']).datetime
 print(startdatetime)
 print(enddatetime)
 platforms = argv["platform"].split(",")
 
-build_product_sales_map(str(startdatetime))
+build_product_sales_map(str(back_date_30_days_time))
 build_parent_child_distribution_map()
 print("product_sales_map len: %s" % len(product_sales_map))
 
