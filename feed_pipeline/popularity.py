@@ -143,7 +143,7 @@ print(startdatetime)
 print(enddatetime)
 platforms = argv["platform"].split(",")
 
-build_product_sales_map(str(back_date_90_days_time))
+build_product_sales_map(str(startdatetime))
 build_parent_child_distribution_map()
 print("product_sales_map len: %s" % len(product_sales_map))
 
