@@ -37,6 +37,7 @@ from generate_user_product_vectors import get_vectors_from_mysql_for_es
 
 NUMBER_OF_THREADS = 20
 RECORD_GROUP_SIZE = 100
+APPLIANCE_MAIN_CATEGORY_ID = "1390"
 
 conn = Utils.mysqlConnection()
 
@@ -314,7 +315,13 @@ class CatalogIndexer:
                         doc['mrp_freeze'] = pas.get('mrp_freeze')
 
                     if pas.get('expdt') is not None:
-                        doc['expdt'] = pas.get('expdt')
+                        try:
+                            if doc['primary_categories'][0]['l1']['id'] == APPLIANCE_MAIN_CATEGORY_ID:
+                                doc['expdt'] = None
+                            else:
+                                doc['expdt'] = pas.get('expdt')
+                        except:
+                            print("primary_categories key missing for sku: %s" % pas.get('sku'))
 
                     # if bundle, get qty of each product also
                     if doc['type'] == 'bundle':
@@ -529,6 +536,9 @@ class CatalogIndexer:
                     primary_categories = row['primary_categories'].split('|')
                     if primary_categories[0] != "":
                         l1['id'] = primary_categories[0]
+                        # Do not send expiry date in case of appliance category
+                        if l1.get('id') == APPLIANCE_MAIN_CATEGORY_ID:
+                            doc['expiry_date'] = None
                         if category_ids and len(category_ids) == len(category_names):
                             if primary_categories[0] in category_ids:
                                 cat_index = category_ids.index(primary_categories[0])
