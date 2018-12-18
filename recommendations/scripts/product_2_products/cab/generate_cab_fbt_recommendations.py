@@ -51,14 +51,16 @@ class Utils:
     def mysqlConnection(env, connection_details=None):
         if env == 'prod':
             host = "dbmaster.ciel4c1bqlwh.ap-southeast-1.rds.amazonaws.com"
+            password = 'Cheaj92pDHtDq8hU'
         elif env in ['non_prod', 'preprod']:
             host = 'price-api-preprod.cjmplqztt198.ap-southeast-1.rds.amazonaws.com'
+            password = 'yNKNy33xG'
         elif env == 'qa':
             host = 'price-api-qa.cjmplqztt198.ap-southeast-1.rds.amazonaws.com'
+            password = 'yNKNy33xG'
         else:
             raise Exception('Unknow env')
         user = 'recommendation'
-        password = 'yNKNy33xG'
         #user = 'api'
         #password = 'aU%v#sq1'
         db = 'nykaa'
