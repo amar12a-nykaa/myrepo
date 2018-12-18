@@ -357,15 +357,14 @@ def update_brand_category_table():
         pop[NYKAA] = round(pop[NYKAA] / max_pop_Nykaa * 100, 2)
         pop[MEN] = round(pop[MEN] / max_pop_Men * 100, 2) if max_pop_Men > 0 else 0
         brand_id = None
-        category_name = None
-        brand_new = brand.replace("'", "''")
-        if brand_new in brand_name_id:
-          brand_id = brand_name_id[brand_new]['brand_id']
+        if brand in brand_name_id:
+          brand_id = brand_name_id[brand]['brand_id']
         if cat_id_index[category_id]:
           category_name = cat_id_index[category_id]['name']
-        q = query % (brand_new, brand_id, category_id, category_name.replace("'", "''"), pop[NYKAA], pop[MEN])
-        # print(q)
-        Utils.mysql_write(q)
+          brand_name = brand_name_name[brand] if brand in brand_name_name else brand
+          q = query % (brand_name.replace("'", "''"), brand_id, category_id, category_name.replace("'", "''"), pop[NYKAA], pop[MEN])
+          # print(q)
+          Utils.mysql_write(q)
       except:
         print(traceback.format_exc())
 
