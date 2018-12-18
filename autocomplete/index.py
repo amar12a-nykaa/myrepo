@@ -830,7 +830,6 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_parallel(['categories', 'brands', 'brands_categories'], **kwargs)
     
 
-
       print('Done processing ',  engine)
       restart_apache_memcached()
     
