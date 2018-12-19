@@ -89,7 +89,7 @@ class Worker(threading.Thread):
         while True:
             try:
                 rows = self.q.get(timeout=3)  # 3s timeout
-                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,size_filter)
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter)
             except queue.Empty:
                 return
             # do whatever work you have to do on work
