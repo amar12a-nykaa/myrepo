@@ -145,7 +145,6 @@ multicategoryList = {
     "1516": {"variant": ["Massage Gels", "Massage Creams"], "name": "Massage Gels & Creams"},
     "3656": {"variant": ["Mugs", "Cups"], "name": "Mugs & Cups"},
     "4376": {"variant": ["Notebooks", "Notepads", "Folders"], "name": "Notebooks, Notepads and Folders"},
-    "3819": {"variant": ["Nykaa Kits", "Nykaa Combos"], "name": "Nykaa Kits and Combos"},
     "4527": {"variant": ["Panties", "Girl Shorts"], "name": "Panties/Girl Shorts"},
     "3077": {"variant": ["Pasties", "Stick-ons"], "name": "Pasties / Stick-ons"},
     "974": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
@@ -830,7 +829,6 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_parallel(['products'], **kwargs)
       index_parallel(['categories', 'brands', 'brands_categories'], **kwargs)
     
-
 
       print('Done processing ',  engine)
       restart_apache_memcached()
