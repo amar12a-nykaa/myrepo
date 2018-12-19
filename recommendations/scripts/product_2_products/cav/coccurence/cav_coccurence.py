@@ -232,9 +232,9 @@ def compute_cav(files, desktop):
             simple_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
             simple_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
 
-            if product_2_mrp.get(str(row['product_id_x'])) and product_2_mrp.get(str(row['product_id_y'])):
-                product_x_mrp = product_2_mrp[str(row['product_id_x'])]
-                product_y_mrp = product_2_mrp[str(row['product_id_y'])]
+            if product_2_mrp.get(row['product_id_x']) and product_2_mrp.get(row['product_id_y']):
+                product_x_mrp = product_2_mrp[row['product_id_x']]
+                product_y_mrp = product_2_mrp[row['product_id_y']]
                 if abs((product_x_mrp - product_y_mrp)/product_x_mrp) <= 0.3 or abs((product_x_mrp - product_y_mrp)/product_y_mrp) <= 0.3:
                     simple_similar_products_mrp_cons_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
                     simple_similar_products_mrp_cons_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
