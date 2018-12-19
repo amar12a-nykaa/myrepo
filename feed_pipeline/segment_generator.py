@@ -3,15 +3,11 @@ import psycopg2
 import psycopg2.extras
 import sys
 import requests
-import django
 import os
 import boto3
 sys.path.append('/home/apis/nykaa/')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nykaa.settings')
-django.setup()
 from pas.v2.utils import Utils
 from pas.v2.utils import UserProfileServiceDynamoDb 
-from pas.v2.models import UserDataStore 
 from contextlib import closing
 sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
@@ -30,7 +26,6 @@ def updateDyanamodb(row,db):
   if row[5]:
       data["email"] = row[5]
   db.put_item(item=data)    
-  #UserDataStore.update_user_data(user_id=data["user_id"],new_attributes=data)
 
 
 
