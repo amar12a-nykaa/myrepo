@@ -69,7 +69,7 @@ def getCurrentDateTime():
 
 class Worker(threading.Thread):
     def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
-                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300):
+                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter):
         self.q = q
         self.search_engine = search_engine
         self.collection = collection
@@ -81,6 +81,7 @@ class Worker(threading.Thread):
         self.product_2_vector_lsi_100 = product_2_vector_lsi_100 
         self.product_2_vector_lsi_200 = product_2_vector_lsi_200 
         self.product_2_vector_lsi_300 = product_2_vector_lsi_300 
+        self.size_filter = size_filter
 
         super().__init__()
 
@@ -88,7 +89,7 @@ class Worker(threading.Thread):
         while True:
             try:
                 rows = self.q.get(timeout=3)  # 3s timeout
-                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300)
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,size_filter)
             except queue.Empty:
                 return
             # do whatever work you have to do on work
@@ -302,12 +303,11 @@ class CatalogIndexer:
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
 
-    def indexRecords(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300):
+    def indexRecords(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter):
         input_docs = []
         pws_fetch_products = []
         size_filter_flag = 0
         # index_start = timeit.default_timer()
-        size_filter = CatalogIndexer.getSizeFilterConfig()
         for index, row in enumerate(records):
             try:
                 CatalogIndexer.validate_catalog_feed_row(row)
@@ -807,6 +807,7 @@ class CatalogIndexer:
         pws_fetch_products = []
         categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
         offersApiConfig = CatalogIndexer.getOffersApiConfig()
+        size_filter = CatalogIndexer.getSizeFilterConfig()
         product_2_vector_lsi_100 = {}
         product_2_vector_lsi_200 = {}
         product_2_vector_lsi_300 = {}
@@ -852,7 +853,7 @@ class CatalogIndexer:
 
         for _ in range(NUMBER_OF_THREADS):
             Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
-                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300).start()
+                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter).start()
         q.join()
         print("Index Catalog Finished!")
 
