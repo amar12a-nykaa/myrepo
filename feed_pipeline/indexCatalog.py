@@ -697,6 +697,7 @@ class CatalogIndexer:
                 doc['pro_flag_i'] = row['pro_flag'] or 0
                 # doc['is_kit_combo_i'] = row['is_kit_combo'] or 0
 
+                doc['is_searchable_i'] = row['is_searchable'] or 0
                 doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
                 doc['create_time'] = row['created_at']
                 doc['object_type'] = "product"
