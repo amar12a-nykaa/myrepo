@@ -1,4 +1,3 @@
-print('Starting script')
 import json
 import traceback
 import psycopg2
@@ -227,11 +226,32 @@ def compute_fbt(env, start_datetime=None, limit=None):
     compute_similarity_udf = udf(compute_similarity, FloatType())
     df = df.withColumn("similarity", compute_similarity_udf(df['orders_intersection'], df['orders_union']))
 
+    v3_similar_products_dict = defaultdict(lambda: [])
     direct_similar_products_dict = defaultdict(lambda: [])
 
+    categories = defaultdict(lambda: {'l1':[], 'l2': [], 'l3': []})
+    brands = defaultdict(lambda: [])
+    primary_categories = results['primary_categories']
+
+    for product_id, categories_str_list in primary_categories.items():
+        for categories_str in categories_str_list:
+            for category, obj in json.loads(categories_str).items():
+                if category in ['l1', 'l2', 'l3']:
+                    categories[product_id][category].append(obj['id'])
+
+    for product_id, brand_str_list in results['brand_facets'].items():
+        for brand_str in brand_str_list:
+            brands[product_id].append(json.loads(brand_str)['id'])
+
     for row in df.collect():
+        if set(brands[row['product_id_x']]).intersection(set(brands[row['product_id_y']])) \
+            and (not set(categories[row['product_id_x']]['l3']).intersection(set(categories[row['product_id_y']]['l3']))) \
+            and set(categories[row['product_id_x']]['l1']).intersection(set(categories[row['product_id_y']]['l1'])):
+            v3_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['orders_intersection']))
+            v3_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['orders_intersection']))
         direct_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['similarity']))
         direct_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['similarity']))
+
 
     parent_2_children = defaultdict(lambda: [])
     for child, parent in results['child_2_parent'].items():
@@ -244,11 +264,14 @@ def compute_fbt(env, start_datetime=None, limit=None):
     product_ids_updated = []
     for product_id in direct_similar_products_dict:
         product_ids_updated.append(product_id)
+        v3_similar_products = list(map(lambda e: int(e[0]), sorted(v3_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
         direct_similar_products = list(map(lambda e: int(e[0]), sorted(direct_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        rows.append((product_id, 'product', 'fbt', 'coccurence_direct', json.dumps(direct_similar_products)))
+        rows.append((product_id, 'product', 'fbt', 'v3', str(v3_similar_products)))
+        rows.append((product_id, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
         variants = parent_2_children.get(product_id, [])
         for variant in variants:
             product_ids_updated.append(variant)
+            rows.append((variant, 'product', 'fbt', 'v3', str(v3_similar_products)))
             rows.append((variant, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
 
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
