@@ -15,7 +15,8 @@ argv = vars(parser.parse_args())
 days = -1 * argv['days']
 
 dates_to_process = enumerate_dates(days, -1)
-s3 = boto3.client('s3')
+pipeline = boto3.session.Session(profile_name='datapipeline')
+s3 = pipeline.client('s3')
 bucket_name = PipelineUtils.getBucketNameForFeedback()
 
 def unzip_file(path_to_zip_file):
