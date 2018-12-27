@@ -14,7 +14,8 @@ collection_name = 'feedback_data_autocomplete'
 
 def insertFeedBackDataInMongo(filename='feedback_autocomplete_result.json'):
     bucket = PipelineUtils.getBucketNameForFeedback()
-    s3 = boto3.resource('s3')
+    pipeline = boto3.session.Session(profile_name='datapipeline')
+    s3 = pipeline.resource('s3')
     try:
         s3.Bucket(bucket).download_file(filename, filename)
     except:
