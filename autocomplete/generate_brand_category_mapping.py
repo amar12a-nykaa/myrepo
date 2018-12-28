@@ -172,7 +172,7 @@ def getProducts():
   query = """SELECT 
                 ds.product_id AS simple_id, pcm.l3_id AS category_l3_id, ds.brand_name as brand, ds.is_men 
              FROM dim_sku ds JOIN product_category_mapping pcm ON ds.product_id = pcm.product_id 
-             WHERE ds.is_luxe = 'No' and l3_id != 0"""
+             WHERE ds.is_luxe = 'No' and pcm.l3_id != 0"""
   results = Utils.fetchResults(nykaa_redshift_connection, query)
   if not results:
     raise Exception("Could not fetch data from dwh databases")
