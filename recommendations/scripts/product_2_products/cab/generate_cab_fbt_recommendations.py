@@ -18,6 +18,8 @@ import pyspark.sql.functions as func
 
 #sys.path.append("/home/apis/nykaa")
 #from pas.v2.utils import Utils, RecommendationsUtils
+ORDER_SOURCE_NYKAA = ['Nykaa', 'Nykaa(Old)', 'NYKAA', 'CS-Manual']
+ORDER_SOURCE_NYKAAMEN = ['NykaaMen']
 
 spark = SparkSession.builder.appName("CAB").getOrCreate()
  
@@ -28,9 +30,9 @@ class RecommendationsUtils:
 
     @staticmethod
     def _add_recommendations_in_mysql(cursor, table, rows):
-        values_str = ", ".join(["(%s, %s, %s, %s, %s)" for i in range(len(rows))])
+        values_str = ", ".join(["(%s, %s, %s, %s, %s, %s)" for i in range(len(rows))])
         values = tuple([_i for row in rows for _i in row])
-        insert_recommendations_query = """ INSERT INTO %s(entity_id, entity_type, recommendation_type, algo, recommended_products_json)
+        insert_recommendations_query = """ INSERT INTO %s(catalog_tag_filter, entity_id, entity_type, recommendation_type, algo, recommended_products_json)
             VALUES %s ON DUPLICATE KEY UPDATE recommended_products_json=VALUES(recommended_products_json)
         """ % (table, values_str)
         values = tuple([str(_i) for row in rows for _i in row])
@@ -161,9 +163,14 @@ class Utils:
                     break
         return rows
 
-def prepare_orders_dataframe(env, start_datetime, limit):
+def prepare_orders_dataframe(env, platform, start_datetime, limit):
     print("Preparing orders data")
-    customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL %s %s" % (" AND order_date >= '%s' " % start_datetime if start_datetime else "", " limit %d" % limit if limit else "")
+    if platform == 'men':
+        order_sources = ORDER_SOURCE_NYKAAMEN
+    else:
+        order_sources = ORDER_SOURCE_NYKAA
+
+    customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_source IN (" + ",".join([("'%s'" % source) for source in order_sources]) + ") AND order_customerid IS NOT NULL %s %s" % (" AND order_date >= '%s' " % start_datetime if start_datetime else "", " limit %d" % limit if limit else "")
     print(customer_orders_query)
     print('Fetching Data from Redshift')
     rows = Utils.fetchResultsInBatch(Utils.redshiftConnection(env), customer_orders_query, 10000)
@@ -175,6 +182,7 @@ def prepare_orders_dataframe(env, start_datetime, limit):
             StructField("product_sku", StringType(), True)])
 
     df = spark.createDataFrame(rows, schema)
+    print('Total number of rows fetched: %d' % df.count())
     df.printSchema()
     print('Scrolling ES for results')
     results = Utils.scrollESForResults(env)
@@ -198,11 +206,12 @@ def prepare_orders_dataframe(env, start_datetime, limit):
     df = df.na.drop()
     df = df.drop("product_sku")
     df = df.select(['order_id', 'customer_id', 'product_id']).distinct()
+    print('Total number of rows after data cleaning: %d' % df.count())
     print('Data preparation done, returning dataframe')
     return df, results
 
-def compute_fbt(env, start_datetime=None, limit=None):
-    df, results = prepare_orders_dataframe(env, start_datetime, limit)
+def compute_fbt(env, platform, start_datetime=None, limit=None):
+    df, results = prepare_orders_dataframe(env, platform, start_datetime, limit)
     df.printSchema()
     product_to_orders_count_df = df.groupBy('product_id').agg(func.countDistinct('order_id')).withColumnRenamed('count(DISTINCT order_id)', 'orders_count').toPandas()
     product_to_orders_count = dict(zip(product_to_orders_count_df.product_id, product_to_orders_count_df.orders_count))
@@ -266,20 +275,20 @@ def compute_fbt(env, start_datetime=None, limit=None):
         product_ids_updated.append(product_id)
         v3_similar_products = list(map(lambda e: int(e[0]), sorted(v3_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
         direct_similar_products = list(map(lambda e: int(e[0]), sorted(direct_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        rows.append((product_id, 'product', 'fbt', 'v3', str(v3_similar_products)))
-        rows.append((product_id, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
+        rows.append((platform, product_id, 'product', 'fbt', 'v3', str(v3_similar_products)))
+        rows.append((platform, product_id, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
         variants = parent_2_children.get(product_id, [])
         for variant in variants:
             product_ids_updated.append(variant)
-            rows.append((variant, 'product', 'fbt', 'v3', str(v3_similar_products)))
-            rows.append((variant, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
+            rows.append((platform, variant, 'product', 'fbt', 'v3', str(v3_similar_products)))
+            rows.append((platform, variant, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
 
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
     RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
 
-def compute_cab(env, start_datetime=None, limit=None):
+def compute_cab(env, platform, start_datetime=None, limit=None):
     print("Computing CAB")
-    df, results = prepare_orders_dataframe(env, start_datetime, limit)
+    df, results = prepare_orders_dataframe(env, platform, start_datetime, limit)
     df.printSchema()
     print('Preparing product to customers count')
     product_to_customers_count_df = df.groupBy('product_id').agg(func.countDistinct('customer_id')).withColumnRenamed('count(DISTINCT customer_id)', 'customers_count').toPandas()
@@ -323,11 +332,11 @@ def compute_cab(env, start_datetime=None, limit=None):
     for product_id in direct_similar_products_dict:
         product_ids_updated.append(product_id)
         direct_similar_products = list(map(lambda e: int(e[0]), sorted(direct_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        rows.append((product_id, 'product', 'bought', 'coccurence_direct', json.dumps(direct_similar_products)))
+        rows.append((platform, product_id, 'product', 'bought', 'coccurence_direct', json.dumps(direct_similar_products)))
         variants = parent_2_children.get(product_id, [])
         for variant in variants:
             product_ids_updated.append(variant)
-            rows.append((variant, 'product', 'bought', 'coccurence_direct', str(direct_similar_products)))
+            rows.append((platform, variant, 'product', 'bought', 'coccurence_direct', str(direct_similar_products)))
 
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
     RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
@@ -338,12 +347,14 @@ if __name__ == '__main__':
     parser.add_argument('--start-datetime')
     parser.add_argument('--limit', type=int)
     parser.add_argument('--env', required=True)
+    parser.add_argument('--platform', required=True, choices=['nykaa','men'])
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
     start_datetime = argv.get('start_datetime')
     limit = argv.get('limit')
     env = argv.get('env')
-    compute_cab(env, start_datetime, limit)
-    compute_fbt(env, start_datetime, limit)
+    platform = argv.get('platform')
+    compute_cab(env, platform, start_datetime, limit)
+    compute_fbt(env, platform, start_datetime, limit)
 
