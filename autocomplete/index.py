@@ -145,7 +145,6 @@ multicategoryList = {
     "1516": {"variant": ["Massage Gels", "Massage Creams"], "name": "Massage Gels & Creams"},
     "3656": {"variant": ["Mugs", "Cups"], "name": "Mugs & Cups"},
     "4376": {"variant": ["Notebooks", "Notepads", "Folders"], "name": "Notebooks, Notepads and Folders"},
-    "3819": {"variant": ["Nykaa Kits", "Nykaa Combos"], "name": "Nykaa Kits and Combos"},
     "4527": {"variant": ["Panties", "Girl Shorts"], "name": "Panties/Girl Shorts"},
     "3077": {"variant": ["Pasties", "Stick-ons"], "name": "Pasties / Stick-ons"},
     "974": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
@@ -627,7 +626,7 @@ def index_products(collection, searchengine):
   popularity = Utils.mongoClient()['search']['popularity']
   count = {'value': 0}
     
-  def flush_index_products(rows):
+  def flush_index_products(rows, productList=[]):
     docs = []
     cnt_product = 0
     cnt_search = 0
@@ -665,9 +664,13 @@ def index_products(collection, searchengine):
         weight_men = row['popularity']
         is_men = True
       data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": id, "men_url": men_url})
+      unique_id = createId(product['title'])
+      if unique_id in productList:
+        continue
       count['value'] += 1
+      productList.append(unique_id)
       docs.append({
-          "_id": createId(product['title']),
+          "_id": unique_id,
           "entity": product['title'], 
           "weight": row['popularity'],
           "weight_men": weight_men,
@@ -677,7 +680,7 @@ def index_products(collection, searchengine):
           "is_men": is_men,
           "source": "product"
         })
-
+      productList.append(unique_id)
       if len(docs) >= 100:
         index_docs(searchengine, docs, collection)
         docs = []
@@ -694,6 +697,7 @@ def index_products(collection, searchengine):
 
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
   limit = 150000 if not GLOBAL_FAST_INDEXING else 5000
+  productList = []
   for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]):# .limit(limit):
     ctr += 1
     if ctr.should_print():
@@ -705,13 +709,13 @@ def index_products(collection, searchengine):
         if product['price'] < 1 or product['pro_flag'] == 1 or product['is_service'] == True:
           continue
         rows_1k.append(rows_untested[product['product_id']])
-      flush_index_products(rows_1k)
+      flush_index_products(rows_1k, productList)
       rows_1k = []
       rows_untested = {}
 
     if count['value'] >= limit:
       break
-  flush_index_products(rows_1k)
+  flush_index_products(rows_1k, productList)
     
 
 
@@ -830,7 +834,6 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_parallel(['products'], **kwargs)
       index_parallel(['categories', 'brands', 'brands_categories'], **kwargs)
     
-
 
       print('Done processing ',  engine)
       restart_apache_memcached()
