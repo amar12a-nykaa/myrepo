@@ -38,16 +38,16 @@ PUNISH_FACTOR=0.7
 BOOST_FACTOR=1.05
 PRODUCT_PUNISH_FACTOR = 0.5
 POPULARITY_DECAY_FACTOR = 0.5
-COLD_START_DECAY_FACTOR = 0.8
+COLD_START_DECAY_FACTOR = 0
 
-WEIGHT_VIEWS_NEW = 35
-WEIGHT_UNITS_NEW = 35
+WEIGHT_VIEWS_NEW = 10
+WEIGHT_UNITS_NEW = 30
 WEIGHT_CART_ADDITIONS_NEW = 10
-WEIGHT_REVENUE_NEW = 20
-PUNISH_FACTOR_NEW=1
-BOOST_FACTOR_NEW=1
-PRODUCT_PUNISH_FACTOR_NEW = 1
-POPULARITY_DECAY_FACTOR_NEW = 0.9
+WEIGHT_REVENUE_NEW = 60
+PUNISH_FACTOR_NEW=0.7
+BOOST_FACTOR_NEW=1.05
+PRODUCT_PUNISH_FACTOR_NEW = 0.5
+POPULARITY_DECAY_FACTOR_NEW = 0.5
 COLD_START_DECAY_FACTOR_NEW = 0.8
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
@@ -450,7 +450,7 @@ def handleColdStart(df):
   product_popularity.rename(columns={'popularity': 'median_popularity', 'popularity_new': 'median_popularity_new'}, inplace=True)
   result = pd.merge(temp_df, product_popularity, left_on='parent_id', right_on='product_id')
 
-  query = """select product_id, sku_created from dim_sku where sku_type != 'sku_type' and sku_created > dateadd(day,-15,current_date)"""
+  query = """select product_id, sku_created from dim_sku where sku_type != 'sku_type' and sku_created > dateadd(day,-30,current_date)"""
   redshift_conn = Utils.redshiftConnection()
   product_creation = pd.read_sql(query, con=redshift_conn)
 
@@ -458,8 +458,12 @@ def handleColdStart(df):
 
   def calculate_new_popularity(row):
     date_diff = abs(datetime.datetime.utcnow() - (np.datetime64(row['sku_created']).astype(datetime.datetime))).days
-    row['calculated_popularity'] = row['popularity'] + row['median_popularity']*(COLD_START_DECAY_FACTOR ** date_diff)
-    row['calculated_popularity_new'] = row['popularity_new'] + row['median_popularity_new'] * (COLD_START_DECAY_FACTOR_NEW ** date_diff)
+    if date_diff > 0:
+        row['calculated_popularity'] = row['popularity'] + row['median_popularity']*(COLD_START_DECAY_FACTOR ** date_diff)
+        row['calculated_popularity_new'] = row['popularity_new'] + row['median_popularity_new'] * (COLD_START_DECAY_FACTOR_NEW ** date_diff)
+    else:
+        row['calculated_popularity'] = row['popularity']
+        row['calculated_popularity_new'] = row['popularity_new']
     return row
 
   result['calculated_popularity'] = 0
