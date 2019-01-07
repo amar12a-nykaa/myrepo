@@ -450,7 +450,7 @@ def handleColdStart(df):
   product_popularity.rename(columns={'popularity': 'median_popularity', 'popularity_new': 'median_popularity_new'}, inplace=True)
   result = pd.merge(temp_df, product_popularity, left_on='parent_id', right_on='product_id')
 
-  query = """select product_id, sku_created from dim_sku where sku_type != 'sku_type' and sku_created > dateadd(day,-30,current_date)"""
+  query = """select product_id, sku_created from dim_sku where sku_type != 'sku_type' and sku_created > dateadd(day,-60,current_date)"""
   redshift_conn = Utils.redshiftConnection()
   product_creation = pd.read_sql(query, con=redshift_conn)
 
