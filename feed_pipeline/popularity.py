@@ -15,7 +15,7 @@ from contextlib import closing
 import arrow
 from IPython import embed
 import mysql.connector
-import numpy as np
+import numpy
 import omniture
 import pandas as pd
 from pandas.io import sql
@@ -436,14 +436,21 @@ def applyBoost(df):
 
 def handleColdStart(df):
   temp_df = df[['parent_id', 'popularity', 'popularity_new']]
-  temp_df.astype({'parent_id': int, 'popularity': float, 'popularity_new' : float})
+  temp_df = temp_df.astype({'parent_id': int, 'popularity': float, 'popularity_new' : float})
 
   query = """select product_id, l3_id from product_category_mapping"""
   redshift_conn = Utils.redshiftConnection()
   product_category_mapping = pd.read_sql(query, con=redshift_conn)
 
   product_data = pd.merge(temp_df, product_category_mapping, left_on=['parent_id'], right_on=['product_id'])
-  category_popularity = product_data.groupby('l3_id').agg({'popularity': 'median', 'popularity_new': 'median'}).reset_index()
+
+  def percentile(n, field):
+      def _percentile(x):
+          return numpy.percentile(x, n)
+
+      _percentile.__name__ = field
+      return _percentile
+  category_popularity = product_data.groupby('l3_id').agg({'popularity': [percentile(95, 'popularity')], 'popularity_new': [percentile(95, 'popularity_new')]}).reset_index()
 
   product_data = pd.merge(product_category_mapping, category_popularity, on='l3_id')
   product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
@@ -457,7 +464,7 @@ def handleColdStart(df):
   result = pd.merge(result, product_creation, on='product_id')
 
   def calculate_new_popularity(row):
-    date_diff = abs(datetime.datetime.utcnow() - (np.datetime64(row['sku_created']).astype(datetime.datetime))).days
+    date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['sku_created']).astype(datetime.datetime))).days
     if date_diff > 0:
         row['calculated_popularity'] = row['popularity'] + row['median_popularity']*(COLD_START_DECAY_FACTOR ** date_diff)
         row['calculated_popularity_new'] = row['popularity_new'] + row['median_popularity_new'] * (COLD_START_DECAY_FACTOR_NEW ** date_diff)
@@ -474,7 +481,7 @@ def handleColdStart(df):
   final_df = pd.merge(df.astype({'parent_id': int}), result.astype({'product_id': int}), left_on='parent_id',
                       right_on='product_id', how='left')
   # final_df['calculated_popularity'] = final_df.calculated_popularity.fillna(-1)
-  final_df['popularity'] = np.where(final_df.calculated_popularity.notnull(), final_df.calculated_popularity, final_df.popularity)
+  final_df['popularity'] = numpy.where(final_df.calculated_popularity.notnull(), final_df.calculated_popularity, final_df.popularity)
   final_df.drop(['calculated_popularity', 'calculated_popularity_new', 'product_id'], axis=1, inplace=True)
   final_df = final_df.astype({'parent_id' : str})
   return final_df
