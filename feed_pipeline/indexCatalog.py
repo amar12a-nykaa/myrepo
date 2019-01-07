@@ -37,6 +37,7 @@ from generate_user_product_vectors import get_vectors_from_mysql_for_es
 
 NUMBER_OF_THREADS = 20
 RECORD_GROUP_SIZE = 100
+APPLIANCE_MAIN_CATEGORY_ID = "1390"
 
 conn = Utils.mysqlConnection()
 
@@ -118,6 +119,58 @@ class CatalogIndexer:
         "bodywash": "body wash bodywash",
         "face wash": "facewash face wash",
         "facewash": "facewash face wash",
+        "anti acne": "antiacne anti acne",
+        "anti oxidants": "antioxidants anti oxidants",
+        "antiacne": "anti acne antiacne",
+        "antioxidants": "anti oxidants antioxidants",
+        "eye liner": "eyeliner eye liner",
+        "eye shadow": "eyeshadow eye shadow",
+        "eyeliner": "eye liner eyeliner",
+        "eyeshadow": "eye shadow eyeshadow",
+        "foot care": "footcare foot care",
+        "footcare": "foot care footcare",
+        "hair care": "haircare hair care",
+        "hair fall": "hairfall hair fall",
+        "hair spray": "hairspray hair spray",
+        "haircare": "hair care haircare",
+        "hairfall": "hair fall hairfall",
+        "hairspray": "hair spray hairspray",
+        "hand wash": "handwash hand wash",
+        "handwash": "hand wash handwash",
+        "lip balm": "lipbalm lip balm",
+        "lip gloss": "lipgloss lip gloss",
+        "lip liner": "lipliner lip liner",
+        "lip stick": "lipstick lip stick",
+        "lipbalm": "lip balm lipbalm",
+        "lipgloss": "lip gloss lipgloss",
+        "lipliner": "lip liner lipliner",
+        "lipstick": "lip stick lipstick",
+        "maang tikka": "maangtikka maang tikka",
+        "maangtikka": "maang tikka maangtikka",
+        "mouth wash": "mouthwash mouth wash",
+        "mouthwash": "mouth wash mouthwash",
+        "nail polish": "nailpolish nail polish",
+        "nailpolish": "nail polish nailpolish",
+        "night dress": "nightdress night dress",
+        "nightdress": "night dress nightdress",
+        "panty liners": "pantyliners panty liners",
+        "pantyliners": "panty liners pantyliners",
+        "racer back": "racerback racer back",
+        "racerback": "racer back racerback",
+        "shower caps": "showercaps shower caps",
+        "showercaps": "shower caps showercaps",
+        "sleep shirt": "sleepshirt sleep shirt",
+        "sleepshirt": "sleep shirt sleepshirt",
+        "sun screen": "sunscreen sun screen",
+        "sunscreen": "sun screen sunscreen",
+        "super food": "superfood super food",
+        "superfood": "super food superfood",
+        "tooth paste": "toothpaste tooth paste",
+        "toothpaste": "tooth paste toothpaste",
+        "under wired": "underwired under wired",
+        "underwired": "under wired underwired",
+        "weight loss": "weightloss weight loss",
+        "weightloss": "weight loss weightloss",
     }
 
     def print_errors(errors):
@@ -250,7 +303,13 @@ class CatalogIndexer:
                         doc['mrp_freeze'] = pas.get('mrp_freeze')
 
                     if pas.get('expdt') is not None:
-                        doc['expdt'] = pas.get('expdt')
+                        try:
+                            if doc['primary_categories'][0]['l1']['id'] == APPLIANCE_MAIN_CATEGORY_ID:
+                                doc['expdt'] = None
+                            else:
+                                doc['expdt'] = pas.get('expdt')
+                        except:
+                            print("primary_categories key missing for sku: %s" % pas.get('sku'))
 
                     # if bundle, get qty of each product also
                     if doc['type'] == 'bundle':
@@ -463,6 +522,9 @@ class CatalogIndexer:
                     primary_categories = row['primary_categories'].split('|')
                     if primary_categories[0] != "":
                         l1['id'] = primary_categories[0]
+                        # Do not send expiry date in case of appliance category
+                        if l1.get('id') == APPLIANCE_MAIN_CATEGORY_ID:
+                            doc['expiry_date'] = None
                         if category_ids and len(category_ids) == len(category_names):
                             if primary_categories[0] in category_ids:
                                 cat_index = category_ids.index(primary_categories[0])
@@ -702,6 +764,10 @@ class CatalogIndexer:
                 doc['object_type'] = "product"
                 doc['top_reviews'] = row.get('top_reviews', '')
                 doc['review_splitup'] = row.get('review_splitup', '')
+                if doc.get('type') == 'simple' or doc.get('type') == 'configurable':
+                    doc['manufacturer_name'] = row.get('manufacturer_name', '')
+                    doc['manufacturer_address'] = row.get('manufacturer_address', '')
+                    doc['country_of_manufacture'] = row.get('country_of_manufacture')
 
                 for k, v in doc.items():
                     for pattern, _type in CatalogIndexer.field_type_pattens.items():

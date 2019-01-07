@@ -36,6 +36,7 @@ WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 60
 PUNISH_FACTOR=0.7
 BOOST_FACTOR=1.05
+PRODUCT_PUNISH_FACTOR = 0.5
 POPULARITY_DECAY_FACTOR = 0.5
 COLD_START_DECAY_FACTOR = 0.8
 
@@ -45,8 +46,12 @@ WEIGHT_CART_ADDITIONS_NEW = 10
 WEIGHT_REVENUE_NEW = 20
 PUNISH_FACTOR_NEW=1
 BOOST_FACTOR_NEW=1
+PRODUCT_PUNISH_FACTOR_NEW = 1
 POPULARITY_DECAY_FACTOR_NEW = 0.9
 COLD_START_DECAY_FACTOR_NEW = 0.8
+
+BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
+PRODUCT_PUNISH_LIST = [303813,262768,262770,262769]
 
 
 client = Utils.mongoClient()
@@ -75,7 +80,7 @@ def build_parent_child_distribution_map():
   global parent_child_distribution_map
 
   query = """select parent_product_id, product_id, count(distinct nykaa_orderno) as orders from fact_order_detail_new
-              where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 60) and product_id is not null 
+              where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 30) and product_id is not null 
               group by 1,2;"""
   print(query)
   redshift_conn = Utils.redshiftConnection()
@@ -113,7 +118,7 @@ def create_product_attribute():
   return product_attribute
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--back_date_90_days", help="90 days back date in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-90).format('YYYY-MM-DD'))
+parser.add_argument("--back_date_30_days", help="90 days back date in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-30).format('YYYY-MM-DD'))
 parser.add_argument("--startdate", help="startdate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace(days=-30).format('YYYY-MM-DD'))
 parser.add_argument("--enddate", help="enddate in YYYYMMDD format or number of days to add from today i.e -4", type=valid_date, default=arrow.now().replace().format('YYYY-MM-DD'))
 parser.add_argument("--preprocess", help="Only runs the report and prints.", action='store_true')
@@ -132,14 +137,14 @@ argv = vars(parser.parse_args())
 
 debug = argv['debug']
 TABLE = argv['table']
-back_date_90_days_time = arrow.get(argv['back_date_90_days']).datetime
+back_date_30_days_time = arrow.get(argv['back_date_30_days']).datetime
 startdatetime = arrow.get(argv['startdate']).datetime
 enddatetime = arrow.get(argv['enddate']).datetime
 print(startdatetime)
 print(enddatetime)
 platforms = argv["platform"].split(",")
 
-build_product_sales_map(str(back_date_90_days_time))
+build_product_sales_map(str(back_date_30_days_time))
 build_parent_child_distribution_map()
 print("product_sales_map len: %s" % len(product_sales_map))
 
@@ -410,11 +415,19 @@ def applyBoost(df):
 
   #promote nykaa products
   def promote_nykaa_products(row):
-    if row['brand_code'] in ['1937', '13754', '7666', '71596']:
+    if row['brand_code'] in BRAND_PROMOTION_LIST:
       row['popularity'] = row['popularity'] * BOOST_FACTOR
       row['popularity_new'] = row['popularity_new'] * BOOST_FACTOR_NEW
     return row
   temp_df = temp_df.apply(promote_nykaa_products, axis=1)
+
+  #promote indivisual products
+  def punish_products_by_id(row):
+    if row['product_id'] in PRODUCT_PUNISH_LIST:
+      row['popularity'] = row['popularity'] * PRODUCT_PUNISH_FACTOR
+      row['popularity_new'] = row['popularity_new'] * PRODUCT_PUNISH_FACTOR_NEW
+    return row
+  temp_df = temp_df.apply(punish_products_by_id, axis=1)
 
   temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
   temp_df = temp_df.astype({'parent_id' : str})
