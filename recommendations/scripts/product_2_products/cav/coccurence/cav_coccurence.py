@@ -19,9 +19,9 @@ class RecommendationsUtils:
 
     @staticmethod
     def _add_recommendations_in_mysql(cursor, table, rows):
-        values_str = ", ".join(["(%s, %s, %s, %s, %s)" for i in range(len(rows))])
+        values_str = ", ".join(["(%s, %s, %s, %s, %s, %s)" for i in range(len(rows))])
         values = tuple([_i for row in rows for _i in row])
-        insert_recommendations_query = """ INSERT INTO %s(entity_id, entity_type, recommendation_type, algo, recommended_products_json)
+        insert_recommendations_query = """ INSERT INTO %s(catalog_tag_filter, entity_id, entity_type, recommendation_type, algo, recommended_products_json)
             VALUES %s ON DUPLICATE KEY UPDATE recommended_products_json=VALUES(recommended_products_json)
         """ % (table, values_str)
         values = tuple([str(_i) for row in rows for _i in row])
@@ -196,7 +196,7 @@ def prepare_data(files, desktop):
     print('Data preparation done, returning dataframe')
     return df, results
 
-def compute_cav(files, desktop):
+def compute_cav(env, platform, files, desktop):
     df, results = prepare_data(files, desktop)
 
     print("Self joining the dataframe: Computing all the non product to product pairs")
@@ -253,16 +253,16 @@ def compute_cav(files, desktop):
         product_ids_updated.append(product_id)
         simple_similar_products = list(map(lambda e: int(e[0]), sorted(simple_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
         if desktop:
-            rows.append((product_id, 'product', 'viewed', 'coccurence_simple_desktop', json.dumps(simple_similar_products)))
+            rows.append((platform, product_id, 'product', 'viewed', 'coccurence_simple_desktop', json.dumps(simple_similar_products)))
         else:
-            rows.append((product_id, 'product', 'viewed', 'coccurence_simple', json.dumps(simple_similar_products)))
+            rows.append((platform, product_id, 'product', 'viewed', 'coccurence_simple', json.dumps(simple_similar_products)))
         variants = parent_2_children.get(product_id, [])
         for variant in variants:
             product_ids_updated.append(variant)
             if desktop:
-                rows.append((variant, 'product', 'viewed', 'coccurence_simple_desktop', str(simple_similar_products)))
+                rows.append((platform, variant, 'product', 'viewed', 'coccurence_simple_desktop', str(simple_similar_products)))
             else:
-                rows.append((variant, 'product', 'viewed', 'coccurence_simple', str(simple_similar_products)))
+                rows.append((platform, variant, 'product', 'viewed', 'coccurence_simple', str(simple_similar_products)))
 
     print('Adding recommendations for %d products with algo=coccurence_simple in DB' % len(set(product_ids_updated)))
 
@@ -271,16 +271,16 @@ def compute_cav(files, desktop):
         product_ids_updated.append(product_id)
         simple_similar_products = list(map(lambda e: e[0], sorted(simple_similar_products_mrp_cons_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
         if desktop:
-            rows.append((product_id, 'product', 'viewed', 'coccurence_simple_mrp_cons_desktop', str(simple_similar_products)))
+            rows.append((platform, product_id, 'product', 'viewed', 'coccurence_simple_mrp_cons_desktop', str(simple_similar_products)))
         else:
-            rows.append((product_id, 'product', 'viewed', 'coccurence_simple_mrp_cons', str(simple_similar_products)))
+            rows.append((platform, product_id, 'product', 'viewed', 'coccurence_simple_mrp_cons', str(simple_similar_products)))
         variants = parent_2_children.get(product_id, [])
         for variant in variants:
             product_ids_updated.append(variant)
             if desktop:
-                rows.append((variant, 'product', 'viewed', 'coccurence_simple_mrp_cons_desktop', str(simple_similar_products)))
+                rows.append((platform, variant, 'product', 'viewed', 'coccurence_simple_mrp_cons_desktop', str(simple_similar_products)))
             else:
-                rows.append((variant, 'product', 'viewed', 'coccurence_simple_mrp_cons', str(simple_similar_products)))
+                rows.append((platform, variant, 'product', 'viewed', 'coccurence_simple_mrp_cons', str(simple_similar_products)))
 
     print('Adding recommendations for %d products with algo=coccurence_simple_mrp_cons in DB' % len(set(product_ids_updated)))
 
@@ -291,11 +291,13 @@ if __name__ == "__main__":
     parser.add_argument('--desktop', action='store_true')
     parser.add_argument('--files', nargs='+')
     parser.add_argument('--env', required=True)
+    parser.add_argument('--platform', required=True, choices=['nykaa','men'])
 
     argv = vars(parser.parse_args())
     files = argv['files']
     desktop = argv.get('desktop')
     env = argv.get('env')
+    platform = argv.get('platform')
 
     s3 = boto3.client('s3')
 
@@ -305,4 +307,4 @@ if __name__ == "__main__":
     print("Printing Configurations:")
     print(sc.getConf().getAll())
 
-    compute_cav(files, desktop)
+    compute_cav(env, platform, files, desktop)
