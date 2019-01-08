@@ -32,11 +32,7 @@ brand_cat_popularity = defaultdict(lambda : defaultdict(lambda : defaultdict(flo
 NYKAA = "nykaa"
 MEN = "men"
 
-#Connection to 'read-replica' host
-nykaa_replica_db_conn = Utils.nykaaMysqlConnection(force_production=True)
-
 es = EsUtils.get_connection()
-
 
 #WEIGHT_BRAND= [200, 300]
 #WEIGHT_CATEGORY = [0, 200]
@@ -58,21 +54,20 @@ def build_product_popularity_index():
 
 def get_category_details():
   global cat_id_index
-  global nykaa_replica_db_conn
 
-  nykaa_redshift_connection = Utils.redshiftConnection()
   #Category id - name mapping
+  nykaa_redshift_connection = Utils.redshiftConnection()
   query = """select distinct l3_id, l3_name as primary_l3 from product_category_mapping 
               where l1_id not in (194, 7287) and l2_id not in (345, 734, 2058, 2064, 2091, 3962, 652);"""
   results = Utils.fetchResults(nykaa_redshift_connection, query)
   for row in results:
     _id = str(row['l3_id'])
     name = row['primary_l3'].strip()
-
     cat_id_index[_id]['name'] = name
-
   nykaa_redshift_connection.close()
+
   #Category name-url mapping
+  nykaa_replica_db_conn = Utils.nykaaMysqlConnection(force_production=True)
   query = "SELECT DISTINCT category_id, request_path AS url FROM nykaalive1.core_url_rewrite WHERE product_id IS NULL AND category_id IS NOT NULL"
   results = Utils.fetchResults(nykaa_replica_db_conn, query)
   for row in results:
@@ -82,6 +77,7 @@ def get_category_details():
     if _id in cat_id_index:
       cat_id_index[_id]['url'] = url
       cat_id_index[_id]['men_url'] = men_url
+  nykaa_replica_db_conn.close()
 
 def update_category_table(products):
   """
@@ -134,18 +130,13 @@ def update_category_table(products):
 
   Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
-  
-
 def getProducts():
   products = []
   global brand_name_id
   global brand_name_name
-  global nykaa_replica_db_conn
-
-  nykaa_analytics_db_conn = mysql.connector.connect(host='nykaa-analytics.nyk00-int.network', user='analytics',
-                                                    password='P1u8Sxh7kNr', database='analytics')
 
   #Brand id - name mapping
+  nykaa_replica_db_conn = Utils.nykaaMysqlConnection(force_production=True)
   query = """
           select distinct name, id, url, brands_v1 
           FROM(
@@ -174,35 +165,25 @@ def getProducts():
       brand_name_name[brand_lower] = brand_upper
 
       brand_name_id[brand_lower] = {'brand_id': brand_id, 'brand_url': brand_url, 'brand_men_url': brand_men_url, 'brands_v1': brands_v1}
+  nykaa_replica_db_conn.close()
 
-
-  query = "show indexes in analytics.sku_l4"
-  index_on_entity_id__sku_l4 = [ x for x in Utils.mysql_read(query, connection=nykaa_analytics_db_conn) if x['Column_name'] == 'entity_id']
-  assert index_on_entity_id__sku_l4, "Index missing on sku_l4"
-
-  query = "show indexes in analytics.catalog_dump"
-  index_on_entity_id__catalog_dump = [ x for x in Utils.mysql_read(query, connection=nykaa_analytics_db_conn) if x['Column_name'] == 'entity_id']
-  #assert index_on_entity_id__catalog_dump, "Index Missing on catalog_dump"
-
-  print("Fetching products from NYKAA DB..")
-  query = "SELECT sl.entity_id AS simple_id, sl.sku AS simple_sku,\
-           sl.key AS parent_id, sl.key_sku AS parent_sku, sl.l2 AS category_l1, sl.l3 AS category_l2,\
-           sl.l4 AS category_l3, sl.l4_id AS category_l3_id, cd.brand, \
-           cd.is_men \
-           FROM analytics.sku_l4 sl\
-           JOIN analytics.catalog_dump cd ON cd.entity_id=sl.entity_id\
-           WHERE sl.l2 NOT LIKE '%Luxe%'\
-           "
-  results = Utils.fetchResults(nykaa_analytics_db_conn, query)
+  print("Fetching products from DWH")
+  nykaa_redshift_connection = Utils.redshiftConnection()
+  query = """SELECT 
+                ds.product_id AS simple_id, pcm.l3_id AS category_l3_id, ds.brand_name as brand, ds.is_men 
+             FROM dim_sku ds JOIN product_category_mapping pcm ON ds.product_id = pcm.product_id 
+             WHERE ds.is_luxe = 'No' and pcm.l3_id != 0"""
+  results = Utils.fetchResults(nykaa_redshift_connection, query)
   if not results:
-    raise Exception("Could not fetch data from magento databases")
+    raise Exception("Could not fetch data from dwh databases")
   for row in results:
     if row['brand']:
       row['brand'] = row['brand'].replace("’", "'")
     products.append(row)
 
+  nykaa_redshift_connection.close()
+
   print("# products found: %s" % len(products))
-  nykaa_analytics_db_conn.close()
   return products
 
 
