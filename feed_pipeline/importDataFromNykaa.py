@@ -3,6 +3,8 @@ import sys
 import json
 import traceback
 from IPython import embed
+import time
+import timeit
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, MemcacheUtils
 
@@ -28,6 +30,7 @@ class NykaaImporter:
 
   def importAttributes():
     # Import attributes
+    attr_start = timeit.default_timer()
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     query = "SELECT option_id, value FROM eav_attribute_option_value GROUP BY option_id"
     results = Utils.fetchResults(nykaa_mysql_conn, query)
@@ -68,8 +71,12 @@ class NykaaImporter:
         except Exception as e:
           print("[Attribute Import ERROR]problem with %s: %s"%(option_id, str(e)))
     print("==== Imported %s attributes ===="%count)
+    attr_stop = timeit.default_timer()
+    attr_duration = attr_stop - attr_start
+    print("Time taken in importing attributes: %s" % time.strftime("%M min %S seconds", time.gmtime(attr_duration)))
 
   def importBrandCategoryAttributes():
+    cat_imp_start = timeit.default_timer()
     #Import Brand-Category level info like app_sorting, featured_products
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     query = """SELECT cce.entity_id AS category_id, cur.request_path AS category_url, 
@@ -143,8 +150,13 @@ class NykaaImporter:
       except Exception as e:
         print("[Brand-Category Info Import ERROR]problem with %s: %s"%(item['category_id'], str(e)))
     print("==== Imported %s brand-category items ===="%count)
+    cat_imp_stop = timeit.default_timer()
+    cat_imp_duration = cat_imp_stop - cat_imp_start
+    print("Time taken in categories and brands: %s" % time.strftime("%M min %S seconds", time.gmtime(cat_imp_duration)))
+
 
   def importOfferAttributes():
+    offer_imp_start = timeit.default_timer()
     # Import offer attributes: featured_products and app_sorting
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     query = "SELECT entity_id AS offer_id, name, app_sorting, custom_sort, filter_params, filter_values FROM `nykaa_offers`"
@@ -176,8 +188,12 @@ class NykaaImporter:
       except Exception as e:
         print("[Offer Info Import ERROR]problem with %s: %s"%(item['offer_id'], str(e)))
     print("==== Imported %s offer items ===="%count)
+    offer_imp_stop = timeit.default_timer()
+    cat_imp_duration = offer_imp_stop - offer_imp_start
+    print("Time taken to import offers: %s" % time.strftime("%M min %S seconds", time.gmtime(cat_imp_duration)))
 
   def importMetaInformation():
+    meta_info_start = timeit.default_timer()
     # Import category meta information
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     query = """SELECT e.entity_id AS category_id, CONCAT(ccevt.value, ' | Nykaa') AS meta_title, REPLACE(REPLACE(ccetk.value, '\r', ''), '\n', '') AS meta_keywords, 
@@ -200,6 +216,9 @@ class NykaaImporter:
       except Exception as e:
         print("[Category Meta Import ERROR]problem with %s: %s"%(result['category_id'], str(e)))
     print("==== Imported meta information of %s categories ===="%count) 
+    meta_info_stop = timeit.default_timer()
+    meta_info_duration = meta_info_stop - meta_info_start
+    print("Time taken to import meta info: %s" % time.strftime("%M min %S seconds", time.gmtime(meta_info_duration)))
     
 
 if __name__ == "__main__":
