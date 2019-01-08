@@ -448,13 +448,11 @@ def handleColdStart(df):
 
   product_data = pd.merge(temp_df, product_category_mapping, left_on=['parent_id'], right_on=['product_id'])
 
-  def percentile(n, field):
+  def percentile(n):
       def _percentile(x):
           return numpy.percentile(x, n)
-
-      _percentile.__name__ = field
       return _percentile
-  category_popularity = product_data.groupby('l3_id').agg({'popularity': [percentile(95, 'popularity')], 'popularity_new': [percentile(95, 'popularity_new')]}).reset_index()
+  category_popularity = product_data.groupby('l3_id').agg({'popularity': percentile(95), 'popularity_new': percentile(95)}).reset_index()
 
   product_data = pd.merge(product_category_mapping, category_popularity, on='l3_id')
   product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
