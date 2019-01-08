@@ -38,6 +38,8 @@ PUNISH_FACTOR=0.7
 BOOST_FACTOR=1.05
 PRODUCT_PUNISH_FACTOR = 0.5
 POPULARITY_DECAY_FACTOR = 0.5
+POPULARITY_TOTAL_RATIO = 0.1
+POPULARITY_BUCKET_RATIO = 0.9
 COLD_START_DECAY_FACTOR = 0
 
 WEIGHT_VIEWS_NEW = 10
@@ -48,6 +50,8 @@ PUNISH_FACTOR_NEW=0.7
 BOOST_FACTOR_NEW=1.05
 PRODUCT_PUNISH_FACTOR_NEW = 0.5
 POPULARITY_DECAY_FACTOR_NEW = 0.5
+POPULARITY_TOTAL_RATIO_NEW = 0.1
+POPULARITY_BUCKET_RATIO_NEW = 0.9
 COLD_START_DECAY_FACTOR_NEW = 0.9
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
@@ -315,8 +319,8 @@ def calculate_popularity():
   df = df.set_index("parent_id")
 
   a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
-  a['popularity'] = 100 * normalize(0.1 * a['popularity_total'] + 0.9 * a['popularity_bucket'])
-  a['popularity_new'] = 100 * normalize(0.7 * a['popularity_new_total'] + 0.3 * a['popularity_new_bucket'])
+  a['popularity'] = 100 * normalize(POPULARITY_TOTAL_RATIO * a['popularity_total'] + POPULARITY_BUCKET_RATIO * a['popularity_bucket'])
+  a['popularity_new'] = 100 * normalize(POPULARITY_TOTAL_RATIO_NEW * a['popularity_new_total'] + POPULARITY_BUCKET_RATIO_NEW * a['popularity_new_bucket'])
   a.popularity= a.popularity.fillna(0)
   a.popularity_new = a.popularity_new.fillna(0)
 
