@@ -70,7 +70,7 @@ def getCurrentDateTime():
 
 class Worker(threading.Thread):
     def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
-                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300):
+                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter):
         self.q = q
         self.search_engine = search_engine
         self.collection = collection
@@ -82,6 +82,7 @@ class Worker(threading.Thread):
         self.product_2_vector_lsi_100 = product_2_vector_lsi_100 
         self.product_2_vector_lsi_200 = product_2_vector_lsi_200 
         self.product_2_vector_lsi_300 = product_2_vector_lsi_300 
+        self.size_filter = size_filter
 
         super().__init__()
 
@@ -89,7 +90,7 @@ class Worker(threading.Thread):
         while True:
             try:
                 rows = self.q.get(timeout=3)  # 3s timeout
-                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300)
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter)
             except queue.Empty:
                 return
             # do whatever work you have to do on work
@@ -260,6 +261,18 @@ class CatalogIndexer:
                 offers_api_config['product_ids'] = offers_api_config['product_ids'].split(',')
         return offers_api_config
 
+    def getSizeFilterConfig():
+        mysql_conn = Utils.nykaaMysqlConnection()
+        query  = "SELECT plain_value FROM core_variable_value WHERE variable_id = (SELECT variable_id FROM core_variable WHERE CODE = 'enable_disable_flags')"
+        result = Utils.fetchResults(mysql_conn, query)
+        config = None
+        for key, config_value in enumerate(result):
+            if config_value['plain_value']:
+                config = json.loads(config_value['plain_value'])
+                size_filter = config['size_filter']
+
+        return size_filter
+
     def fetch_price_availability(input_docs, pws_fetch_products):
         request_url = "http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get"
         request_data = json.dumps({'products': pws_fetch_products}).encode('utf8')
@@ -353,9 +366,10 @@ class CatalogIndexer:
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
 
-    def indexRecords(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300):
+    def indexRecords(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter):
         input_docs = []
         pws_fetch_products = []
+        size_filter_flag = 0
         # index_start = timeit.default_timer()
         for index, row in enumerate(records):
             try:
@@ -568,6 +582,13 @@ class CatalogIndexer:
 
                     doc['primary_categories'].append({"l1": l1, "l2": l2, "l3": l3})
 
+                size_filter_flag = 0
+                if category_ids:
+                    size_filter_cat_ids = size_filter['category_ids'].split(',')
+                    diff = list(set(category_ids) & set(size_filter_cat_ids))
+                    if len(diff)>0 and size_filter['status'] == '1':
+                        size_filter_flag = 1
+
                 # variant stuff
                 if doc['type'] == 'configurable':
                     variant_type = row['variant_type']
@@ -710,7 +731,7 @@ class CatalogIndexer:
                     doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
 
                 # facets: dynamic fields
-                facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1")]
+                facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1") or (field == 'size_id' and size_filter_flag == 1)]
                 for field in facet_fields:
                     field_prefix = field.rsplit('_', 1)[0]
                     facet_ids = (row[field] or "").split('|') if row[field] else []
@@ -719,7 +740,7 @@ class CatalogIndexer:
                         doc[field_prefix + '_ids'] = facet_ids
                         doc[field_prefix + '_values'] = facet_values
                         facets = []
-                        if field_prefix in ['brand', 'old_brand']:
+                        if field_prefix in ['brand', 'old_brand', 'size']:
                             for i, brand_id in enumerate(facet_ids):
                                 brand_facet = OrderedDict()
                                 brand_facet['id'] = brand_id
@@ -833,7 +854,7 @@ class CatalogIndexer:
         validate_popularity_data_health()
 
         required_fields_from_csv = ['sku', 'parent_sku', 'product_id', 'type_id', 'name', 'description', 'product_url', 'price', 'special_price', 'discount', 'is_in_stock',
-        'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size',
+        'pack_size', 'tag', 'rating', 'rating_num', 'review_count', 'qna_count', 'try_it_on', 'image_url', 'main_image', 'shade_name', 'variant_icon', 'size','size_id',
         'variant_type', 'offer_name', 'offer_id', 'product_expiry', 'created_at', 'category_id', 'category', 'brand_v1', 'brand', 'shop_the_look_product', 'style_divas',
         'visibility', 'gender_v1', 'gender', 'color_v1', 'color', 'concern_v1', 'concern', 'finish_v1', 'finish', 'formulation_v1', 'formulation', 'try_it_on_type',
         'hair_type_v1', 'hair_type', 'benefits_v1', 'benefits', 'skin_tone_v1', 'skin_tone', 'skin_type_v1', 'skin_type', 'coverage_v1', 'coverage', 'preference_v1',
@@ -854,7 +875,7 @@ class CatalogIndexer:
         pws_fetch_products = []
         categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
         offersApiConfig = CatalogIndexer.getOffersApiConfig()
-        
+        size_filter = CatalogIndexer.getSizeFilterConfig()
         product_2_vector_lsi_100 = {}
         product_2_vector_lsi_200 = {}
         product_2_vector_lsi_300 = {}
@@ -900,7 +921,7 @@ class CatalogIndexer:
 
         for _ in range(NUMBER_OF_THREADS):
             Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
-                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300).start()
+                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter).start()
         q.join()
         print("Index Catalog Finished!")
 
