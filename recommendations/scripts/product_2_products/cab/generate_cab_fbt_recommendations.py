@@ -12,8 +12,8 @@ import mysql.connector
 from elasticsearch import helpers, Elasticsearch
 
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType
-from pyspark.sql.functions import udf
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType
+from pyspark.sql.functions import udf, col, desc
 import pyspark.sql.functions as func
 
 #sys.path.append("/home/apis/nykaa")
@@ -121,12 +121,12 @@ class Utils:
                 break
 
             scroll_id = response['_scroll_id']
-            luxe_products += [int(p['_source']['product_id']) for p in response['hits']['hits'] if p["_source"]["is_luxe"]]
-            product_2_mrp.update({int(p["_source"]["product_id"]): p["_source"]["mrp"] for p in response["hits"]["hits"]})
-            child_2_parent.update({int(p["_source"]["product_id"]): int(p["_source"]["parent_id"]) for p in response["hits"]["hits"]})
-            primary_categories.update({int(p["_source"]["product_id"]): p["_source"]["primary_categories"] for p in response["hits"]["hits"]})
+            luxe_products += [int(p['_source']['product_id']) for p in response['hits']['hits'] if p["_source"].get("is_luxe") and p["_source"]["is_luxe"]]
+            product_2_mrp.update({int(p["_source"]["product_id"]): p["_source"]["mrp"] for p in response["hits"]["hits"] if p["_source"].get("mrp")})
+            child_2_parent.update({int(p["_source"]["product_id"]): int(p["_source"]["parent_id"]) for p in response["hits"]["hits"] if p["_source"].get("parent_id")})
+            primary_categories.update({int(p["_source"]["product_id"]): p["_source"]["primary_categories"] for p in response["hits"]["hits"] if p["_source"].get("primary_categories")})
             brand_facets.update({int(p["_source"]["product_id"]): p["_source"].get("brand_facet") for p in response["hits"]["hits"] if p["_source"].get("brand_facet")})
-            sku_2_product_id.update({p["_source"]["sku"]: int(p["_source"]["product_id"]) for p in response["hits"]["hits"]})
+            sku_2_product_id.update({p["_source"]["sku"]: int(p["_source"]["product_id"]) for p in response["hits"]["hits"] if p["_source"].get("sku")})
             product_2_image.update({int(p["_source"]["product_id"]): p['_source']['media'] for p in response['hits']['hits'] if p['_source'].get('media')})
 
         return {'luxe_products': luxe_products, 'product_2_mrp': product_2_mrp, 'child_2_parent': child_2_parent, 'primary_categories': primary_categories, 'brand_facets': brand_facets, 'sku_2_product_id': sku_2_product_id, 'product_2_image': product_2_image}
@@ -161,9 +161,9 @@ class Utils:
                     break
         return rows
 
-def prepare_orders_dataframe(env, start_datetime, limit):
+def prepare_orders_dataframe(env, start_datetime, end_datetime, limit):
     print("Preparing orders data")
-    customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL %s %s" % (" AND order_date >= '%s' " % start_datetime if start_datetime else "", " limit %d" % limit if limit else "")
+    customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL %s %s %s" % (" AND order_date <= '%s' " % end_datetime if end_datetime else "", " AND order_date >= '%s' " % start_datetime if start_datetime else "", " limit %d" % limit if limit else "")
     print(customer_orders_query)
     print('Fetching Data from Redshift')
     rows = Utils.fetchResultsInBatch(Utils.redshiftConnection(env), customer_orders_query, 10000)
@@ -176,6 +176,8 @@ def prepare_orders_dataframe(env, start_datetime, limit):
 
     df = spark.createDataFrame(rows, schema)
     df.printSchema()
+    print('Total number of rows extracted: %d' % df.count())
+    print('Total number of products: %d' % df.select('product_id').distinct().count())
     print('Scrolling ES for results')
     results = Utils.scrollESForResults(env)
     print('Scrolling ES done')
@@ -188,6 +190,8 @@ def prepare_orders_dataframe(env, start_datetime, limit):
     convert_sku_to_product_id_udf = udf(convert_sku_to_product_id, IntegerType())
     print('Converting sku to product_id')
     df = df.withColumn("product_id", convert_sku_to_product_id_udf(df['product_sku'], df['product_id']))
+    print('Total number of rows extracted: %d' % df.count())
+    print('Total number of products: %d' % df.select('product_id').distinct().count())
 
     def convert_to_parent(product_id):
         return child_2_parent.get(product_id, product_id)
@@ -195,14 +199,26 @@ def prepare_orders_dataframe(env, start_datetime, limit):
     convert_to_parent_udf = udf(convert_to_parent, IntegerType())
     print('Converting product_id to parent')
     df = df.withColumn("product_id", convert_to_parent_udf(df['product_id']))
+    
+    print('Total number of rows extracted: %d' % df.count())
+    print('Total number of products: %d' % df.select('product_id').distinct().count())
+
+    print('Dropping na')
     df = df.na.drop()
+    print('Total number of rows extracted: %d' % df.count())
+    print('Total number of products: %d' % df.select('product_id').distinct().count())
     df = df.drop("product_sku")
+
+    print('Selecting distinct(order_id, customer_id, product_id)')
     df = df.select(['order_id', 'customer_id', 'product_id']).distinct()
+    print('Total number of rows extracted: %d' % df.count())
+    print('Total number of products: %d' % df.select('product_id').distinct().count())
+
     print('Data preparation done, returning dataframe')
     return df, results
 
-def compute_fbt(env, start_datetime=None, limit=None):
-    df, results = prepare_orders_dataframe(env, start_datetime, limit)
+def compute_fbt(env, start_datetime=None, end_datetime=None, limit=None):
+    df, results = prepare_orders_dataframe(env, start_datetime, end_datetime, limit)
     df.printSchema()
     product_to_orders_count_df = df.groupBy('product_id').agg(func.countDistinct('order_id')).withColumnRenamed('count(DISTINCT order_id)', 'orders_count').toPandas()
     product_to_orders_count = dict(zip(product_to_orders_count_df.product_id, product_to_orders_count_df.orders_count))
@@ -277,27 +293,41 @@ def compute_fbt(env, start_datetime=None, limit=None):
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
     RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
 
-def compute_cab(env, start_datetime=None, limit=None):
+def compute_cab(env, start_datetime=None, end_datetime=None, limit=None):
     print("Computing CAB")
-    df, results = prepare_orders_dataframe(env, start_datetime, limit)
+    df, results = prepare_orders_dataframe(env, start_datetime, end_datetime, limit)
+    luxe_products_dict = {p:True for p in results['luxe_products']}
+    df = df.select(['product_id', 'customer_id']).distinct()
     df.printSchema()
     print('Preparing product to customers count')
-    product_to_customers_count_df = df.groupBy('product_id').agg(func.countDistinct('customer_id')).withColumnRenamed('count(DISTINCT customer_id)', 'customers_count').toPandas()
+    #product_to_customers_count_df = df.groupBy('product_id').agg(func.countDistinct('customer_id')).withColumnRenamed('count(DISTINCT customer_id)', 'customers_count').toPandas()
+    product_to_customers_count_df = df.groupBy('product_id').count().withColumnRenamed('count', 'customers_count').toPandas()
     product_to_customers_count = dict(zip(product_to_customers_count_df.product_id, product_to_customers_count_df.customers_count))
     print('Doing essential steps in computation')
     df = df.withColumnRenamed('product_id', 'product_id_x').join(df.withColumnRenamed('product_id', 'product_id_y'), on="customer_id", how="inner")
-    df = df.select(['product_id_x', 'product_id_y', 'customer_id']).distinct()
+    #df = df.select(['product_id_x', 'product_id_y', 'customer_id']).distinct()
     df = df[df.product_id_x < df.product_id_y]
     df = df.groupBy(['product_id_x', 'product_id_y']).agg({'customer_id': 'count'})
     df = df.withColumnRenamed("count(customer_id)", 'customers_intersection')
 
     df = df[df.customers_intersection >= 2]
 
+    def is_luxe(product_id):
+        return luxe_products_dict.get(product_id, False)
+
+    is_luxe_udf = udf(is_luxe, BooleanType())
+    print('Is Luxe')
+    df = df.withColumn("is_luxe_x", is_luxe_udf(df['product_id_x']))
+    df = df.withColumn("is_luxe_y", is_luxe_udf(df['product_id_y']))
+    df = df[(((df['is_luxe_x'] == True) & (df['is_luxe_y'] == True)) | ((df['is_luxe_x'] == False) & (df['is_luxe_y'] == False)))]
+
     def compute_union_len(product_id_x, product_id_y, customers_intersection):
         return product_to_customers_count[product_id_x] + product_to_customers_count[product_id_y] - customers_intersection
 
     compute_union_len_udf = udf(compute_union_len, IntegerType())
     df = df.withColumn("customers_union", compute_union_len_udf(df['product_id_x'], df['product_id_y'], df['customers_intersection']))
+
+    #print(product_to_customers_count)
     
     def compute_similarity(customers_intersection, customers_union):
         return customers_intersection/customers_union
@@ -316,6 +346,8 @@ def compute_cab(env, start_datetime=None, limit=None):
     for child, parent in results['child_2_parent'].items():
         parent_2_children[parent].append(child)
 
+    #df.filter((col('product_id_x') == 303851) | (col('product_id_y') == 303851)).sort(col("similarity").desc()).show(500, False)
+    #df.show(20, False)
     print('Total Number of parent products: %d' % len(parent_2_children))
     print('Total Number of child products: %d' % sum([len(variants) for parent, variants in parent_2_children.items()]))
     rows = []
@@ -330,20 +362,23 @@ def compute_cab(env, start_datetime=None, limit=None):
             rows.append((variant, 'product', 'bought', 'coccurence_direct', str(direct_similar_products)))
 
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
+    print('Total number of rows: %d' % len(rows))
     RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--start-datetime')
+    parser.add_argument('--end-datetime')
     parser.add_argument('--limit', type=int)
     parser.add_argument('--env', required=True)
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
     start_datetime = argv.get('start_datetime')
+    end_datetime = argv.get('end_datetime')
     limit = argv.get('limit')
     env = argv.get('env')
-    compute_cab(env, start_datetime, limit)
-    compute_fbt(env, start_datetime, limit)
+    compute_cab(env, start_datetime, end_datetime, limit)
+    compute_fbt(env, start_datetime, end_datetime, limit)
 
