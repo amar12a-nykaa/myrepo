@@ -28,6 +28,7 @@ from loopcounter import LoopCounter
 from esutils import EsUtils
 from apiutils import ApiUtils
 from idutils import createId
+from categoryutils import getVariants
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils, MemcacheUtils
@@ -55,151 +56,6 @@ MIN_COUNTS = {
   "category_facet": 600,
 }
 Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
-
-multicategoryList = {
-    "3161": {"variant": ["Aria Leya"], "name": "Aria + Leya"},
-    "1612": {"variant": ["Arthritis", "Osteoporosis"], "name": "Arthritis & Osteoporosis"},
-    "1466": {"variant": ["Badges", "Clothing Pins"], "name": "Badges and Clothing Pins"},
-    "4387": {"variant": ["Bags", "Wallets"], "name": "Bags and Wallets"},
-    "1311": {"variant": ["Bath Gels", "Shower Gels"], "name": "Bath / Shower Gels"},
-    "232": {"variant": ["BB Cream", "CC Cream"], "name": "BB & CC Cream"},
-    "2086": {"variant": ["Beard Care", "Moustache Care"], "name": "Beard & Moustache Care"},
-    "2604": {"variant": ["Beard Care", "Moustache Care"], "name": "Beard & Moustache Care"},
-    "4059": {"variant": ["Beard Trimming", "Beard Shaving"], "name": "Beard Trimming & Shaving"},
-    "3627": {"variant": ["Blankets", "Comforters"], "name": "Blankets & Comforters"},
-    "1422": {"variant": ["Body Mist", "Body Spray"], "name": "Body Mist/Spray"},
-    "1644": {"variant": ["Body Mist", "Body Spray"], "name": "Body Mist/Spray"},
-    "970": {"variant": ["Body Mist", "Body Spray"], "name": "Body Mist/Spray"},
-    "406": {"variant": ["Body Mist", "Body Splashes"], "name": "Body mists and splashes"},
-    "1386": {"variant": ["Body Scrubbers", "Body Brushes"], "name": "Body Scrubbers & Brushes"},
-    "3452": {"variant": ["Body Wrap", "Body Envelopment"], "name": "Body Wrap/ Envelopment"},
-    "6925": {"variant": ["Bodysuits", "Rompers"], "name": "Bodysuits & Rompers"},
-    "6931": {"variant": ["Bodysuits", "Rompers"], "name": "Bodysuits & Rompers"},
-    "1607": {"variant": ["Bones", "Joints"], "name": "Bones & Joints"},
-    "3652": {"variant": ["Bowls", "Platters"], "name": "Bowls & Platters"},
-    "3097": {"variant": ["Bra", "Panty"], "name": "Bra / Panty"},
-    "2023": {"variant": ["Brain", "Memory"], "name": "Brain & Memory"},
-    "3109": {"variant": ["Bridal", "Sexy"], "name": "Bridal / Sexy"},
-    "3083": {"variant": ["Brief", "Hipster"], "name": "Brief / Hipster"},
-    "3101": {"variant": ["Camis", "Tops"], "name": "Camis / Tops"},
-    "3662": {"variant": ["Candle Holders", "Votives"], "name": "Candle Holders & Votives"},
-    "3628": {"variant": ["Candle Holders", "Votives"], "name": "Candle Holders & Votives"},
-    "4525": {"variant": ["Capris", "Leggings"], "name": "Capris/Leggings"},
-    "4377": {"variant": ["Cards", "Envelopes"], "name": "Cards and Envelopes"},
-    "563": {"variant": ["Chains", "Waist Chains"], "name": "Chains and Waist Chains"},
-    "1324": {"variant": ["Colognes", "Perfumes"], "name": "Colognes & Perfumes (EDT & EDP)"},
-    "7337": {"variant": ["Colognes", "Perfumes"], "name": "Colognes and Perfumes (EDT and EDP)"},
-    "430":  {"variant": ["Cotton Buds", "Cotton Balls"], "name": "Cotton Buds & Balls"},
-    "1647": {"variant": ["Cotton Buds", "Cotton Balls"], "name": "Cotton Buds and Balls"},
-    "1675": {"variant": ["Cotton Buds", "Cotton Balls", "Cotton Wipes"], "name": "Cotton Buds, Balls & Wipes"},
-    "1815": {"variant": ["Crabtree", "Evelyn"], "name": "Crabtree & Evelyn"},
-    "1676": {"variant": ["Creams", "Lotions", "Oils"], "name": "Creams, Lotions & Oils"},
-    "1411": {"variant": ["Curling Irons", "Stylers"], "name": "Curling Irons/Stylers"},
-    "346": {"variant": ["Curly", "Wavy"], "name": "Curly & Wavy"},
-    "3631": {"variant": ["Cushions", "Covers"], "name": "Cushions & Covers"},
-    "2078": {"variant": ["Dark Circles", "Wrinkles"], "name": "Dark Circles / Wrinkles"},
-    "536": {"variant": ["Dark Circles", "Wrinkles"], "name": "Dark Circles/Wrinkles"},
-    "289": {"variant": ["Day Cream", "Night Cream"], "name": "Day/Night Cream"},
-    "3069": {"variant": ["Demi", "Balconette"], "name": "Demi / Balconette"},
-    "377": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-Ons"},
-    "971": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-Ons"},
-    "979": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-ons"},
-    "1323": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-ons"},
-    "1650": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-Ons"},
-    "7336": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-ons"},
-    "2046": {"variant": ["Dry Hair", "Frizzy Hair"], "name": "Dry & Frizzy Hair"},
-    "573": {"variant": ["Dry Hair", "Frizzy Hair"], "name": "Dry & Frizzy Hair"},
-    "362": {"variant": ["Dryers", "Stylers"], "name": "Dryers & Stylers"},
-    "967": {"variant": ["EDT", "Colognes"], "name": "EDT/Colognes"},
-    "7562": {"variant": ["Face Care", "Body Care"], "name": "Face & Body Care"},
-    "290": {"variant": ["Floss", "Tongue Cleaners"], "name": "Floss & Tongue Cleaners"},
-    "331": {"variant": ["Gels", "Waxes"], "name": "Gels & Waxes"},
-    "3626": {"variant": ["Gift Bags", "Gift Boxes"], "name": "Gift Bags & Boxes"},
-    "4386": {"variant": ["Gift Bags", "Gift Boxes"], "name": "Gift Bags and Boxes"},
-    "2041": {"variant": ["Hair Creams", "Hair Masks"], "name": "Hair Creams & Masks"},
-    "793":  {"variant": ["Hair Gels", "Hair Wax"], "name": "Hair Gels & Wax"},
-    "5949": {"variant": ["Hair Tools", "Hair Accessories"], "name": "Hair Tools & Accessories"},
-    "1608": {"variant": ["Hair", "Skin", "Nails"], "name": "Hair, Skin & Nails"},
-    "1214": {"variant": ["Hairfall", "Thinning"], "name": "Hairfall & Thinning"},
-    "583": {"variant": ["Hand Creams", "Foot Creams"], "name": "Hand & Foot Creams"},
-    "1318": {"variant": ["Hand Care", "Foot Care"], "name": "Hand and Foot Care"},
-    "3671": {"variant": ["Idols", "Murti"], "name": "Idols / Murti"},
-    "4432": {"variant": ["Joker", "Witch"], "name": "Joker & Witch"},
-    "3737": {"variant": ["Jugs", "Carafe"], "name": "Jugs & Carafe"},
-    "3094": {"variant": ["Leggings", "Pants"], "name": "Leggings / Pants"},
-    "6909": {"variant": ["Lens Solution", "Lens Accessories"], "name": "Lens Solution & Accessories"},
-    "396":  {"variant": ["Loofahs", "Sponges"], "name": "Loofahs & Sponges"},
-    "371":  {"variant": ["Lotions", "Creams"], "name": "Lotions & Creams"},
-    "691":  {"variant": ["Lotions", "Creams"], "name": "Lotions & Creams"},
-    "4397": {"variant": ["Makeup Pouches", "Vanity Kits"], "name": "Makeup Pouches and Vanity Kits"},
-    "5987": {"variant": ["Manicure", "Pedicure"], "name": "Manicure & Pedicure"},
-    "3277": {"variant": ["Manicure Kits", "Pedicure Kits"], "name": "Manicure & Pedicure Kits"},
-    "688": {"variant": ["Manicure Kits", "Pedicure Kits"], "name": "Manicure & Pedicure Kits"},
-    "529": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
-    "1303": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
-    "227": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
-    "7309": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
-    "2075": {"variant": ["Massage Oil", "Body Oil"], "name": "Massage / Body Oil"},
-    "554": {"variant": ["Massage Oils", "Carrier Oils"], "name": "Massage / Carrier Oils"},
-    "1315": {"variant": ["Massage Oils", "Aromatherapy Oils"], "name": "Massage & Aromatherapy Oils"},
-    "1516": {"variant": ["Massage Gels", "Massage Creams"], "name": "Massage Gels & Creams"},
-    "3656": {"variant": ["Mugs", "Cups"], "name": "Mugs & Cups"},
-    "4376": {"variant": ["Notebooks", "Notepads", "Folders"], "name": "Notebooks, Notepads and Folders"},
-    "4527": {"variant": ["Panties", "Girl Shorts"], "name": "Panties/Girl Shorts"},
-    "3077": {"variant": ["Pasties", "Stick-ons"], "name": "Pasties / Stick-ons"},
-    "974": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
-    "962": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
-    "375": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
-    "3568": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
-    "1322": {"variant": ["Perfumes"], "name": "Perfumes (EDT/EDP)"},
-    "1290": {"variant": ["Pre Shaves", "Post Shaves"], "name": "Pre & Post Shaves"},
-    "1410": {"variant": ["Pre Shaves", "Post Shaves"], "name": "Pre & Post Shaves"},
-    "7292": {"variant": ["Pre Shaves", "Post Shaves"], "name": "Pre & Post Shaves"},
-    "4412": {"variant": ["Ray", "Dale"], "name": "Ray & Dale"},
-    "1287": {"variant": ["Razors", "Cartridges"], "name": "Razors & Cartridges"},
-    "1398": {"variant": ["Razors", "Cartridges"], "name": "Razors & Cartridges"},
-    "7289": {"variant": ["Razors", "Cartridges"], "name": "Razors & Cartridges"},
-    "363": {"variant": ["Rollers", "Curlers"], "name": "Rollers & Curlers"},
-    "2478": {"variant": ["Salon", "Spa"], "name": "Salon/Spa"},
-    "3115": {"variant": ["Sarongs", "Cover-ups"], "name": "Sarongs & Cover-ups"},
-    "4372": {"variant": ["Scarves", "Stoles"], "name": "Scarves and Stoles"},
-    "369": {"variant": ["Scrubs", "Exfoliants"], "name": "Scrubs & Exfoliants"},
-    "530": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
-    "1304": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
-    "282": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
-    "7310": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
-    "6926": {"variant": ["Sets", "Suits"], "name": "Sets & Suits"},
-    "6932": {"variant": ["Sets", "Suits"], "name": "Sets & Suits"},
-    "7138": {"variant": ["Shaping Camis", "Shaping Slips"], "name": "Shaping Camis & Slips"},
-    "1288": {"variant": ["Shavers", "Trimmers"], "name": "Shavers & Trimmers"},
-    "2085": {"variant": ["Shavers", "Trimmers"], "name": "Shavers & Trimmers"},
-    "7290": {"variant": ["Shavers", "Trimmers"], "name": "Shavers & Trimmers"},
-    "800": {"variant": ["Shavers", "Trimmers"], "name": "Shavers & Trimmers"},
-    "39": {"variant": ["Shaving", "Hair Removal"], "name": "Shaving & Hair Removal"},
-    "1553": {"variant": ["Shaving Creams", "Shaving Foams", "Shaving Gels"], "name": "Shaving Cream, Foams & Gels"},
-    "1289": {"variant": ["Shaving Creams", "Shaving Foams", "Shaving Gels"], "name": "Shaving Creams, Foams & Gels"},
-    "7291": {"variant": ["Shaving Creams", "Shaving Foams", "Shaving Gels"], "name": "Shaving Creams, Foams & Gels"},
-    "1484": {"variant": ["Shopping Bags", "Shopping Totes"], "name": "Shopping Bags and Totes"},
-    "368": {"variant": ["Shower Gels", "Body Wash"], "name": "Shower Gels & Body Wash"},
-    "4526": {"variant": ["Slips", "Skirts"], "name": "Slips/Skirts"},
-    "271": {"variant": ["Sponges", "Applicators"], "name": "Sponges & Applicators"},
-    "3455": {"variant": ["Steam", "Bath"], "name": "Steam / Bath"},
-    "3079": {"variant": ["Stockings", "Garters"], "name": "Stockings / Garters"},
-    "3668": {"variant": ["Storage", "Organization"], "name": "Storage & Organization"},
-    "6933": {"variant": ["T-Shirts", "Shirts"], "name": "T-Shirts & Shirts"},
-    "3654": {"variant": ["Table Mats", "Table Runners"], "name": "Table Mats & Runners"},
-    "4528": {"variant": ["Tanks", "Camis"], "name": "Tanks & Camis"},
-    "3092": {"variant": ["Tanks", "Tees"], "name": "Tanks & Tees"},
-    "746": {"variant": ["Teeth Care", "Dental Care"], "name": "Teeth & Dental Care"},
-    "7466": {"variant": ["Tissue Boxes", "Handkerchiefs"], "name": "Tissue Boxes & Handkerchiefs"},
-    "223": {"variant": ["Toners", "Astringents"], "name": "Toners & Astringents"},
-    "6927": {"variant": ["Tops", "T-Shirts"], "name": "Tops & T-Shirts"},
-    "1481": {"variant": ["Travel Bags", "Backpacks"], "name": "Travel Bags and Backpacks"},
-    "4524": {"variant": ["Tummy", "Waist Cinchers"], "name": "Tummy And Waist Cinchers"},
-    "3650": {"variant": ["Wall Art", "Wall Mirrors"], "name": "Wall Art & Mirrors"},
-    "3658": {"variant": ["Wine Gift Boxes", "Wine Holders"], "name": "Wine Gift Boxes & Holders"},
-    "3105": {"variant": ["Wraps", "Gowns"], "name": "Wraps / Gowns"}
-  }
 
 brandLandingMap = {"herm" : "https://www.nykaa.com/hermes?ptype=lst&id=7917"}
 
@@ -432,7 +288,6 @@ def index_brands(collection, searchengine):
   index_docs(searchengine, docs, collection)
 
 def index_categories(collection, searchengine):
-  global multicategoryList
 
   def getCategoryDoc(row, variant):
     category_url = row['url']
@@ -472,8 +327,9 @@ def index_categories(collection, searchengine):
       continue
     prev_cat = row['category_name']
 
-    if row['category_id'] in multicategoryList:
-      for variant in multicategoryList[row['category_id']]['variant']:
+    variants = getVariants(row['category_id'])
+    if variants:
+      for variant in variants:
         categoryDoc = getCategoryDoc(row, variant)
         docs.append(categoryDoc)
     else:
