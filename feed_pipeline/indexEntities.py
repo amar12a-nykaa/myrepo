@@ -150,6 +150,7 @@ class EntityIndexer:
       query = """select eov.value as name, eov.option_id as filter_id from eav_attribute_option eo join eav_attribute_option_value eov
                     on eo.option_id = eov.option_id and eov.store_id = 0 where attribute_id = %s"""%id
       results = Utils.fetchResults(mysql_conn, query)
+      mysql_conn.close()
       ctr = LoopCounter(name='%s Indexing' % filter)
       docs = []
       for row in results:
@@ -172,6 +173,7 @@ class EntityIndexer:
         print(row['name'], ctr.count)
 
       EsUtils.indexDocs(docs, collection)
+
 
   def indexEntities(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False, index_brands_arg=False,index_filters_arg=False, index_all=False):
     index = None
@@ -200,12 +202,12 @@ class EntityIndexer:
       index_client.create(index, schema)
       print("Creating index: %s" % index)
 
+      if index_filters_arg:
+        EntityIndexer.index_filters(index)
       if index_categories_arg:
         EntityIndexer.index_categories(index)
       if index_brands_arg:
         EntityIndexer.index_brands(index)
-      if index_filters_arg:
-        EntityIndexer.index_filters(index)
 
     if swap:
       print("Swapping Index")
