@@ -72,13 +72,13 @@ class NykaaImporter:
   def importBrandCategoryAttributes():
     #Import Brand-Category level info like app_sorting, featured_products
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
-    query = 'SHOW column FROM category_information'
+    query = 'SHOW columns FROM category_information'
     results = Utils.fetchResults(nykaa_mysql_conn, query)
     magento_fields = [result['Field'] for result in results]
 
 
     gludo_mysql_conn = Utils.mysqlConnection()
-    query = 'SHOW column FROM brand_category_information'
+    query = 'SHOW columns FROM brand_category_information'
     results = Utils.fetchResults(gludo_mysql_conn, query)
     gludo_fields = [result['Field'] for result in results]
 
