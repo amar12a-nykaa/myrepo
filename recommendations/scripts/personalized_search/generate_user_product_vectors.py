@@ -10,8 +10,23 @@ import json
 from gensim import corpora, similarities
 from gensim import models, matutils
 
-#import sys
-#sys.path.append("/home/apis/nykaa")
+import traceback
+import psycopg2
+import psycopg2
+from collections import defaultdict
+from contextlib import closing
+import mysql.connector
+from elasticsearch import helpers, Elasticsearch
+
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType
+from pyspark.sql.functions import udf, col, desc
+import pyspark.sql.functions as func
+import sys
+sys.path.append("/home/hadoop/")
+import test
+
+#test.print_cool()
 #from pas.v2.utils import Utils
 #sys.path.append("/home/ubuntu/nykaa_scripts/utils")
 #from gensimutils import GensimUtils
@@ -117,9 +132,9 @@ class Utils:
                     "query": { "match_all": {} },
                     "_source": ["product_id", "is_luxe", "mrp", "parent_id", "primary_categories", "brand_facet", "sku", "media"]
                 }
-                response = es_conn.search(index='livecore', body=query, scroll='2m')
+                response = es_conn.search(index='livecore', body=query, scroll='5m')
             else:
-                response = es_conn.scroll(scroll_id=scroll_id, scroll='2m')
+                response = es_conn.scroll(scroll_id=scroll_id, scroll='5m')
 
             if not response['hits']['hits']:
                 break
@@ -180,15 +195,15 @@ def add_embedding_vectors_in_mysql(db, table, rows):
         _add_embedding_vectors_in_mysql(cursor, table, rows[i:i+500]) 
         db.commit()
 
-def get_vectors_from_mysql_for_es(algo, sku=True):
+def get_vectors_from_mysql_for_es(env, algo, sku=True):
     print("Getting vectors from mysql for es")
     query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='%s'" % algo
-    rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 1000)
+    rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(env), query, 1000)
     print("Total number of products from mysql: %d" % len(rows))
     embedding_vector_field_name = 'embedding_vector_%s' % algo
     if not sku:
         return [{'product_id': str(row[0]), embedding_vector_field_name: json.loads(row[1])} for row in rows]
-    product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
+    product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults(env)['sku_2_product_id'].items()}
     docs = []
     for row in rows:
         if product_id_2_sku.get(row[0]):
@@ -210,13 +225,17 @@ if __name__ == '__main__':
     parser.add_argument('--store-in-db', action='store_true')
     parser.add_argument('--add-product-children', action='store_true')
     parser.add_argument('--add-in-es', action='store_true')
+    parser.add_argument('--env', required=True)
+    parser.add_argument('--limit', type=int, required=True)
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
     algo = argv['algo']
+    env = argv['env']
+    limit = argv.get('limit', -1)
 
     if argv['add_vectors_from_mysql_to_es']:
-        docs = get_vectors_from_mysql_for_es(algo)
+        docs = get_vectors_from_mysql_for_es(env, algo)
         for i in range(0, len(docs), 1000):
             Utils.updateESCatalog(docs[i:i+1000])
         exit()
@@ -237,8 +256,13 @@ if __name__ == '__main__':
     user_vectors = {}
 
     norm_model = models.NormModel()
-    for user_id, product_ids_bow in user_corpus_dict.items():
-        user_vectors[user_id] = matutils.unitvec(matutils.sparse2full(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)).tolist() #GensimUtils.generate_complete_vectors(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)
+    if limit > 0:
+        for i, (user_id, product_ids_bow) in enumerate(list(user_corpus_dict.items())):
+            if i < limit:
+                user_vectors[user_id] = matutils.unitvec(matutils.sparse2full(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)).tolist() #GensimUtils.generate_complete_vectors(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)
+    else:
+        for user_id, product_ids_bow in user_corpus_dict.items():
+            user_vectors[user_id] = matutils.unitvec(matutils.sparse2full(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)).tolist() #GensimUtils.generate_complete_vectors(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)
 
     product_ids = list(set([product_tuple[0] for products_bow in user_corpus_dict.values() for product_tuple in products_bow]))
 
@@ -248,7 +272,7 @@ if __name__ == '__main__':
         product_vectors[str(product_id)] = matutils.unitvec(matutils.sparse2full(user_lsi[[[product_id, 1]]], vector_len)).tolist() #GensimUtils.generate_complete_vectors(user_lsi[[[product_id, 1]]], vector_len)
 
     if add_product_children:
-        child_2_parent = Utils.scrollESForResults()['child_2_parent']
+        child_2_parent = Utils.scrollESForResults(env)['child_2_parent']
         for child_id, parent_id in child_2_parent.items():
             if product_vectors.get(str(parent_id)):
                 product_vectors[str(child_id)] = product_vectors[str(parent_id)]
@@ -270,11 +294,11 @@ if __name__ == '__main__':
         for product_id, vector in product_vectors.items():
             rows.append((product_id, 'product', algo, json.dumps(vector)))
 
-        add_embedding_vectors_in_mysql(Utils.mysqlConnection('w'), 'embedding_vectors', rows)
+        add_embedding_vectors_in_mysql(Utils.mysqlConnection(env), 'embedding_vectors', rows)
 
     if add_in_es:
         print("Adding results in ES")
-        product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults()['sku_2_product_id'].items()}
+        product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults(env)['sku_2_product_id'].items()}
 
         docs = []
         embedding_vector_field_name = "embedding_vector_" % algo
