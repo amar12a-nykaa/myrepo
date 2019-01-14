@@ -16,6 +16,7 @@ from pas.v2.utils import Utils
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
+from idutils import strip_accents
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 ensure_mongo_indices_now()
@@ -155,6 +156,7 @@ def getProducts():
   results = Utils.fetchResults(nykaa_replica_db_conn, query)
   for brand in results:
     brand_name = brand['name'].replace("’", "'")
+    brand_name = strip_accents(brand_name)
     brand_id = brand['id']
     brand_url = "http://www.nykaa.com/" + brand['url']
     brand_men_url = "http://www.nykaaman.com/" + brand['url']
@@ -172,13 +174,14 @@ def getProducts():
   query = """SELECT 
                 ds.product_id AS simple_id, pcm.l3_id AS category_l3_id, ds.brand_name as brand, ds.is_men 
              FROM dim_sku ds JOIN product_category_mapping pcm ON ds.product_id = pcm.product_id 
-             WHERE ds.is_luxe = 'No' and pcm.l3_id != 0"""
+             WHERE pcm.l3_id != 0"""
   results = Utils.fetchResults(nykaa_redshift_connection, query)
   if not results:
     raise Exception("Could not fetch data from dwh databases")
   for row in results:
     if row['brand']:
       row['brand'] = row['brand'].replace("’", "'")
+      row['brand'] = strip_accents(row['brand'])
     products.append(row)
 
   nykaa_redshift_connection.close()

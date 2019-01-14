@@ -875,7 +875,9 @@ class CatalogIndexer:
         pws_fetch_products = []
         categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
         offersApiConfig = CatalogIndexer.getOffersApiConfig()
+
         size_filter = CatalogIndexer.getSizeFilterConfig()
+
         product_2_vector_lsi_100 = {}
         product_2_vector_lsi_200 = {}
         product_2_vector_lsi_300 = {}
