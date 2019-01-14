@@ -107,7 +107,7 @@ class NykaaImporter:
 
     extra_fields_query = ''
     for extra_field in extra_fields:
-      extra_fields_query += extra_field + ','
+      extra_fields_query += 'ci.' + extra_field + ','
 
     query = """SELECT cce.entity_id AS category_id, cur.request_path AS category_url, 
             ci.app_sorting, ci.custom_sort, ci.art_banner_image, ci.art_banner_video, ci.art_banner_video_image, 
