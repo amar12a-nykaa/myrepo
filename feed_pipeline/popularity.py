@@ -484,6 +484,7 @@ def handleColdStart(df):
                       right_on='product_id', how='left')
   # final_df['calculated_popularity'] = final_df.calculated_popularity.fillna(-1)
   final_df['popularity'] = numpy.where(final_df.calculated_popularity.notnull(), final_df.calculated_popularity, final_df.popularity)
+  final_df['popularity_new'] = numpy.where(final_df.calculated_popularity_new.notnull(), final_df.calculated_popularity_new, final_df.popularity_new)
   final_df.drop(['calculated_popularity', 'calculated_popularity_new', 'product_id'], axis=1, inplace=True)
   final_df = final_df.astype({'parent_id' : str})
   return final_df
