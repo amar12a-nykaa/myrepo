@@ -89,6 +89,9 @@ class NykaaImporter:
       'font_color', 'art_title', 'art_content', 'art_url', 'art_link_text', 'child_categories', 'art_pos',
       'android_landing_url', 'ios_landing_url', 'tip_tile', 'desktop_tip_tile']
 
+    extra_fields = [value for value in extra_fields if value not in field_list]
+    field_list.extend(extra_fields)
+
     fields = ''
     values = ''
     on_duplicate_values = ''
@@ -105,9 +108,6 @@ class NykaaImporter:
     extra_fields_query = ''
     for extra_field in extra_fields:
       extra_fields_query += extra_field + ','
-
-    if len(extra_fields_query)>1:
-      extra_fields_query = extra_fields_query[:-1]
 
     query = """SELECT cce.entity_id AS category_id, cur.request_path AS category_url, 
             ci.app_sorting, ci.custom_sort, ci.art_banner_image, ci.art_banner_video, ci.art_banner_video_image, 
