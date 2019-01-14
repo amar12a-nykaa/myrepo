@@ -150,7 +150,6 @@ class EntityIndexer:
       query = """select eov.value as name, eov.option_id as filter_id from eav_attribute_option eo join eav_attribute_option_value eov
                     on eo.option_id = eov.option_id and eov.store_id = 0 where attribute_id = %s"""%id
       results = Utils.fetchResults(mysql_conn, query)
-      mysql_conn.close()
       ctr = LoopCounter(name='%s Indexing' % filter)
       docs = []
       for row in results:

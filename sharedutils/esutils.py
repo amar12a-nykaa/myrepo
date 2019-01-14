@@ -39,6 +39,13 @@ index_alias_config = {
       "config" : "entity",
       "unique_field" : "_id",
       "type" : "entity"
+    },
+  "guide":
+    {
+      "collections": ['guide_yin', 'guide_yang'],
+      "config": "guide",
+      "unique_field": "_id",
+      "type": "entity"
     }
 }
 
@@ -74,6 +81,10 @@ class EsUtils:
                 es.indices.put_alias(index= index, name = alias)
               if index in ['entity_yin', 'entity_yang']:
                 schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/entity_schema.json'))
+                es.indices.create(index = index, body = schema)
+                es.indices.put_alias(index= index, name = alias)
+              if index in ['guide_yin', 'guide_yang']:
+                schema = json.load(open('/home/shweta/nykaa/nykaa_scripts/feed_pipeline/guide_schema.json'))
                 es.indices.create(index = index, body = schema)
                 es.indices.put_alias(index= index, name = alias)
             else:

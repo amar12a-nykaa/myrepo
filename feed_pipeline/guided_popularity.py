@@ -1,15 +1,15 @@
 import argparse
 import sys
 import pandas as pd
+import json
+import os
 
-sys.path.append("/home/shweta/nykaa/fresh_nykaa_apis")
+sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
+sys.path.append('/nykaa/scripts/sharedutils/')
+from esutils import EsUtils
 
 FREQUENCY_THRESHOLD = 3
-
-def insert_guides_in_es(df):
-    pass
-
 
 def process_guides(filename='guide.csv'):
     df = pd.read_csv(filename, encoding="ISO-8859-1")
@@ -63,8 +63,54 @@ def process_guides(filename='guide.csv'):
 
 
 def get_entities(query):
+    def iskdiffhelper(string, pattern, m, n, dp):
+        if dp[m][n] != -1:
+            return dp[m][n]
+
+        if n == 0:
+            dp[m][n] = m
+            return m
+
+        if m == 0:
+            dp[m][n] = 0
+            return 0
+
+        minimum = min(iskdiffhelper(string, pattern, m - 1, n, dp) + 1,
+                      iskdiffhelper(string, pattern, m, n - 1, dp) + 1)
+        if string[n - 1] == pattern[m - 1]:
+            minimum = min(minimum, iskdiffhelper(string, pattern, m - 1, n - 1, dp))
+        else:
+            minimum = min(minimum, iskdiffhelper(string, pattern, m - 1, n - 1, dp) + 1)
+
+        dp[m][n] = minimum
+        return dp[m][n]
+
+    def iskdiff(string, pattern, k):
+        m = len(pattern)
+        n = len(string)
+
+        dp = [[-1 for x in range(n + 1)] for y in range(m + 1)]
+        for x in range(n):
+            sol = iskdiffhelper(string, pattern, m, n - x, dp)
+            if sol <= k:
+                return True
+
+        return False
+
+    def fuzzylen(str_len):
+        # fuzziness
+        if str_len > 5:
+            k = 2
+        elif str_len >= 3:
+            k = 1
+        else:
+            k = 0
+
+        return k
+
     query = query.lower()
-    query_formatted = "".join(query.split())
+    query_formatted = " ".join(query.split())
+    query_formatted += " "
     result = {}
 
     querydsl = {}
@@ -93,9 +139,11 @@ def get_entities(query):
             entity_names_list = doc['entity_synonyms']
         entity_names_list.insert(0, doc['entity'])
         for entity_name_orig in entity_names_list:
-            entity_name = "".join(entity_name_orig.split())
-        if entity_name.lower() in query_formatted:
-            # take the longest matching entity for each type
+            entity_name = " ".join(entity_name_orig.split())
+        entity_name += " "
+        #use k-diff to drop
+        # print("%s %s %s"%(query_formatted, entity_name.lower(), fuzzylen(len(entity_name))))
+        if iskdiff(query_formatted, entity_name.lower(), fuzzylen(len(entity_name))):
             if entity_type in result and len(entity_name) < len(result[entity_type]['entity']):
                 continue
             result[entity_type] = {
@@ -148,21 +196,62 @@ def get_filters():
     return filters
 
 
+def insert_guides_in_es(guides, collection):
+    guides.rename(columns={'index': 'rank', 'filter_name': 'type', 'filter_id': 'entity_id', 'keyword': 'entity',
+                           'filter_value': 'entity_value'}, inplace=True)
+    guides['_id'] = guides.index
+    documents = guides.to_dict(orient='records')
+    print(documents[:10])
+    document_chunks = [documents[i:i + 100] for i in range(0, len(documents), 100)]
+    for docs in document_chunks:
+        EsUtils.indexDocs(docs, collection)
+
+def index_guides(collection, active, inactive, swap, filename):
+    print('Starting Processing')
+    if collection:
+        index = collection
+    elif active:
+        index = EsUtils.get_active_inactive_indexes('guide')['active_index']
+    elif inactive:
+        index = EsUtils.get_active_inactive_indexes('guide')['inactive_index']
+    else:
+        index = None
+
+    if not index:
+        return
+
+    index_client = EsUtils.get_index_client()
+    if index_client.exists(index):
+        print("Deleting index: %s" % index)
+        index_client.delete(index)
+    schema = json.load(open(os.path.join(os.path.dirname(__file__), 'guide_schema.json')))
+    index_client.create(index, schema)
+    print("Creating index: %s" % index)
+
+    guides = process_guides(filename)
+    filters = get_filters()
+    guides = pd.merge(guides, filters, on=['filter_name', 'filter_value'])
+    insert_guides_in_es(guides, index)
+
+    if swap:
+      print("Swapping Index")
+      indexes = EsUtils.get_active_inactive_indexes('guide')
+      EsUtils.switch_index_alias('guide', indexes['active_index'], indexes['inactive_index'])
+
+    print("Done Processing")
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Argument parser for feedback result')
     parser.add_argument('--filename', '-f', type=str, default='guide.csv')
 
-    # collection_state = parser.add_mutually_exclusive_group(required=True)
-    # collection_state.add_argument("--inactive", action='store_true')
-    # collection_state.add_argument("--active", action='store_true')
-    # collection_state.add_argument("--collection")
+    collection_state = parser.add_mutually_exclusive_group(required=True)
+    collection_state.add_argument("--inactive", action='store_true')
+    collection_state.add_argument("--active", action='store_true')
+    collection_state.add_argument("--collection")
 
     parser.add_argument("--swap", action='store_true', help="Swap the Core")
 
     argv = vars(parser.parse_args())
     filename = argv['filename']
-    guides = process_guides(filename)
-    filters = get_filters()
 
-    guides = pd.merge(guides, filters, on=['filter_name', 'filter_value'])
-    print(guides.shape)
+    index_guides(collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'],filename=filename)
