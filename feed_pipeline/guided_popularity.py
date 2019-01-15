@@ -197,7 +197,7 @@ def get_filters():
 
 
 def insert_guides_in_es(guides, collection):
-    guides.rename(columns={'index': 'rank', 'filter_name': 'type', 'filter_id': 'entity_id', 'keyword': 'entity',
+    guides.rename(columns={'index': 'rank', 'filter_name': 'type', 'filter_id': 'entity_id', 'keyword': 'query',
                            'filter_value': 'entity_value'}, inplace=True)
     guides['_id'] = guides.index
     documents = guides.to_dict(orient='records')
