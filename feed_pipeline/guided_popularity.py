@@ -211,7 +211,7 @@ def insert_guides_in_es(guides, collection):
     EsUtils.indexDocs(documents, collection)
 
     guide_non_color = guides[guides['color_code'].isnull()]
-    guide_non_color.drop(columns=['color_code'], inplace=True)
+    guide_non_color.drop(['color_code'], axis=1, inplace=True)
     documents = guide_non_color.to_dict(orient='records')
 
     print(documents[:10])
