@@ -89,7 +89,7 @@ class EsUtils:
                 es.indices.put_alias(index= index, name = alias)
             else:
               es.indices.put_alias(index= index, name = alias)
-
+    response = es.indices.get_alias(index=alias)
     for index, index_aliases in response.items():
       return index
 

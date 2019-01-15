@@ -12,13 +12,15 @@
           "filter": [
             "lowercase",
             "asciifolding"
-          ]
+          ],
+          "tokenizer": "keyword"
         },
         "default_search": {
           "filter": [
             "lowercase",
             "asciifolding"
-          ]
+          ],
+          "tokenizer": "keyword"
         }
       }
     }

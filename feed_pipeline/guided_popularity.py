@@ -181,8 +181,14 @@ def get_filters():
     mysql_conn.close()
 
     filters['filter_name'] = filters['filter_name'].apply(lambda x : x[:-3])
-
+    filters = filters.astype({'filter_id': str})
     mysql_conn = Utils.mysqlConnection()
+    #get color codes
+    query = """SELECT attribute_id as filter_id, group_concat(value) as color_code FROM attribute_values group by 1"""
+    color_codes = pd.read_sql(query, con=mysql_conn)
+    color_codes['color_code'] = color_codes['color_code'].apply(lambda x : x.split(',') if x else None)
+    filters = pd.merge(filters, color_codes, how='left', on='filter_id')
+
     query = """select brand_id as filter_id, brand as filter_value, 'brand' as filter_name
                 from brands"""
     brands = pd.read_sql(query, con=mysql_conn)
@@ -200,9 +206,16 @@ def insert_guides_in_es(guides, collection):
     guides.rename(columns={'index': 'rank', 'filter_name': 'type', 'filter_id': 'entity_id', 'keyword': 'query',
                            'filter_value': 'entity_value'}, inplace=True)
     guides['_id'] = guides.index
-    documents = guides.to_dict(orient='records')
+    guide_color = guides[~guides['color_code'].isnull()]
+    documents = guide_color.to_dict(orient='records')
+    EsUtils.indexDocs(documents, collection)
+
+    guide_non_color = guides[guides['color_code'].isnull()]
+    guide_non_color.drop(columns=['color_code'], inplace=True)
+    documents = guide_non_color.to_dict(orient='records')
+
     print(documents[:10])
-    document_chunks = [documents[i:i + 100] for i in range(0, len(documents), 100)]
+    document_chunks = [documents[i:i + 1000] for i in range(0, len(documents), 1000)]
     for docs in document_chunks:
         EsUtils.indexDocs(docs, collection)
 
