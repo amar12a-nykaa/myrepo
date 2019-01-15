@@ -32,6 +32,7 @@ import test
 #from gensimutils import GensimUtils
 class S3Utils:
 
+    @staticmethod
     def download_dir(client, resource, s3_dir, dist, local, bucket):
         paginator = client.get_paginator('list_objects')
         for result in paginator.paginate(Bucket=bucket, Delimiter='/', Prefix=dist):
@@ -49,16 +50,18 @@ class S3Utils:
 
 class GensimUtils:
 
+    @staticmethod
     def get_models(bucket_name, input_dir):
         with tempfile.TemporaryDirectory() as temp_dir:
             S3Utils.download_dir(boto3.client('s3'), boto3.resource('s3'), input_dir, input_dir, temp_dir, bucket_name)
             with open(temp_dir + '/metric_corpus_dict.json') as f:
                 metric_corpus_dict = json.load(f)
-            tfidf = models.TfidfModel.load(temp_dir + '/tfidf/model.tfidf')
-            tfidf_lsi = models.LsiModel.load(temp_dir + '/tfidf_lsi/model.tfidf_lsi')
+            #tfidf = models.TfidfModel.load(temp_dir + '/tfidf/model.tfidf')
+            #tfidf_lsi = models.LsiModel.load(temp_dir + '/tfidf_lsi/model.tfidf_lsi')
             lsi = models.LsiModel.load(temp_dir + '/lsi/model.lsi')
-        return (metric_corpus_dict, tfidf, tfidf_lsi, lsi)
+        return (metric_corpus_dict, lsi)#(metric_corpus_dict, tfidf, tfidf_lsi, lsi)
 
+    @staticmethod
     def generate_complete_vectors(vector_tuple, vector_len):
         vector_dict = dict(vector_tuple)
         return [vector_dict.get(i, 0) for i in range(vector_len)]
@@ -97,6 +100,32 @@ class Utils:
                     print("MySQL connection failed 3 times. Giving up..")
                     raise
 
+    @staticmethod
+    def mlMysqlConnection(env, connection_details=None):
+        if env == 'prod':
+            host = "ml-db-master.nykaa-internal.com"
+            password = 'fjxcneXnq2gptsTs'
+        elif env in ['non_prod', 'preprod', 'qa']:
+            host = 'nka-preprod-ml.cjmplqztt198.ap-southeast-1.rds.amazonaws.com'
+            password = 'JKaPHGB4JWXM'
+        else:
+            raise Exception('Unknow env')
+        user = 'ml'
+        db = 'nykaa_ml'
+        for i in [0, 1, 2]:
+            try:
+                if connection_details is not None and isinstance(connection_details, dict):
+                    connection_details['host'] = host
+                    connection_details['user'] = user
+                    connection_details['password'] = password
+                    connection_details['database'] = db
+                return mysql.connector.connect(host=host, user=user, password=password, database=db)
+            except:
+                print("MySQL connection failed! Retyring %d.." % i)
+                if i == 2:
+                    print(traceback.format_exc())
+                    print("MySQL connection failed 3 times. Giving up..")
+                    raise
 
     @staticmethod
     def esConn(env):
@@ -195,10 +224,10 @@ def add_embedding_vectors_in_mysql(db, table, rows):
         _add_embedding_vectors_in_mysql(cursor, table, rows[i:i+500]) 
         db.commit()
 
-def get_vectors_from_mysql_for_es(env, algo, sku=True):
+def get_vectors_from_mysql_for_es(connection, algo, sku=True):
     print("Getting vectors from mysql for es")
     query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='%s'" % algo
-    rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(env), query, 1000)
+    rows = Utils.fetchResultsInBatch(connection, query, 1000)
     print("Total number of products from mysql: %d" % len(rows))
     embedding_vector_field_name = 'embedding_vector_%s' % algo
     if not sku:
@@ -235,7 +264,7 @@ if __name__ == '__main__':
     limit = argv.get('limit', -1)
 
     if argv['add_vectors_from_mysql_to_es']:
-        docs = get_vectors_from_mysql_for_es(env, algo)
+        docs = get_vectors_from_mysql_for_es(Utils.mlMysqlConnection(env), algo)
         for i in range(0, len(docs), 1000):
             Utils.updateESCatalog(docs[i:i+1000])
         exit()
@@ -250,7 +279,8 @@ if __name__ == '__main__':
     add_product_children = argv['add_product_children']
 
     print("Downloading the models")
-    user_corpus_dict, user_tfidf, user_tfidf_lsi, user_lsi = GensimUtils.get_models(bucket_name, input_dir)
+    user_corpus_dict, user_lsi = GensimUtils.get_models(bucket_name, input_dir)
+    #user_corpus_dict, user_tfidf, user_tfidf_lsi, user_lsi = GensimUtils.get_models(bucket_name, input_dir)
 
     print("Generating user vectors")
     user_vectors = {}
@@ -294,7 +324,7 @@ if __name__ == '__main__':
         for product_id, vector in product_vectors.items():
             rows.append((product_id, 'product', algo, json.dumps(vector)))
 
-        add_embedding_vectors_in_mysql(Utils.mysqlConnection(env), 'embedding_vectors', rows)
+        add_embedding_vectors_in_mysql(Utils.mlMysqlConnection(env), 'embedding_vectors', rows)
 
     if add_in_es:
         print("Adding results in ES")

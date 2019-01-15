@@ -1,11 +1,21 @@
 #!/bin/bash
-sudo python3 -m pip install boto3
-sudo python3 -m pip install pandas
-sudo python3 -m pip install argparse
-sudo python3 -m pip install gensim
-sudo python3 -m pip install smart_open
-sudo python3 -m pip install s3fs
-sudo python3 -m pip install psycopg2
-sudo python3 -m pip install mysqlclient
-sudo python3 -m pip install mysql-connector-python
-sudo python3 -m pip install elasticsearch
+cd /tmp
+sudo wget https://www.python.org/ftp/python/3.5.2/Python-3.5.2.tgz
+sudo tar xzf Python-3.5.2.tgz
+cd Python-3.5.2
+sudo ./configure
+sudo make altinstall
+sudo ln -s -f /usr/local/bin/python3.5 /usr/bin/python3
+sudo ln -s -f /usr/local/bin/pip3.5 /usr/bin/pip3
+
+sudo pip3 install gensim
+sudo pip3 install boto3
+sudo pip3 install pandas
+sudo pip3 install argparse
+sudo pip3 install smart_open
+sudo pip3 install s3fs
+sudo pip3 install psycopg2
+sudo pip3 install mysqlclient
+sudo pip3 install mysql-connector-python
+sudo pip3 install elasticsearch
+
