@@ -11,18 +11,14 @@
         "default": {
           "filter": [
             "lowercase",
-            "my_stemming",
             "asciifolding"
-          ],
-          "tokenizer": "whitespace"
+          ]
         },
         "default_search": {
           "filter": [
             "lowercase",
-            "my_stemming",
             "asciifolding"
-          ],
-          "tokenizer": "whitespace"
+          ]
         }
       }
     }
