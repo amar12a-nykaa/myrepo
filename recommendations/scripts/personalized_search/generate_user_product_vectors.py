@@ -18,13 +18,11 @@ from contextlib import closing
 import mysql.connector
 from elasticsearch import helpers, Elasticsearch
 
-from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType
-from pyspark.sql.functions import udf, col, desc
-import pyspark.sql.functions as func
+#from pyspark.sql import SparkSession
+#from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType
+#from pyspark.sql.functions import udf, col, desc
+#import pyspark.sql.functions as func
 import sys
-sys.path.append("/home/hadoop/")
-import test
 
 #test.print_cool()
 #from pas.v2.utils import Utils
@@ -255,7 +253,7 @@ if __name__ == '__main__':
     parser.add_argument('--add-product-children', action='store_true')
     parser.add_argument('--add-in-es', action='store_true')
     parser.add_argument('--env', required=True)
-    parser.add_argument('--limit', type=int, required=True)
+    parser.add_argument('--limit', type=int)
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
