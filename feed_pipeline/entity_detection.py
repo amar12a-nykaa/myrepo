@@ -3,6 +3,8 @@ import sys
 import pandas as pd
 import json
 import os
+import unicodedata
+from nltk.stem import PorterStemmer
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
@@ -11,6 +13,8 @@ from esutils import EsUtils
 
 FREQUENCY_THRESHOLD = 3
 
+def strip_accents(text):
+    return ''.join(char for char in unicodedata.normalize('NFKD', text) if unicodedata.category(char) != 'Mn')
 
 def stem(s):
     slen = len(s)
@@ -74,9 +78,21 @@ def get_entities(query):
 
         return k
 
+    porter = PorterStemmer()
+
+    special_brand_list = ['faces']
+
     query = query.lower()
-    query_formatted = "".join(query.split())
-    # query_formatted += " "
+    queryList = query.split()
+    queryListRaw = [strip_accents(e) for e in queryList]
+    query_formatted_raw = ''.join(queryListRaw)
+
+    queryList = [porter.stem(e) if e not in special_brand_list else e for e in queryListRaw]
+    q_length = len(queryList)
+    query_formatted = "".join(queryList)
+
+    # print(query_formatted)
+
     result = {}
 
     querydsl = {}
@@ -101,17 +117,22 @@ def get_entities(query):
         entity_type = doc['type'].lower()
 
         entity_name = ""
+        entity_name_raw = ""
         entity_names_list = []
         if 'entity_synonyms' in doc:
             entity_names_list = doc['entity_synonyms']
         entity_names_list.insert(0, doc['entity'])
         for entity_name_orig in entity_names_list:
-            entity_name = "".join(entity_name_orig.split())
-        # entity_name += ""
-        #use k-diff to drop
-        # print("%s %s %s"%(query_formatted, entity_name.lower(), fuzzylen(len(entity_name))))
-        # if iskdiff(query_formatted, entity_name.lower(), fuzzylen(len(entity_name))):
-        if entity_name.lower() in query_formatted:
+            word_list = entity_name_orig.lower().split()
+            word_list = [strip_accents(e) for e in word_list]
+            entity_name_raw = ''.join(word_list)
+
+            word_list = [porter.stem(e) if e not in special_brand_list else e for e in word_list]
+            entity_name = "".join(word_list)
+
+        # print("%s %s" %(entity_name, query_formatted))
+        if((entity_name in query_formatted or entity_name in query_formatted_raw) or
+                (entity_name_raw in query_formatted or entity_name_raw in query_formatted_raw)):
             entity_dict.append(''.join(entity_names_list[0].split()).lower())
             if entity_type in result and len(entity_name) < len(result[entity_type]['entity']):
                 continue
@@ -119,30 +140,43 @@ def get_entities(query):
                 'id': doc['id'],
                 'entity': doc['entity'],
                 'entity_formatted': entity_name,
+                'entity_formatted_raw': entity_name_raw,
                 'rank': index
             }
 
     # drop entity if it is subtring of another entity
+    # print(result)
     drop_entities = []
+
     entity_type_list = result.keys()
     for entity_type in entity_type_list:
         for en_type, en_data in result.items():
             if en_type == entity_type:
                 continue
-            if result[entity_type]['entity_formatted'] in en_data['entity_formatted']:
+            if en_type in drop_entities:
+                continue
+            if result[entity_type]['entity_formatted_raw'] in en_data['entity_formatted_raw']:
                 drop_entities.append(entity_type)
                 break
+
+    # print(drop_entities)
     for entity in drop_entities:
         result.pop(entity, None)
 
-    queryList = query.split()
-    q_length = len(queryList)
+    # print(queryList)
     for key, value in result.items():
-        words = ''.join(value['entity'].lower().split())
-        dropList = [e for e in queryList if stem(e) in words]
-        queryList = [e for e in queryList if e not in dropList]
+        words = value['entity_formatted']
+        words_raw = value['entity_formatted_raw']
 
-    f_length = len(queryList)
+        dropList = [e for e in queryListRaw if e in words or porter.stem(e) in words]
+        queryListRaw = [e for e in queryListRaw if e not in dropList]
+
+        dropList = [e for e in queryListRaw if e in words_raw or porter.stem(e) in words_raw]
+        queryListRaw = [e for e in queryListRaw if e not in dropList]
+
+
+    # print(queryList)
+    f_length = len(queryListRaw)
     coverage = (q_length - f_length)*100/(q_length)
     result['match'] = coverage
 
@@ -191,6 +225,10 @@ def dfs(dp, end, result, tmp):
         tmp.remove(word)
 
 if __name__ == '__main__':
+    # print(get_entities('Panty liners'))
+    # print(PorterStemmer().stem('blue eye liner'))
+    # print(PorterStemmer().stem('beauties'))
+
     df = pd.read_csv('keywords.csv')
     df.drop(['Searches'], inplace=True, axis=1)
 
@@ -206,7 +244,7 @@ if __name__ == '__main__':
         return row
     df['entities'] = ""
     df = df.apply(get_entity, axis=1)
-    df.to_csv('keyword_entity_4.csv', index=False)
+    df.to_csv('keyword_entity_7.csv', index=False)
 
     # print(get_entities('lakme 9 to 5 lipstick'))
     # print(get_entities('face primer'))
