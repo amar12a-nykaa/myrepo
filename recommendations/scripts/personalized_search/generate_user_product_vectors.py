@@ -221,6 +221,7 @@ def add_embedding_vectors_in_mysql(db, table, rows):
     for i in range(0, len(rows), 500):
         _add_embedding_vectors_in_mysql(cursor, table, rows[i:i+500]) 
         db.commit()
+        print('Added %d rows to DB' % (i+1))
 
 def get_vectors_from_mysql_for_es(connection, algo, sku=True):
     print("Getting vectors from mysql for es")
@@ -250,7 +251,7 @@ if __name__ == '__main__':
     parser.add_argument('--product-json') 
     parser.add_argument('--user-json') 
     parser.add_argument('--store-in-db', action='store_true')
-    parser.add_argument('--add-product-children', action='store_true')
+    parser.add_argument('--add-only-products', action='store_true')
     parser.add_argument('--add-in-es', action='store_true')
     parser.add_argument('--env', required=True)
     parser.add_argument('--limit', type=int)
@@ -274,7 +275,7 @@ if __name__ == '__main__':
     user_json = argv.get('user_json')
     store_in_db = argv['store_in_db']
     add_in_es = argv['add_in_es']
-    add_product_children = argv['add_product_children']
+    add_only_products = argv['add_only_products']
 
     print("Downloading the models")
     user_corpus_dict, user_lsi = GensimUtils.get_models(bucket_name, input_dir)
@@ -293,17 +294,12 @@ if __name__ == '__main__':
             user_vectors[user_id] = matutils.unitvec(matutils.sparse2full(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)).tolist() #GensimUtils.generate_complete_vectors(user_lsi[norm_model.normalize(product_ids_bow)], vector_len)
 
     product_ids = list(set([product_tuple[0] for products_bow in user_corpus_dict.values() for product_tuple in products_bow]))
+    print('Products from models: %d' % len(product_ids))
 
     print("Generating product vectors")
     product_vectors = {}
     for product_id in product_ids:
         product_vectors[str(product_id)] = matutils.unitvec(matutils.sparse2full(user_lsi[[[product_id, 1]]], vector_len)).tolist() #GensimUtils.generate_complete_vectors(user_lsi[[[product_id, 1]]], vector_len)
-
-    if add_product_children:
-        child_2_parent = Utils.scrollESForResults(env)['child_2_parent']
-        for child_id, parent_id in child_2_parent.items():
-            if product_vectors.get(str(parent_id)):
-                product_vectors[str(child_id)] = product_vectors[str(parent_id)]
 
     if product_json and user_json:
         print("Writing json file")
@@ -316,12 +312,14 @@ if __name__ == '__main__':
     if store_in_db:
         print("Storing results in mysql DB")
         rows = []
-        for user_id, vector in user_vectors.items():
-            rows.append((user_id, 'user', algo, json.dumps(vector)))
+        if not add_only_products:
+            for user_id, vector in user_vectors.items():
+                rows.append((user_id, 'user', algo, json.dumps(vector)))
 
         for product_id, vector in product_vectors.items():
             rows.append((product_id, 'product', algo, json.dumps(vector)))
 
+        print('Total number of rows to be added to DB: %s' % len(rows))
         add_embedding_vectors_in_mysql(Utils.mlMysqlConnection(env), 'embedding_vectors', rows)
 
     if add_in_es:
