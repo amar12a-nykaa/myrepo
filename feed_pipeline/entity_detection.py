@@ -104,7 +104,8 @@ def get_entities(query):
                 continue
             if en_type in drop_entities:
                 continue
-            if result[entity_type]['entity_formatted_raw'] in en_data['entity_formatted_raw']:
+            if result[entity_type]['entity_formatted_raw'] in en_data['entity_formatted_raw'] or \
+                result[entity_type]['entity_formatted'] in en_data['entity_formatted']:
                 drop_entities.append(entity_type)
                 break
 
