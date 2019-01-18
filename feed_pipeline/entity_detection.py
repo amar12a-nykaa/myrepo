@@ -83,6 +83,8 @@ def get_entities(query):
 
         if((entity_name in query_formatted or entity_name in query_formatted_raw) or
                 (entity_name_raw in query_formatted or entity_name_raw in query_formatted_raw)):
+            if entity_type == 'brand' and entity_name in special_brand_list and entity_name not in queryList:
+                continue
             entity_dict.append(''.join(entity_names_list[0].split()).lower())
             if entity_type in result and len(entity_name) < len(result[entity_type]['entity']):
                 continue
@@ -131,7 +133,7 @@ def get_entities(query):
 
 if __name__ == '__main__':
     df = pd.read_csv('keywords.csv')
-    df.drop(['Searches'], inplace=True, axis=1)
+    #df.drop(['Searches'], inplace=True, axis=1)
 
     def get_entity(row):
         entities = get_entities(row['Keyword'])
