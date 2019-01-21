@@ -115,9 +115,9 @@ class Utils:
                     "query": { "match_all": {} },
                     "_source": ["product_id", "is_luxe", "mrp", "parent_id", "primary_categories", "brand_facet", "sku", "media"]
                 }
-                response = es_conn.search(index='livecore', body=query, scroll='2m')
+                response = es_conn.search(index='livecore', body=query, scroll='15m')
             else:
-                response = es_conn.scroll(scroll_id=scroll_id, scroll='2m')
+                response = es_conn.scroll(scroll_id=scroll_id, scroll='15m')
 
             if not response['hits']['hits']:
                 break
@@ -328,7 +328,7 @@ def compute_cab(env, platform, start_datetime=None, end_datetime=None, limit=Non
     print('Is Luxe')
     df = df.withColumn("is_luxe_x", is_luxe_udf(df['product_id_x']))
     df = df.withColumn("is_luxe_y", is_luxe_udf(df['product_id_y']))
-    df = df[(((df['is_luxe_x'] == True) & (df['is_luxe_y'] == True)) | ((df['is_luxe_x'] == False) & (df['is_luxe_y'] == False)))]
+    #df = df[(((df['is_luxe_x'] == True) & (df['is_luxe_y'] == True)) | ((df['is_luxe_x'] == False) & (df['is_luxe_y'] == False)))]
 
     def compute_union_len(product_id_x, product_id_y, customers_intersection):
         return product_to_customers_count[product_id_x] + product_to_customers_count[product_id_y] - customers_intersection
@@ -348,8 +348,10 @@ def compute_cab(env, platform, start_datetime=None, end_datetime=None, limit=Non
     direct_similar_products_dict = defaultdict(lambda: [])
 
     for row in df.collect():
-        direct_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['similarity']))
-        direct_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['similarity']))
+        if (row['is_luxe_x'] and row['is_luxe_y'])  or not row['is_luxe_x']:
+            direct_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['similarity']))
+        if (row['is_luxe_y'] and row['is_luxe_x'])  or not row['is_luxe_y']:
+            direct_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['similarity']))
 
     parent_2_children = defaultdict(lambda: [])
     for child, parent in results['child_2_parent'].items():
