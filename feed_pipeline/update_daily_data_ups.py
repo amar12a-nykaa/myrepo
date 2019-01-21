@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 yesterday = datetime.now() - timedelta(days=1)
 foldername = yesterday.strftime('%Y%m%d')
 
-cmd = "aws s3 sync "+"s3://nykaa-ups/daily_data/"+foldername+" "+"/home/ubuntu/nykaa_scripts/feed_pipeline/data/"+foldername+"/"
+cmd = "/usr/local/bin/aws s3 sync "+"s3://nykaa-ups/daily_data/"+foldername+" "+"/home/ubuntu/nykaa_scripts/feed_pipeline/data/"+foldername+"/"
 out = subprocess.check_output(cmd , shell=True).strip()
 if out:
     print(out)
