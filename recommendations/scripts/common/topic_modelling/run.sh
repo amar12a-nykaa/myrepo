@@ -1,10 +1,13 @@
 #!/bin/bash
+# Usage
+# sudo sh run.sh -t 100 -e non_prod -o "gensim_models/jan_14" -d "2018-01-01 00:00:00" -l 200000
 ENV='non_prod'
 NUM_TOPICS='300'
 START_DATETIME=''
 LIMIT=''
+WITH_CHILDREN=''
 
-while getopts t:e:o:d:l: option
+while getopts t:e:o:d:l:c option
 do
     case "${option}"
         in
@@ -13,6 +16,7 @@ do
         o) OUTPUT_DIR=${OPTARG} ;;
         d) START_DATETIME="--start-datetime=${OPTARG}" ;;
         l) LIMIT="--limit=${OPTARG}" ;;
+        c) WITH_CHILDREN="--with-children" ;;
     esac
 done
 
@@ -36,5 +40,5 @@ S3_PREFIX='topic_modelling'
 aws s3 cp "${DIR}${BOOTSTRAP_FILE}" s3://${BUCKET_NAME}/${S3_PREFIX}/
 aws s3 cp "${DIR}${SCRIPT_FILE}" s3://${BUCKET_NAME}/${S3_PREFIX}/
 
-aws emr create-cluster --name "Topic Modelling customer_id:product_id: ${NUM_TOPICS}" --tags Category=Gludo Purpose=EMR --release-label emr-5.14.0 --instance-type m5.24xlarge --instance-count 1 --applications Name=Spark --ec2-attributes KeyName=${KEY_NAME},SubnetId=${SUBNET_ID} --ebs-root-volume-size 100 --bootstrap-actions Path="s3://${BUCKET_NAME}/${S3_PREFIX}/${BOOTSTRAP_FILE}" --log-uri "s3://${BUCKET_NAME}/logs" --steps Type=Spark,Name="Spark Program",ActionOnFailure=CONTINUE,Args=[s3://${BUCKET_NAME}/${S3_PREFIX}/${SCRIPT_FILE},"--bucket-name","${BUCKET_NAME}","--output-dir","${OUTPUT_DIR}","--metric","customer_id","--similarity-metric","product_id","--discarded-metric","order_id","--num-topics","${NUM_TOPICS}","-m","lsi","--env","${ENV}",${LIMIT},"${START_DATETIME}","--verbose"] --use-default-roles --auto-terminate --configurations file://${DIR}${CONFIG_FILE}
+aws emr create-cluster --name "Topic Modelling customer_id:product_id: ${NUM_TOPICS}" --tags Category=Gludo Purpose=EMR --release-label emr-5.14.0 --instance-type m5.24xlarge --instance-count 1 --applications Name=Spark --ec2-attributes KeyName=${KEY_NAME},SubnetId=${SUBNET_ID} --ebs-root-volume-size 100 --bootstrap-actions Path="s3://${BUCKET_NAME}/${S3_PREFIX}/${BOOTSTRAP_FILE}" --log-uri "s3://${BUCKET_NAME}/logs" --steps Type=Spark,Name="Spark Program",ActionOnFailure=CONTINUE,Args=[s3://${BUCKET_NAME}/${S3_PREFIX}/${SCRIPT_FILE},"--bucket-name","${BUCKET_NAME}","--output-dir","${OUTPUT_DIR}","--metric","customer_id","--similarity-metric","product_id","--discarded-metric","order_id","--num-topics","${NUM_TOPICS}","-m","lsi","--env","${ENV}",${LIMIT},"${START_DATETIME}","--verbose","${WITH_CHILDREN}"] --use-default-roles --auto-terminate --configurations file://${DIR}${CONFIG_FILE}
 
