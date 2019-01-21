@@ -98,9 +98,9 @@ class Utils:
                     "query": { "match_all": {} },
                     "_source": ["product_id", "is_luxe", "mrp", "parent_id", "primary_categories", "brand_facet", "sku", "media"]
                 }
-                response = es_conn.search(index='livecore', body=query, scroll='2m')
+                response = es_conn.search(index='livecore', body=query, scroll='15m')
             else:
-                response = es_conn.scroll(scroll_id=scroll_id, scroll='2m')
+                response = es_conn.scroll(scroll_id=scroll_id, scroll='15m')
 
             if not response['hits']['hits']:
                 break
@@ -119,7 +119,7 @@ class Utils:
 
     @staticmethod
     def redshiftConnection(env):
-        if env in ['prod', 'non_prod']:
+        if env in ['prod']:
             host = 'dwhcluster.cy0qwrxs0juz.ap-southeast-1.redshift.amazonaws.com'
         elif env in ['non_prod', 'preprod', 'qa']:
             host = 'nka-preprod-dwhcluster.c742iibw9j1g.ap-southeast-1.redshift.amazonaws.com'
@@ -155,7 +155,7 @@ def s3_upload_dir(s3, local_directory, bucket_name, destination):
             s3_path = os.path.join(destination, relative_path)
             s3.upload_file(local_path, bucket_name, s3_path)
 
-def prepare_orders_dataframe(env, start_datetime, limit):
+def prepare_orders_dataframe(env, start_datetime, with_children, limit):
     print("Preparing orders data")
     customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL %s %s" % (" AND order_date >= '%s' " % start_datetime if start_datetime else "", " limit %d" % limit if limit else "")
     print(customer_orders_query)
@@ -187,8 +187,13 @@ def prepare_orders_dataframe(env, start_datetime, limit):
         return child_2_parent.get(product_id, product_id)
 
     convert_to_parent_udf = udf(convert_to_parent, IntegerType())
-    print('Converting product_id to parent')
-    df = df.withColumn("product_id", convert_to_parent_udf(df['product_id']))
+    if with_children:
+        print('Adding parent of the product')
+        df_with_children = df.withColumn("product_id", convert_to_parent_udf(df['product_id']))
+        df = df.union(df_with_children)
+    else:
+        print('Converting product_id to parent')
+        df = df.withColumn("product_id", convert_to_parent_udf(df['product_id']))
     df = df.na.drop()
     df = df.drop("product_sku")
     df = df.select(['order_id', 'customer_id', 'product_id']).distinct()
@@ -198,6 +203,7 @@ def prepare_orders_dataframe(env, start_datetime, limit):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for generating topics')
     parser.add_argument('--verbose', '-v', action='store_true')
+    parser.add_argument('--with-children', action='store_true')
     parser.add_argument('--env', '-e', required=True) 
     parser.add_argument('--start-datetime') 
     parser.add_argument('--limit', '-l', type=int) 
@@ -211,6 +217,7 @@ if __name__ == "__main__":
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
+    with_children = argv['with_children']
     #input_csv = argv['input_csv']
     env = argv['env']
     start_datetime = argv['start_datetime']
@@ -227,7 +234,7 @@ if __name__ == "__main__":
 
     s3 = boto3.client('s3')
 
-    df, results = prepare_orders_dataframe(env, start_datetime, limit)
+    df, results = prepare_orders_dataframe(env, start_datetime, with_children, limit)
 
     if verbose:
         print("After filtering out null values from dataframe, total number of rows: %d" % df.count())
