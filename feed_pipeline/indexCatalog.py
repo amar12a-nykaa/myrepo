@@ -694,6 +694,9 @@ class CatalogIndexer:
                     doc['nykaaman_offers'] = []
                     doc['nykaaman_offer_ids'] = []
                     doc['nykaaman_offer_facet'] = []
+                    doc['nykaa_pro_offers'] = []
+                    doc['nykaa_pro_offer_ids'] = []
+                    doc['nykaa_pro_offer_facet'] = []
 
                     try:
                         if row['offers']:
@@ -729,6 +732,7 @@ class CatalogIndexer:
                         print(traceback.format_exc())
                     doc['offer_count'] = len(doc['offers'])
                     doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
+                    doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
 
                 # facets: dynamic fields
                 facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1") or (field == 'size_id' and size_filter_flag == 1)]
