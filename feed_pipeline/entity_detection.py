@@ -16,27 +16,23 @@ FREQUENCY_THRESHOLD = 3
 def strip_accents(text):
     return ''.join(char for char in unicodedata.normalize('NFKD', text) if unicodedata.category(char) != 'Mn')
 
-def stem(s):
-    slen = len(s)
-    if (slen < 3 or s[slen - 1] != 's'):
-        return s
-
-    s2 = s[slen - 2]
-    if s2 == 'u' or s2 == 's':
-        return s
-    if s2 == 'e':
-        if slen > 3 and s[slen - 3] == 'i' and s[slen - 4] != 'a' and s[slen - 4] != 'e':
-            return s[:-2]
-        if s[slen - 3] == 'i' or s[slen - 3] == 'a' or s[slen - 3] == 'o' or s[slen - 3] == 'e':
-            return s
-
-    return s[:-1]
 
 def get_entities(query):
     porter = PorterStemmer()
     special_brand_list = ['faces','acnes']
+    ignore_brand_list = ["charcoalmask", "blush"]
+    brand_synonym_reverse = {
+        "faces canada": "faces",
+        "wet and wild": "wet n wild",
+        "lotus professional": "lotus herbals",
+        "sugar cosmetics": "sugar",
+        "la girl": "l.a. girl",
+        " mac ": " m.a.c ",
+    }
 
     query = strip_accents(query.lower())
+    for synonym, brand in brand_synonym_reverse.items():
+        query = query.replace(synonym, brand)
     queryListRaw = query.split()
     query_formatted_raw = ''.join(queryListRaw)
 
@@ -84,6 +80,8 @@ def get_entities(query):
         if((entity_name in query_formatted or entity_name in query_formatted_raw) or
                 (entity_name_raw in query_formatted or entity_name_raw in query_formatted_raw)):
             if entity_type == 'brand' and entity_name in special_brand_list and entity_name not in queryList:
+                continue
+            if entity_type == 'brand' and entity_name in ignore_brand_list:
                 continue
             entity_dict.append(''.join(entity_names_list[0].split()).lower())
             if entity_type in result and len(entity_name) < len(result[entity_type]['entity']):

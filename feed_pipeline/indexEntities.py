@@ -43,6 +43,13 @@ class EntityIndexer:
       "The Face Shop": ["Face Shop"],
       "The Body Care": ["Body Care"],
       "Make Up Forever": ["Makeup Forever"],
+      "Maybelline New York": ["Maybelline"],
+      "NYX Professional Makeup": ["NYX"],
+      "Lotus Herbals": ["Lotus"],
+      "Huda Beauty": ["Huda"],
+      "Vaadi Herbals": ["Vaadi"],
+      "Kama Ayurveda": ["Kama"],
+      "Layer'r": ["Layer"],
     }
     mysql_conn = Utils.mysqlConnection()
     query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
