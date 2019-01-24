@@ -782,6 +782,7 @@ class CatalogIndexer:
                 doc['bulkbuyer_max_allowed_qty_i'] = row['bulkbuyer_max_allowed_qty'] or 0
                 doc['is_free_sample_i'] = row['is_free_sample'] or 0
                 doc['pro_flag_i'] = row['pro_flag'] or 0
+                doc['pro_disclaimer_s'] = row['pro_disclaimer']
                 # doc['is_kit_combo_i'] = row['is_kit_combo'] or 0
 
                 doc['is_searchable_i'] = row['is_searchable'] or 0
