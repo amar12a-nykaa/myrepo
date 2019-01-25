@@ -44,10 +44,7 @@ def get_entities(query):
     result = {}
 
     querydsl = {}
-    querydsl['sort'] = {
-        '_score': 'desc',
-        'weight': 'desc'
-    }
+    querydsl['sort'] = [{ '_score': 'desc'}, {'weight': 'desc'}]
     querydsl['size'] = 10
     querydsl['query'] = {
         "multi_match": {
