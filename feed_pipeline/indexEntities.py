@@ -24,6 +24,7 @@ sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
 from esutils import EsUtils
 from idutils import createId
+from categoryutils import getVariants
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
@@ -39,6 +40,13 @@ class EntityIndexer:
       "The Face Shop": ["Face Shop"],
       "The Body Care": ["Body Care"],
       "Make Up Forever": ["Makeup Forever"],
+      "Maybelline New York": ["Maybelline"],
+      "NYX Professional Makeup": ["NYX"],
+      "Lotus Herbals": ["Lotus"],
+      "Huda Beauty": ["Huda"],
+      "Vaadi Herbals": ["Vaadi"],
+      "Kama Ayurveda": ["Kama"],
+      "Layer'r": ["Layer"],
     }
     mysql_conn = Utils.mysqlConnection()
     query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
@@ -70,6 +78,16 @@ class EntityIndexer:
     EsUtils.indexDocs(docs, collection)
 
   def index_categories(collection):
+
+    def getCategoryDoc(row, variant):
+      doc = {
+        "_id": createId(variant),
+        "entity": variant,
+        "weight": row['category_popularity'],
+        "type": "category",
+        "id": row['category_id'],
+      }
+      return doc
     docs = []
 
     mysql_conn = Utils.mysqlConnection()
@@ -85,15 +103,16 @@ class EntityIndexer:
       if prev_cat == row['category_name']:
         continue
       prev_cat = row['category_name']
+      variants = getVariants(row['category_id'])
+      if variants:
+        for variant in variants:
+          categoryDoc = getCategoryDoc(row, variant)
+          docs.append(categoryDoc)
+      else:
+        categoryDoc = getCategoryDoc(row, prev_cat)
+        docs.append(categoryDoc)
 
-      docs.append({
-        "_id": createId(row['category_name']),
-        "entity": row['category_name'],
-        "weight": row['category_popularity'],
-        "type": "category",
-        "id": row['category_id'],
-      })
-      if len(docs) == 100:
+      if len(docs) >= 100:
         EsUtils.indexDocs(docs, collection)
         docs = []
 
@@ -145,7 +164,7 @@ class EntityIndexer:
     if index_all:
       index_categories_arg = True
       index_brands_arg = True
-      index_brands_categories_arg = True
+      index_brands_categories_arg = False
 
     if index:
       #clear the index
