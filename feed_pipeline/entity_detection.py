@@ -27,7 +27,7 @@ def get_entities(query):
         "lotus professional": "lotus herbals",
         "sugar cosmetics": "sugar",
         "la girl": "l.a. girl",
-        " mac ": " m.a.c ",
+        "mac ": "m.a.c ",
     }
 
     query = strip_accents(query.lower())
