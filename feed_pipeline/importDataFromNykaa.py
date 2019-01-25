@@ -79,10 +79,48 @@ class NykaaImporter:
     cat_imp_start = timeit.default_timer()
     #Import Brand-Category level info like app_sorting, featured_products
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+    query = 'SHOW columns FROM category_information'
+    results = Utils.fetchResults(nykaa_mysql_conn, query)
+    magento_fields = [result['Field'] for result in results]
+
+
+    gludo_mysql_conn = Utils.mysqlConnection()
+    query = 'SHOW columns FROM brand_category_information'
+    results = Utils.fetchResults(gludo_mysql_conn, query)
+    gludo_fields = [result['Field'] for result in results]
+
+    extra_fields = [value for value in gludo_fields if value in magento_fields]
+
+    field_list = [
+      'id', 'sorting', 'featured_products', 'level', 'type', 'url', 'banner_image', 'banner_video', 'banner_video_image',
+      'font_color', 'art_title', 'art_content', 'art_url', 'art_link_text', 'child_categories', 'art_pos',
+      'android_landing_url', 'ios_landing_url', 'tip_tile', 'desktop_tip_tile']
+
+    extra_fields = [value for value in extra_fields if value not in field_list]
+    field_list.extend(extra_fields)
+
+    fields = ''
+    values = ''
+    on_duplicate_values = ''
+    for index, field in enumerate(field_list):
+      fields += field
+      values += '%s'
+      on_duplicate_values += "%s=VALUES(%s)" % (field, field)
+      if index < len(field_list) - 1:
+        fields += ', '
+        values += ', '
+        on_duplicate_values += ', '
+
+
+    extra_fields_query = ''
+    for extra_field in extra_fields:
+      extra_fields_query += 'ci.' + extra_field + ','
+
     query = """SELECT cce.entity_id AS category_id, cur.request_path AS category_url, 
             ci.app_sorting, ci.custom_sort, ci.art_banner_image, ci.art_banner_video, ci.art_banner_video_image, 
             ci.font_color, ci.art_title, ci.art_content, ci.art_url, ci.art_link_text, ci.categories, ci.art_position,
             ci.android_landing_url, ci.ios_landing_url, ci.tip_tile, ci.url as desktop_tip_tile,
+            """+extra_fields_query+"""
             (cce.level-2) AS level, (CASE WHEN nkb.brand_id > 0 THEN 'brand' ELSE 'category' END) AS type 
             FROM `catalog_category_entity` AS cce
             LEFT JOIN `category_information` AS ci ON ci.cat_id = cce.entity_id
@@ -95,26 +133,18 @@ class NykaaImporter:
     for item in results:
       try:
         # Write to PWS DB
-        field_list = ['id', 'sorting', 'featured_products', 'level', 'type', 'url', 'banner_image', 'banner_video', 'banner_video_image', 
-        'font_color', 'art_title', 'art_content', 'art_url', 'art_link_text', 'child_categories', 'art_pos', 'android_landing_url', 'ios_landing_url', 'tip_tile', 'desktop_tip_tile']
 
-        fields = ''
-        values = ''
-        on_duplicate_values = ''
-        for index, field in enumerate(field_list):
-           fields += field
-           values += '%s'
-           on_duplicate_values += "%s=VALUES(%s)" % (field, field)
-           if index < len(field_list)-1:
-             fields += ', '
-             values += ', '
-             on_duplicate_values += ', '
-          
+        extra_fields_value_list = []
+        for extra_field in extra_fields:
+          extra_fields_value_list.append(item[extra_field])
+
+        extra_fields_value_tuple = tuple(extra_fields_value_list)
+
         query = "INSERT INTO brand_category_information (" + fields + ") VALUES (" + values + ") ON DUPLICATE KEY UPDATE " + on_duplicate_values
         NykaaImporter.pws_cursor.execute(query, (item['category_id'], item['app_sorting'], item['custom_sort'], item['level'], item['type'], item['category_url'],
                                          item['art_banner_image'], item['art_banner_video'], item['art_banner_video_image'], item['font_color'],
                                          item['art_title'], item['art_content'], item['art_url'], item['art_link_text'], item['categories'], item['art_position'],
-                                         item['android_landing_url'], item['ios_landing_url'], item['tip_tile'], item['desktop_tip_tile']))
+                                         item['android_landing_url'], item['ios_landing_url'], item['tip_tile'], item['desktop_tip_tile']) + extra_fields_value_tuple)
 
         NykaaImporter.pws_mysql_conn.commit()
         count += 1
@@ -146,6 +176,8 @@ class NykaaImporter:
         cat_info['ios_landing_url'] = item['ios_landing_url']
         cat_info['tip_tile'] = item['tip_tile']
         cat_info['desktop_tip_tile'] = item['desktop_tip_tile']
+        for extra_field in extra_fields:
+          cat_info[extra_field] = item[extra_field]
         MemcacheUtils.set(memcache_key, json.dumps(cat_info), update_prod_memcache=True)
       except Exception as e:
         print("[Brand-Category Info Import ERROR]problem with %s: %s"%(item['category_id'], str(e)))
