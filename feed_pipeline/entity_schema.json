@@ -11,11 +11,23 @@
             "my_stemming": {
               "type": "stemmer",
               "language": "minimal_english"
+            },
+            "my_word_delimiter_search": {
+              "type": "word_delimiter",
+              "catenate_numbers": "true",
+              "catenate_words": "true"
+            },
+            "my_word_delimiter_index": {
+              "type": "word_delimiter",
+              "catenate_numbers": "true",
+              "preserve_original": "true",
+              "catenate_words": "true"
             }
           },
           "analyzer": {
             "default_search": {
               "filter": [
+                "my_word_delimiter_search",
                 "lowercase",
                 "my_stemming",
                 "asciifolding"
@@ -24,6 +36,7 @@
             },
             "shingle_analyzer": {
               "filter": [
+                "my_word_delimiter_index",
                 "lowercase",
                 "my_stemming",
                 "asciifolding",
@@ -33,6 +46,7 @@
             },
             "default": {
               "filter": [
+                "my_word_delimiter_index",
                 "lowercase",
                 "my_stemming",
                 "asciifolding"
