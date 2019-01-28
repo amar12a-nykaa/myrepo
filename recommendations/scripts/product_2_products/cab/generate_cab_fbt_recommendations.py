@@ -302,7 +302,7 @@ def compute_fbt(env, platform, start_datetime=None, end_datetime=None, limit=Non
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
     RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
 
-def compute_cab(env, platform, start_datetime=None, end_datetime=None, limit=None):
+def compute_cab(env, cab_algo, platform, start_datetime=None, end_datetime=None, limit=None):
     print("Computing CAB")
     df, results = prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit)
     luxe_products_dict = {p:True for p in results['luxe_products']}
@@ -366,11 +366,11 @@ def compute_cab(env, platform, start_datetime=None, end_datetime=None, limit=Non
     for product_id in direct_similar_products_dict:
         product_ids_updated.append(product_id)
         direct_similar_products = list(map(lambda e: int(e[0]), sorted(direct_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        rows.append((platform, product_id, 'product', 'bought', 'coccurence_direct', json.dumps(direct_similar_products)))
+        rows.append((platform, product_id, 'product', 'bought', cab_algo, json.dumps(direct_similar_products)))
         variants = parent_2_children.get(product_id, [])
         for variant in variants:
             product_ids_updated.append(variant)
-            rows.append((platform, variant, 'product', 'bought', 'coccurence_direct', str(direct_similar_products)))
+            rows.append((platform, variant, 'product', 'bought', cab_algo, str(direct_similar_products)))
 
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
     print('Total number of rows: %d' % len(rows))
@@ -381,6 +381,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--start-datetime')
     parser.add_argument('--end-datetime')
+    parser.add_argument('--cab-algo')
     parser.add_argument('--limit', type=int)
     parser.add_argument('--env', required=True)
     parser.add_argument('--platform', required=True, choices=['nykaa','men'])
@@ -392,5 +393,6 @@ if __name__ == '__main__':
     limit = argv.get('limit')
     env = argv.get('env')
     platform = argv.get('platform')
-    compute_cab(env, platform, start_datetime, end_datetime, limit)
+    cab_algo = argv.get('cab_algo', 'coccurence_direct')
+    compute_cab(env, cab_algo, platform, start_datetime, end_datetime, limit)
     compute_fbt(env, platform, start_datetime, end_datetime, limit)
