@@ -29,7 +29,7 @@ from categoryutils import getVariants
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
-filter_attribute_map = {"664": "finish", "658": "color", "656": "concern", "661": "preference", "659": "formulation"}
+filter_attribute_map = {"656": "concern", "661": "preference", "659": "formulation", "664": "finish", "658": "color"}
 FILTER_WEIGHT = 50
 
 class EntityIndexer:
@@ -178,7 +178,6 @@ class EntityIndexer:
           docs = []
 
         print(row['name'], ctr.count)
-
       EsUtils.indexDocs(docs, collection)
 
   def indexEntities(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False,
