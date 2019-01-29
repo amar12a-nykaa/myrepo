@@ -29,7 +29,7 @@ from categoryutils import getVariants
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
-filter_attribute_map = {"656": "concern", "661": "preference", "659": "formulation", "664": "finish", "658": "color"}
+filter_attribute_map = [("656","concern"), ("661","preference"), ("659","formulation"), ("664","finish"), ("658","color")]
 FILTER_WEIGHT = 50
 
 class EntityIndexer:
@@ -154,7 +154,9 @@ class EntityIndexer:
 
   def index_filters(collection):
     mysql_conn = Utils.nykaaMysqlConnection(force_production=True)
-    for id, filter in filter_attribute_map.items():
+    for filt in filter_attribute_map:
+      id = filt[0]
+      filter = filt[1]
       query = """select eov.value as name, eov.option_id as filter_id from eav_attribute_option eo join eav_attribute_option_value eov
                     on eo.option_id = eov.option_id and eov.store_id = 0 where attribute_id = %s"""%id
       results = Utils.fetchResults(mysql_conn, query)
