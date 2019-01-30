@@ -172,7 +172,7 @@ class EntityIndexer:
           "entity": row['name'],
           "weight": FILTER_WEIGHT,
           "type": filter,
-          "id": row['filter_id']
+          "id": str(row['filter_id'])
         }
         docs.append(filter_doc)
         if len(docs) >= 100:
