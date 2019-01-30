@@ -654,6 +654,9 @@ def index_products(collection, searchengine):
 
       _type = 'product'
       url = product['product_url']
+      url_parts = url.partition('com')
+      if len(url_parts) == 3:
+        url = url_parts[2]
       image = product['image']
       image_base = product['image_base']
       men_url = None
