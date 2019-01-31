@@ -17,6 +17,7 @@ from esutils import EsUtils
 
 from importDataFromNykaa import NykaaImporter
 from indexCatalog import CatalogIndexer
+from update_bestseller_product_to_es import update_bestseller_data
 
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
@@ -126,6 +127,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--limit", default=0, help='number of docs to index', type=int)
     parser.add_argument("--no-swap", action="store_true", help="Do not swap index")
     parser.add_argument("--throw-dummy-error", action="store_true", help="Throws an dummy error for testing purpose")
+    parser.add_argument("--bestsellerupdate", default=True, type=bool)
     argv = vars(parser.parse_args())
 
     if argv['throw_dummy_error']:
@@ -184,6 +186,9 @@ if __name__ == "__main__":
     # Index Elastic Search Data
     if argv['search_engine'] in ['elasticsearch', None]:
         indexESData(file_path, force_run)
+
+    if argv['bestsellerupdate']:
+        update_bestseller_data(100)
 
     script_stop = timeit.default_timer()
     script_duration = script_stop - script_start
