@@ -53,7 +53,9 @@ def get_category_details(batch_size):
 
 		gludo_connection.cursor().execute(insert_query)
 
+	gludo_connection.commit()
 	gludo_connection.cursor().close()
+	gludo_connection.close()
 	print('config products : ', len(index))
 
 
