@@ -154,7 +154,6 @@ def getProducts():
           )A
           """
   results = Utils.fetchResults(nykaa_replica_db_conn, query)
-  brand_overrides = {"Himalaya" : "Himalaya Herbals"}
   for brand in results:
     brand_name = brand['name'].replace("’", "'")
     brand_name = strip_accents(brand_name)
@@ -164,8 +163,6 @@ def getProducts():
     brands_v1 = brand['brands_v1']
     if brand_name is not None:
       brand_upper = brand_name.strip()
-      if brand_upper in brand_overrides:
-        brand_upper = brand_overrides[brand_upper]
       brand_lower = brand_upper.lower()
       brand_name_name[brand_lower] = brand_upper
 
