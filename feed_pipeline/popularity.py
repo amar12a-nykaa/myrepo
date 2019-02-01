@@ -354,6 +354,7 @@ def calculate_popularity():
       popularity_table.replace_one({"_id": parent_id}, row, upsert=True)
       if parent_id in parent_child_distribution_map:
         for child_id, sale_ratio in parent_child_distribution_map[parent_id].items():
+          popularity_table.remove({"_id": child_id, "last_calculated": {"$ne": timestamp}})
           popularity_table.update({"_id": child_id}, {"$set": {'last_calculated': timestamp, 'parent_id': parent_id},
                                                       "$max": {'popularity': row['popularity'] * sale_ratio,
                                                             'popularity_recent': row['popularity_recent'] * sale_ratio}
