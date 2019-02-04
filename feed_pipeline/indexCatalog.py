@@ -804,6 +804,9 @@ class CatalogIndexer:
                 doc['object_type'] = "product"
                 doc['top_reviews'] = row.get('top_reviews', '')
                 doc['review_splitup'] = row.get('review_splitup', '')
+                doc['days_to_return'] = row.get('days_to_return')
+                doc['message_on_return'] = row.get('message_on_return')
+                doc['return_available'] = row.get('return_available')
                 if doc.get('type') == 'simple' or doc.get('type') == 'configurable':
                     doc['manufacturer_name'] = row.get('manufacturer_name', '')
                     doc['manufacturer_address'] = row.get('manufacturer_address', '')
