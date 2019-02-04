@@ -343,7 +343,6 @@ def index_categories(collection, searchengine):
   index_docs(searchengine, docs, collection)
 
 def index_brands_categories(collection, searchengine):
-  global multicategoryList
 
   def getBrandCategoryDoc(row, variant):
     is_men = False
@@ -376,9 +375,9 @@ def index_brands_categories(collection, searchengine):
     ctr += 1 
     if ctr.should_print():
       print(ctr.summary)
-
-    if row['category_id'] in multicategoryList:
-      for variant in multicategoryList[row['category_id']]['variant']:
+    variants = getVariants(row['category_id'])
+    if variants:
+      for variant in variants:
         brandCategoryDoc = getBrandCategoryDoc(row, variant)
         docs.append(brandCategoryDoc)
     else:

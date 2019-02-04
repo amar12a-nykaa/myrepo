@@ -29,7 +29,7 @@ from categoryutils import getVariants
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
-filter_attribute_map = {"664": "finish", "658": "color", "656": "concern", "661": "preference", "659": "formulation"}
+filter_attribute_map = [("656","concern"), ("661","preference"), ("659","formulation"), ("664","finish"), ("658","color")]
 FILTER_WEIGHT = 50
 
 class EntityIndexer:
@@ -46,6 +46,7 @@ class EntityIndexer:
       "Maybelline New York": ["Maybelline"],
       "NYX Professional Makeup": ["NYX"],
       "Lotus Herbals": ["Lotus"],
+      "Himalaya Herbals": ["Himalaya"],
       "Huda Beauty": ["Huda"],
       "Vaadi Herbals": ["Vaadi"],
       "Kama Ayurveda": ["Kama"],
@@ -81,6 +82,7 @@ class EntityIndexer:
     EsUtils.indexDocs(docs, collection)
 
   def index_categories(collection):
+
     def getCategoryDoc(row, variant):
       doc = {
         "_id": createId(variant),
@@ -153,7 +155,10 @@ class EntityIndexer:
 
   def index_filters(collection):
     mysql_conn = Utils.nykaaMysqlConnection(force_production=True)
-    for id, filter in filter_attribute_map.items():
+
+    for filt in filter_attribute_map:
+      id = filt[0]
+      filter = filt[1]
       query = """select eov.value as name, eov.option_id as filter_id from eav_attribute_option eo join eav_attribute_option_value eov
                     on eo.option_id = eov.option_id and eov.store_id = 0 where attribute_id = %s"""%id
       results = Utils.fetchResults(mysql_conn, query)
@@ -169,7 +174,7 @@ class EntityIndexer:
           "entity": row['name'],
           "weight": FILTER_WEIGHT,
           "type": filter,
-          "id": row['filter_id']
+          "id": str(row['filter_id'])
         }
         docs.append(filter_doc)
         if len(docs) >= 100:
@@ -180,8 +185,8 @@ class EntityIndexer:
 
       EsUtils.indexDocs(docs, collection)
 
-
-  def indexEntities(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False, index_brands_arg=False,index_filters_arg=False, index_all=False):
+  def indexEntities(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False,
+                      index_brands_arg=False, index_filters_arg=False, index_all=False):
     index = None
     print('Starting Processing')
     if collection: 
@@ -239,5 +244,7 @@ if __name__ == "__main__":
 
   required_args = ['category', 'brand', 'filters']
   index_all = not any([argv[x] for x in required_args])
-  EntityIndexer.indexEntities(collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_filters_arg=argv['filters'], index_all=index_all)
 
+EntityIndexer.indexEntities(collection=argv['collection'], active=argv['active'], inactive=argv['inactive'],
+                            swap=argv['swap'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'],
+                            index_filters_arg=argv['filters'], index_all=index_all)
