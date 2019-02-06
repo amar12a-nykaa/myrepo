@@ -717,6 +717,8 @@ class CatalogIndexer:
                                         key['name'] = i['name']
                                         key['offer_start_date'] = i['offer_start_date']
                                         key['offer_end_date'] = i['offer_end_date']
+                                        if 'customer_group' in i:
+                                          key['customer_group'] = i['customer_group']
                                         doc['key'].append(key)
                                         if prefix == 'nykaa':
                                             doc['offer_ids'].append(i['id'])
@@ -784,8 +786,14 @@ class CatalogIndexer:
                 doc['pro_flag_i'] = row['pro_flag'] or 0
                 doc['pro_disclaimer_s'] = row['pro_disclaimer']
                 # doc['is_kit_combo_i'] = row['is_kit_combo'] or 0
-
-                doc['is_searchable_i'] = row['is_searchable'] or 0
+                if 'pro_disclaimer' in row:
+                  doc['pro_disclaimer_s'] = row['pro_disclaimer']
+                else:
+                  doc['pro_disclaimer_s'] = ''
+                if 'is_searchable' in row:
+                  doc['is_searchable_i'] = row['is_searchable'] or 0
+                else:
+                  doc['is_searchable_i'] = 0
                 doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
                 doc['create_time'] = row['created_at']
                 doc['object_type'] = "product"
