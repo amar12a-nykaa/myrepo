@@ -50,7 +50,7 @@ def get_category_details(batch_size):
 	for batch in batch_array:
 		insert_query = 'INSERT INTO bestseller_product_mapping (sku, bestseller_child_skus) VALUES '
 		for row in batch:
-			insert_query += str(row) + ','
+			insert_query += str(row).upper() + ','
 		insert_query = insert_query[:-1]
 		gludo_connection.cursor().execute(insert_query)
 
