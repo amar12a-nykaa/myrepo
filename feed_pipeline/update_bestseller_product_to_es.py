@@ -6,7 +6,10 @@ sys.path.append('/home/apis/nykaa/')
 
 from pas.v2.utils import Utils, hostname, CATALOG_COLLECTION_ALIAS
 from elasticsearch import helpers, Elasticsearch
-from sharedutils.esutils import EsUtils
+
+sys.path.append('/nykaa/scripts/sharedutils/')
+from esutils import EsUtils
+
 es_connection = Utils.esConn()
 
 
