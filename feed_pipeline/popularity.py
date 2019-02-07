@@ -40,7 +40,7 @@ PRODUCT_PUNISH_FACTOR = 0.5
 POPULARITY_DECAY_FACTOR = 0.5
 POPULARITY_TOTAL_RATIO = 0.1
 POPULARITY_BUCKET_RATIO = 0.9
-COLD_START_DECAY_FACTOR = 0
+COLD_START_DECAY_FACTOR = 0.9
 
 WEIGHT_VIEWS_NEW = 10
 WEIGHT_UNITS_NEW = 30
@@ -354,6 +354,7 @@ def calculate_popularity():
       popularity_table.replace_one({"_id": parent_id}, row, upsert=True)
       if parent_id in parent_child_distribution_map:
         for child_id, sale_ratio in parent_child_distribution_map[parent_id].items():
+          popularity_table.remove({"_id": child_id, "last_calculated": {"$ne": timestamp}})
           popularity_table.update({"_id": child_id}, {"$set": {'last_calculated': timestamp, 'parent_id': parent_id},
                                                       "$max": {'popularity': row['popularity'] * sale_ratio,
                                                             'popularity_recent': row['popularity_recent'] * sale_ratio}

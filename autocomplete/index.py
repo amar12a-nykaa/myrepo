@@ -57,7 +57,7 @@ MIN_COUNTS = {
 }
 Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
-brandLandingMap = {"herm" : "https://www.nykaa.com/hermes?ptype=lst&id=7917"}
+brandLandingMap = {"herm" : "/hermes?ptype=lst&id=7917"}
 
 def get_feedback_data(entity):
     search_term = entity.lower()
@@ -221,7 +221,7 @@ def index_search_queries(collection, searchengine):
       if(query != corrected_query):
         is_corrected = True
       _type = 'search_query'
-      url = "http://www.nykaa.com/search/result/?q=" + corrected_query.replace(" ", "+")
+      url = "/search/result/?q=" + corrected_query.replace(" ", "+")
       data = json.dumps({"type": _type, "url": url, "corrected_query" : corrected_query})
       entity = query 
       cnt_search += 1 
@@ -292,8 +292,8 @@ def index_categories(collection, searchengine):
   def getCategoryDoc(row, variant):
     category_url = row['url']
     category_men_url = row['men_url']
-    url = "http://www.nykaa.com/search/result/?q=" + variant.replace(" ", "+")
-    men_url = "http://www.nykaaman.com/search/result/?q=" + variant.replace(" ", "+")
+    url = "/search/result/?q=" + variant.replace(" ", "+")
+    men_url = "/search/result/?q=" + variant.replace(" ", "+")
     is_men = False
     if row['category_popularity_men'] > 0:
       is_men = True
@@ -349,8 +349,8 @@ def index_brands_categories(collection, searchengine):
     if row['popularity_men'] > 0:
       is_men = True
 
-    url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['brand'] + " " + variant
-    men_url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['brand'] + " " + variant
+    url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
+    men_url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
     doc = {"_id": createId(row['brand'] + "_" + variant),
                  "entity": row['brand'] + " " + variant,
                  "weight": row['popularity'],
@@ -406,8 +406,8 @@ def index_category_facets(collection, searchengine):
     if row['popularity_men'] > 0:
       is_men = True
 
-    url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
-    men_url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
+    url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
+    men_url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
     docs.append({"_id": createId(row['facet_val'] +"_"+row['category_name']), 
         "entity": row['facet_val'] + " " + row['category_name'],  
         "weight": row['popularity'],
@@ -509,6 +509,9 @@ def index_products(collection, searchengine):
 
       _type = 'product'
       url = product['product_url']
+      url_parts = url.partition('com')
+      if len(url_parts) == 3:
+        url = url_parts[2]
       image = product['image']
       image_base = product['image_base']
       men_url = None
