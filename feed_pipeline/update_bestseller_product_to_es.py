@@ -3,9 +3,10 @@ import argparse
 from contextlib import closing
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import Utils, hostname
-from elasticsearch import helpers, Elasticsearch
 
+from pas.v2.utils import Utils, hostname, CATALOG_COLLECTION_ALIAS
+from elasticsearch import helpers, Elasticsearch
+from sharedutils.esutils import EsUtils
 es_connection = Utils.esConn()
 
 
@@ -35,7 +36,12 @@ def update_es_bestseller_products(docs):
 def update_bestseller_data(batch_size):
 
 	try:
+		print('update_bestseller_data Started ')
 		print('batch_size : ', batch_size)
+		indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+		active_index = indexes['active_index']
+		print("ES Active Index: %s" % active_index)
+
 		fetch_query = """SELECT sku, bestseller_child_skus FROM bestseller_product_mapping;"""
 		connection = Utils.mysqlConnection('r')
 		with closing(connection.cursor()) as cursor:
@@ -64,6 +70,8 @@ def update_bestseller_data(batch_size):
 
 			print('Totat products updated : ', products_updated)
 			print('Totat products skipped : ', products_skipped)
+
+		print('update_bestseller_data Finished ')
 	except:
 		print(sys.exc_info()[0])
 
