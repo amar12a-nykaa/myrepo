@@ -327,6 +327,7 @@ def calculate_popularity():
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
   a = applyBoost(a)
   a = handleColdStart(a)
+  a = applyOffers(a)
   a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
   for i, row in a.iterrows():
@@ -489,6 +490,31 @@ def handleColdStart(df):
   final_df.drop(['calculated_popularity', 'calculated_popularity_new', 'product_id'], axis=1, inplace=True)
   final_df = final_df.astype({'parent_id' : str})
   return final_df
+
+def applyOffers(df):
+  start_date = datetime.datetime.now() + datetime.timedelta(minutes=330)
+  end_date = start_date + datetime.timedelta(days=1)
+  start_date = start_date.strftime('%Y-%m-%d')
+  end_date = end_date.strftime('%Y-%m-%d')
+  conn = Utils.nykaaMysqlConnection()
+
+  query = """select entity_id as offer_id from nykaa_offers where start_date < '%s' and end_date > '%s'"""%(start_date, end_date)
+  offers = pd.read_sql(query, con=conn)
+  offers = list(offers['offer_id'])
+
+  query = """select entity_id as product_id, value as offer_ids from catalog_product_entity_varchar where attribute_id = 678 and store_id = 0 and value is not null"""
+  product_offer_mapping = pd.read_sql(query, con=conn)
+  conn.close()
+
+  product_offer_mapping['offer_ids'] = product_offer_mapping['offer_ids'].apply(lambda x: x.split(','))
+  product_offer_mapping['valid'] = product_offer_mapping['offer_ids'].apply(lambda x: any(i for i in x if i in offers))
+  product_offer_mapping = product_offer_mapping[product_offer_mapping.valid == True]
+  product_offer_mapping = product_offer_mapping.astype({'product_id' : str, 'valid': bool})
+  df = pd.merge(df, product_offer_mapping, how='left', left_on=['parent_id'], right_on=['product_id'])
+  df.valid = df.valid.fillna(False)
+
+  df['popularity_new'] = df.apply(lambda x: x['popularity_new'] + (x['popularity_new']/10) if x['valid'] == True else x['popularity_new'], axis=1)
+  return df
 
 if argv['preprocess']:
   print("preprocess start: %s" % arrow.now())
