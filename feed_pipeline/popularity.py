@@ -496,10 +496,11 @@ def applyOffers(df):
   end_date = start_date + datetime.timedelta(days=1)
   start_date = start_date.strftime('%Y-%m-%d')
   end_date = end_date.strftime('%Y-%m-%d')
-  conn = Utils.nykaaMysqlConnection()
+  conn = Utils.nykaaMysqlConnection(force_production=True)
 
-  query = """select entity_id as offer_id from nykaa_offers where start_date < '%s' and end_date > '%s'"""%(start_date, end_date)
+  query = """select entity_id as offer_id from nykaa_offers where enabled=1 and app = 1 and start_date < '%s' and end_date > '%s'"""%(start_date, end_date)
   offers = pd.read_sql(query, con=conn)
+  offers = offers.astype({'offer_id': str})
   offers = list(offers['offer_id'])
 
   query = """select entity_id as product_id, value as offer_ids from catalog_product_entity_varchar where attribute_id = 678 and store_id = 0 and value is not null"""
@@ -513,7 +514,13 @@ def applyOffers(df):
   df = pd.merge(df, product_offer_mapping, how='left', left_on=['parent_id'], right_on=['product_id'])
   df.valid = df.valid.fillna(False)
 
-  df['popularity_new'] = df.apply(lambda x: x['popularity_new'] + (x['popularity_new']/10) if x['valid'] == True else x['popularity_new'], axis=1)
+  def calculate_new_popularity(row):
+    print("preprocess start: %s" % arrow.now()) |
+    if row['valid']:
+      row['popularity_new'] = row['popularity_new'] + (row['popularity_new']/10)
+    return row
+  df = df.apply(calculate_new_popularity, axis=1)
+  df.drop(['valid', 'product_id', 'offer_ids'], axis=1, inplace=True)
   return df
 
 if argv['preprocess']:
