@@ -515,7 +515,6 @@ def applyOffers(df):
   df.valid = df.valid.fillna(False)
 
   def calculate_new_popularity(row):
-    print("preprocess start: %s" % arrow.now()) |
     if row['valid']:
       row['popularity_new'] = row['popularity_new'] + (row['popularity_new']/10)
     return row
