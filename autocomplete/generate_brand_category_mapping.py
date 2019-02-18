@@ -73,8 +73,8 @@ def get_category_details():
   results = Utils.fetchResults(nykaa_replica_db_conn, query)
   for row in results:
     _id = str(row['category_id'])
-    url = "http://www.nykaa.com/" + row['url']
-    men_url = "http://www.nykaaman.com/" + row['url']
+    url = row['url']
+    men_url = row['url']
     if _id in cat_id_index:
       cat_id_index[_id]['url'] = url
       cat_id_index[_id]['men_url'] = men_url
@@ -158,8 +158,8 @@ def getProducts():
     brand_name = brand['name'].replace("’", "'")
     brand_name = strip_accents(brand_name)
     brand_id = brand['id']
-    brand_url = "http://www.nykaa.com/" + brand['url']
-    brand_men_url = "http://www.nykaaman.com/" + brand['url']
+    brand_url = brand['url']
+    brand_men_url = brand['url']
     brands_v1 = brand['brands_v1']
     if brand_name is not None:
       brand_upper = brand_name.strip()
