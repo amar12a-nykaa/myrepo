@@ -54,6 +54,7 @@ def process_guides(filename='guide.csv'):
         filter_list = list(entities.keys())
         temp_df = df[df['keyword'] == keyword]
         temp_df = temp_df[~temp_df['filter_name'].isin(filter_list)].reset_index(drop=True)
+        temp_df['filter_name'] = temp_df['filter_name'].apply(lambda x : x + '_filter')
         temp_df.drop(['freq'], axis=1, inplace=True)
 
         guide_list.append(temp_df)
@@ -180,7 +181,7 @@ def get_filters():
     filters = pd.read_sql(query, con=mysql_conn)
     mysql_conn.close()
 
-    filters['filter_name'] = filters['filter_name'].apply(lambda x : x.replace('_v1', '_filter'))
+    filters['filter_name'] = filters['filter_name'].apply(lambda x: x[:-3])
     filters = filters.astype({'filter_id': str})
     mysql_conn = Utils.mysqlConnection()
     #get color codes
