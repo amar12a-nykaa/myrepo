@@ -54,7 +54,6 @@ def process_guides(filename='guide.csv'):
         filter_list = list(entities.keys())
         temp_df = df[df['keyword'] == keyword]
         temp_df = temp_df[~temp_df['filter_name'].isin(filter_list)].reset_index(drop=True)
-        temp_df['filter_name'] = temp_df['filter_name'].apply(lambda x : x + '_filter')
         temp_df.drop(['freq'], axis=1, inplace=True)
 
         guide_list.append(temp_df)
@@ -245,6 +244,7 @@ def index_guides(collection, active, inactive, swap, filename):
     guides = process_guides(filename)
     filters = get_filters()
     guides = pd.merge(guides, filters, on=['filter_name', 'filter_value'])
+    guides['filter_name'] = guides['filter_name'].apply(lambda x: x + '_filter')
     insert_guides_in_es(guides, index)
 
     if swap:
