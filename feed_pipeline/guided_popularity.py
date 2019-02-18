@@ -180,7 +180,7 @@ def get_filters():
     filters = pd.read_sql(query, con=mysql_conn)
     mysql_conn.close()
 
-    filters['filter_name'] = filters['filter_name'].apply(lambda x : x[:-3])
+    filters['filter_name'] = filters['filter_name'].apply(lambda x : x.replace('_v1', '_filter'))
     filters = filters.astype({'filter_id': str})
     mysql_conn = Utils.mysqlConnection()
     #get color codes
