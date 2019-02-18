@@ -39,7 +39,7 @@ class EntityIndexer:
 
   def index_assortment_gap(collection):
     docs = []
-    df = pd.read_csv('feed_pipeline/assortment_gaps.csv')
+    df = pd.read_csv('/nykaa/scripts/feed_pipeline/assortment_gaps.csv')
     brand_list = list(df['Brands'])
 
     ctr = LoopCounter(name='Assortment Gap Indexing')
