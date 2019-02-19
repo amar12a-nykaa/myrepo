@@ -2,6 +2,7 @@
 import argparse
 import csv
 import json
+import pandas as pd
 from pprint import pprint
 import re
 import sys
@@ -31,9 +32,38 @@ from pas.v2.utils import Utils
 
 filter_attribute_map = [("656","concern"), ("661","preference"), ("659","formulation"), ("664","finish"), ("658","color")]
 FILTER_WEIGHT = 50
+ASSORTMENT_WEIGHT = 1
 
 class EntityIndexer:
   DOCS_BATCH_SIZE = 1000
+
+  def index_assortment_gap(collection):
+    docs = []
+    df = pd.read_csv('/nykaa/scripts/feed_pipeline/assortment_gaps.csv')
+    brand_list = list(df['Brands'])
+
+    ctr = LoopCounter(name='Assortment Gap Indexing')
+    for row in brand_list:
+      ctr += 1
+      if ctr.should_print():
+        print(ctr.summary)
+
+      assortment_doc = {
+        "_id": createId(row),
+        "entity": row,
+        "weight": ASSORTMENT_WEIGHT,
+        "type": "assortment_gap",
+        "id": ctr.count
+      }
+
+      docs.append(assortment_doc)
+      if len(docs) >= 100:
+        EsUtils.indexDocs(docs, collection)
+        docs = []
+
+      print(row, ctr.count)
+
+    EsUtils.indexDocs(docs, collection)
 
   def index_brands(collection):
     docs = []
@@ -213,6 +243,7 @@ class EntityIndexer:
       index_client.create(index, schema)
       print("Creating index: %s" % index)
 
+      EntityIndexer.index_assortment_gap(index)
       if index_filters_arg:
         EntityIndexer.index_filters(index)
       if index_categories_arg:
