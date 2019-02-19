@@ -172,6 +172,24 @@ class CatalogIndexer:
         "underwired": "under wired underwired",
         "weight loss": "weightloss weight loss",
         "weightloss": "weight loss weightloss",
+        "vwash": "v wash vwash",
+        "mini": "little mini",
+        "little": "little mini",
+        "eyelash": "eye lash eyelash",
+        "matte": "matt matte",
+        "color pop": "colorpop color pop",
+        "mamaearth": "mamaearth mama earth",
+        "colorbar": "color bar colorbar",
+        "glamglow": "glamglow glam glow",
+        "deodorants": "deodorants deo",
+        "moisturizer": "moisturizer moisturiser",
+        "almond": "badam almond",
+        "badam": "badam almond",
+        "de tan": "de tan d tan",
+        "d tan": "de tan d tan",
+        "thebalm": "thebalm the balm",
+        "bblunt": "bblunt b blunt",
+        "boroplus": "boroplus boro plus",
     }
 
     def print_errors(errors):
@@ -799,6 +817,9 @@ class CatalogIndexer:
                 doc['object_type'] = "product"
                 doc['top_reviews'] = row.get('top_reviews', '')
                 doc['review_splitup'] = row.get('review_splitup', '')
+                doc['days_to_return'] = row.get('days_to_return')
+                doc['message_on_return'] = row.get('message_on_return')
+                doc['return_available'] = row.get('return_available')
                 if doc.get('type') == 'simple' or doc.get('type') == 'configurable':
                     doc['manufacturer_name'] = row.get('manufacturer_name', '')
                     doc['manufacturer_address'] = row.get('manufacturer_address', '')
@@ -892,12 +913,16 @@ class CatalogIndexer:
 
         size_filter = CatalogIndexer.getSizeFilterConfig()
 
-        product_2_vector_lsi_100 = {}
-        product_2_vector_lsi_200 = {}
-        product_2_vector_lsi_300 = {}
-        #product_2_vector_lsi_100 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_100', False)}
-        #product_2_vector_lsi_200 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_200', False)}
-        #product_2_vector_lsi_300 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es('lsi_300', False)}
+        #product_2_vector_lsi_100 = {}
+        #product_2_vector_lsi_200 = {}
+        #product_2_vector_lsi_300 = {}
+        print("Fetching embedding vectors for products")
+        index_check_results = Utils.fetchResults(Utils.mlMysqlConnection('r'), 'SHOW INDEXES FROM embedding_vectors')
+        if len(list(filter(lambda x: x['Key_name'] == 'embedding_vector_scroll', index_check_results))) == 0:
+            raise Exception('Index embedding_vector_scroll is not present in ml db')
+        product_2_vector_lsi_100 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es(Utils.mlMysqlConnection('r'), 'lsi_100', False)}
+        product_2_vector_lsi_200 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es(Utils.mlMysqlConnection('r'), 'lsi_200', False)}
+        product_2_vector_lsi_300 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es(Utils.mlMysqlConnection('r'), 'lsi_300', False)}
 
         ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
         q = queue.Queue(maxsize=0)

@@ -2,6 +2,7 @@
 import argparse
 import csv
 import json
+import pandas as pd
 from pprint import pprint
 import re
 import sys
@@ -24,12 +25,45 @@ sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
 from esutils import EsUtils
 from idutils import createId
+from categoryutils import getVariants
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
+filter_attribute_map = [("656","concern"), ("661","preference"), ("659","formulation"), ("664","finish"), ("658","color")]
+FILTER_WEIGHT = 50
+ASSORTMENT_WEIGHT = 1
+
 class EntityIndexer:
   DOCS_BATCH_SIZE = 1000
+
+  def index_assortment_gap(collection):
+    docs = []
+    df = pd.read_csv('/nykaa/scripts/feed_pipeline/assortment_gaps.csv')
+    brand_list = list(df['Brands'])
+
+    ctr = LoopCounter(name='Assortment Gap Indexing')
+    for row in brand_list:
+      ctr += 1
+      if ctr.should_print():
+        print(ctr.summary)
+
+      assortment_doc = {
+        "_id": createId(row),
+        "entity": row,
+        "weight": ASSORTMENT_WEIGHT,
+        "type": "assortment_gap",
+        "id": ctr.count
+      }
+
+      docs.append(assortment_doc)
+      if len(docs) >= 100:
+        EsUtils.indexDocs(docs, collection)
+        docs = []
+
+      print(row, ctr.count)
+
+    EsUtils.indexDocs(docs, collection)
 
   def index_brands(collection):
     docs = []
@@ -39,6 +73,14 @@ class EntityIndexer:
       "The Face Shop": ["Face Shop"],
       "The Body Care": ["Body Care"],
       "Make Up Forever": ["Makeup Forever"],
+      "Maybelline New York": ["Maybelline"],
+      "NYX Professional Makeup": ["NYX"],
+      "Lotus Herbals": ["Lotus"],
+      "Himalaya Herbals": ["Himalaya"],
+      "Huda Beauty": ["Huda"],
+      "Vaadi Herbals": ["Vaadi"],
+      "Kama Ayurveda": ["Kama"],
+      "Layer'r": ["Layer"],
     }
     mysql_conn = Utils.mysqlConnection()
     query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
@@ -70,6 +112,16 @@ class EntityIndexer:
     EsUtils.indexDocs(docs, collection)
 
   def index_categories(collection):
+
+    def getCategoryDoc(row, variant):
+      doc = {
+        "_id": createId(variant),
+        "entity": variant,
+        "weight": row['category_popularity'],
+        "type": "category",
+        "id": row['category_id'],
+      }
+      return doc
     docs = []
 
     mysql_conn = Utils.mysqlConnection()
@@ -85,15 +137,16 @@ class EntityIndexer:
       if prev_cat == row['category_name']:
         continue
       prev_cat = row['category_name']
+      variants = getVariants(row['category_id'])
+      if variants:
+        for variant in variants:
+          categoryDoc = getCategoryDoc(row, variant)
+          docs.append(categoryDoc)
+      else:
+        categoryDoc = getCategoryDoc(row, prev_cat)
+        docs.append(categoryDoc)
 
-      docs.append({
-        "_id": createId(row['category_name']),
-        "entity": row['category_name'],
-        "weight": row['category_popularity'],
-        "type": "category",
-        "id": row['category_id'],
-      })
-      if len(docs) == 100:
+      if len(docs) >= 100:
         EsUtils.indexDocs(docs, collection)
         docs = []
 
@@ -130,7 +183,38 @@ class EntityIndexer:
 
     EsUtils.indexDocs(docs, collection)
 
-  def indexEntities(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_all=False):
+  def index_filters(collection):
+    mysql_conn = Utils.nykaaMysqlConnection(force_production=True)
+    for filt in filter_attribute_map:
+      id = filt[0]
+      filter = filt[1]
+      query = """select eov.value as name, eov.option_id as filter_id from eav_attribute_option eo join eav_attribute_option_value eov
+                    on eo.option_id = eov.option_id and eov.store_id = 0 where attribute_id = %s"""%id
+      results = Utils.fetchResults(mysql_conn, query)
+      ctr = LoopCounter(name='%s Indexing' % filter)
+      docs = []
+      for row in results:
+        ctr += 1
+        if ctr.should_print():
+          print(ctr.summary)
+
+        filter_doc = {
+          "_id": createId(row['name']),
+          "entity": row['name'],
+          "weight": FILTER_WEIGHT,
+          "type": filter,
+          "id": str(row['filter_id'])
+        }
+        docs.append(filter_doc)
+        if len(docs) >= 100:
+          EsUtils.indexDocs(docs, collection)
+          docs = []
+
+        print(row['name'], ctr.count)
+      EsUtils.indexDocs(docs, collection)
+
+  def indexEntities(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False,
+                      index_brands_arg=False, index_filters_arg=False, index_all=False):
     index = None
     print('Starting Processing')
     if collection: 
@@ -145,7 +229,7 @@ class EntityIndexer:
     if index_all:
       index_categories_arg = True
       index_brands_arg = True
-      index_brands_categories_arg = True
+      index_filters_arg = True
 
     if index:
       #clear the index
@@ -157,12 +241,13 @@ class EntityIndexer:
       index_client.create(index, schema)
       print("Creating index: %s" % index)
 
+      EntityIndexer.index_assortment_gap(index)
+      if index_filters_arg:
+        EntityIndexer.index_filters(index)
       if index_categories_arg:
         EntityIndexer.index_categories(index)
       if index_brands_arg:
         EntityIndexer.index_brands(index)
-      if index_brands_categories_arg:
-        EntityIndexer.index_brands_categories(index)
 
     if swap:
       print("Swapping Index")
@@ -176,7 +261,7 @@ if __name__ == "__main__":
   group = parser.add_argument_group('group')
   group.add_argument("-c", "--category", action='store_true')
   group.add_argument("-b", "--brand", action='store_true')
-  group.add_argument("--brand-category", action='store_true')
+  group.add_argument("--filters", action='store_true')
 
   collection_state = parser.add_mutually_exclusive_group(required=True)
   collection_state.add_argument("--inactive", action='store_true')
@@ -186,7 +271,8 @@ if __name__ == "__main__":
   parser.add_argument("--swap", action='store_true', help="Swap the Core")
   argv = vars(parser.parse_args())
 
-  required_args = ['category', 'brand', 'brand_category']
+  required_args = ['category', 'brand', 'filters']
   index_all = not any([argv[x] for x in required_args])
-  EntityIndexer.indexEntities(collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_all=index_all)
-
+EntityIndexer.indexEntities(collection=argv['collection'], active=argv['active'], inactive=argv['inactive'],
+                            swap=argv['swap'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'],
+                            index_filters_arg=argv['filters'], index_all=index_all)

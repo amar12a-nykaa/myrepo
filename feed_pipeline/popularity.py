@@ -40,7 +40,7 @@ PRODUCT_PUNISH_FACTOR = 0.5
 POPULARITY_DECAY_FACTOR = 0.5
 POPULARITY_TOTAL_RATIO = 0.1
 POPULARITY_BUCKET_RATIO = 0.9
-COLD_START_DECAY_FACTOR = 0
+COLD_START_DECAY_FACTOR = 0.9
 
 WEIGHT_VIEWS_NEW = 10
 WEIGHT_UNITS_NEW = 30
@@ -327,6 +327,7 @@ def calculate_popularity():
   ctr = LoopCounter(name='Writing popularity to db', total = len(a.index))
   a = applyBoost(a)
   a = handleColdStart(a)
+  a = applyOffers(a)
   a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
   for i, row in a.iterrows():
@@ -354,6 +355,7 @@ def calculate_popularity():
       popularity_table.replace_one({"_id": parent_id}, row, upsert=True)
       if parent_id in parent_child_distribution_map:
         for child_id, sale_ratio in parent_child_distribution_map[parent_id].items():
+          popularity_table.remove({"_id": child_id, "last_calculated": {"$ne": timestamp}})
           popularity_table.update({"_id": child_id}, {"$set": {'last_calculated': timestamp, 'parent_id': parent_id},
                                                       "$max": {'popularity': row['popularity'] * sale_ratio,
                                                             'popularity_recent': row['popularity_recent'] * sale_ratio}
@@ -488,6 +490,37 @@ def handleColdStart(df):
   final_df.drop(['calculated_popularity', 'calculated_popularity_new', 'product_id'], axis=1, inplace=True)
   final_df = final_df.astype({'parent_id' : str})
   return final_df
+
+def applyOffers(df):
+  start_date = datetime.datetime.now() + datetime.timedelta(minutes=330)
+  end_date = start_date + datetime.timedelta(days=1)
+  start_date = start_date.strftime('%Y-%m-%d')
+  end_date = end_date.strftime('%Y-%m-%d')
+  conn = Utils.nykaaMysqlConnection(force_production=True)
+
+  query = """select entity_id as offer_id from nykaa_offers where enabled=1 and app = 1 and start_date < '%s' and end_date > '%s'"""%(start_date, end_date)
+  offers = pd.read_sql(query, con=conn)
+  offers = offers.astype({'offer_id': str})
+  offers = list(offers['offer_id'])
+
+  query = """select entity_id as product_id, value as offer_ids from catalog_product_entity_varchar where attribute_id = 678 and store_id = 0 and value is not null"""
+  product_offer_mapping = pd.read_sql(query, con=conn)
+  conn.close()
+
+  product_offer_mapping['offer_ids'] = product_offer_mapping['offer_ids'].apply(lambda x: x.split(','))
+  product_offer_mapping['valid'] = product_offer_mapping['offer_ids'].apply(lambda x: any(i for i in x if i in offers))
+  product_offer_mapping = product_offer_mapping[product_offer_mapping.valid == True]
+  product_offer_mapping = product_offer_mapping.astype({'product_id' : str, 'valid': bool})
+  df = pd.merge(df, product_offer_mapping, how='left', left_on=['parent_id'], right_on=['product_id'])
+  df.valid = df.valid.fillna(False)
+
+  def calculate_new_popularity(row):
+    if row['valid']:
+      row['popularity_new'] = row['popularity_new'] + (row['popularity_new']/10)
+    return row
+  df = df.apply(calculate_new_popularity, axis=1)
+  df.drop(['valid', 'product_id', 'offer_ids'], axis=1, inplace=True)
+  return df
 
 if argv['preprocess']:
   print("preprocess start: %s" % arrow.now())
