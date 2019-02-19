@@ -5,7 +5,7 @@ import json
 import os
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils, EntityUtils
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
@@ -50,7 +50,7 @@ def process_guides(filename='guide.csv'):
     keyword_list = list(map(str, keyword_frequency.iloc[:, 0]))
     for keyword in keyword_list:
         # remove filters present in keyword itself
-        entities = get_entities(keyword)
+        entities, coverage = EntityUtils.get_matched_entities(keyword)
         filter_list = list(entities.keys())
         temp_df = df[df['keyword'] == keyword]
         temp_df = temp_df[~temp_df['filter_name'].isin(filter_list)].reset_index(drop=True)
@@ -60,114 +60,6 @@ def process_guides(filename='guide.csv'):
 
     guide = pd.concat(guide_list).reset_index()
     return guide
-
-
-def get_entities(query):
-    def iskdiffhelper(string, pattern, m, n, dp):
-        if dp[m][n] != -1:
-            return dp[m][n]
-
-        if n == 0:
-            dp[m][n] = m
-            return m
-
-        if m == 0:
-            dp[m][n] = 0
-            return 0
-
-        minimum = min(iskdiffhelper(string, pattern, m - 1, n, dp) + 1,
-                      iskdiffhelper(string, pattern, m, n - 1, dp) + 1)
-        if string[n - 1] == pattern[m - 1]:
-            minimum = min(minimum, iskdiffhelper(string, pattern, m - 1, n - 1, dp))
-        else:
-            minimum = min(minimum, iskdiffhelper(string, pattern, m - 1, n - 1, dp) + 1)
-
-        dp[m][n] = minimum
-        return dp[m][n]
-
-    def iskdiff(string, pattern, k):
-        m = len(pattern)
-        n = len(string)
-
-        dp = [[-1 for x in range(n + 1)] for y in range(m + 1)]
-        for x in range(n):
-            sol = iskdiffhelper(string, pattern, m, n - x, dp)
-            if sol <= k:
-                return True
-
-        return False
-
-    def fuzzylen(str_len):
-        # fuzziness
-        if str_len > 5:
-            k = 2
-        elif str_len >= 3:
-            k = 1
-        else:
-            k = 0
-
-        return k
-
-    query = query.lower()
-    query_formatted = " ".join(query.split())
-    query_formatted += " "
-    result = {}
-
-    querydsl = {}
-    querydsl['sort'] = {
-        '_score': 'desc',
-        'weight': 'desc'
-    }
-    querydsl['size'] = 10
-    querydsl['query'] = {
-        "multi_match": {
-            "query": query,
-            "fields": ["entity", "entity.shingle", "entity.shingle_search"]
-        }
-    }
-
-    response = Utils.makeESRequest(querydsl, index='entity')
-    docs = response['hits']['hits']
-
-    for index, doc in enumerate(docs):
-        doc = doc['_source']
-        entity_type = doc['type'].lower()
-
-        entity_name = ""
-        entity_names_list = []
-        if 'entity_synonyms' in doc:
-            entity_names_list = doc['entity_synonyms']
-        entity_names_list.insert(0, doc['entity'])
-        for entity_name_orig in entity_names_list:
-            entity_name = " ".join(entity_name_orig.split())
-        entity_name += " "
-        #use k-diff to drop
-        # print("%s %s %s"%(query_formatted, entity_name.lower(), fuzzylen(len(entity_name))))
-        if iskdiff(query_formatted, entity_name.lower(), fuzzylen(len(entity_name))):
-            if entity_type in result and len(entity_name) < len(result[entity_type]['entity']):
-                continue
-            result[entity_type] = {
-                'id': doc['id'],
-                'entity': doc['entity'],
-                'entity_formatted': entity_name,
-                'rank': index
-            }
-
-    # drop entity if it is subtring of another entity
-    drop_entities = []
-    entity_type_list = result.keys()
-    for entity_type in entity_type_list:
-        for en_type, en_data in result.items():
-            if en_type == entity_type:
-                continue
-            if result[entity_type]['entity_formatted'] in en_data['entity_formatted']:
-                drop_entities.append(entity_type)
-                break
-    for entity in drop_entities:
-        result.pop(entity, None)
-
-    return result
-
 
 def get_filters():
     mysql_conn = Utils.nykaaMysqlConnection(force_production=True)
