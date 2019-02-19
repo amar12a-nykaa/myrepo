@@ -54,7 +54,7 @@ def process_guides(filename='guide.csv'):
         filter_list = list(entities.keys())
         temp_df = df[df['keyword'] == keyword]
         temp_df = temp_df[~temp_df['filter_name'].isin(filter_list)].reset_index(drop=True)
-        temp_df.drop(['freq'], axis=1, inplace=True)
+        # temp_df.drop(['freq'], axis=1, inplace=True)
 
         guide_list.append(temp_df)
 
@@ -95,7 +95,7 @@ def get_filters():
 
 
 def insert_guides_in_es(guides, collection):
-    guides.rename(columns={'index': 'rank', 'filter_name': 'type', 'filter_id': 'entity_id', 'keyword': 'query',
+    guides.rename(columns={'freq': 'rank', 'filter_name': 'type', 'filter_id': 'entity_id', 'keyword': 'query',
                            'filter_value': 'entity_value'}, inplace=True)
     guides['_id'] = guides.index
     guide_color = guides[~guides['color_code'].isnull()]
