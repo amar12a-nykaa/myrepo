@@ -159,9 +159,9 @@ class Utils:
                     "query": { "match_all": {} },
                     "_source": ["product_id", "is_luxe", "mrp", "parent_id", "primary_categories", "brand_facet", "sku", "media"]
                 }
-                response = es_conn.search(index='livecore', body=query, scroll='5m')
+                response = es_conn.search(index='livecore', body=query, scroll='15m')
             else:
-                response = es_conn.scroll(scroll_id=scroll_id, scroll='5m')
+                response = es_conn.scroll(scroll_id=scroll_id, scroll='15m')
 
             if not response['hits']['hits']:
                 break
