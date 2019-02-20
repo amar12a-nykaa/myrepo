@@ -12,6 +12,7 @@ from esutils import EsUtils
 FREQUENCY_THRESHOLD = 3
 
 def process_guides(filename='guide.csv'):
+    file_path = '/nykaa/scripts/' + filename
     df = pd.read_csv(filename, encoding="ISO-8859-1")
 
     #apply frequency threshold
