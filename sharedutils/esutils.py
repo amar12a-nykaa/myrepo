@@ -84,7 +84,7 @@ class EsUtils:
                 es.indices.create(index = index, body = schema)
                 es.indices.put_alias(index= index, name = alias)
               if index in ['guide_yin', 'guide_yang']:
-                schema = json.load(open('/home/shweta/nykaa/nykaa_scripts/feed_pipeline/guide_schema.json'))
+                schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/guide_schema.json'))
                 es.indices.create(index = index, body = schema)
                 es.indices.put_alias(index= index, name = alias)
             else:
