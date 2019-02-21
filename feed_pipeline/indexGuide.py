@@ -10,10 +10,11 @@ sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
 FREQUENCY_THRESHOLD = 3
+GUIDE_SIZE = 20
 
 def process_guides(filename='guide.csv'):
     file_path = '/nykaa/scripts/' + filename
-    df = pd.read_csv(filename, encoding="ISO-8859-1")
+    df = pd.read_csv(file_path, encoding="ISO-8859-1")
 
     #apply frequency threshold
     df = df[df.freq >= FREQUENCY_THRESHOLD]
@@ -54,11 +55,15 @@ def process_guides(filename='guide.csv'):
         entities, coverage = EntityUtils.get_matched_entities(keyword)
         filter_list = list(entities.keys())
         temp_df = df[df['keyword'] == keyword]
+        cat_df = temp_df[temp_df['filter_name'] == 'category']
+        cat_df = cat_df.head(GUIDE_SIZE)
+        non_cat_df = temp_df[temp_df['filter_name'] != 'category']
+        temp_df = pd.concat([cat_df, non_cat_df])
+        temp_df = temp_df.sort_values(by='freq', ascending=False)
         temp_df = temp_df[~temp_df['filter_name'].isin(filter_list)].reset_index(drop=True)
         # temp_df.drop(['freq'], axis=1, inplace=True)
 
         guide_list.append(temp_df)
-
     guide = pd.concat(guide_list).reset_index()
     return guide
 
