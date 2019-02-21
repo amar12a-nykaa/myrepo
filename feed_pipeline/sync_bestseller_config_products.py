@@ -42,7 +42,7 @@ def get_category_details(batch_size):
 
 	nykaa_redshift_connection.close()
 
-	gludo_connection = Utils.mysqlConnection()
+	gludo_connection = Utils.mysqlConnection('w')
 	purge_query = 'DELETE FROM bestseller_product_mapping;'
 	gludo_connection.cursor().execute(purge_query)
 	print('bestseller_product_mapping purged')
