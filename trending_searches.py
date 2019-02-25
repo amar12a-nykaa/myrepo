@@ -1,20 +1,23 @@
+import os
+import sys
+import time
+import json
+import psutil
+import argparse
 import pandas as pd
 import re
 from pandas import Series
 from pandas.api.types import is_string_dtype
 from pandas.api.types import is_numeric_dtype
-#from pas.v2.utils import Utils
 import numpy as np
 from nltk.stem import PorterStemmer
 #from utils import EntityUtils
 from datetime import date, timedelta, datetime
-# encoding=utf8
-import os
-import sys
 
+sys.path.append("/nykaa/api")
+from pas.v2.utils import Utils
 # print(EntityUtils.get_matched_entities('lakme'))
 # exit()
-
 reload(sys)
 sys.setdefaultencoding('utf8')
 
@@ -73,7 +76,7 @@ def popular_searches(df,df_new):
 
 def get_trending_searches():
 
-    df = pd.read_csv('/home/abc/trending_search/trending.csv')
+    df = pd.read_csv('trending.csv')
     #renaming columns
     df.columns = ['date','internal_search_term','frequency','click_interaction_instance']
     #changing date format
