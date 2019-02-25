@@ -153,6 +153,7 @@ if __name__ == '__main__':
         print(url)
         values = (word,url,row.frequency)
         query = """INSERT INTO trending_searches (search_term, url, rank) VALUES ('%s', '%s', '%s') """ % (values)
+
         cursor.execute(query)
         mysql_conn.commit()
 
