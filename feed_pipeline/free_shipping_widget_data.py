@@ -20,9 +20,10 @@ def populateFrequentProductDetails():
     truncate_table = False
     try:
         query = """select s.product_id, s.l3_id, 
-                    case when s.mrp <= 100 then 'BELOW 100'
-                         when s.mrp > 100 and s.mrp <= 200 then 'BELOW 200'
-                         when s.mrp > 200 then 'ABOVE 200'
+                    case when s.mrp <= 50  then 'BELOW 50'
+                         when s.mrp <= 100 then 'BELOW 100'
+                         when s.mrp <= 150 then 'BELOW 150'
+                         when s.mrp <= 200 then 'BELOW 200'
                     end as bucket,
                     count(*) as purchase_count
                     from fact_order_detail_new fodn join
