@@ -737,7 +737,7 @@ class CatalogIndexer:
                                         if prefix == 'nykaa':
                                             doc['offer_ids'].append(i['id'])
                                         else:
-                                            doc[prefix + '_offer_ids'].append(i['id'])
+                                            doc.setdefault(prefix + '_offer_ids', []).append(i['id'])
 
                                     product['offers'][prefix] = sorted(product['offers'][prefix], key=itemgetter('priority'), reverse=True)
                                     if prefix == 'nykaa':
