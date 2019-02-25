@@ -48,6 +48,9 @@ def date_type(x):
     x = str(x)
     return x
 
+def to_list(x):
+    return tuple(x)
+
 def group_filter(x):
     diff = 0
     temp = 0
@@ -89,7 +92,7 @@ def get_trending_searches():
     #grouping all the exact matched terms on same date with aggregation on freq,ctr
     df = df.groupby(['cleaned_term','date'],as_index=False).agg({'frequency' : 'sum',
 	                                            'click_interaction_instance' : 'sum',
-	                                            'internal_search_term': list })
+	                                            'internal_search_term': to_list })
 
     df.drop(df[(df.frequency < 100) & ((df.date)==(previous))].index, inplace=True)
 
@@ -104,7 +107,7 @@ def get_trending_searches():
 
     df = df.groupby(['cleaned_term'],as_index=False).agg({'frequency' : 'sum',
 	                                            'click_interaction_instance' : 'sum',
-	                                            'internal_search_term': list })
+	                                            'internal_search_term': to_list })
     #top 3 terms which are suddenly into popular list
     row_list = []
     row_list = popular_searches(df,df_new)
@@ -134,7 +137,7 @@ if __name__ == '__main__':
     mysql_conn = Utils.mysqlConnection('w')
     cursor = mysql_conn.cursor()
     if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'",connection=mysql_conn):
-        Utils.mysql_write("create table trending_searches(search_term varchar(32), url varchar(32), rank int",connection=mysql_conn)
+        Utils.mysql_write("create table trending_searches(search_term varchar(32), url varchar(32), rank int)",connection=mysql_conn)
     Utils.mysql_write("delete from trending_searches",connection=mysql_conn)
 
     data = pd.DataFrame
@@ -148,8 +151,9 @@ if __name__ == '__main__':
         word=" ".join(ls)
         url = "/search/result/?q=" + word.replace(" ", "+")
         print(url)
-        values = (row.internal_search_term,url,row.frequency)
-        cursor.execute(query, values)
+        values = (word,url,row.frequency)
+        query = """INSERT INTO trending_searches (search_term, url, rank) VALUES ('%s', '%s', '%s') """ % (values)
+        cursor.execute(query)
         mysql_conn.commit()
 
     cursor.close()
