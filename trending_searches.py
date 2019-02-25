@@ -3,7 +3,7 @@ import re
 from pandas import Series
 from pandas.api.types import is_string_dtype
 from pandas.api.types import is_numeric_dtype
-from pas.v2.utils import Utils
+#from pas.v2.utils import Utils
 import numpy as np
 from nltk.stem import PorterStemmer
 #from utils import EntityUtils
@@ -19,10 +19,10 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 porter = PorterStemmer()
-previous = date.today() - timedelta(10)
+previous = date.today() - timedelta(14)
 previous = previous.strftime('%Y-%m-%d')
 previous = str(previous)
-#print (previous)
+print (previous)
 
 def word_clean(word):
     word = str(word).lower()
@@ -67,8 +67,7 @@ def popular_searches(df,df_new):
     for i in range(len(df.index)):
         if (df_new.iloc[i, 3] * 100) / (df.iloc[i, 2] - df_new.iloc[i, 3]) > 30:
             row_list.append(df.values[i])
-    print (df.columns)
-    print (df_new.columns)
+
     return row_list
 
 
@@ -78,12 +77,9 @@ def get_trending_searches():
     #renaming columns
     df.columns = ['date','internal_search_term','frequency','click_interaction_instance']
     #changing date format
-
     df['date'] = [datetime.strptime(x, '%B %d, %Y') for x in df['date'] ]
     df['date'] = df['date'].dt.normalize()
     df['date'] = df['date'].apply(date_type)
-
-    #df['internal_search_term']=df['internal_search_term'].str.lower()
 
     df['cleaned_term'] = df['internal_search_term'].map(word_clean)
 
@@ -99,48 +95,39 @@ def get_trending_searches():
     df = df.groupby(['cleaned_term'],as_index=False).filter(lambda x: x['date'].max() == (previous))
 
     df = df.sort_values(['cleaned_term','date'])
-
-    df.to_csv('output1.csv')
-
+    #print(df)
     df_new = pd.DataFrame
     df_new = df[df.date == previous]
 
     df = df.groupby(['cleaned_term'],as_index=False).agg({'frequency' : 'sum',
 	                                            'click_interaction_instance' : 'sum',
 	                                            'internal_search_term': list })
-
-    df['internal_search_term'] = df['internal_search_term'].apply(lambda x:x[0])
-
+    #top 3 terms which are suddenly into popular list
     row_list = []
     row_list = popular_searches(df,df_new)
     data = pd.DataFrame(row_list)
-
-    df = df[df.frequency>500]
-    df = df.sort_values(['frequency','click_interaction_instance'],ascending=False)
-    df = df.head(5)
-
-    #df.drop(df.columns[0],axis=1,inplace=True)
-    #df.drop(df.columns[2],axis=1,inplace=True)
-
-    df.to_csv('output_topFreq.csv')
-    return df
-
-'''
-    data.columns=['cleaned_term','internal_search_term','frequency','click_interaction_instance']
-    data.drop(data[data.frequency < 100 ].index, inplace=True)
-
-    data['CTR']=data[['frequency','click_interaction_instance']].apply(ctr_calc,axis=1)
+    data.columns = ['cleaned_term', 'internal_search_term', 'frequency', 'click_interaction_instance']
+    data.drop(data[data.frequency < 100].index, inplace=True)
+    #add column for CTR
+    data['CTR'] = data[['frequency', 'click_interaction_instance']].apply(ctr_calc, axis=1)
     data.drop(data[data.CTR < 30].index, inplace=True)
+    data = data.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
+    data = data.head(3)
+    data.drop(['CTR'], inplace=True)
 
-    #print(data)
-    #data=data.sort_values(['cleaned_term'])
+    # top 3 frequently searched terms
+    df['internal_search_term'] = df['internal_search_term'].apply(lambda x: x[0])
+    df = df[df.frequency > 500]
+    df = df.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
+    df = df.head(3)
 
-    data.to_csv('output_sum30.csv')
-'''
+    result=pd.concat([df,data])
+    return result
 
 if __name__ == '__main__':
 
     get_trending_searches()
+
     mysql_conn = Utils.mysqlConnection('w')
     cursor = mysql_conn.cursor()
     if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'",connection=mysql_conn):
@@ -153,7 +140,10 @@ if __name__ == '__main__':
     query = "INSERT INTO trending_searches (search_term, url, rank) VALUES ('%s', '%s', '%s') "
 
     for index, row in data.iterrows():
-        url = "/search/result/?q=" + row['internal_search_term'].replace(" ", "+")
+        word=row['internal_search_term']
+        ls=word.split()
+        word=" ".join(ls)
+        url = "/search/result/?q=" + word.replace(" ", "+")
         print(url)
         values = (row.internal_search_term,url,row.frequency)
         cursor.execute(query, values)
