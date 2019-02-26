@@ -22,6 +22,7 @@ from pas.v2.utils import Utils
 porter = PorterStemmer()
 previous=''
 
+
 def word_clean(word):
     word = str(word).lower()
     ls = re.split('[^A-Za-z+&0-9]', str(word))
