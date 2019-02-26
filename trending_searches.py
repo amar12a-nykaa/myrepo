@@ -20,10 +20,7 @@ from pas.v2.utils import Utils
 # exit()
 
 porter = PorterStemmer()
-previous = date.today() - timedelta(14)
-previous = previous.strftime('%Y-%m-%d')
-previous = str(previous)
-print (previous)
+previous=''
 
 def word_clean(word):
     word = str(word).lower()
@@ -43,8 +40,10 @@ def ctr_calc(x):
         return 0
 
 def date_type(x):
+    global previous
     x = x.date()
     x = str(x)
+    previous=max(previous,x)
     return x
 
 def to_list(x):
@@ -86,6 +85,7 @@ def get_trending_searches():
     df['date'] = [datetime.strptime(x, '%B %d, %Y') for x in df['date'] ]
     df['date'] = df['date'].dt.normalize()
     df['date'] = df['date'].apply(date_type)
+    print(previous)
 
     df['cleaned_term'] = df['internal_search_term'].map(word_clean)
 
@@ -113,6 +113,7 @@ def get_trending_searches():
     row_list = popular_searches(df,df_new)
     data = pd.DataFrame(row_list)
     print(data.head(5))
+    print(data.columns)
     data.columns = ['cleaned_term', 'internal_search_term', 'frequency', 'click_interaction_instance']
     data.drop(data[data.frequency < 100].index, inplace=True)
 
