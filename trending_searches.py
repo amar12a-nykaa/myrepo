@@ -15,7 +15,7 @@ from nltk.stem import PorterStemmer
 from datetime import date, timedelta, datetime
 
 sys.path.append("/nykaa/api")
-#from pas.v2.utils import Utils
+from pas.v2.utils import Utils
 
 # print(EntityUtils.get_matched_entities('lakme'))
 # exit()
@@ -134,17 +134,15 @@ def get_trending_searches():
     data['CTR'] = data[['frequency', 'click_interaction_instance']].apply(ctr_calc, axis=1)
     data.drop(data[data.CTR < 30].index, inplace=True)
     data = data.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
-    data = data.head(3)
+    data = data.head(5)
     data.drop(['CTR'], axis=1, inplace=True)
 
     # top 3 frequently searched terms
     df = df[df.frequency > 500]
     df = df.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
     df = df.head(3)
-    print(df)
-    print(data)
-    result = pd.concat([df, data])
-    return result
+
+    return data
 
 
 def insert_trending_searches(data):
