@@ -33,7 +33,7 @@ def word_clean(word):
 
 #ctr calculaion
 def ctr_calc(x):
-    print(x[0],x[1])
+    #print(x[0],x[1])
     if x[0] != 0:
         return (x[1])*100//x[0]
     else:
@@ -71,9 +71,8 @@ def popular_searches(df,df_new):
     print(df.columns)
     print(df_new.columns)
     for i in range(len(df.index)):
-        if (df_new.iloc[i, 2] * 100) / (df.iloc[i, 1] - df_new.iloc[i, 2]) > 30:
+        if (df_new.iloc[i, 3] * 100) / (df.iloc[i, 3] - df_new.iloc[i, 3]) > 30:
             row_list.append(df.values[i])
-
     return row_list
 
 def get_trending_searches():
@@ -100,21 +99,22 @@ def get_trending_searches():
 
     df = df.groupby(['cleaned_term'],as_index=False).filter(lambda x: x['date'].max() == (previous))
 
-    df = df.sort_values(['cleaned_term','date'])
+    #df = df.sort_values(['cleaned_term','date'])
     #print(df)
     df_new = pd.DataFrame
     df_new = df[df.date == previous]
+    df_new.drop(['date'], axis=1, inplace=True)
 
     df = df.groupby(['cleaned_term'],as_index=False).agg({'frequency' : 'sum',
                                               'click_interaction_instance' : 'sum',
                                               'internal_search_term': to_list })
+    df['internal_search_term'] = df['internal_search_term'].apply(lambda x: x[0])
+
     #top 3 terms which are suddenly into popular list
     row_list = []
     row_list = popular_searches(df,df_new)
     data = pd.DataFrame(row_list)
-    print(data.head(5))
-    print(data.columns)
-    data.columns = ['cleaned_term', 'internal_search_term', 'frequency', 'click_interaction_instance']
+    data.columns = ['cleaned_term', 'frequency', 'internal_search_term', 'click_interaction_instance']
     data.drop(data[data.frequency < 100].index, inplace=True)
 
     #add column for CTR
@@ -126,7 +126,6 @@ def get_trending_searches():
     data.drop(['CTR'],axis=1, inplace=True)
 
     # top 3 frequently searched terms
-    df['internal_search_term'] = df['internal_search_term'].apply(lambda x: x[0])
     df = df[df.frequency > 500]
     df = df.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
     df = df.head(3)
@@ -166,3 +165,4 @@ if __name__ == '__main__':
     data = get_trending_searches()
 
     insert_trending_searches(data)
+
