@@ -33,7 +33,7 @@ def word_clean(word):
 
 #ctr calculaion
 def ctr_calc(x):
-    #print(x[0],x[1])
+    print(x[0],x[1])
     if x[0] != 0:
         return (x[1])*100//x[0]
     else:
@@ -68,10 +68,9 @@ def group_filter(x):
 
 def popular_searches(df,df_new):
     row_list = []
-    print(df.columns)
-    print(df_new.columns)
+    print(df_new.iloc[0, 0],df_new.iloc[0, 1],df_new.iloc[0, 2],df_new.iloc[0, 3])
     for i in range(len(df.index)):
-        if (df_new.iloc[i, 3] * 100) / (df.iloc[i, 3] - df_new.iloc[i, 3]) > 30:
+        if (df_new.iloc[i, 1] * 100) / (df.iloc[i, 1] - df_new.iloc[i, 1]) > 30:
             row_list.append(df.values[i])
     return row_list
 
@@ -98,23 +97,26 @@ def get_trending_searches():
     df['internal_search_term'] = df['internal_search_term'].apply(lambda x:x[0])
 
     df = df.groupby(['cleaned_term'],as_index=False).filter(lambda x: x['date'].max() == (previous))
-
-    #df = df.sort_values(['cleaned_term','date'])
     #print(df)
     df_new = pd.DataFrame
     df_new = df[df.date == previous]
     df_new.drop(['date'], axis=1, inplace=True)
+    df_new = df_new.sort_values(['cleaned_term'])
 
     df = df.groupby(['cleaned_term'],as_index=False).agg({'frequency' : 'sum',
                                               'click_interaction_instance' : 'sum',
                                               'internal_search_term': to_list })
     df['internal_search_term'] = df['internal_search_term'].apply(lambda x: x[0])
-
+    df = df.sort_values(['cleaned_term'])
+    print(df.columns)
+    print(df_new.columns)
     #top 3 terms which are suddenly into popular list
     row_list = []
     row_list = popular_searches(df,df_new)
+    print(row_list)
     data = pd.DataFrame(row_list)
-    data.columns = ['cleaned_term', 'frequency', 'internal_search_term', 'click_interaction_instance']
+    print(data.head(5))
+    data.columns = ['cleaned_term','frequency','click_interaction_instance','internal_search_term']
     data.drop(data[data.frequency < 100].index, inplace=True)
 
     #add column for CTR
@@ -138,11 +140,11 @@ def insert_trending_searches(data):
     mysql_conn = Utils.mysqlConnection('w')
     cursor = mysql_conn.cursor()
     if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
-        Utils.mysql_write("create table trending_searches(search_term varchar(255), url varchar(255), rank int)",
+        Utils.mysql_write("create table trending_searches(search_term varchar(255), url varchar(255))",
                           connection=mysql_conn)
     Utils.mysql_write("delete from trending_searches", connection=mysql_conn)
 
-    query = "INSERT INTO trending_searches (search_term, url, rank) VALUES ('%s', '%s', '%s') "
+    query = "INSERT INTO trending_searches (search_term, url, rank) VALUES ('%s', '%s') "
 
     for index, row in data.iterrows():
         word = row['internal_search_term']
@@ -150,8 +152,8 @@ def insert_trending_searches(data):
         word = " ".join(ls)
         url = "/search/result/?q=" + word.replace(" ", "+")
         print(url)
-        values = (word, url, row.frequency)
-        query = """INSERT INTO trending_searches (search_term, url, rank) VALUES ('%s', '%s', '%s') """ % (values)
+        values = (word, url)
+        query = """INSERT INTO trending_searches (search_term, url, rank) VALUES ('%s', '%s') """ % (values)
 
         cursor.execute(query)
         mysql_conn.commit()
@@ -165,4 +167,3 @@ if __name__ == '__main__':
     data = get_trending_searches()
 
     insert_trending_searches(data)
-
