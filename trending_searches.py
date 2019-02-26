@@ -75,7 +75,7 @@ def group_filter(x):
 
 def popular_searches(df, df_new):
     dftemp = df[0:0]
-    print(df_new.iloc[0, 0], df_new.iloc[0, 1], df_new.iloc[0, 2], df_new.iloc[0, 3])
+    print(df_new.iloc[0, 0])
     for i in range(len(df.index)):
         if (df_new.iloc[i, 2] * 100) / (df.iloc[i, 2] - df_new.iloc[i, 2]) > 30:
             dftemp = dftemp.append(df.iloc[i], ignore_index=True)
@@ -86,6 +86,7 @@ def get_trending_searches():
     df = pd.read_csv('trending.csv')
     # renaming columns
     df.columns = ['date', 'internal_search_term', 'frequency', 'click_interaction_instance']
+    df.drop(df[(df.frequency < 10)].index,inplace=True)
     # changing date format
     df['date'] = [datetime.strptime(x, '%B %d, %Y') for x in df['date']]
     df['date'] = df['date'].dt.normalize()
@@ -93,15 +94,21 @@ def get_trending_searches():
     print(previous)
 
     df['cleaned_term'] = df['internal_search_term'].map(word_clean)
+    idx = df.groupby(['cleaned_term'])['frequency'].transform(max) == df['frequency']
+    temp = df[idx]
+    print(temp)
+    temp.drop(['frequency'], axis=1, inplace=True)
+    temp.drop(['click_interaction_instance'], axis=1, inplace=True)
+
 
     # grouping all the exact matched terms on same date with aggregation on freq,ctr
     df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum',
-                                                                   'click_interaction_instance': 'sum',
-                                                                   'internal_search_term': to_list})
+                                                                   'click_interaction_instance': 'sum'})
+    df.join(temp, lsuffix='_caller', rsuffix='_other')
+    df.to_csv('temp.csv', index=False)
 
     df.drop(df[(df.frequency < 100) & ((df.date) == (previous))].index, inplace=True)
 
-    df['internal_search_term'] = df['internal_search_term'].apply(lambda x: x[0])
 
     df = df.groupby(['cleaned_term'], as_index=False).filter(lambda x: x['date'].max() == (previous))
     # print(df)
@@ -111,9 +118,7 @@ def get_trending_searches():
     df_new = df_new.sort_values(['cleaned_term'])
 
     df = df.groupby(['cleaned_term'], as_index=False).agg({'frequency': 'sum',
-                                                           'click_interaction_instance': 'sum',
-                                                           'internal_search_term': to_list})
-    df['internal_search_term'] = df['internal_search_term'].apply(lambda x: x[0])
+                                                           'click_interaction_instance': 'sum'})
     df = df.sort_values(['cleaned_term'])
     # print(df.columns)
     # print(df_new.columns)
