@@ -15,7 +15,7 @@ from nltk.stem import PorterStemmer
 from datetime import date, timedelta, datetime
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+#from pas.v2.utils import Utils
 
 # print(EntityUtils.get_matched_entities('lakme'))
 # exit()
@@ -36,7 +36,6 @@ def word_clean(word):
 
 # ctr calculaion
 def ctr_calc(x):
-    print(x[0], x[1])
     if x[0] != 0:
         return (x[1]) * 100 // x[0]
     else:
@@ -75,7 +74,6 @@ def group_filter(x):
 
 def popular_searches(df, df_new):
     dftemp = df[0:0]
-    print(df_new.iloc[0, 0])
     for i in range(len(df.index)):
         if (df_new.iloc[i, 2] * 100) / (df.iloc[i, 2] - df_new.iloc[i, 2]) > 30:
             dftemp = dftemp.append(df.iloc[i], ignore_index=True)
@@ -87,6 +85,7 @@ def get_trending_searches():
     # renaming columns
     df.columns = ['date', 'internal_search_term', 'frequency', 'click_interaction_instance']
     df.drop(df[(df.frequency < 10)].index,inplace=True)
+    df.drop(df[(df.click_interaction_instance < 5)].index, inplace=True)
     # changing date format
     df['date'] = [datetime.strptime(x, '%B %d, %Y') for x in df['date']]
     df['date'] = df['date'].dt.normalize()
@@ -96,15 +95,15 @@ def get_trending_searches():
     df['cleaned_term'] = df['internal_search_term'].map(word_clean)
     idx = df.groupby(['cleaned_term'])['frequency'].transform(max) == df['frequency']
     temp = df[idx]
-    print(temp)
     temp.drop(['frequency'], axis=1, inplace=True)
     temp.drop(['click_interaction_instance'], axis=1, inplace=True)
+    temp.drop(['date'], axis=1, inplace=True)
 
 
     # grouping all the exact matched terms on same date with aggregation on freq,ctr
     df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum',
                                                                    'click_interaction_instance': 'sum'})
-    df.join(temp, lsuffix='_caller', rsuffix='_other')
+    df=pd.merge(df,temp,on='cleaned_term')
     df.to_csv('temp.csv', index=False)
 
     df.drop(df[(df.frequency < 100) & ((df.date) == (previous))].index, inplace=True)
@@ -117,8 +116,9 @@ def get_trending_searches():
     df_new.drop(['date'], axis=1, inplace=True)
     df_new = df_new.sort_values(['cleaned_term'])
 
-    df = df.groupby(['cleaned_term'], as_index=False).agg({'frequency': 'sum',
+    df = df.groupby(['cleaned_term','internal_search_term'], as_index=False).agg({'frequency': 'sum',
                                                            'click_interaction_instance': 'sum'})
+    print(df)
     df = df.sort_values(['cleaned_term'])
     # print(df.columns)
     # print(df_new.columns)
