@@ -146,7 +146,7 @@ def insert_trending_searches(data):
         url = "/search/result/?q=" + word.replace(" ", "+")
         print(url)
         values = ('query',url, word)
-        query = """INSERT INTO trending_searches (type, url,q) VALUES ('%s','%s','%s') """ % (values)
+        query = """INSERT INTO trending_searches (type, url,q) VALUES ("%s","%s","%s") """ % (values)
 
         cursor.execute(query)
         mysql_conn.commit()
@@ -159,4 +159,4 @@ if __name__ == '__main__':
     data = pd.DataFrame
     data = get_trending_searches()
 
-    #insert_trending_searches(data)
+    insert_trending_searches(data)
