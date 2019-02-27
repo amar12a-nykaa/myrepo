@@ -494,11 +494,11 @@ def handleColdStart(df):
 def applyOffers(df):
   start_date = datetime.datetime.now() + datetime.timedelta(minutes=330)
   end_date = start_date + datetime.timedelta(days=1)
-  start_date = start_date.strftime('%Y-%m-%d')
+  start_date = start_date.strftime('%Y-%m-%d 06:00:00')
   end_date = end_date.strftime('%Y-%m-%d')
   conn = Utils.nykaaMysqlConnection(force_production=True)
 
-  query = """select entity_id as offer_id from nykaa_offers where enabled=1 and app = 1 and start_date < '%s' and end_date > '%s'"""%(start_date, end_date)
+  query = """select entity_id as offer_id from nykaa_offers where enabled=1 and app = 1 and start_date < '%s' and end_date > '%s'"""%(end_date, start_date)
   offers = pd.read_sql(query, con=conn)
   offers = offers.astype({'offer_id': str})
   offers = list(offers['offer_id'])
