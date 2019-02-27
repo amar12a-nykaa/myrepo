@@ -119,7 +119,7 @@ def get_trending_searches():
     data = popular_searches(df, df_new)
 
     # delete rows whose CTR < 30%
-    #data.drop(data[(data.frequency // data.click_interaction_instance) < 0.3].index, inplace=True)
+    data.drop(data[(data.frequency // data.click_interaction_instance) < 0.3].index, inplace=True)
     data = data.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
     data = data.head(5)
 
@@ -135,11 +135,9 @@ def insert_trending_searches(data):
     cursor = mysql_conn.cursor()
 
     if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
-        Utils.mysql_write("create table trending_searches(type VARCHAR(64) DEFAULT 'query',url VARCHAR(255),q VARCHAR(255))",
+        Utils.mysql_write("create table trending_searches(type VARCHAR(64),url VARCHAR(255),q VARCHAR(255))",
                           connection=mysql_conn)
     Utils.mysql_write("delete from trending_searches", connection=mysql_conn)
-
-    query = "INSERT INTO trending_searches (type, url,q) VALUES ('%s', '%s','%s') "
 
     for index, row in data.iterrows():
         word = row['internal_search_term']
@@ -147,8 +145,8 @@ def insert_trending_searches(data):
         word = " ".join(ls)
         url = "/search/result/?q=" + word.replace(" ", "+")
         print(url)
-        values = (url, word)
-        query = """INSERT INTO trending_searches ( url,q) VALUES ('%s','%s') """ % (values)
+        values = ('query',url, word)
+        query = """INSERT INTO trending_searches (type, url,q) VALUES ('%s','%s','%s') """ % (values)
 
         cursor.execute(query)
         mysql_conn.commit()
