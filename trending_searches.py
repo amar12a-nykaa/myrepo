@@ -75,7 +75,9 @@ def group_filter(x):
 def popular_searches(df, df_new):
     dftemp = df[0:0]
     for i in range(len(df.index)):
-        if (df.iloc[i]['frequency'] - df_new.iloc[i]['frequency'])!=0 and (df_new.iloc[i]['frequency']) / (df.iloc[i]['frequency'] - df_new.iloc[i]['frequency']) > 0.8:
+        a=df.iloc[i]['frequency']
+        b=df_new.iloc[i]['frequency']
+        if (a - b) != 0 and (b)/(a) > 0.6:
             dftemp = dftemp.append(df.iloc[i], ignore_index=True)
     return dftemp
 
@@ -94,17 +96,17 @@ def get_trending_searches():
 
     df['cleaned_term'] = df['internal_search_term'].map(word_clean)
     idx = df.groupby(['cleaned_term'])['frequency'].transform(max) == df['frequency']
+    temp=pd.DataFrame
     temp = df[idx]
-    temp.drop(['frequency','click_interaction_instance','date'], axis=1, inplace=True)
+    temp.drop(['frequency','click_interaction_instance','date'], axis=1,inplace=True)
 
     # grouping all the exact matched terms on same date with aggregation on freq,ctr
     df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum',
                                                                    'click_interaction_instance': 'sum'})
+    #print(df.columns)
     df=pd.merge(df,temp,on='cleaned_term')
-    df.to_csv('temp.csv', index=False)
-
+    #print(df.columns,temp.columns)
     df.drop(df[(df.frequency < 100) & ((df.date) == (previous))].index, inplace=True)
-
 
     df = df.groupby(['cleaned_term'], as_index=False).filter(lambda x: x['date'].max() == (previous))
     # print(df)
@@ -113,21 +115,18 @@ def get_trending_searches():
 
     df = df.groupby(['cleaned_term','internal_search_term'], as_index=False).agg({'frequency': 'sum',
                                                            'click_interaction_instance': 'sum'})
-
-    # top 3 terms which are suddenly into popular list
+    #terms which are suddenly into popular list
     data = pd.DataFrame
     data = popular_searches(df, df_new)
-
     # delete rows whose CTR < 30%
     data.drop(data[(data.frequency // data.click_interaction_instance) < 0.3].index, inplace=True)
     data = data.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
     data = data.head(5)
 
     print (data)
-    # top 3 frequently searched terms
-    df = df.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
-    df = df.head(3)
-
+    #frequently searched terms
+    #df = df.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
+    #df = df.head(5)
     return data
 
 def insert_trending_searches(data):
