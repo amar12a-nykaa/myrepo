@@ -1,5 +1,4 @@
 
-
 multicategoryList = {
     "3161": {"variant": ["Aria Leya"], "name": "Aria + Leya"},
     "1612": {"variant": ["Arthritis", "Osteoporosis"], "name": "Arthritis & Osteoporosis"},
