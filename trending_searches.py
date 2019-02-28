@@ -74,9 +74,6 @@ def get_trending_searches():
 
     df=df.drop(df[(df.ctr / df.frequency) < 0.3].index)
     df = df.sort_values(['frequency', 'ctr'], ascending=False)
-    #frequently searched terms
-    #df = df.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
-    #df = df.head(5)
 
     return df.head(5)
 
