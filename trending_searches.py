@@ -68,18 +68,17 @@ def get_trending_searches():
     df = df.astype({"frequency_prev": int})
     #df.to_csv('/home/abc/test.csv')
 
-    filter = ((df.frequency==df.frequency_prev)) | ((df.frequency>df.frequency_prev) &df.frequency_prev/(df.frequency-df.frequency_prev) < 0.6)
-    df=df.drop(df[(df.frequency==df.frequency_prev)].index)
-    df = df.drop(df[ ((df.frequency>df.frequency_prev) &df.frequency_prev/(df.frequency-df.frequency_prev) < 0.6)].index)
+    filter = ((df.frequency==df.frequency_prev)) | ((df.frequency>df.frequency_prev) & df.frequency_prev/(df.frequency-df.frequency_prev) < 0.6)
+
+    df = df.drop(df[ filter].index)
 
     df=df.drop(df[(df.ctr / df.frequency) < 0.3].index)
     df = df.sort_values(['frequency', 'ctr'], ascending=False)
-    print(df.head(5))
-    print (len(df.index))
     #frequently searched terms
     #df = df.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
     #df = df.head(5)
-    return data
+
+    return df.head(5)
 
 def insert_trending_searches(data):
     mysql_conn = Utils.mysqlConnection('w')
