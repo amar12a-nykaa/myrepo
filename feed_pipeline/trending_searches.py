@@ -40,7 +40,7 @@ def get_trending_searches():
     temp = temp.groupby(['cleaned_term'],as_index=False).agg({'ist': 'first'})
     # grouping all the exact matched terms on same date with aggregation on freq,ctr
     df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum','ctr': 'sum'})
-    df.to_csv('/home/abc/temp1.csv')
+    #df.to_csv('/home/abc/temp1.csv')
 
     df = pd.merge(df, temp, on='cleaned_term')
 
