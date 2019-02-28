@@ -17,12 +17,8 @@ from datetime import date, timedelta, datetime
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
-# print(EntityUtils.get_matched_entities('lakme'))
-# exit()
-
 porter = PorterStemmer()
 previous = ''
-
 
 def word_clean(word):
     word = str(word).lower()
@@ -33,97 +29,53 @@ def word_clean(word):
     word = "".join(l)
     return word
 
-
-# ctr calculaion
-def ctr_calc(x):
-    if x[0] != 0:
-        return (x[1]) * 100 // x[0]
-    else:
-        return 0
-
-
-def date_type(x):
-    global previous
-    x = x.date()
-    x = str(x)
-    previous = max(previous, x)
-    return x
-
-
-def to_list(x):
-    return tuple(x)
-
-
-def group_filter(x):
-    diff = 0
-    temp = 0
-    flag = True
-    dftemp = x[0:0]
-    for index, each in x.iterrows():
-        if flag:
-            flag = False
-            temp = each.frequency
-            continue
-        if each.frequency - temp < diff:
-            return dftemp
-        diff = each.frequency - temp
-        temp = each.frequency
-    # print(x)
-    return x
-
-
-def popular_searches(df, df_new):
-    dftemp = df[0:0]
-    for i in range(len(df.index)):
-        a=df.iloc[i]['frequency']
-        b=df_new.iloc[i]['frequency']
-        if (a - b) != 0 and (b)/(a) > 0.6:
-            dftemp = dftemp.append(df.iloc[i], ignore_index=True)
-    return dftemp
-
-
 def get_trending_searches():
     df = pd.read_csv('trending.csv')
     # renaming columns
-    df.columns = ['date', 'internal_search_term', 'frequency', 'click_interaction_instance']
-    df.drop(df[(df.frequency < 10)].index,inplace=True)
-    df.drop(df[(df.click_interaction_instance < 5)].index, inplace=True)
+    df.columns = ['date', 'ist', 'frequency', 'ctr']
+    df.drop(df[(df.frequency < 10) | (df.ctr < 10)].index,inplace=True)
     # changing date format
     df['date'] = [datetime.strptime(x, '%B %d, %Y') for x in df['date']]
-    df['date'] = df['date'].dt.normalize()
-    df['date'] = df['date'].apply(date_type)
-    print(previous)
+    df = df.astype({"date": str})
+    previous=df['date'].max()
 
-    df['cleaned_term'] = df['internal_search_term'].map(word_clean)
+    df['cleaned_term'] = df['ist'].map(word_clean)
     idx = df.groupby(['cleaned_term'])['frequency'].transform(max) == df['frequency']
     temp=pd.DataFrame
     temp = df[idx]
-    temp.drop(['frequency','click_interaction_instance','date'], axis=1,inplace=True)
 
+    temp = temp.groupby(['cleaned_term'],as_index=False).agg({'ist': 'first'})
     # grouping all the exact matched terms on same date with aggregation on freq,ctr
-    df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum',
-                                                                   'click_interaction_instance': 'sum'})
-    #print(df.columns)
-    df=pd.merge(df,temp,on='cleaned_term')
-    #print(df.columns,temp.columns)
+    df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum','ctr': 'sum'})
+    df.to_csv('/home/abc/temp1.csv')
+
+    df = pd.merge(df, temp, on='cleaned_term')
+
     df.drop(df[(df.frequency < 100) & ((df.date) == (previous))].index, inplace=True)
+    #df = df.groupby(['cleaned_term'], as_index=False).filter(lambda x: x['date'].max() == (previous))
 
-    df = df.groupby(['cleaned_term'], as_index=False).filter(lambda x: x['date'].max() == (previous))
-    # print(df)
-    df_new = pd.DataFrame
-    df_new = df.ix[df.date == previous]
+    df_prev = df.ix[df.date == previous]
+    df_prev = df_prev.drop(['date', 'ctr', 'ist'], axis=1)
+    df_prev.columns = ['cleaned_term', 'frequency_prev']
 
-    df = df.groupby(['cleaned_term','internal_search_term'], as_index=False).agg({'frequency': 'sum',
-                                                           'click_interaction_instance': 'sum'})
-    #terms which are suddenly into popular list
-    data = pd.DataFrame
-    data = popular_searches(df, df_new)
-    # delete rows whose CTR < 30%
-    data.drop(data[(data.frequency // data.click_interaction_instance) < 0.3].index, inplace=True)
-    data = data.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
-    data = data.head(5)
 
-    print (data)
+    df = df.groupby(['cleaned_term','ist'], as_index=False).agg({'frequency': 'sum','ctr': 'sum'})
+
+    #print(df.shape)
+    df = pd.merge(df, df_prev, on='cleaned_term',how='left')
+    df = df.dropna()
+    #print(df.shape)
+    df = df.astype({"frequency_prev": int})
+    #df.to_csv('/home/abc/test.csv')
+
+    filter = ((df.frequency==df.frequency_prev)) | ((df.frequency>df.frequency_prev) &df.frequency_prev/(df.frequency-df.frequency_prev) < 0.6)
+    df=df.drop(df[(df.frequency==df.frequency_prev)].index)
+    df = df.drop(df[ ((df.frequency>df.frequency_prev) &df.frequency_prev/(df.frequency-df.frequency_prev) < 0.6)].index)
+
+    df=df.drop(df[(df.ctr / df.frequency) < 0.3].index)
+    df = df.sort_values(['frequency', 'ctr'], ascending=False)
+    print(df.head(5))
+    print (len(df.index))
     #frequently searched terms
     #df = df.sort_values(['frequency', 'click_interaction_instance'], ascending=False)
     #df = df.head(5)
@@ -139,7 +91,7 @@ def insert_trending_searches(data):
     Utils.mysql_write("delete from trending_searches", connection=mysql_conn)
 
     for index, row in data.iterrows():
-        word = row['internal_search_term']
+        word = row['ist']
         ls = word.split()
         word = " ".join(ls)
         url = "/search/result/?q=" + word.replace(" ", "+")
