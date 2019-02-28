@@ -22,7 +22,8 @@ def word_clean(word):
     return word
 
 def get_trending_searches():
-    df = pd.read_csv('trending.csv')
+    file_path = '/nykaa/scripts/feed_pipeline/trending.csv'
+    df = pd.read_csv(file_path)
     # renaming columns
     df.columns = ['date', 'ist', 'frequency', 'ctr']
     df.drop(df[(df.frequency < 10) | (df.ctr < 10)].index,inplace=True)
