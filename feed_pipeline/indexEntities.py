@@ -123,7 +123,6 @@ class EntityIndexer:
       }
       return doc
     docs = []
-
     mysql_conn = Utils.mysqlConnection()
     query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' order by name, category_popularity desc"
     results = Utils.fetchResults(mysql_conn, query)
@@ -273,6 +272,7 @@ if __name__ == "__main__":
 
   required_args = ['category', 'brand', 'filters']
   index_all = not any([argv[x] for x in required_args])
-EntityIndexer.indexEntities(collection=argv['collection'], active=argv['active'], inactive=argv['inactive'],
+
+  EntityIndexer.indexEntities(collection=argv['collection'], active=argv['active'], inactive=argv['inactive'],
                             swap=argv['swap'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'],
                             index_filters_arg=argv['filters'], index_all=index_all)
