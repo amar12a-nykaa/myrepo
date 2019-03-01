@@ -12,6 +12,27 @@ from pas.v2.utils import Utils
 porter = PorterStemmer()
 previous = ''
 
+def group_filter(x,prev,algo):
+    data = pd.DataFrame(x)
+    if  data['date'].max() != prev:
+        return False
+
+    if algo == 3:
+        l = len(data.index)
+        if l > 2:
+            mid = l // 2 + 1
+            data = data.sort_values(['date'])
+            oldSum = data[:mid]['frequency'].sum()
+            newSum = data[-(l - mid):]['frequency'].sum()
+            if newSum > 2.5 * oldSum:
+                return True
+        else:
+            sum = data['frequency'].sum()
+            if (sum > 500):
+                print(data.ist)
+                return True
+        return False
+
 def word_clean(word):
     word = str(word).lower()
     ls = re.split('[^A-Za-z+&0-9]', str(word))
@@ -45,28 +66,15 @@ def get_trending_searches():
     df = pd.merge(df, temp, on='cleaned_term')
 
     df.drop(df[(df.frequency < 100) & ((df.date) == (previous))].index, inplace=True)
-    #df = df.groupby(['cleaned_term'], as_index=False).filter(lambda x: x['date'].max() == (previous))
 
-    df_prev = df.ix[df.date == previous]
-    df_prev = df_prev.drop(['date', 'ctr', 'ist'], axis=1)
-    df_prev.columns = ['cleaned_term', 'frequency_prev']
-
-
-    df = df.groupby(['cleaned_term','ist'], as_index=False).agg({'frequency': 'sum','ctr': 'sum'})
-
-    #print(df.shape)
-    df = pd.merge(df, df_prev, on='cleaned_term',how='left')
-    df = df.dropna()
-    #print(df.shape)
-    df = df.astype({"frequency_prev": int})
-    #df.to_csv('/home/abc/test.csv')
-
-    filter = ((df.frequency==df.frequency_prev)) | ((df.frequency>df.frequency_prev) & df.frequency_prev/(df.frequency-df.frequency_prev) < 0.6)
-
-    df = df.drop(df[ filter].index)
-
-    df=df.drop(df[(df.ctr / df.frequency) < 0.3].index)
+    df = df.groupby(['cleaned_term', 'ist']).filter(group_filter, prev=previous, algo=3)
+    #df.to_csv('temp.csv')
+    # print(df.head(5))
+    df = df.groupby(['cleaned_term', 'ist']).agg({'frequency': 'sum', 'ctr': 'sum'})
+    df = df.drop(df[(df.ctr / df.frequency) < 0.25].index)
     df = df.sort_values(['frequency', 'ctr'], ascending=False)
+
+    #df.to_csv('output_algo3.csv')
 
     return df.head(5)
 
@@ -98,5 +106,5 @@ def insert_trending_searches(data):
 if __name__ == '__main__':
     data = pd.DataFrame
     data = get_trending_searches()
-
+    print(data)
     insert_trending_searches(data)
