@@ -115,8 +115,7 @@ def normalize(a):
 
 def normalize_search_terms():
 
-
-    date_buckets = [(0, 60), (61, 120), (121, 180), (181, 240)]
+    date_buckets = [(0, 60), (61, 120), (121, 180)]
     dfs = []
 
     bucket_results = []
@@ -167,7 +166,7 @@ def normalize_search_terms():
     bucket_results = []
     for term in search_terms_daily.aggregate([
         #{"$match": {"term" : {"$in": ['Lipstick', 'nars']}}},
-        {"$match": {"internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
+        {"$match": {"date": {"$gte": date_6months_ago}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
         #{"$match": {"date": {"$gte": date_6months_ago, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
         {"$project": {"term": { "$toLower": "$term"}, "date":"$date","count": "$internal_search_term_conversion_instance" }},
         {"$group": {"_id": "$term", "count": {"$sum": "$count"} }}, 
