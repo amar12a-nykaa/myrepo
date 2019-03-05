@@ -11,7 +11,6 @@ import csv
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import StoreDbUtils
 
-
 hostname = socket.gethostname()
 my_name = os.path.basename(__file__)
 FTP_HOST = "ftp.nyk00-int.network"
@@ -36,7 +35,7 @@ def _save_data_into_db(cursor, data_chunk):
     input_docs = []
     for row in data_chunk:
         doc = {}
-        doc['sku'] = row['SKUCode']
+        doc['sku'] = row['SKUCODE']
         doc['store_code'] = row['LocCode']
         doc['inventory'] = row['SOH']
         doc['store_update_time'] = row['LastUpdatedOn']
@@ -53,7 +52,7 @@ def _save_data_into_db(cursor, data_chunk):
 
 
 def save_data_into_db(data):
-    RECORD_GROUP_SIZE = 50
+    RECORD_GROUP_SIZE = 100
     mysql_conn = StoreDbUtils.mysqlConnection(mode='w')
     cursor = mysql_conn.cursor()
     for i in range(0, len(data), RECORD_GROUP_SIZE):
@@ -110,7 +109,6 @@ if __name__ == "__main__":
             os.remove(filename)
     else:
         print("File with filename %s not found."%(filename))
-
     script_stop = timeit.default_timer()
     script_duration = script_stop - script_start
     print("Total time taken for the script to run: %s" % time.strftime("%M min %S seconds", time.gmtime(script_duration)))
