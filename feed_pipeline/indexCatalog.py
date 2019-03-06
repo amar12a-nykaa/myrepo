@@ -190,6 +190,7 @@ class CatalogIndexer:
         "thebalm": "thebalm the balm",
         "bblunt": "bblunt b blunt",
         "boroplus": "boroplus boro plus",
+        "sheet mask": "sheet mask face mask",
     }
 
     def print_errors(errors):
