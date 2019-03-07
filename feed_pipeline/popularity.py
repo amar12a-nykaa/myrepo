@@ -56,7 +56,18 @@ COLD_START_DECAY_FACTOR_NEW = 0.9
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 PRODUCT_PUNISH_LIST = [303813,262768,262770,262769]
-
+PRODUCT_POPULARITY_OVERRIDES =  { "417918": 60,
+                                  "417919": 56,
+                                  "417921": 55,
+                                  "417926": 54,
+                                  "417920": 52,
+                                  "417925": 51,
+                                  "417923": 49,
+                                  "417922": 48,
+                                  "417928": 45,
+                                  "417924": 43,
+                                  "417927": 40
+                                }
 
 client = Utils.mongoClient()
 raw_data = client['search']['raw_data']
@@ -362,6 +373,12 @@ def calculate_popularity():
                                                       }, upsert=True)
 
   popularity_table.remove({"last_calculated": {"$ne": timestamp}})
+  override_popularity()
+
+
+def override_popularity():
+  for id, popularity in PRODUCT_POPULARITY_OVERRIDES.items():
+    popularity_table.update({"_id": id}, {"$set": {'popularity': popularity}})
 
 def get_all_the_child_products(parent_id):
   query  = "select distinct(product_id) from catalog_product_super_link where parent_id  = '{0}'".format(parent_id)
