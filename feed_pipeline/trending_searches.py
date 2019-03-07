@@ -29,7 +29,6 @@ def group_filter(x,prev,algo):
         else:
             sum = data['frequency'].sum()
             if (sum > 500):
-                print(data.ist)
                 return True
         return False
 
@@ -61,15 +60,12 @@ def get_trending_searches():
     temp = temp.groupby(['cleaned_term'],as_index=False).agg({'ist': 'first'})
     # grouping all the exact matched terms on same date with aggregation on freq,ctr
     df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum','ctr': 'sum'})
-    #df.to_csv('/home/abc/temp1.csv')
-
     df = pd.merge(df, temp, on='cleaned_term')
 
     df.drop(df[(df.frequency < 100) & ((df.date) == (previous))].index, inplace=True)
 
     df = df.groupby(['cleaned_term', 'ist']).filter(group_filter, prev=previous, algo=3)
-    #df.to_csv('temp.csv')
-    # print(df.head(5))
+
     df = df.groupby(['cleaned_term', 'ist']).agg({'frequency': 'sum', 'ctr': 'sum'})
     df = df.drop(df[(df.ctr / df.frequency) < 0.25].index)
     df = df.sort_values(['frequency', 'ctr'], ascending=False)
