@@ -8,6 +8,7 @@ from datetime import date, timedelta, datetime
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
+from pas.v2.utils import EntityUtils
 
 porter = PorterStemmer()
 previous = ''
@@ -19,12 +20,11 @@ def group_filter(x,prev,algo):
 
     if algo == 3:
         l = len(data.index)
-        if l > 2:
-            mid = l // 2 + 1
+        if l > 1:
             data = data.sort_values(['date'])
-            oldSum = data[:mid]['frequency'].sum()
-            newSum = data[-(l - mid):]['frequency'].sum()
-            if newSum > 2.5 * oldSum:
+            yesterday=data.iloc[l-1]['frequency']
+            lastdays=data[:(l-1)]['frequency'].sum()
+            if yesterday > 1.3 * lastdays :
                 return True
         else:
             sum = data['frequency'].sum()
@@ -40,6 +40,10 @@ def word_clean(word):
         l.append(porter.stem(e))
     word = "".join(l)
     return word
+
+def get_entities(word):
+    result,coverage = EntityUtils.get_matched_entities(word)
+    return result
 
 def get_trending_searches():
     file_path = '/nykaa/scripts/feed_pipeline/trending.csv'
@@ -62,9 +66,14 @@ def get_trending_searches():
     df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum','ctr': 'sum'})
     df = pd.merge(df, temp, on='cleaned_term')
 
-    df.drop(df[(df.frequency < 100) & ((df.date) == (previous))].index, inplace=True)
+    print (df[df.cleaned_term.str.contains('free')])
+    df.drop(df[df.cleaned_term.str.contains('free')].index,inplace=True)
+
+    df.drop(df[(df.frequency < 100 | df.ctr/df.frequency < 0.4) & (df.date) == (previous)].index, inplace=True)
 
     df = df.groupby(['cleaned_term', 'ist']).filter(group_filter, prev=previous, algo=3)
+    df['entities']=df['ist'].apply(get_entities)
+    exit()
 
     df = df.groupby(['cleaned_term', 'ist']).agg({'frequency': 'sum', 'ctr': 'sum'})
     df = df.drop(df[(df.ctr / df.frequency) < 0.25].index)
