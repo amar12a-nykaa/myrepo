@@ -32,23 +32,10 @@ if get_process_count() > 1:
 
 
 def _save_data_into_db(cursor, data_chunk):
-    input_docs = []
     for row in data_chunk:
-        doc = {}
-        doc['sku'] = row['SKUCODE']
-        doc['store_code'] = row['LocCode']
-        doc['inventory'] = row['SOH']
-        doc['store_update_time'] = row['LastUpdatedOn']
-        input_docs.append(doc)
-    if input_docs:
-        str1 = "INSERT INTO nykaa_retail_store_inventory_data (sku, store_code, inventory, store_update_time) VALUES"
-        field_str = ''
-        for index, data in enumerate(input_docs):
-            field_str += "('" + "','".join(str(x) for x in data.values()) + "'),"
-        str2 = " ON DUPLICATE KEY UPDATE inventory = VALUES(inventory), store_update_time=VALUES(store_update_time);"
-        field_str = field_str.strip(",")
-        final_query = str1 + field_str + str2
-        cursor.execute(final_query)
+        query = "INSERT INTO nykaa_retail_store_inventory_data (sku, store_code, inventory, store_update_time) VALUES(%s, %s, %s, %s) ON DUPLICATE KEY UPDATE inventory = VALUES(inventory), store_update_time=VALUES(store_update_time);"
+        cursor.execute(query, (row['SKUCODE'], row['LocCode'], row['SOH'], row['LastUpdatedOn']))
+
 
 
 def save_data_into_db(data):
