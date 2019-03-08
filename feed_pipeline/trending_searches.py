@@ -16,10 +16,11 @@ previous = ''
 
 def group_filter(x,prev,algo):
     data = pd.DataFrame(x)
-    if  data['date'].max() != prev:
-        return False
 
-    if algo == 3:
+    if algo == 1:
+        if data['date'].max() != prev:
+            return False
+
         l = len(data.index)
         if l > 1:
             data = data.sort_values(['date'])
@@ -33,6 +34,9 @@ def group_filter(x,prev,algo):
                 return True
         return False
 
+
+
+
 def word_clean(word):
     word = str(word).lower()
     ls = re.split('[^A-Za-z+&0-9]', str(word))
@@ -42,12 +46,12 @@ def word_clean(word):
     word = "".join(l)
     return word
 
-def get_entities(word,df):
+def get_entities(word):
     result,coverage = EntityUtils.get_matched_entities(word)
-    brand=result['brand']['entity'] if result['brand'] else None
-    category = result['category']['entity'] if result['category'] else None
+    brand=result['brand']['entity'] if result['brand'] else 'None'
+    category = result['category']['entity'] if result['category'] else 'None'
 
-    return pd.Series({'brand': brand, 'category': category})
+    return pd.Series({'ist': word, 'brand': brand, 'category': category})
 
 def get_trending_searches():
     file_path = '/nykaa/scripts/feed_pipeline/trending.csv'
@@ -70,26 +74,43 @@ def get_trending_searches():
     df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum','ctr': 'sum'})
     df = pd.merge(df, temp, on='cleaned_term')
 
-    print (df[df.cleaned_term.str.contains('free')])
+    #print (df[df.cleaned_term.str.contains('free')])
     df.drop(df[df.cleaned_term.str.contains('free')].index,inplace=True)
 
     df.drop(df[(df.frequency < 100 | (df.ctr/df.frequency < 0.4)) & (df.date == previous)].index, inplace=True)
 
-    df = df.groupby(['cleaned_term', 'ist']).filter(group_filter, prev=previous, algo=3)
+    df = df.groupby(['cleaned_term', 'ist']).filter(group_filter, prev=previous, algo=1)
 
-    df = df.groupby(['cleaned_term', 'ist']).agg({'frequency': 'sum', 'ctr': 'sum'})
+    df = df.groupby(['cleaned_term','ist'],as_index=False).agg({'frequency': 'sum', 'ctr': 'sum'})
 
     temp = df['ist'].apply(get_entities)
-    print(temp)
-    exit()
-    df.merge(temp,left_index=True, right_index=True)
-    exit()
-    df = df.drop(df[(df.ctr / df.frequency) < 0.25].index)
+
+    df['brand'] = temp['brand']
+    df['category'] = temp['category']
+
+    df=df.drop(df[(df.brand=='None') & (df.category=='None')].index)
+
+    idx = df.groupby(['brand'])['frequency'].transform(max) == df['frequency']
+    df = df[idx]
+    df = df.groupby(['brand','frequency'], as_index=False).agg({'ist': 'first','ctr':'sum','category':'sum'})
+
+    idx = df.groupby(['category'])['frequency'].transform(max) == df['frequency']
+    df = df[idx]
+    df = df.groupby(['category','frequency'], as_index=False).agg({'ist': 'first','ctr':'sum','brand':'sum'})
     df = df.sort_values(['frequency', 'ctr'], ascending=False)
+    df = df.drop(df[(df.ctr / df.frequency) < 0.25].index)
+    print(df)
 
-    #df.to_csv('output_algo3.csv')
+    def concate(a,b):
+        a='' if a=='None' else a
+        b='' if b=='None' else b
+        return a+' '+b
 
-    return df.head(5)
+    print("concatenating brand and category")
+
+    df['brand+category']=df.apply(lambda x: concate(x['brand'],x['category']), axis=1)
+
+    return df
 
 def insert_trending_searches(data):
     mysql_conn = Utils.mysqlConnection('w')
