@@ -2,6 +2,7 @@ import os
 import sys
 import pandas as pd
 import re
+import numpy as np
 from nltk.stem import PorterStemmer
 # from utils import EntityUtils
 from datetime import date, timedelta, datetime
@@ -41,9 +42,12 @@ def word_clean(word):
     word = "".join(l)
     return word
 
-def get_entities(word):
+def get_entities(word,df):
     result,coverage = EntityUtils.get_matched_entities(word)
-    return result
+    brand=result['brand']['entity'] if result['brand'] else None
+    category = result['category']['entity'] if result['category'] else None
+
+    return pd.Series({'brand': brand, 'category': category})
 
 def get_trending_searches():
     file_path = '/nykaa/scripts/feed_pipeline/trending.csv'
@@ -69,13 +73,17 @@ def get_trending_searches():
     print (df[df.cleaned_term.str.contains('free')])
     df.drop(df[df.cleaned_term.str.contains('free')].index,inplace=True)
 
-    df.drop(df[(df.frequency < 100 | df.ctr/df.frequency < 0.4) & (df.date) == (previous)].index, inplace=True)
+    df.drop(df[(df.frequency < 100 | (df.ctr/df.frequency < 0.4)) & (df.date == previous)].index, inplace=True)
 
     df = df.groupby(['cleaned_term', 'ist']).filter(group_filter, prev=previous, algo=3)
-    df['entities']=df['ist'].apply(get_entities)
-    exit()
 
     df = df.groupby(['cleaned_term', 'ist']).agg({'frequency': 'sum', 'ctr': 'sum'})
+
+    temp = df['ist'].apply(get_entities)
+    print(temp)
+    exit()
+    df.merge(temp,left_index=True, right_index=True)
+    exit()
     df = df.drop(df[(df.ctr / df.frequency) < 0.25].index)
     df = df.sort_values(['frequency', 'ctr'], ascending=False)
 
