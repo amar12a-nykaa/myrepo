@@ -191,6 +191,11 @@ class CatalogIndexer:
         "bblunt": "bblunt b blunt",
         "boroplus": "boroplus boro plus",
         "sheet mask": "sheet mask face mask",
+        "flashmud": "flashmud flash mud",
+        "supermud": "supermud super mud",
+        "thirstymud": "thirstymud thirsty mud",
+        "gravitymud": "gravitymud gravity mud",
+        "youthmud": "youthmud youth mud",
     }
 
     def print_errors(errors):
