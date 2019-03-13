@@ -67,6 +67,10 @@ def get_trending_searches(file_path):
     df_remaining.rename(columns={'frequency': 'avg_frequency', 'ctr': 'avg_ctr'}, inplace=True)
 
     final_df = pd.merge(df_yesterday, df_remaining, how='left', on=['cleaned_term','ist'])
+    final_df['avg_frequency'].fillna(0)
+    total_yesterday = final_df['frequency'].sum()
+    total_remaining = final_df['avg_frequency'].sum()
+    final_df['avg_frequency'] = (final_df['avg_frequency']*total_yesterday)/total_remaining
     final_df = final_df[final_df.frequency >= 1.3 * final_df.avg_frequency]
 
     #entities detection
