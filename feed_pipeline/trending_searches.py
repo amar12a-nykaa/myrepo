@@ -40,6 +40,7 @@ def get_trending_searches(file_path):
 
     # changing date format
     df['date'] = [datetime.strptime(x, '%B %d, %Y').date() for x in df['date']]
+    df['date'] = df['date'].astype(str)
     df['cleaned_term'] = df['ist'].map(word_clean)
     idx = df.groupby(['cleaned_term'])['frequency'].transform(max) == df['frequency']
     temp = df[idx]
@@ -72,7 +73,7 @@ def get_trending_searches(file_path):
     final_df['brand'] = ''
     final_df['category'] = ''
     final_df = final_df.apply(get_entities, axis=1)
-    final_df = final_df.drop(df[(df.brand == 'None') & (df.category == 'None')].index)
+    final_df = final_df.drop(final_df[(final_df.brand == 'None') & (final_df.category == 'None')].index)
     final_df = final_df.sort_values(['frequency'], ascending=False)
 
     result = []
@@ -125,6 +126,6 @@ if __name__ == '__main__':
     argv = vars(parser.parse_args())
     filename = argv['filename'] #+ "datepart"
     filepath = '/nykaa/adminftp/' + filename
-    data = get_trending_searches(filepath=filepath)
+    data = get_trending_searches(file_path=filepath)
     print(data)
     insert_trending_searches(data)
