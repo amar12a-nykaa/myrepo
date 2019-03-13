@@ -1,40 +1,16 @@
-import os
 import sys
 import pandas as pd
+import argparse
+import arrow
 import re
-import numpy as np
 from nltk.stem import PorterStemmer
-# from utils import EntityUtils
-from datetime import date, timedelta, datetime
+from datetime import datetime
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
-from pas.v2.utils import EntityUtils
+from pas.v2.utils import Utils, EntityUtils
 
 porter = PorterStemmer()
-previous = ''
-
-def group_filter(x,prev,algo):
-    data = pd.DataFrame(x)
-
-    if algo == 1:
-        if data['date'].max() != prev:
-            return False
-
-        l = len(data.index)
-        if l > 1:
-            data = data.sort_values(['date'])
-            yesterday=data.iloc[l-1]['frequency']
-            lastdays=data[:(l-1)]['frequency'].sum()
-            if yesterday > 1.3 * lastdays :
-                return True
-        else:
-            sum = data['frequency'].sum()
-            if (sum > 500):
-                return True
-        return False
-
-
+RESULT_SIZE = 15
 
 
 def word_clean(word):
@@ -46,71 +22,79 @@ def word_clean(word):
     word = "".join(l)
     return word
 
-def get_entities(word):
-    result,coverage = EntityUtils.get_matched_entities(word)
-    brand=result['brand']['entity'] if result['brand'] else 'None'
-    category = result['category']['entity'] if result['category'] else 'None'
+def get_entities(row):
+    result,coverage = EntityUtils.get_matched_entities(row['ist'])
+    row['brand']=result['brand']['entity'] if 'brand' in result else 'None'
+    row['category'] = result['category']['entity'] if 'category' in result else 'None'
+    return row
 
-    return pd.Series({'ist': word, 'brand': brand, 'category': category})
+def calculate_ctr(row):
+    row['ctr_ratio'] = float(row['ctr']*100)/row['frequency']
+    return row
 
-def get_trending_searches():
-    file_path = '/nykaa/scripts/feed_pipeline/trending.csv'
+def get_trending_searches(file_path):
     df = pd.read_csv(file_path)
     # renaming columns
     df.columns = ['date', 'ist', 'frequency', 'ctr']
-    df.drop(df[(df.frequency < 10) | (df.ctr < 10)].index,inplace=True)
-    # changing date format
-    df['date'] = [datetime.strptime(x, '%B %d, %Y') for x in df['date']]
-    df = df.astype({"date": str})
-    previous=df['date'].max()
+    df.drop(df[df.frequency < 10].index, inplace=True)
 
+    # changing date format
+    df['date'] = [datetime.strptime(x, '%B %d, %Y').date() for x in df['date']]
     df['cleaned_term'] = df['ist'].map(word_clean)
     idx = df.groupby(['cleaned_term'])['frequency'].transform(max) == df['frequency']
-    temp=pd.DataFrame
     temp = df[idx]
+    temp = temp.groupby(['cleaned_term'], as_index=False).agg({'ist': 'first'})
 
-    temp = temp.groupby(['cleaned_term'],as_index=False).agg({'ist': 'first'})
-    # grouping all the exact matched terms on same date with aggregation on freq,ctr
-    df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum','ctr': 'sum'})
+    df = df.groupby(['cleaned_term', 'date'], as_index=False).agg({'frequency': 'sum', 'ctr': 'sum'})
     df = pd.merge(df, temp, on='cleaned_term')
+    df['ctr_ratio'] = 0
+    df = df.apply(calculate_ctr, axis=1)
+    df.drop(df[df.ctr_ratio < 10].index, inplace=True)
 
-    #print (df[df.cleaned_term.str.contains('free')])
-    df.drop(df[df.cleaned_term.str.contains('free')].index,inplace=True)
+    previous = df['date'].max()
+    previous_date = arrow.get(previous, 'YYYY-MM-DD')
+    start = previous_date.shift(days=-3).format('YYYY-MM-DD')
 
-    df.drop(df[(df.frequency < 100 | (df.ctr/df.frequency < 0.4)) & (df.date == previous)].index, inplace=True)
+    df_yesterday = df[df.date == previous]
+    df_remaining = df[(df.date >= start) & (df.date < previous)]
 
-    df = df.groupby(['cleaned_term', 'ist']).filter(group_filter, prev=previous, algo=1)
+    # deleting searches whose yesterday.freq < 100 yesterday.CTR < 40%
+    df_yesterday = df_yesterday[(df_yesterday.frequency > 100) & (df_yesterday.ctr_ratio > 40)]
+    df_yesterday.drop(['ctr_ratio', 'date'], axis=1, inplace=True)
 
-    df = df.groupby(['cleaned_term','ist'],as_index=False).agg({'frequency': 'sum', 'ctr': 'sum'})
+    df_remaining = df_remaining.groupby(['cleaned_term', 'ist'], as_index=False).agg({'frequency': 'mean', 'ctr': 'mean'})
+    df_remaining.rename(columns={'frequency': 'avg_frequency', 'ctr': 'avg_ctr'}, inplace=True)
 
-    temp = df['ist'].apply(get_entities)
+    final_df = pd.merge(df_yesterday, df_remaining, how='left', on=['cleaned_term','ist'])
+    final_df = final_df[final_df.frequency >= 1.3 * final_df.avg_frequency]
 
-    df['brand'] = temp['brand']
-    df['category'] = temp['category']
+    #entities detection
+    final_df['brand'] = ''
+    final_df['category'] = ''
+    final_df = final_df.apply(get_entities, axis=1)
+    final_df = final_df.drop(df[(df.brand == 'None') & (df.category == 'None')].index)
+    final_df = final_df.sort_values(['frequency'], ascending=False)
 
-    df=df.drop(df[(df.brand=='None') & (df.category=='None')].index)
+    result = []
+    included_list = {'brand': [], 'category': []}
+    count = 0
 
-    idx = df.groupby(['brand'])['frequency'].transform(max) == df['frequency']
-    df = df[idx]
-    df = df.groupby(['brand','frequency'], as_index=False).agg({'ist': 'first','ctr':'sum','category':'sum'})
+    for index, row in final_df.iterrows():
+        brand = row['brand']
+        category = row['category']
+        if brand and brand in included_list['brand']:
+            continue
+        if category and category in included_list['category']:
+            continue
+        included_list['brand'].append(brand)
+        included_list['category'].append(category)
+        result.append(row['ist'])
+        count = count + 1
+        if count >= RESULT_SIZE:
+            break
 
-    idx = df.groupby(['category'])['frequency'].transform(max) == df['frequency']
-    df = df[idx]
-    df = df.groupby(['category','frequency'], as_index=False).agg({'ist': 'first','ctr':'sum','brand':'sum'})
-    df = df.sort_values(['frequency', 'ctr'], ascending=False)
-    df = df.drop(df[(df.ctr / df.frequency) < 0.25].index)
-    print(df)
+    return result
 
-    def concate(a,b):
-        a='' if a=='None' else a
-        b='' if b=='None' else b
-        return a+' '+b
-
-    print("concatenating brand and category")
-
-    df['brand+category']=df.apply(lambda x: concate(x['brand'],x['category']), axis=1)
-
-    return df
 
 def insert_trending_searches(data):
     mysql_conn = Utils.mysqlConnection('w')
@@ -121,12 +105,10 @@ def insert_trending_searches(data):
                           connection=mysql_conn)
     Utils.mysql_write("delete from trending_searches", connection=mysql_conn)
 
-    for index, row in data.iterrows():
-        word = row['ist']
+    for word in data:
         ls = word.split()
         word = " ".join(ls)
         url = "/search/result/?q=" + word.replace(" ", "+")
-        print(url)
         values = ('query',url, word)
         query = """INSERT INTO trending_searches (type, url,q) VALUES ("%s","%s","%s") """ % (values)
 
@@ -138,7 +120,11 @@ def insert_trending_searches(data):
 
 
 if __name__ == '__main__':
-    data = pd.DataFrame
-    data = get_trending_searches()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--filename", type=str, default='trending.csv')
+    argv = vars(parser.parse_args())
+    filename = argv['filename'] #+ "datepart"
+    filepath = '/nykaa/adminftp/' + filename
+    data = get_trending_searches(filepath=filepath)
     print(data)
     insert_trending_searches(data)
