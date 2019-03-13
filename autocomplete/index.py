@@ -53,7 +53,7 @@ MIN_COUNTS = {
   "category": 200,
   "brand_category": 10000,
   "search_query": 40000,
-  "category_facet": 600,
+  "category_facet": 300,
 }
 Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
