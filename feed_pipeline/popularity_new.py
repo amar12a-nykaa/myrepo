@@ -13,6 +13,20 @@ popularity_table = client['search']['popularity']
 order_data = client['search']['order_data']
 
 
+def create_child_parent_map():
+  query = """SELECT cpsl.product_id, cpsl.parent_id
+              FROM catalog_product_entity e
+	            JOIN catalog_product_super_link cpsl ON e.entity_id = cpsl.product_id
+              JOIN catalog_product_entity_int cpei ON cpei.entity_id = cpsl.parent_id
+              WHERE e.type_id = 'simple' and cpei.attribute_id = 80 AND cpei.value = 1
+              GROUP BY cpsl.product_id;"""
+  nykaa_conn = Utils.nykaaMysqlConnection()
+  child_parent_map = pd.read_sql(query, con=nykaa_conn)
+  child_parent_map = child_parent_map.astype({'parent_id': str, 'product_id': str})
+  return child_parent_map
+  
+child_parent_map = create_child_parent_map()
+
 def get_child_distribution_ratio(startdate, enddate):
   bucket_results = []
   for p in order_data.aggregate([
@@ -81,6 +95,8 @@ def get_order_data(startdate, enddate):
 
 
 def get_bucket_results(date_bucket=None):
+  global child_parent_map
+  
   if date_bucket:
     startday = date_bucket[1] * -1
     endday = date_bucket[0] * -1
@@ -99,7 +115,6 @@ def get_bucket_results(date_bucket=None):
     print("Skipping bucket:", date_bucket)
     return None
   order_data = get_order_data(startdate, enddate)
-  child_distribution_ratio = get_child_distribution_ratio(startdate, enddate)
   
   # create_parent_matrix
   parent_order_data = order_data.groupby('parent_id').agg({'orders': 'sum', 'revenue': 'sum'})
@@ -107,9 +122,25 @@ def get_bucket_results(date_bucket=None):
   parent['orders'] = numpy.where(parent.orders.notnull(), parent.orders, parent.orders_om)
   parent['revenue'] = numpy.where(parent.revenue.notnull(), parent.revenue, parent.revenue_om)
   parent.drop(['orders_om', 'revenue_om'], axis=1, inplace=True)
+  parent.rename(columns={'parent_id': 'id'}, inplace=True)
   print(parent)
-
-
+  
+  #create_child_matrix
+  child_order_data = order_data.groupby('product_id').agg({'orders': 'sum', 'revenue': 'sum'})
+  child_distribution_ratio = get_child_distribution_ratio(startdate, enddate)
+  child = pd.merge(child_parent_map, child_distribution_ratio, how='left', on=['product_id', 'parent_id'])
+  child.ratio = child.ratio.fillna(1)
+  child = pd.merge(child, omniture_data, how='inner', on='parent_id')
+  child['views'] = child.apply(lambda x: x['views']/x['ratio'], axis=1)
+  child['cart_additions'] = child.apply(lambda x: x['cart_additions']/x['ratio'], axis=1)
+  child.drop(['orders_om', 'revenue_om', 'ratio', 'parent_id'])
+  child = pd.merge(child, child_order_data, how='left', on='product_id')
+  child.orders = child.orders.fillna(0)
+  child.revenue = child.revenue.fillna(0)
+  child.rename(columns={'product_id': 'id'}, inplace=True)
+  print(child)
+  
+  
 def calculate_popularity():
   timestamp = arrow.now().datetime
   
