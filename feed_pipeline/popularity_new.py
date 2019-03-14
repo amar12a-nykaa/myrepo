@@ -117,7 +117,7 @@ def get_bucket_results(date_bucket=None):
   order_data = get_order_data(startdate, enddate)
   
   # create_parent_matrix
-  parent_order_data = order_data.groupby('parent_id').agg({'orders': 'sum', 'revenue': 'sum'})
+  parent_order_data = order_data.groupby('parent_id').agg({'orders': 'sum', 'revenue': 'sum'}).reset_index()
   parent = pd.merge(omniture_data, parent_order_data, how='left', on='parent_id')
   parent['orders'] = numpy.where(parent.orders.notnull(), parent.orders, parent.orders_om)
   parent['revenue'] = numpy.where(parent.revenue.notnull(), parent.revenue, parent.revenue_om)
@@ -126,7 +126,7 @@ def get_bucket_results(date_bucket=None):
   print(parent)
   
   #create_child_matrix
-  child_order_data = order_data.groupby('product_id').agg({'orders': 'sum', 'revenue': 'sum'})
+  child_order_data = order_data.groupby('product_id').agg({'orders': 'sum', 'revenue': 'sum'}).reset_index()
   child_distribution_ratio = get_child_distribution_ratio(startdate, enddate)
   child = pd.merge(child_parent_map, child_distribution_ratio, how='left', on=['product_id', 'parent_id'])
   child.ratio = child.ratio.fillna(1)
@@ -139,7 +139,13 @@ def get_bucket_results(date_bucket=None):
   child.revenue = child.revenue.fillna(0)
   child.rename(columns={'product_id': 'id'}, inplace=True)
   print(child)
-  
+
+  df = pd.concat([parent, child])
+  df = df.groupby('id').agg({'views': 'max',
+                             'cart_additions': 'max',
+                             'orders': 'max',
+                             'revenue': 'max'}).reset_index()
+  return df
   
 def calculate_popularity():
   timestamp = arrow.now().datetime
@@ -160,6 +166,8 @@ def calculate_popularity():
     df = get_bucket_results(date_bucket)
     if df is None:
       continue
+    df.to_csv('test.csv', index=False)
+    exit()
 
 
 if __name__ == '__main__':
