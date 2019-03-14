@@ -94,6 +94,10 @@ def get_order_data(startdate, enddate):
   return data
 
 
+def normalize(a):
+  return (a-min(a))/(max(a)-min(a))
+
+
 def get_bucket_results(date_bucket=None):
   global child_parent_map
   
@@ -145,6 +149,10 @@ def get_bucket_results(date_bucket=None):
                              'cart_additions': 'max',
                              'orders': 'max',
                              'revenue': 'max'}).reset_index()
+  df['views'] = normalize(df['views'])
+  df['cart_additions'] = normalize(df['cart_additions'])
+  df['orders'] = normalize(df['orders'])
+  df['revenue'] = normalize(df['revenue'])
   return df
   
 def calculate_popularity():
