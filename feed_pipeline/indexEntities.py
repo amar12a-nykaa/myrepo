@@ -75,8 +75,6 @@ class EntityIndexer:
       "Make Up Forever": ["Makeup Forever"],
       "Maybelline New York": ["Maybelline"],
       "NYX Professional Makeup": ["NYX"],
-      "Lotus Herbals": ["Lotus"],
-      "Himalaya Herbals": ["Himalaya"],
       "Huda Beauty": ["Huda"],
       "Vaadi Herbals": ["Vaadi"],
       "Kama Ayurveda": ["Kama"],

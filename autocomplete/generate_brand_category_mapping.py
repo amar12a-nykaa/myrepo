@@ -59,7 +59,8 @@ def get_category_details():
   #Category id - name mapping
   nykaa_redshift_connection = Utils.redshiftConnection()
   query = """select distinct l3_id, l3_name as primary_l3 from product_category_mapping 
-              where l1_id not in (194, 7287) and l2_id not in (345, 734, 2058, 2064, 2091, 3962, 652);"""
+              where l1_id not in (194,7287) and l2_id not in (345,734,2058,2064,2091,3962,652,3049,3050,8440)
+              and l3_id not in (4036,3746,3745,3819,6612);"""
   results = Utils.fetchResults(nykaa_redshift_connection, query)
   for row in results:
     _id = str(row['l3_id'])
