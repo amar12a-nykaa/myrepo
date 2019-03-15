@@ -3,6 +3,7 @@ import pandas as pd
 import argparse
 import arrow
 import re
+import urllib
 from nltk.stem import PorterStemmer
 from datetime import date,datetime,timedelta
 
@@ -113,7 +114,7 @@ def insert_trending_searches(data):
     for word in data:
         ls = word.split()
         word = " ".join(ls)
-        url = "/search/result/?q=" + word.replace(" ", "+")
+        url = "/search/result/?" + str(urllib.parse.urlencode({'q': word}))
         values = ('query',url, word)
         query = """INSERT INTO trending_searches (type, url,q) VALUES ("%s","%s","%s") """ % (values)
 
