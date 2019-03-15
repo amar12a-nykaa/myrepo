@@ -94,8 +94,6 @@ def create_child_parent_map():
   child_parent_map = child_parent_map.astype({'parent_id': str, 'product_id': str})
   return child_parent_map
   
-child_parent_map = create_child_parent_map()
-child_parent_sales_map = create_child_sales_map()
 
 def get_child_distribution_ratio(startdate, enddate):
   bucket_results = []
@@ -119,6 +117,10 @@ def get_child_distribution_ratio(startdate, enddate):
   data.drop(['orders', 'total_order'], axis=1, inplace=True)
   data = data.astype({'parent_id': str, 'product_id': str, 'ratio': float})
   return data
+
+
+child_parent_map = create_child_parent_map()
+child_parent_sales_map = create_child_sales_map()
 
 
 def get_omniture_data(startdate, enddate):
