@@ -20,7 +20,8 @@ order_data = client['search']['order_data']
 
 POPULARITY_DECAY_FACTOR=0.5
 WEIGHT_VIEWS = 10
-WEIGHT_UNITS = 30
+WEIGHT_UNITS = 0
+WEIGHT_ORDERS = 30
 WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 60
 POPULARITY_TOTAL_RATIO = 0.1
@@ -32,7 +33,8 @@ COLD_START_DECAY_FACTOR = 0.95
 
 POPULARITY_DECAY_FACTOR_NEW = 0.5
 WEIGHT_VIEWS_NEW = 10
-WEIGHT_UNITS_NEW = 30
+WEIGHT_UNITS_NEW = 0
+WEIGHT_ORDERS_NEW = 30
 WEIGHT_CART_ADDITIONS_NEW = 10
 WEIGHT_REVENUE_NEW = 60
 POPULARITY_TOTAL_RATIO_NEW = 0.1
@@ -130,6 +132,7 @@ def get_omniture_data(startdate, enddate):
     {"$group": {"_id": "$parent_id",
                 "views": {"$sum": "$views"},
                 "cart_additions": {"$sum": "$cart_additions"},
+                "units_om": {"$sum": "$units"},
                 "orders_om": {"$sum": "$orders"},
                 "revenue_om": {"$sum": "$revenue"}
                 }},
@@ -151,6 +154,7 @@ def get_order_data(startdate, enddate):
     {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
     {"$group": {"_id": {"product_id": "$product_id", "parent_id": "$parent_id"},
                 "orders": {"$sum": "$orders"},
+                "units": {"$sum": "$units"},
                 "revenue": {"$sum": "$revenue"}
                 }
      }
@@ -193,25 +197,27 @@ def get_bucket_results(date_bucket=None):
   order_data = get_order_data(startdate, enddate)
   
   # create_parent_matrix
-  parent_order_data = order_data.groupby('parent_id').agg({'orders': 'sum', 'revenue': 'sum'}).reset_index()
+  parent_order_data = order_data.groupby('parent_id').agg({'orders': 'sum', 'revenue': 'sum', 'units': 'sum'}).reset_index()
   parent = pd.merge(omniture_data, parent_order_data, how='left', on='parent_id')
   parent['orders'] = numpy.where(parent.orders.notnull(), parent.orders, parent.orders_om)
   parent['revenue'] = numpy.where(parent.revenue.notnull(), parent.revenue, parent.revenue_om)
+  parent['units'] = numpy.where(parent.units.notnull(), parent.units, parent.units_om)
   parent.orders = parent.orders.fillna(0)
   parent.revenue = parent.revenue.fillna(0)
+  parent.units = parent.units.fillna(0)
   parent.drop(['orders_om', 'revenue_om'], axis=1, inplace=True)
   parent.rename(columns={'parent_id': 'id'}, inplace=True)
   print(parent)
   
   #create_child_matrix
-  child_order_data = order_data.groupby('product_id').agg({'orders': 'sum', 'revenue': 'sum'}).reset_index()
+  child_order_data = order_data.groupby('product_id').agg({'orders': 'sum', 'revenue': 'sum', 'units': 'sum'}).reset_index()
   child_distribution_ratio = get_child_distribution_ratio(startdate, enddate)
   child = pd.merge(child_parent_map, child_distribution_ratio, how='left', on=['product_id', 'parent_id'])
   child.ratio = child.ratio.fillna(1)
   child = pd.merge(child, omniture_data, how='inner', on='parent_id')
   child['views'] = child.apply(lambda x: x['views']/x['ratio'], axis=1)
   child['cart_additions'] = child.apply(lambda x: x['cart_additions']/x['ratio'], axis=1)
-  child.drop(['orders_om', 'revenue_om', 'ratio', 'parent_id'], axis=1, inplace=True)
+  child.drop(['orders_om', 'revenue_om', 'units_om', 'ratio', 'parent_id'], axis=1, inplace=True)
   child = pd.merge(child, child_order_data, how='left', on='product_id')
   child.orders = child.orders.fillna(0)
   child.revenue = child.revenue.fillna(0)
@@ -222,17 +228,18 @@ def get_bucket_results(date_bucket=None):
   df = df.groupby('id').agg({'views': 'max',
                              'cart_additions': 'max',
                              'orders': 'max',
+                             'units': 'max',
                              'revenue': 'max'}).reset_index()
   df['views'] = normalize(df['views'])
   df['cart_additions'] = normalize(df['cart_additions'])
   df['orders'] = normalize(df['orders'])
+  df['units'] = normalize(df['units'])
   df['revenue'] = normalize(df['revenue'])
   return df
   
 
 def calculate_popularity():
   global child_parent_map
-  global child_parent_sales_map
   
   timestamp = arrow.now().datetime
   
@@ -256,12 +263,12 @@ def calculate_popularity():
     multiplication_factor = POPULARITY_DECAY_FACTOR ** (bucket_id + 1)
     print("date_bucket: %s bucket_id: %s multiplication_factor: %s" %(str(date_bucket),bucket_id,multiplication_factor))
     df['popularity'] = multiplication_factor * normalize(
-                        numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_UNITS * df['orders'] +
+                        numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_ORDERS * df['orders'] + WEIGHT_UNITS * df['units'] +
                           WEIGHT_CART_ADDITIONS * df['cart_additions'] + WEIGHT_REVENUE * df['revenue'])) * 100
 
     multiplication_factor_new = POPULARITY_DECAY_FACTOR_NEW ** (bucket_id + 1)
     df['popularity_new'] = multiplication_factor_new * normalize(
-                            numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_UNITS_NEW * df['orders'] +
+                            numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_ORDERS_NEW * df['orders'] + WEIGHT_UNITS_NEW * df['units'] +
                               WEIGHT_CART_ADDITIONS_NEW * df['cart_additions'] + WEIGHT_REVENUE_NEW * df['revenue'])) * 100
 
     dfs.append(df.loc[:, ['id', 'popularity', 'popularity_new']].set_index('id'))
@@ -278,9 +285,9 @@ def calculate_popularity():
   
   #get_total_popularity
   df = get_bucket_results()
-  df['popularity_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_UNITS * df['orders'] +
+  df['popularity_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_ORDERS * df['orders'] + WEIGHT_UNITS * df['units'] +
                               WEIGHT_CART_ADDITIONS * df['cart_additions'] + WEIGHT_REVENUE * df['revenue'])) * 100
-  df['popularity_new_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_UNITS_NEW * df['orders'] +
+  df['popularity_new_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_ORDERS_NEW * df['orders'] + WEIGHT_UNITS_NEW * df['units'] +
                               WEIGHT_CART_ADDITIONS_NEW * df['cart_additions'] + WEIGHT_REVENUE_NEW * df['revenue'])) * 100
   df = df.set_index("id")
 
