@@ -205,7 +205,7 @@ def get_bucket_results(date_bucket=None):
   parent.orders = parent.orders.fillna(0)
   parent.revenue = parent.revenue.fillna(0)
   parent.units = parent.units.fillna(0)
-  parent.drop(['orders_om', 'revenue_om'], axis=1, inplace=True)
+  parent.drop(['orders_om', 'revenue_om', 'units_om'], axis=1, inplace=True)
   parent.rename(columns={'parent_id': 'id'}, inplace=True)
   print(parent)
   
@@ -220,6 +220,7 @@ def get_bucket_results(date_bucket=None):
   child.drop(['orders_om', 'revenue_om', 'units_om', 'ratio', 'parent_id'], axis=1, inplace=True)
   child = pd.merge(child, child_order_data, how='left', on='product_id')
   child.orders = child.orders.fillna(0)
+  child.units = child.units.fillna(0)
   child.revenue = child.revenue.fillna(0)
   child.rename(columns={'product_id': 'id'}, inplace=True)
   print(child)
