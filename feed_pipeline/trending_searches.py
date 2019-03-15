@@ -4,7 +4,7 @@ import argparse
 import arrow
 import re
 from nltk.stem import PorterStemmer
-from datetime import datetime
+from datetime import date,datetime,timedelta
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils, EntityUtils
@@ -128,8 +128,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--filename", type=str, default='trending.csv')
     argv = vars(parser.parse_args())
-    filename = argv['filename'] #+ "datepart"
-    filepath = '/nykaa/adminftp/' + filename
+
+    yesterday = str(date.today() - timedelta(1)).split('-')
+    yesterday = ''.join(yesterday)
+
+    from pathlib import Path
+    filepath = Path('/nykaa/adminftp/' + 'trendingRawData' + yesterday + '.csv')
+    if not filepath.is_file():
+        filepath = '/nykaa/adminftp/' + argv['filename']
+
     data = get_trending_searches(file_path=filepath)
     print(data)
     insert_trending_searches(data)
