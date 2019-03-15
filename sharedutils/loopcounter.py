@@ -42,7 +42,9 @@ class LoopCounter(object):
 
   @property
   def time_remaining(self):
-    sec_remaining = round((100 - self.percent_completed )* self.time /self.percent_completed)
+    sec_remaining = 100
+    if self.percent_completed > 0:
+      sec_remaining = round((100 - self.percent_completed )* self.time /self.percent_completed)
     return time.strftime('%H:%M:%S', time.gmtime(sec_remaining))
 
   def __iadd__(self, other):
