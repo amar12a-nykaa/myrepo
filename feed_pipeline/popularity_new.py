@@ -81,6 +81,20 @@ def create_child_sales_map():
   startdate = arrow.now().replace(days=-31).datetime.replace(tzinfo=None)
   enddate = arrow.now().replace(days=1).datetime.replace(tzinfo=None)
   child_parent_ratio = get_child_distribution_ratio(startdate, enddate)
+
+  query = """select product_id, parent_id, is_in_stock, mrp, disabled
+                from products"""
+  mysql_conn = Utils.mysqlConnection()
+  data = pd.read_sql(query, con=mysql_conn)
+  mysql_conn.close()
+  data.mrp = data.mrp.fillna(0)
+  data = data[(data.is_in_stock == 0) | (data.disabled == 1) | (data.mrp < 1)]
+  data['valid'] = 0
+  data = data.astype({'product_id': str, 'parent_id': str})
+  data.drop(['is_in_stock', 'mrp', 'disabled'], axis=1, inplace=True)
+
+  child_parent_ratio = pd.merge(child_parent_ratio, data, how='left', on=['product_id', 'parent_id'])
+  child_parent_ratio.valid = child_parent_ratio.valid.fillna(1)
   return child_parent_ratio
   
 
@@ -462,16 +476,14 @@ def get_popularity_multiplier(parent_id, product_list):
   global child_parent_sales_map
   popularity_multiplier = 1
   for p in product_list:
-    api = 'http://' + PipelineUtils.getAPIHost() + '/apis/v2/product.list?id={0}'.format(p)
-    r = requests.get(api)
     try:
-      data = json.loads(r.content.decode('utf-8'))
-      if (not data['result']['in_stock']) or (data['result']['disabled']) or (float(data['result']['mrp']) < 1):
-        ratio = child_parent_sales_map[(child_parent_sales_map.parent_id == str(parent_id)) & (child_parent_sales_map.product_id == str(p))]['ratio']
-        popularity_multiplier -= float(ratio)
+      isvalid = child_parent_sales_map[(child_parent_sales_map.parent_id == str(parent_id)) & (child_parent_sales_map.product_id == str(p))]['valid']
+      if not isvalid:
+        popularity_multiplier -= float(child_parent_sales_map[(child_parent_sales_map.parent_id == str(parent_id))
+                                                            & (child_parent_sales_map.product_id == str(p))]['ratio'])
     except:
       pass
-    return max(popularity_multiplier, 0)
+  return max(popularity_multiplier, 0)
   
 
 def override_popularity():
