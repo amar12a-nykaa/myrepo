@@ -260,7 +260,7 @@ def get_bucket_results(date_bucket=None):
   return df
   
 
-def calculate_popularity():
+def calculate_new_popularity():
   global child_parent_map
   
   timestamp = arrow.now().datetime
@@ -350,10 +350,12 @@ def calculate_popularity():
     row['popularity_recent'] = row['popularity_recent']* float(popularity_multiplier_factor)
 
     id = row.get('id')
-    popularity_table.update({"_id": id}, row, upsert=True)
+    popularity_table.update({"_id": id}, {"$set": {'popularity_recent': row['popularity'],
+                                              'popularity_multiplier_factor_new': row['popularity_multiplier_factor']}})
+    # popularity_table.update({"_id": id}, update, upsert=True)
 
-  popularity_table.remove({"last_calculated": {"$ne": timestamp}})
-  override_popularity()
+  # popularity_table.remove({"last_calculated": {"$ne": timestamp}})
+  # override_popularity()
   
 
 def applyBoost(df):
@@ -504,5 +506,5 @@ child_parent_sales_map = create_child_sales_map()
 
 if __name__ == '__main__':
   print("popularity start: %s" % arrow.now())
-  calculate_popularity()
+  calculate_new_popularity()
   print("popularity end: %s" % arrow.now())
