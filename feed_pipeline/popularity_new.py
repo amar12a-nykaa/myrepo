@@ -111,6 +111,17 @@ def create_child_parent_map():
   return child_parent_map
   
 
+def get_parent_child_list():
+  global child_parent_map
+  parent_map = {}
+  for i, row in child_parent_map.iterrows():
+    row = dict(row)
+    plist = parent_map.get(row['parent_id'], [])
+    plist.append(row['product_id'])
+    parent_map[row['parent_id']] = plist
+  return parent_map
+  
+
 def get_child_distribution_ratio(startdate, enddate):
   bucket_results = []
   for p in order_data.aggregate([
@@ -133,10 +144,6 @@ def get_child_distribution_ratio(startdate, enddate):
   data.drop(['orders', 'total_order'], axis=1, inplace=True)
   data = data.astype({'parent_id': str, 'product_id': str, 'ratio': float})
   return data
-
-
-child_parent_map = create_child_parent_map()
-child_parent_sales_map = create_child_sales_map()
 
 
 def get_omniture_data(startdate, enddate):
@@ -322,6 +329,7 @@ def calculate_popularity():
   a = a.sort_values(by='popularity', ascending=True)
   a.to_csv('a.csv', index=False)
   
+  parent_child_list = get_parent_child_list()
   ctr = LoopCounter(name='Writing popularity to db', total=len(a.index))
   for i, row in a.iterrows():
     ctr += 1
@@ -330,7 +338,7 @@ def calculate_popularity():
 
     row = dict(row)
 
-    child_product_list = child_parent_map[(child_parent_map.parent_id == row['id'])]['product_id'].unique()
+    child_product_list = parent_child_list.get(row['id'], [])
     if len(child_product_list) > 0:
       popularity_multiplier_factor = get_popularity_multiplier(row['id'], child_product_list)
     else:
@@ -474,6 +482,7 @@ def applyOffers(df):
 
 def get_popularity_multiplier(parent_id, product_list):
   global child_parent_sales_map
+  product_list = list(dict.fromkeys(product_list))
   popularity_multiplier = 1
   for p in product_list:
     try:
@@ -490,6 +499,8 @@ def override_popularity():
   for id, popularity in PRODUCT_POPULARITY_OVERRIDES.items():
     popularity_table.update({"_id": id}, {"$set": {'popularity': popularity}})
     
+child_parent_map = create_child_parent_map()
+child_parent_sales_map = create_child_sales_map()
 
 if __name__ == '__main__':
   print("popularity start: %s" % arrow.now())
