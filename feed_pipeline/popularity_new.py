@@ -95,7 +95,16 @@ def create_child_sales_map():
 
   child_parent_ratio = pd.merge(child_parent_ratio, data, how='left', on=['product_id', 'parent_id'])
   child_parent_ratio.valid = child_parent_ratio.valid.fillna(1)
-  return child_parent_ratio
+
+  child_parent_valid_ratio = {}
+  for i, row in child_parent_ratio.iterrows():
+    row = dict(row)
+    data = child_parent_valid_ratio.get(row['parent_id'], {})
+    data[row['product_id']] = {}
+    data[row['product_id']]['valid'] = row['valid']
+    data[row['product_id']]['ratio'] = row['ratio']
+    child_parent_valid_ratio[row['parent_id']] = data
+  return child_parent_valid_ratio
   
 
 def create_child_parent_map():
@@ -488,11 +497,12 @@ def get_popularity_multiplier(parent_id, product_list):
   popularity_multiplier = 1
   for p in product_list:
     try:
-      isvalid = child_parent_sales_map[(child_parent_sales_map.parent_id == str(parent_id)) & (child_parent_sales_map.product_id == str(p))]['valid']
-      if not isvalid:
-        popularity_multiplier -= float(child_parent_sales_map[(child_parent_sales_map.parent_id == str(parent_id))
-                                                            & (child_parent_sales_map.product_id == str(p))]['ratio'])
+      childdata = child_parent_sales_map.get(str(parent_id), {})
+      if childdata.get(str(p)) and (not childdata.get(str(p)).get('valid')):
+        ratio = childdata.get(str(p)).get('valid').get('ratio', 0)
+        popularity_multiplier -= float(ratio)
     except:
+      print('unable to get child data')
       pass
   return max(popularity_multiplier, 0)
   
