@@ -499,7 +499,7 @@ def get_popularity_multiplier(parent_id, product_list):
     try:
       childdata = child_parent_sales_map.get(str(parent_id), {})
       if childdata.get(str(p)) and (not childdata.get(str(p)).get('valid')):
-        ratio = childdata.get(str(p)).get('valid').get('ratio', 0)
+        ratio = childdata.get(str(p)).get('ratio', 0)
         popularity_multiplier -= float(ratio)
     except:
       print('unable to get child data')
