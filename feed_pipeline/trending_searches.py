@@ -34,25 +34,29 @@ def calculate_ctr(row):
     return row
 
 def get_trending_searches(filename):
-
-    flag = 0
-    df=pd.DataFrame
-    df.columns = ['date', 'ist', 'frequency', 'ctr']
+    flag1 = 0
+    flag2 = 0
+    df = pd.DataFrame
 
     for i in range(4):
-        temp = str(date.today() - timedelta(i+1)).split('-')
+        temp = str(date.today() - timedelta(i + 1)).split('-')
         temp = ''.join(temp)
         from pathlib import Path
         filepath = Path('/nykaa/adminftp/' + 'trendingRawData' + temp + '.csv')
         if not filepath.is_file():
-            flag = 1
+            flag1 = 1
             break;
+        if flag2 == 0:
+            df = pd.read_csv(filepath)
+            flag2 = 1
+            continue
         df_temp = pd.read_csv(filepath)
-        df.append(df_temp, ignore_index=True)
+        df = pd.concat([df, df_temp], ignore_index=True)
+        print(df)
 
-    if flag==1:
-        filepath = Path('/nykaa/adminftp/' + filename )
-        df = pd.read_csv(filepath)
+    if flag1 == 1:
+        filepath = Path('/nykaa/adminftp/' + filename)
+        df = pd.read_csv(filename)
 
     # renaming columns
     df.columns = ['date', 'ist', 'frequency', 'ctr']
