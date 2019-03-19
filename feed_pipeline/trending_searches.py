@@ -148,6 +148,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--filename", type=str, default='trending.csv')
     argv = vars(parser.parse_args())
-    data = get_trending_searches(filename=filename)
+    data = get_trending_searches(filename=argv['filename'])
     print(data)
     insert_trending_searches(data)
