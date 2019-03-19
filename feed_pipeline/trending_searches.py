@@ -33,8 +33,27 @@ def calculate_ctr(row):
     row['ctr_ratio'] = float(row['ctr']*100)/row['frequency']
     return row
 
-def get_trending_searches(file_path):
-    df = pd.read_csv(file_path)
+def get_trending_searches(filename):
+
+    flag = 0
+    df=pd.DataFrame
+    df.columns = ['date', 'ist', 'frequency', 'ctr']
+
+    for i in range(4):
+        temp = str(date.today() - timedelta(i+1)).split('-')
+        temp = ''.join(temp)
+        from pathlib import Path
+        filepath = Path('/nykaa/adminftp/' + 'trendingRawData' + temp + '.csv')
+        if not filepath.is_file():
+            flag = 1
+            break;
+        df_temp = pd.read_csv(filepath)
+        df.append(df_temp, ignore_index=True)
+
+    if flag==1:
+        filepath = Path('/nykaa/adminftp/' + filename )
+        df = pd.read_csv(filepath)
+
     # renaming columns
     df.columns = ['date', 'ist', 'frequency', 'ctr']
     df.drop(df[df.frequency < 10].index, inplace=True)
@@ -78,7 +97,7 @@ def get_trending_searches(file_path):
     final_df['brand'] = ''
     final_df['category'] = ''
     final_df = final_df.apply(get_entities, axis=1)
-    final_df = final_df.drop(final_df[(final_df.brand == 'None') & (final_df.category == 'None')].index)
+    #final_df = final_df.drop(final_df[(final_df.brand == 'None') & (final_df.category == 'None')].index)
     final_df = final_df.sort_values(['frequency'], ascending=False)
 
     result = []
@@ -129,15 +148,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--filename", type=str, default='trending.csv')
     argv = vars(parser.parse_args())
-
-    yesterday = str(date.today() - timedelta(1)).split('-')
-    yesterday = ''.join(yesterday)
-
-    from pathlib import Path
-    filepath = Path('/nykaa/adminftp/' + 'trendingRawData' + yesterday + '.csv')
-    if not filepath.is_file():
-        filepath = '/nykaa/adminftp/' + argv['filename']
-
-    data = get_trending_searches(file_path=filepath)
+    data = get_trending_searches(filename=filename)
     print(data)
     insert_trending_searches(data)
