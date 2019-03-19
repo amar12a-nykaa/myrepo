@@ -11,7 +11,7 @@ sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils, EntityUtils
 
 porter = PorterStemmer()
-RESULT_SIZE = 15
+RESULT_SIZE = 5
 
 
 def word_clean(word):
@@ -27,6 +27,8 @@ def get_entities(row):
     result,coverage = EntityUtils.get_matched_entities(row['ist'])
     row['brand']=result['brand']['entity'] if 'brand' in result else 'None'
     row['category'] = result['category']['entity'] if 'category' in result else 'None'
+    row['coverage'] = coverage
+
     return row
 
 def calculate_ctr(row):
@@ -38,10 +40,55 @@ def get_yesterday_trending():
 
     if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
         return None
+    prev=[]
+    for each in Utils.mysql_read("select word from trending_searches"):
+        prev.append(word_clean(each.get('q')))
+    return prev
 
-    res = Utils.mysql_read("select word from trending_searches")
-    return res
+def get_results(final_df,prev_trending_terms):
+    result = []
+    included_list = {'brand': [], 'category': []}
+    count = 0
+    for index, row in final_df.iterrows():
+        brand = row['brand']
+        category = row['category']
+        if brand and brand in included_list['brand']:
+            continue
+        if category and category in included_list['category']:
+            continue
+        if row['cleaned_term'] in prev_trending_terms:
+            continue
+        included_list['brand'].append(brand)
+        included_list['category'].append(category)
+        result.append(row['ist'])
+        count = count + 1
+        if count >= RESULT_SIZE:
+            break
+    return result
 
+def select_version(final_df,prev_trending_terms,algo):
+
+    if algo == 1:
+        final_df = final_df[(final_df.coverage == 100)]
+        result = get_results(final_df,prev_trending_terms)
+        return result
+
+    if algo == 2:
+        final_df = final_df[(final_df.brand != 'None')]
+        result = get_results(final_df, prev_trending_terms)
+        return result
+
+    if algo == 3:
+        result = []
+        count = 0
+        for index, row in final_df.iterrows():
+            if row['cleaned_term'] in prev_trending_terms:
+                continue
+            result.append(row['ist'])
+            count = count + 1
+            if count >= RESULT_SIZE:
+                break
+        return result
 
 def get_trending_searches(filename):
     flag1 = 0
@@ -110,27 +157,11 @@ def get_trending_searches(filename):
     #entities detection
     final_df['brand'] = ''
     final_df['category'] = ''
+    final_df['coverage'] = 0
     final_df = final_df.apply(get_entities, axis=1)
-    #final_df = final_df.drop(final_df[(final_df.brand == 'None') & (final_df.category == 'None')].index)
-    final_df = final_df.sort_values(['frequency'], ascending=False)
-    previous_trending_terms = get_yesterday_trending()
-    result = []
-    included_list = {'brand': [], 'category': []}
-    count = 0
 
-    for index, row in final_df.iterrows():
-        brand = row['brand']
-        category = row['category']
-        if brand and brand in included_list['brand']:
-            continue
-        if category and category in included_list['category']:
-            continue
-        included_list['brand'].append(brand)
-        included_list['category'].append(category)
-        result.append(row['ist'])
-        count = count + 1
-        if count >= RESULT_SIZE:
-            break
+    prev_trending_terms = get_yesterday_trending()
+    result = select_version(final_df, prev_trending_terms, algo=1)
 
     return result
 
