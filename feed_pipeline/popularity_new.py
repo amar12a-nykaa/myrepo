@@ -95,16 +95,16 @@ def create_child_sales_map():
 
   child_parent_ratio = pd.merge(child_parent_ratio, data, how='left', on=['product_id', 'parent_id'])
   child_parent_ratio.valid = child_parent_ratio.valid.fillna(1)
-
-  child_parent_valid_ratio = {}
-  for i, row in child_parent_ratio.iterrows():
-    row = dict(row)
-    data = child_parent_valid_ratio.get(row['parent_id'], {})
-    data[row['product_id']] = {}
-    data[row['product_id']]['valid'] = row['valid']
-    data[row['product_id']]['ratio'] = row['ratio']
-    child_parent_valid_ratio[row['parent_id']] = data
-  return child_parent_valid_ratio
+  return child_parent_ratio
+  # child_parent_valid_ratio = {}
+  # for i, row in child_parent_ratio.iterrows():
+  #   row = dict(row)
+  #   data = child_parent_valid_ratio.get(row['parent_id'], {})
+  #   data[row['product_id']] = {}
+  #   data[row['product_id']]['valid'] = row['valid']
+  #   data[row['product_id']]['ratio'] = row['ratio']
+  #   child_parent_valid_ratio[row['parent_id']] = data
+  # return child_parent_valid_ratio
   
 
 def create_child_parent_map():
@@ -206,6 +206,7 @@ def normalize(a):
 
 def get_bucket_results(date_bucket=None):
   global child_parent_map
+  global child_parent_sales_map
   
   if date_bucket:
     startday = date_bucket[1] * -1
@@ -225,6 +226,12 @@ def get_bucket_results(date_bucket=None):
     print("Skipping bucket:", date_bucket)
     return None
   order_data = get_order_data(startdate, enddate)
+  
+  #remove oos products
+  order_data = pd.merge(order_data, child_parent_sales_map, how='left', on=['product_id', 'parent_id'])
+  order_data.orders = order_data.apply(lambda x: 0 if not x['valid'] else x['orders'])
+  order_data.revenue = order_data.apply(lambda x: 0 if not x['valid'] else x['revenue'])
+  order_data.units = order_data.apply(lambda x: 0 if not x['valid'] else x['units'])
   
   # create_parent_matrix
   parent_order_data = order_data.groupby('parent_id').agg({'orders': 'sum', 'revenue': 'sum', 'units': 'sum'}).reset_index()
@@ -331,9 +338,9 @@ def calculate_new_popularity():
   a.popularity_new = a.popularity_new.fillna(0)
   
   #business_logic
-  a = applyBoost(a)
-  a = handleColdStart(a)
-  a = applyOffers(a)
+  # a = applyBoost(a)
+  # a = handleColdStart(a)
+  # a = applyOffers(a)
   a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
   a.to_csv('a.csv', index=False)
@@ -347,16 +354,16 @@ def calculate_new_popularity():
 
     row = dict(row)
 
-    child_product_list = parent_child_list.get(row['id'], [])
-    if len(child_product_list) > 0:
-      popularity_multiplier_factor = get_popularity_multiplier(row['id'], child_product_list)
-    else:
-      popularity_multiplier_factor = 1
-
-    row['last_calculated'] = timestamp
-    row['popularity_multiplier_factor'] =  popularity_multiplier_factor
-    row['popularity'] = row['popularity']* float(popularity_multiplier_factor)
-    row['popularity_recent'] = row['popularity_recent']* float(popularity_multiplier_factor)
+    # child_product_list = parent_child_list.get(row['id'], [])
+    # if len(child_product_list) > 0:
+    #   popularity_multiplier_factor = get_popularity_multiplier(row['id'], child_product_list)
+    # else:
+    #   popularity_multiplier_factor = 1
+    #
+    # row['last_calculated'] = timestamp
+    # row['popularity_multiplier_factor'] =  popularity_multiplier_factor
+    # row['popularity'] = row['popularity']* float(popularity_multiplier_factor)
+    # row['popularity_recent'] = row['popularity_recent']* float(popularity_multiplier_factor)
 
     id = row.get('id')
     popularity_table.update({"_id": id}, {"$set": {'popularity_recent': row['popularity'],
