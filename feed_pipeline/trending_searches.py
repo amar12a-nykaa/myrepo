@@ -33,6 +33,16 @@ def calculate_ctr(row):
     row['ctr_ratio'] = float(row['ctr']*100)/row['frequency']
     return row
 
+def get_yesterday_trending():
+    mysql_conn = Utils.mysqlConnection('r')
+
+    if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
+        return None
+
+    res = Utils.mysql_read("select word from trending_searches")
+    return res
+
+
 def get_trending_searches(filename):
     flag1 = 0
     flag2 = 0
@@ -42,8 +52,8 @@ def get_trending_searches(filename):
         temp = str(date.today() - timedelta(i + 1)).split('-')
         temp = ''.join(temp)
         from pathlib import Path
-        filepath = Path('/nykaa/adminftp/' + 'trendingRawData' + temp + '.csv')
-        if not filepath.is_file():
+        filepath = '/nykaa/adminftp/' + 'trendingRawData' + temp + '.csv'
+        if not Path(filepath).is_file():
             flag1 = 1
             break;
         if flag2 == 0:
@@ -55,7 +65,7 @@ def get_trending_searches(filename):
         print(df)
 
     if flag1 == 1:
-        filepath = Path('/nykaa/adminftp/' + filename)
+        filepath = '/nykaa/adminftp/' + filename
         df = pd.read_csv(filename)
 
     # renaming columns
@@ -103,7 +113,7 @@ def get_trending_searches(filename):
     final_df = final_df.apply(get_entities, axis=1)
     #final_df = final_df.drop(final_df[(final_df.brand == 'None') & (final_df.category == 'None')].index)
     final_df = final_df.sort_values(['frequency'], ascending=False)
-
+    previous_trending_terms = get_yesterday_trending()
     result = []
     included_list = {'brand': [], 'category': []}
     count = 0
