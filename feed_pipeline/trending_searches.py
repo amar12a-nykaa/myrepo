@@ -54,11 +54,11 @@ def get_results(final_df,prev_trending_terms):
     for index, row in final_df.iterrows():
         brand = row['brand']
         category = row['category']
-        if brand and brand in included_list['brand']:
+        if brand != 'None' and brand in included_list['brand']:
             continue
-        if category and category in included_list['category']:
+        if category != 'None' and category in included_list['category']:
             continue
-        if row['cleaned_term'] in prev_trending_terms:
+        if prev_trending_terms is not None and row['cleaned_term'] in prev_trending_terms:
             continue
         included_list['brand'].append(brand)
         included_list['category'].append(category)
@@ -81,15 +81,7 @@ def select_version(final_df,prev_trending_terms,algo):
         return result
 
     if algo == 3:
-        result = []
-        count = 0
-        for index, row in final_df.iterrows():
-            if row['cleaned_term'] in prev_trending_terms:
-                continue
-            result.append(row['ist'])
-            count = count + 1
-            if count >= RESULT_SIZE:
-                break
+        result = get_results(final_df, prev_trending_terms)
         return result
 
 def read_file(filepath):
