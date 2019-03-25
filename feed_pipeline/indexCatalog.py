@@ -814,6 +814,8 @@ class CatalogIndexer:
                 doc['days_to_return'] = row.get('days_to_return')
                 doc['message_on_return'] = row.get('message_on_return')
                 doc['return_available'] = row.get('return_available')
+                doc['country_code'] = row.get('country_code')
+                doc['country_name'] = row.get('country_name')
                 if doc.get('type') == 'simple' or doc.get('type') == 'configurable':
                     doc['manufacturer_name'] = row.get('manufacturer_name', '')
                     doc['manufacturer_address'] = row.get('manufacturer_address', '')
@@ -890,7 +892,7 @@ class CatalogIndexer:
         'preference', 'spf_v1', 'spf', 'add_to_cart_url', 'parent_id', 'redirect_to_parent', 'eretailer', 'product_ingredients', 'vendor_id', 'vendor_sku', 'old_brand_v1',
         'old_brand', 'highlights', 'featured_in_titles', 'featured_in_urls', 'is_subscribable', 'bucket_discount_percent','list_offer_id', 'max_allowed_qty', 'beauty_partner_v1',
         'beauty_partner', 'primary_categories', 'offers', 'filter_size_v1', 'filter_size', 'speciality_search_v1', 'speciality_search', 'filter_product_v1', 'filter_product', 'usage_period_v1', 'usage_period',
-        'hide_child_description']
+        'hide_child_description','country_code','country_name']
 
         print("Reading CSV .. ")
         all_rows = read_csv_from_file(file_path)
