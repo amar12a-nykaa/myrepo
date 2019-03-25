@@ -197,7 +197,41 @@ class EsUtils:
     print("Swapping Index")
     indexes = EsUtils.get_active_inactive_indexes(alias)
     EsUtils.switch_index_alias(alias, from_index=indexes['active_index'], to_index=indexes['inactive_index'])
-  
+
+  def reindex_two_clusters(self, from_region, target_region, from_index, to_index):
+    hostname = socket.gethostname()
+    if not(hostname.startswith('admin') or hostname.startswith('preprod')):
+      print("Reindexing is allowed only in preprod & production environments")
+      raise Exception("Exiting..... error")
+
+    try:
+      # Create connection object at both region
+      source_client = Utils.esConnCustom(from_region)
+      target_client = Utils.esConnCustom(target_region)
+      setting_client = elasticsearch.client.IndicesClient(Utils.esConnCustom(target_region))
+
+      # Set refresh_interval to -1 to enable faster indexing
+      sett = {'refresh_interval': '-1'}
+      setting_client.put_settings(sett, to_index)
+
+      # reindex data from one region to other
+      elasticsearch.helpers.reindex(client=source_client, source_index=from_index, target_index=to_index, target_client=target_client, chunk_size=500)
+
+      # reset refresh_interval to 1 seccond once indexing is finished
+      sett = {'refresh_interval': '1s'}
+      setting_client.put_settings(sett, to_index)
+
+      # forcefully refresh index at target region to reflect changes
+      try:
+        setting_client.refresh(index=to_index, request_timeout=120)
+      except Exception as e:
+        print(traceback.format_exc())
+        raise Exception("Index refresh failed.....")
+
+    except:
+      print(traceback.format_exc())
+      print("Error occured....")
+      raise
 
 if __name__ == "__main__":
   ret = EsUtils.get_active_inactive_indexes('livecore')
