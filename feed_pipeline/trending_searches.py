@@ -27,7 +27,7 @@ def word_clean(word):
 
 def get_entities(row):
     result,coverage = EntityUtils.get_matched_entities(row['ist'])
-    row['brand']=result['brand']['entity'] if 'brand' in result else 'None'
+    row['brand'] = result['brand']['entity'] if 'brand' in result else 'None'
     row['category'] = result['category']['entity'] if 'category' in result else 'None'
     row['coverage'] = coverage
 
@@ -62,7 +62,26 @@ def get_results(final_df,prev_trending_terms):
             continue
         included_list['brand'].append(brand)
         included_list['category'].append(category)
-        result.append(row['ist'])
+        ist_list = row['ist'].split()
+        i = 0
+        brand_list = brand.split()
+        cat_list = category.split()
+        for brand_word in brand_list:
+            i = 0
+            for ist_word in ist_list:
+                if brand_word != 'None' and word_clean(ist_word) == word_clean(brand_word):
+                    ist_list[i] = brand_word
+                i += 1
+
+        for cat_word in cat_list:
+            i = 0
+            for ist_word in ist_list:
+                if cat_word != 'None' and word_clean(ist_word) == word_clean(cat_word):
+                    ist_list[i] = cat_word
+                i += 1
+        word = ' '.join(ist_list)
+
+        result.append(word)
         count = count + 1
         if count >= RESULT_SIZE:
             break
