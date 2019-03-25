@@ -20,6 +20,7 @@ import omniture
 import pandas as pd
 from pandas.io import sql
 from pymongo import MongoClient
+from popularity_new import calculate_new_popularity
 from pipelineUtils import PipelineUtils
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
@@ -374,6 +375,8 @@ def calculate_popularity():
                                                       }, upsert=True)
 
   popularity_table.remove({"last_calculated": {"$ne": timestamp}})
+  #Update popularity_recent using new logic
+  calculate_new_popularity()
   override_popularity()
 
 
