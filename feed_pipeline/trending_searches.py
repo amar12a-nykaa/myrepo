@@ -41,7 +41,7 @@ def get_yesterday_trending():
     if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
         return None
     prev=[]
-    for each in Utils.mysql_read("select word from trending_searches"):
+    for each in Utils.mysql_read("select q from trending_searches"):
         prev.append(word_clean(each.get('q')))
     return prev
 
@@ -93,7 +93,6 @@ def select_version(final_df,prev_trending_terms,algo):
 def get_trending_searches(filename):
     flag1 = 0
     flag2 = 0
-    df = pd.DataFrame
 
     for i in range(4):
         temp = str(date.today() - timedelta(i + 1)).split('-')
@@ -109,11 +108,10 @@ def get_trending_searches(filename):
             continue
         df_temp = pd.read_csv(filepath)
         df = pd.concat([df, df_temp], ignore_index=True)
-        print(df)
 
     if flag1 == 1:
         filepath = '/nykaa/adminftp/' + filename
-        df = pd.read_csv(filename)
+        df = pd.read_csv(filepath)
 
     # renaming columns
     df.columns = ['date', 'ist', 'frequency', 'ctr']
@@ -151,6 +149,7 @@ def get_trending_searches(filename):
     final_df['avg_frequency'].fillna(0)
     total_yesterday = final_df['frequency'].sum()
     total_remaining = final_df['avg_frequency'].sum()
+    # normalising each term freequency
     final_df['avg_frequency'] = (final_df['avg_frequency']*total_yesterday)/total_remaining
     final_df = final_df[final_df.frequency >= 1.3 * final_df.avg_frequency]
 
@@ -161,6 +160,7 @@ def get_trending_searches(filename):
     final_df = final_df.apply(get_entities, axis=1)
 
     prev_trending_terms = get_yesterday_trending()
+    final_df = final_df.sort_values(['avg_frequency'], ascending=False)
     result = select_version(final_df, prev_trending_terms, algo=1)
 
     return result
