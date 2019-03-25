@@ -3,9 +3,11 @@ import pandas as pd
 import argparse
 import arrow
 import re
+import os
 import urllib
 from nltk.stem import PorterStemmer
 from datetime import date,datetime,timedelta
+from health_check import enumerate_dates
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils, EntityUtils
@@ -90,26 +92,52 @@ def select_version(final_df,prev_trending_terms,algo):
                 break
         return result
 
+def read_file(filepath):
+    def unzip_file(path_to_zip_file):
+        import zipfile
+        import os
+        zip_ref = zipfile.ZipFile(path_to_zip_file, 'r')
+        zip_ref.extractall(os.path.dirname(path_to_zip_file))
+        zip_ref.close()
+
+    if not os.path.isfile(filepath):
+        print("[ERROR] File does not exist: %s" % filepath)
+        return
+
+    extention = os.path.splitext(filepath)[1]
+    if extention == '.zip':
+        csvfilepath = os.path.splitext(filepath)[0] + '.csv'
+        os.system("rm %s")
+        try:
+            os.remove(csvfilepath)
+        except OSError:
+            pass
+        unzip_file(filepath)
+        assert os.path.isfile(csvfilepath), 'Failed to extract CSV from %s' % filepath
+
+        filepath = csvfilepath
+
+    data=pd.read_csv(filepath)
+    return data
+
 def get_trending_searches(filename):
-    flag1 = 0
-    flag2 = 0
+    flag = 0
+    dates = enumerate_dates(-4,-1)
+    for date in dates:
+        date = ''.join(str(date.date()).split('-'))
+        filepath = '/nykaa/adminftp/' + 'trendingRawData' + date + '.csv'
+        if not os.path.exists(filepath):
+            filepath = '/nykaa/adminftp/' + 'trendingRawData' + date + '.zip'
 
-    for i in range(4):
-        temp = str(date.today() - timedelta(i + 1)).split('-')
-        temp = ''.join(temp)
-        from pathlib import Path
-        filepath = '/nykaa/adminftp/' + 'trendingRawData' + temp + '.csv'
-        if not Path(filepath).is_file():
-            flag1 = 1
-            break;
-        if flag2 == 0:
-            df = pd.read_csv(filepath)
-            flag2 = 1
-            continue
-        df_temp = pd.read_csv(filepath)
-        df = pd.concat([df, df_temp], ignore_index=True)
+        df_temp=read_file(filepath)
+        try:
+            df = pd.concat([df, df_temp], ignore_index=True)
+        except:
+            df = df_temp
+            if df_temp is None:
+                flag = 1
 
-    if flag1 == 1:
+    if flag == 1:
         filepath = '/nykaa/adminftp/' + filename
         df = pd.read_csv(filepath)
 
