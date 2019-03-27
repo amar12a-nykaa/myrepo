@@ -288,7 +288,9 @@ def calculate_new_popularity():
     POPULARITY_TOTAL_RATIO_NEW * a['popularity_new_total'] + POPULARITY_BUCKET_RATIO_NEW * a['popularity_new_bucket'])
   a.popularity = a.popularity.fillna(0)
   a.popularity_new = a.popularity_new.fillna(0)
-  
+  # business_logic
+  a = applyBoost(a)
+  a = handleColdStart(a)
   a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
   a.to_csv('a.csv', index=False)
@@ -302,6 +304,96 @@ def calculate_new_popularity():
     row = dict(row)
     id = row.get('id')
     popularity_table.update({"_id": id}, {"$set": {'popularity_recent': row['popularity']}})
+
+
+def applyBoost(df):
+  query = """select product_id, sku_type, brand_code, mrp, l3_id from dim_sku"""
+  print(query)
+  redshift_conn = Utils.redshiftConnection()
+  product_attr = pd.read_sql(query, con=redshift_conn)
+  redshift_conn.close()
+
+  dtype = dict(id=int)
+  temp_df = pd.merge(df.astype(dtype), product_attr, how='left', left_on=['id'], right_on=['product_id'])
+
+  #punish combo products
+  def punish_combos(row):
+    if row['sku_type'] and str(row['sku_type']).lower() == 'bundle':
+      row['popularity'] = row['popularity'] * PUNISH_FACTOR
+      row['popularity_new'] = row['popularity_new'] * PUNISH_FACTOR_NEW
+    return row
+  # temp_df = temp_df.apply(punish_combos, axis=1)
+
+  #promote nykaa products
+  def promote_nykaa_products(row):
+    if row['brand_code'] in BRAND_PROMOTION_LIST:
+      row['popularity'] = row['popularity'] * BOOST_FACTOR
+      row['popularity_new'] = row['popularity_new'] * BOOST_FACTOR_NEW
+    return row
+  temp_df = temp_df.apply(promote_nykaa_products, axis=1)
+
+  #promote indivisual products
+  def punish_products_by_id(row):
+    if row['product_id'] in PRODUCT_PUNISH_LIST:
+      row['popularity'] = row['popularity'] * PRODUCT_PUNISH_FACTOR
+      row['popularity_new'] = row['popularity_new'] * PRODUCT_PUNISH_FACTOR_NEW
+    return row
+  temp_df = temp_df.apply(punish_products_by_id, axis=1)
+  temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
+  temp_df = temp_df.astype({'id': str})
+
+  return temp_df
+
+
+def handleColdStart(df):
+  temp_df = df[['id', 'popularity', 'popularity_new']]
+  temp_df = temp_df.astype({'id': int, 'popularity': float, 'popularity_new': float})
+
+  query = """select product_id, l3_id from product_category_mapping"""
+  redshift_conn = Utils.redshiftConnection()
+  product_category_mapping = pd.read_sql(query, con=redshift_conn)
+
+  product_data = pd.merge(temp_df, product_category_mapping, left_on=['id'], right_on=['product_id'])
+
+  def percentile(n):
+      def _percentile(x):
+          return numpy.percentile(x, n)
+      return _percentile
+  category_popularity = product_data.groupby('l3_id').agg({'popularity': percentile(95), 'popularity_new': percentile(95)}).reset_index()
+
+  product_data = pd.merge(product_category_mapping, category_popularity, on='l3_id')
+  product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
+  product_popularity.rename(columns={'popularity': 'median_popularity', 'popularity_new': 'median_popularity_new'}, inplace=True)
+  result = pd.merge(temp_df, product_popularity, left_on='id', right_on='product_id')
+
+  query = """select product_id, sku_created from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
+  product_creation = pd.read_sql(query, con=redshift_conn)
+  redshift_conn.close()
+
+  result = pd.merge(result, product_creation, on='product_id')
+
+  def update_popularity(row):
+    date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['sku_created']).astype(datetime.datetime))).days
+    if date_diff > 0:
+        row['calculated_popularity'] = row['popularity'] + row['median_popularity']*(COLD_START_DECAY_FACTOR ** date_diff)
+        row['calculated_popularity_new'] = row['popularity_new'] + row['median_popularity_new'] * (COLD_START_DECAY_FACTOR_NEW ** date_diff)
+    else:
+        row['calculated_popularity'] = row['popularity']
+        row['calculated_popularity_new'] = row['popularity_new']
+    return row
+
+  result['calculated_popularity'] = 0
+  result['calculated_popularity_new'] = 0
+  result = result.apply(update_popularity, axis=1)
+
+  result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new']]
+  final_df = pd.merge(df.astype({'id': int}), result.astype({'product_id': int}), left_on='id',
+                      right_on='product_id', how='left')
+  final_df['popularity'] = numpy.where(final_df.calculated_popularity.notnull(), final_df.calculated_popularity, final_df.popularity)
+  final_df['popularity_new'] = numpy.where(final_df.calculated_popularity_new.notnull(), final_df.calculated_popularity_new, final_df.popularity_new)
+  final_df.drop(['calculated_popularity', 'calculated_popularity_new', 'product_id'], axis=1, inplace=True)
+  final_df = final_df.astype({'id': str})
+  return final_df
 
 
 child_parent_map = create_child_parent_map()
