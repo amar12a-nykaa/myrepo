@@ -290,7 +290,7 @@ def calculate_new_popularity():
   a.popularity_new = a.popularity_new.fillna(0)
   # business_logic
   a = applyBoost(a)
-  a = handleColdStart(a)
+  # a = handleColdStart(a)
   a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
   a.to_csv('a.csv', index=False)
