@@ -385,11 +385,6 @@ class CatalogIndexer:
             index = indexes['active_index']
         EsUtils.indexDocs(docs, index)
 
-    def formatESDoc(doc):
-        for key, value in doc.items():
-            if isinstance(value, list) and value == ['']:
-                doc[key] = []
-
     def update_generic_attributes_filters(doc, row):
         generic_attributes_raw = row.get('generic_attributes', '')
         generic_filters_raw = row.get('generic_filters', '')
@@ -422,6 +417,12 @@ class CatalogIndexer:
 
         except Exception as ex:
             print({"msg": ex, "row": row})
+
+    def formatESDoc(doc):
+        for key, value in doc.items():
+            if isinstance(value, list) and value == ['']:
+                doc[key] = []
+
 
     def indexRecords(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter):
         input_docs = []
