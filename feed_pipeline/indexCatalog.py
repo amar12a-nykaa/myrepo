@@ -390,6 +390,39 @@ class CatalogIndexer:
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
 
+    def update_generic_attributes_filters(doc, row):
+        generic_attributes_raw = row.get('generic_attributes', '')
+        generic_filters_raw = row.get('generic_filters', '')
+        try:
+            generic_attributes_raw = '{' + generic_attributes_raw + '}'
+            generic_attributes = json.loads(generic_attributes_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
+
+            for attribute_key, attribute_data in generic_attributes.items():
+                doc[attribute_key] = attribute_data.get('value')
+
+            generic_filters_raw = '{' + generic_filters_raw + '}'
+            generic_filters = json.loads(generic_filters_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
+
+            for attribute_key, facets_data in generic_filters.items():
+
+                facets = []
+                facet_ids = []
+                facet_values = []
+
+                for facet_data in facets_data:
+                    id = facet_data.get('id')
+                    value = facets_data.get('value')
+                    facet_ids.append(id)
+                    facet_values.append(value)
+                    facets.append({"id": id, "name": value})
+
+                doc[attribute_key + '_ids'] = facet_ids
+                doc[attribute_key + '_values'] = facet_values
+                doc[attribute_key + '_facet'] = facets
+
+        except Exception as ex:
+            print({"msg": ex, "row": row})
+
     def indexRecords(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter):
         input_docs = []
         pws_fetch_products = []
@@ -399,6 +432,8 @@ class CatalogIndexer:
             try:
                 CatalogIndexer.validate_catalog_feed_row(row)
                 doc = {}
+                
+                CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
                 doc['sku'] = row['sku']
                 if skus and doc['sku'] not in skus:
                     continue
