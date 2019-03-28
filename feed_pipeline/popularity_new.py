@@ -372,13 +372,14 @@ def handleColdStart(df):
   product_data = pd.merge(product_category_mapping, category_popularity, on='l3_id')
   product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
   product_popularity.rename(columns={'popularity': 'median_popularity', 'popularity_new': 'median_popularity_new'}, inplace=True)
-  
-  product_popularity = pd.merge(product_popularity, category_popularity_boosted, on='l3_id')
-  product_popularity = product_popularity.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max',
-                                                                     'median_popularity': 'max', 'median_popularity_new': 'max'}).reset_index()
-  product_popularity.rename(columns={'popularity': 'popularity_boosted', 'popularity_new': 'popularity_new_boosted'},
+
+  product_data_boosted = pd.merge(product_category_mapping, category_popularity_boosted, on='l3_id')
+  product_popularity_boosted = product_data_boosted.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
+  product_popularity_boosted.rename(columns={'popularity': 'popularity_boosted', 'popularity_new': 'popularity_new_boosted'},
                             inplace=True)
+  
   result = pd.merge(temp_df, product_popularity, left_on='id', right_on='product_id')
+  result = pd.merge(result, product_popularity_boosted, on='product_id')
 
   query = """select product_id, sku_created, brand_code from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
   product_creation = pd.read_sql(query, con=redshift_conn)
