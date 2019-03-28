@@ -56,6 +56,7 @@ POPULARITY_BUCKET_RATIO_NEW = 0.9
 COLD_START_DECAY_FACTOR_NEW = 0.95
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
+COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 PRODUCT_PUNISH_LIST = [303813,262768,262770,262769]
 PRODUCT_POPULARITY_OVERRIDES =  { "417918": 60,
                                   "417919": 56,
@@ -465,6 +466,10 @@ def handleColdStart(df):
   temp_df = df[['parent_id', 'popularity', 'popularity_new']]
   temp_df = temp_df.astype({'parent_id': int, 'popularity': float, 'popularity_new' : float})
 
+  product_attr = create_product_attribute()
+  temp_df = pd.merge(temp_df, product_attr, how='left', left_on=['parent_id'], right_on=['product_id'])
+  temp_df.drop(['product_id', 'sku_type', 'mrp', 'l3_id'], axis=1, inplace=True)
+
   query = """select product_id, l3_id from product_category_mapping"""
   redshift_conn = Utils.redshiftConnection()
   product_category_mapping = pd.read_sql(query, con=redshift_conn)
@@ -476,11 +481,17 @@ def handleColdStart(df):
           return numpy.percentile(x, n)
       return _percentile
   category_popularity = product_data.groupby('l3_id').agg({'popularity': percentile(95), 'popularity_new': percentile(95)}).reset_index()
+  category_popularity_boosted = product_data.groupby('l3_id').agg({'popularity': percentile(99), 'popularity_new': percentile(99)}).reset_index()
 
   product_data = pd.merge(product_category_mapping, category_popularity, on='l3_id')
   product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
   product_popularity.rename(columns={'popularity': 'median_popularity', 'popularity_new': 'median_popularity_new'}, inplace=True)
   result = pd.merge(temp_df, product_popularity, left_on='parent_id', right_on='product_id')
+  
+  product_data = pd.merge(product_category_mapping, category_popularity_boosted, on='l3_id')
+  product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
+  product_popularity.rename(columns={'popularity': 'popularity_99', 'popularity_new': 'popularity_new_99'}, inplace=True)
+  result = pd.merge(result, product_popularity, left_on='parent_id', right_on='product_id')
 
   query = """select product_id, sku_created from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
   redshift_conn = Utils.redshiftConnection()
@@ -491,8 +502,13 @@ def handleColdStart(df):
   def calculate_new_popularity(row):
     date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['sku_created']).astype(datetime.datetime))).days
     if date_diff > 0:
-        row['calculated_popularity'] = row['popularity'] + row['median_popularity']*(COLD_START_DECAY_FACTOR ** date_diff)
-        row['calculated_popularity_new'] = row['popularity_new'] + row['median_popularity_new'] * (COLD_START_DECAY_FACTOR_NEW ** date_diff)
+        med_popularity = row['median_popularity']
+        med_popularity_new = row['median_popularity_new']
+        if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
+          med_popularity = row['popularity_99']
+          med_popularity_new = row['popularity_new_99']
+        row['calculated_popularity'] = row['popularity'] + med_popularity*(COLD_START_DECAY_FACTOR ** date_diff)
+        row['calculated_popularity_new'] = row['popularity_new'] + med_popularity_new * (COLD_START_DECAY_FACTOR_NEW ** date_diff)
     else:
         row['calculated_popularity'] = row['popularity']
         row['calculated_popularity_new'] = row['popularity_new']
