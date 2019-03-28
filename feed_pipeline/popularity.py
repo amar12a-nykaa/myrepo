@@ -491,7 +491,7 @@ def handleColdStart(df):
   product_data = pd.merge(product_category_mapping, category_popularity_boosted, on='l3_id')
   product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
   product_popularity.rename(columns={'popularity': 'popularity_99', 'popularity_new': 'popularity_new_99'}, inplace=True)
-  result = pd.merge(result, product_popularity, left_on='parent_id', right_on='product_id')
+  result = pd.merge(result, product_popularity, left_on='product_id', right_on='product_id')
 
   query = """select product_id, sku_created from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
   redshift_conn = Utils.redshiftConnection()
