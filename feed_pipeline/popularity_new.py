@@ -42,6 +42,7 @@ PRODUCT_PUNISH_FACTOR_NEW = 0.5
 COLD_START_DECAY_FACTOR_NEW = 0.95
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
+COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 PRODUCT_PUNISH_LIST = [303813,262768,262770,262769]
     
 
@@ -290,7 +291,7 @@ def calculate_new_popularity():
   a.popularity_new = a.popularity_new.fillna(0)
   # business_logic
   a = applyBoost(a)
-  # a = handleColdStart(a)
+  a = handleColdStart(a)
   a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
   a.to_csv('a.csv', index=False)
@@ -346,7 +347,13 @@ def applyBoost(df):
 
 
 def handleColdStart(df):
+  global child_parent_map
   temp_df = df[['id', 'popularity', 'popularity_new']]
+  
+  #remove config child product
+  temp_df = pd.merge(temp_df, child_parent_map, left_on='id', right_on='product_id', how='left')
+  temp_df = temp_df[temp_df['product_id'].isnull()]
+  temp_df = temp_df[['id', 'popularity', 'popularity_new']]
   temp_df = temp_df.astype({'id': int, 'popularity': float, 'popularity_new': float})
 
   query = """select product_id, l3_id from product_category_mapping"""
@@ -360,13 +367,21 @@ def handleColdStart(df):
           return numpy.percentile(x, n)
       return _percentile
   category_popularity = product_data.groupby('l3_id').agg({'popularity': percentile(95), 'popularity_new': percentile(95)}).reset_index()
+  category_popularity_boosted = product_data.groupby('l3_id').agg({'popularity': percentile(99), 'popularity_new': percentile(99)}).reset_index()
 
   product_data = pd.merge(product_category_mapping, category_popularity, on='l3_id')
   product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
   product_popularity.rename(columns={'popularity': 'median_popularity', 'popularity_new': 'median_popularity_new'}, inplace=True)
-  result = pd.merge(temp_df, product_popularity, left_on='id', right_on='product_id')
 
-  query = """select product_id, sku_created from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
+  product_data_boosted = pd.merge(product_category_mapping, category_popularity_boosted, on='l3_id')
+  product_popularity_boosted = product_data_boosted.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
+  product_popularity_boosted.rename(columns={'popularity': 'popularity_boosted', 'popularity_new': 'popularity_new_boosted'},
+                            inplace=True)
+  
+  result = pd.merge(temp_df, product_popularity, left_on='id', right_on='product_id')
+  result = pd.merge(result, product_popularity_boosted, on='product_id')
+
+  query = """select product_id, sku_created, brand_code from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
   product_creation = pd.read_sql(query, con=redshift_conn)
   redshift_conn.close()
 
@@ -375,8 +390,13 @@ def handleColdStart(df):
   def update_popularity(row):
     date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['sku_created']).astype(datetime.datetime))).days
     if date_diff > 0:
-        row['calculated_popularity'] = row['popularity'] + row['median_popularity']*(COLD_START_DECAY_FACTOR ** date_diff)
-        row['calculated_popularity_new'] = row['popularity_new'] + row['median_popularity_new'] * (COLD_START_DECAY_FACTOR_NEW ** date_diff)
+        med_popularity = row['median_popularity']
+        med_popularity_new = row['median_popularity_new']
+        if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
+          med_popularity = row['popularity_boosted']
+          med_popularity_new = row['popularity_new_boosted']
+        row['calculated_popularity'] = row['popularity'] + med_popularity*(COLD_START_DECAY_FACTOR ** date_diff)
+        row['calculated_popularity_new'] = row['popularity_new'] + med_popularity_new*(COLD_START_DECAY_FACTOR_NEW ** date_diff)
     else:
         row['calculated_popularity'] = row['popularity']
         row['calculated_popularity_new'] = row['popularity_new']
