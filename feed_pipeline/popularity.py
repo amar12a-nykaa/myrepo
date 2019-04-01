@@ -383,7 +383,7 @@ def calculate_popularity():
 
 def override_popularity():
   for id, popularity in PRODUCT_POPULARITY_OVERRIDES.items():
-    popularity_table.update({"_id": id}, {"$set": {'popularity': popularity}})
+    popularity_table.update({"_id": id}, {"$set": {'popularity': popularity, 'popularity_recent': popularity}})
 
 def get_all_the_child_products(parent_id):
   query  = "select distinct(product_id) from catalog_product_super_link where parent_id  = '{0}'".format(parent_id)
