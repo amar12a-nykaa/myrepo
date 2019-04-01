@@ -242,7 +242,7 @@ class NykaaImporter:
     count = 0
     for result in results:
       try:
-        query = "INSERT INTO categories_meta (category_id, meta_title, meta_description, meta_keywords) VALUES (%s, %s, %s, %s, %s) "
+        query = "INSERT INTO categories_meta (category_id, meta_title, meta_description, meta_keywords, h1_tag) VALUES (%s, %s, %s, %s, %s) "
         query += "ON DUPLICATE KEY UPDATE meta_title=%s, meta_description=%s, meta_keywords=%s, h1_tag=%s"
 
         values = (result['category_id'],
