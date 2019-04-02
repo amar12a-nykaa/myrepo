@@ -229,19 +229,25 @@ class NykaaImporter:
     # Import category meta information
     nykaa_mysql_conn = Utils.nykaaMysqlConnection()
     query = """SELECT e.entity_id AS category_id, CONCAT(ccevt.value, ' | Nykaa') AS meta_title, REPLACE(REPLACE(ccetk.value, '\r', ''), '\n', '') AS meta_keywords, 
-               REPLACE(REPLACE(ccetd.value, '\r', ''), '\n', '') AS meta_description FROM catalog_category_entity e
+               REPLACE(REPLACE(ccetd.value, '\r', ''), '\n', '') AS meta_description,
+               REPLACE(REPLACE(cceh1.value, '\r', ''), '\n', '') AS h1_tag
+               FROM catalog_category_entity e
                LEFT JOIN catalog_category_entity_varchar ccevt ON ccevt.entity_id = e.entity_id AND ccevt.attribute_id = 36
                LEFT JOIN catalog_category_entity_text ccetk ON ccetk.entity_id = e.entity_id AND ccetk.attribute_id = 37
                LEFT JOIN catalog_category_entity_text ccetd ON ccetd.entity_id = e.entity_id AND ccetd.attribute_id = 38
-               WHERE ccevt.value IS NOT NULL OR ccetk.value IS NOT NULL OR ccetd.value IS NOT NULL;"""    
+               LEFT JOIN catalog_category_entity_text cceh1 ON cceh1.entity_id = e.entity_id AND cceh1.attribute_id = (
+               SELECT attribute_id FROM eav_attribute WHERE attribute_code = 'category_meta_title' and entity_type_id = 3)
+               WHERE ccevt.value IS NOT NULL OR ccetk.value IS NOT NULL OR ccetd.value IS NOT NULL OR cceh1.value IS NOT NULL;"""
     results = Utils.fetchResults(nykaa_mysql_conn, query)
     count = 0
     for result in results:
       try:
-        query = "INSERT INTO categories_meta (category_id, meta_title, meta_description, meta_keywords) VALUES (%s, %s, %s, %s) "
-        query += "ON DUPLICATE KEY UPDATE meta_title=%s, meta_description=%s, meta_keywords=%s"
+        query = "INSERT INTO categories_meta (category_id, meta_title, meta_description, meta_keywords, h1_tag) VALUES (%s, %s, %s, %s, %s) "
+        query += "ON DUPLICATE KEY UPDATE meta_title=%s, meta_description=%s, meta_keywords=%s, h1_tag=%s"
 
-        values = (result['category_id'], result['meta_title'], result['meta_description'], result['meta_keywords'], result['meta_title'], result['meta_description'], result['meta_keywords'])
+        values = (result['category_id'],
+                  result['meta_title'], result['meta_description'], result['meta_keywords'], result['h1_tag'],
+                  result['meta_title'], result['meta_description'], result['meta_keywords'], result['h1_tag'])
         NykaaImporter.pws_cursor.execute(query, values)
         NykaaImporter.pws_mysql_conn.commit()
         count += 1
