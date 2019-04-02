@@ -15,3 +15,5 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 0 0 * * * root /usr/bin/python /nykaa/scripts/feed_pipeline/health_check.py -m  
 0 1 * * * root /usr/local/bin/aws s3 sync /nykaa/adminftp s3://prod-nykaafeeds/search_autocomplete/ 
 0 * * * * root /usr/local/bin/aws s3 cp /data/nykaa/master_feed_gludo.csv  s3://nykaadp-feeds/master_feed_gludo/master_feed_gludo.csv
+30 2 * * * root /usr/local/bin/aws s3 sync /nykaa/product_views_data/ s3://ltr-sagemaker/training_data --profile datapipeline
+30 2 * * * root /usr/local/bin/aws s3 sync /nykaa/product_metadata/ s3://ltr-sagemaker/training_data --profile datapipeline
