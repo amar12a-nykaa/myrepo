@@ -1,0 +1,9 @@
+filter_name,filter_value,display text
+skin_tone_filter,Medium/Wheatish,Medium/Wheatish Skin Tone
+skin_tone_filter,Fair/Light,Fair/Light Skin Tone
+skin_tone_filter,Dusky/Dark,Dusky/Dark Skin Tone
+skin_type_filter,Dry,Dry Skin
+skin_type_filter,Combination,Combination Skin
+skin_type_filter,Oily,Oily Skin
+skin_type_filter,Sensitive,Sensitive Skin
+skin_type_filter,Normal,Normal Skin
