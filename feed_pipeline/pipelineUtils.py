@@ -21,8 +21,6 @@ class PipelineUtils:
     host = 'localhost'
     if socket.gethostname().startswith('admin'):
       host = 'priceapi.nyk00-int.network'
-    elif socket.gethostname().startswith('preprod'):
-      host = 'preprod-api.nyk00-int.network'
     return host
 
   def getAdPlatformEndPoint():
