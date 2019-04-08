@@ -100,9 +100,21 @@ def get_filters():
     return filters
 
 
+def override_filter_value(df):
+    overrides = pd.read_csv('overrides.csv')
+    for i, row in overrides.iterrows():
+        row = dict(row)
+        type = row['filter_name']
+        entity_value = row['filter_value']
+        replacement_text = row['display text']
+        df['entity_value'] = df.apply(lambda x : replacement_text if (x['type'] == type and
+                                                x['entity_value'] == entity_value) else x['entity_value'], axis=1)
+    return df
+    
 def insert_guides_in_es(guides, collection):
     guides.rename(columns={'freq': 'rank', 'filter_name': 'type', 'filter_id': 'entity_id', 'keyword': 'query',
                            'filter_value': 'entity_value'}, inplace=True)
+    override_filter_value(guides)
     guides['_id'] = guides.index
     guide_color = guides[~guides['color_code'].isnull()]
     documents = guide_color.to_dict(orient='records')
