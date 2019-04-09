@@ -26,7 +26,7 @@ POPULARITY_BUCKET_RATIO = 0.9
 PUNISH_FACTOR=0.7
 BOOST_FACTOR=1.1
 PRODUCT_PUNISH_FACTOR = 0.5
-COLD_START_DECAY_FACTOR = 0.95
+COLD_START_DECAY_FACTOR = 0.99
 
 POPULARITY_DECAY_FACTOR_NEW = 0.5
 WEIGHT_VIEWS_NEW = 10
@@ -39,7 +39,7 @@ POPULARITY_BUCKET_RATIO_NEW = 0.9
 PUNISH_FACTOR_NEW=0.7
 BOOST_FACTOR_NEW=1.1
 PRODUCT_PUNISH_FACTOR_NEW = 0.5
-COLD_START_DECAY_FACTOR_NEW = 0.95
+COLD_START_DECAY_FACTOR_NEW = 0.99
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
@@ -304,7 +304,7 @@ def calculate_new_popularity():
 
     row = dict(row)
     id = row.get('id')
-    popularity_table.update({"_id": id}, {"$set": {'popularity_recent': row['popularity']}})
+    popularity_table.update({"_id": id}, {"$set": {'popularity': row['popularity']}})
 
 
 def applyBoost(df):
@@ -323,7 +323,7 @@ def applyBoost(df):
       row['popularity'] = row['popularity'] * PUNISH_FACTOR
       row['popularity_new'] = row['popularity_new'] * PUNISH_FACTOR_NEW
     return row
-  # temp_df = temp_df.apply(punish_combos, axis=1)
+  temp_df = temp_df.apply(punish_combos, axis=1)
 
   #promote nykaa products
   def promote_nykaa_products(row):
