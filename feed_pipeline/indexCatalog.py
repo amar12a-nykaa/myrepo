@@ -1,8 +1,6 @@
 #!/usr/bin/python
 import argparse
-import csv
 import json
-import os
 import pprint
 import socket
 import sys
@@ -10,7 +8,7 @@ import traceback
 import ast
 from operator import itemgetter
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import datetime
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 import re
@@ -23,8 +21,7 @@ import threading
 import numpy
 from collections import defaultdict 
 from dateutil import tz
-import dateutil.relativedelta
-import datetime as dt
+
 
 sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
@@ -90,12 +87,10 @@ class Worker(threading.Thread):
         super().__init__()
 
     def run(self):
-        is_first=True
         while True:
             try:
                 rows = self.q.get(timeout=3)  # 3s timeout
-                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first)
-                is_first=False
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter)
             except queue.Empty:
                 return
             # do whatever work you have to do on work
@@ -202,17 +197,6 @@ class CatalogIndexer:
         "gravitymud": "gravitymud gravity mud",
         "youthmud": "youthmud youth mud",
     }
-
-    yesterday = datetime.now() - timedelta(days=1)
-    foldername = yesterday.strftime('%Y%m%d')
-    folderpath = "/nykaa/product_metadata/dt="+foldername
-
-    filepath = folderpath +"/"+foldername+".csv"
-
-    if os.path.exists(filepath):
-      os.remove(filepath)
-    if not os.path.exists(folderpath):
-      os.makedirs(folderpath)
 
     def print_errors(errors):
         for err in errors:
@@ -405,12 +389,11 @@ class CatalogIndexer:
         for key, value in doc.items():
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
-    @classmethod
-    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first):
+
+    def indexRecords(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter):
         input_docs = []
         pws_fetch_products = []
         size_filter_flag = 0
-        csvfile = open(cls.filepath, 'a')
         # index_start = timeit.default_timer()
         for index, row in enumerate(records):
             try:
@@ -736,6 +719,9 @@ class CatalogIndexer:
                     doc['nykaaman_offers'] = []
                     doc['nykaaman_offer_ids'] = []
                     doc['nykaaman_offer_facet'] = []
+                    doc['nykaa_pro_offers'] = []
+                    doc['nykaa_pro_offer_ids'] = []
+                    doc['nykaa_pro_offer_facet'] = []
 
                     try:
                         if row['offers']:
@@ -756,6 +742,8 @@ class CatalogIndexer:
                                         key['name'] = i['name']
                                         key['offer_start_date'] = i['offer_start_date']
                                         key['offer_end_date'] = i['offer_end_date']
+                                        if 'customer_group' in i:
+                                          key['customer_group'] = i['customer_group']
                                         doc['key'].append(key)
                                         if prefix == 'nykaa':
                                             doc['offer_ids'].append(i['id'])
@@ -771,6 +759,7 @@ class CatalogIndexer:
                         print(traceback.format_exc())
                     doc['offer_count'] = len(doc['offers'])
                     doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
+                    doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
 
                 # facets: dynamic fields
                 facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1") or (field == 'size_id' and size_filter_flag == 1)]
@@ -820,9 +809,16 @@ class CatalogIndexer:
                 doc['bulkbuyer_max_allowed_qty_i'] = row['bulkbuyer_max_allowed_qty'] or 0
                 doc['is_free_sample_i'] = row['is_free_sample'] or 0
                 doc['pro_flag_i'] = row['pro_flag'] or 0
+                doc['pro_disclaimer_s'] = row['pro_disclaimer']
                 # doc['is_kit_combo_i'] = row['is_kit_combo'] or 0
-
-                doc['is_searchable_i'] = row['is_searchable'] or 0
+                if 'pro_disclaimer' in row:
+                  doc['pro_disclaimer_s'] = row['pro_disclaimer']
+                else:
+                  doc['pro_disclaimer_s'] = ''
+                if 'is_searchable' in row:
+                  doc['is_searchable_i'] = row['is_searchable'] or 0
+                else:
+                  doc['is_searchable_i'] = 0
                 doc['update_time'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
                 doc['create_time'] = row['created_at']
                 doc['object_type'] = "product"
@@ -866,33 +862,11 @@ class CatalogIndexer:
                         doc['title_brand_category'] += " " + " ".join([x['name'] for x in doc[facet]]) 
                     except:
                         pass
-                product_id = doc['product_id']
-                client = Utils.mongoClient()
-                raw_data = client['search']['raw_data']
-                end_date = datetime.now()
-                start_date = datetime.now() - dateutil.relativedelta.relativedelta(months=1)
-                db_result = raw_data.aggregate([{"$match":{ "date": {"$gte": dt.datetime(start_date.year,start_date.month,start_date.day), "$lte": dt.datetime(end_date.year,end_date.month,end_date.day)}}},{"$group":{"_id":product_id,"cart_additions":{"$sum":"$cart_additions"},"orders": {"$sum": "$orders"},"revenue": {"$sum": "$revenue"},"units": {"$sum": "$units"},"views": {"$sum": "$views"}}}])
-                result = list(db_result)
-                if result:
-                  doc['units_sold'] = result[0]['units']
-                  doc['cart_additions'] = result[0]['cart_additions']
-                  doc['views_in_last_month'] = result[0]['views']
-                  doc['revenue_in_last_month'] = result[0]['revenue']
-                  doc['orders_in_last_month'] = result[0]['orders']
+
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
 
                 input_docs.append(doc)
-
-                csv_columns=[]
-                for key in doc:
-	                csv_columns.append(key)
-                writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-                if is_first:
-                  writer.writeheader()
-                  is_first = False
-                writer.writerow(doc)
-
             except Exception as e:
                 print(traceback.format_exc())
                 print("Error with %s: %s" % (row['sku'], str(e)))
@@ -919,7 +893,6 @@ class CatalogIndexer:
 
     def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None):
         skus = skus or []
-        skus = [x for x in skus if x]
         if skus:
             print("Running Index Catalog for selected skus: %s" % skus)
         validate_popularity_data_health()
