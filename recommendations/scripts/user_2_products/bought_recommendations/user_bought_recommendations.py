@@ -10,6 +10,7 @@ import pandas as pd
 sys.path.append("/home/ubuntu/nykaa_scripts/sharedutils")
 from loopcounter import LoopCounter
 sys.path.append("/home/apis/nykaa")
+#sys.path.append("/home/ashwinpal/nykaa_apis")
 from pas.v2.utils import Utils, RecommendationsUtils
 from joblib import Parallel, delayed
 from datetime import datetime, timedelta
@@ -29,12 +30,15 @@ def compute_recommendation_rows(customer_ids, entity_type, recommendation_type, 
     for customer_id in customer_ids:
         recommendation_rows.append((customer_id, entity_type, recommendation_type, algo, json.dumps(RecommendationsUtils.customersAlsoBoughtWithMultipleProductsBuckets(customer_2_product_chunks[customer_id], algo, number_of_suggestions=200, product_2_recommendations=product_2_recommendations))))
 
-def process_orders_df(start_datetime=None):
+def process_orders_df(start_datetime=None, customer_id=None):
     print(str(datetime.now()))
-    if start_datetime:
-        query = "SELECT fact_order_new.order_customerid, fact_order_new.nykaa_orderno, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.order_customerid IN (SELECT DISTINCT(order_customerid) FROM fact_order_new WHERE order_date > '%s') AND fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL ORDER BY order_date DESC" % start_datetime
+    if customer_id:
+        query = "SELECT fact_order_new.order_customerid, fact_order_new.nykaa_orderno, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.order_customerid=%s AND fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL ORDER BY order_date DESC" % customer_id
     else:
-        query = "SELECT fact_order_new.order_customerid, fact_order_new.nykaa_orderno, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL ORDER BY order_date DESC"
+        if start_datetime:
+            query = "SELECT fact_order_new.order_customerid, fact_order_new.nykaa_orderno, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.order_customerid IN (SELECT DISTINCT(order_customerid) FROM fact_order_new WHERE order_date > '%s') AND fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL ORDER BY order_date DESC" % start_datetime
+        else:
+            query = "SELECT fact_order_new.order_customerid, fact_order_new.nykaa_orderno, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL ORDER BY order_date DESC"
 
     print(query)
     rows = Utils.fetchResultsInBatch(Utils.redshiftConnection(), query, 10000)
@@ -49,7 +53,7 @@ def process_orders_df(start_datetime=None):
     child_2_parent = scroll_results['child_2_parent']
 
     df['product_id'] = df.apply(lambda row: sku_2_product_id.get(row['sku'], row['product_id']), axis=1)
-    df['product_id'] = df.apply(lambda row: child_2_parent.get(row['product_id'], row['product_id']), axis=1)
+    #df['product_id'] = df.apply(lambda row: child_2_parent.get(row['product_id'], row['product_id']), axis=1)
     df = df.drop(['sku'], axis=1)
     #df['group_count'] = 1
     #df = df.groupby(['customer_id', 'order_id', 'product_id']).agg({'group_count': 'sum'}).reset_index().drop(['group_count'], axis=1)
@@ -106,6 +110,7 @@ if __name__ == '__main__':
     parser.add_argument('--hours', type=int)
     parser.add_argument('--days', type=int)
     parser.add_argument('--date')
+    parser.add_argument('--customer-id')
 
     argv = vars(parser.parse_args())
     DEBUG = argv['debug']
@@ -122,4 +127,7 @@ if __name__ == '__main__':
         if argv.get('days'):
             start_datetime -= timedelta(days=argv['days'])
 
-    process_orders_df(str(start_datetime))
+    customer_id = None
+    if argv.get('customer_id'):
+        customer_id = argv['customer_id']
+    process_orders_df(str(start_datetime), customer_id)
