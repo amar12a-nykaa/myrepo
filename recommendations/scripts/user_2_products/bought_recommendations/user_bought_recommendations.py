@@ -95,7 +95,7 @@ def process_orders_df(start_datetime=None, customer_id=None):
         print("Computing recommendation rows")
         customer_ids = list(customer_2_product_chunks.keys())
         customer_ids_chunks = [customer_ids[i:i+1000] for i in range(0, len(customer_ids), 1000)]
-        Parallel(n_jobs=1, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(compute_recommendation_rows)(customer_ids_chunk, 'user', 'bought', algo, str(recommendations_generation_time), customer_2_product_chunks, recommendation_rows, product_2_recommendations, customer_2_orders, order_2_products) for customer_ids_chunk in customer_ids_chunks)
+        Parallel(n_jobs=20, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(compute_recommendation_rows)(customer_ids_chunk, 'user', 'bought', algo, str(recommendations_generation_time), customer_2_product_chunks, recommendation_rows, product_2_recommendations, customer_2_orders, order_2_products) for customer_ids_chunk in customer_ids_chunks)
 
     print("Total Recommendation rows: %d" % len(recommendation_rows))
     RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection('w'), 'recommendations_v2', recommendation_rows)
