@@ -406,7 +406,7 @@ class CatalogIndexer:
 
                 for facet_data in facets_data:
                     id = facet_data.get('id')
-                    value = facets_data.get('value')
+                    value = facet_data.get('value')
                     facet_ids.append(id)
                     facet_values.append(value)
                     facets.append({"id": id, "name": value})
@@ -433,7 +433,6 @@ class CatalogIndexer:
                 CatalogIndexer.validate_catalog_feed_row(row)
                 doc = {}
                 
-                CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
                 doc['sku'] = row['sku']
                 if skus and doc['sku'] not in skus:
                     continue
@@ -892,6 +891,8 @@ class CatalogIndexer:
             except Exception as e:
                 print(traceback.format_exc())
                 print("Error with %s: %s" % (row['sku'], str(e)))
+            CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
+
         # index_stop = timeit.default_timer()
         # index_duration = index_stop - index_start
         # print("for loop time: %s seconds." % (time.strftime("%M min %S seconds", time.gmtime(index_duration))))
