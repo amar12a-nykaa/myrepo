@@ -387,13 +387,22 @@ class CatalogIndexer:
 
     def update_generic_attributes_filters(doc, row):
         generic_attributes_raw = row.get('generic_attributes', '')
+        generic_multiselect_attributes_raw = row.get('generic_multiselect_attributes', '')
         generic_filters_raw = row.get('generic_filters', '')
         try:
             generic_attributes_raw = '{' + generic_attributes_raw + '}'
             generic_attributes = json.loads(generic_attributes_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
 
             for attribute_key, attribute_data in generic_attributes.items():
-                doc[attribute_key] = attribute_data.get('value')
+                value = attribute_data.get('value')
+                type = attribute_data.get('type')
+
+                if type == 'int':
+                    value = int(value)
+                elif type == 'decimal':
+                    value = float(value)
+
+                doc[attribute_key] = value
 
             generic_filters_raw = '{' + generic_filters_raw + '}'
             generic_filters = json.loads(generic_filters_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
@@ -414,6 +423,17 @@ class CatalogIndexer:
                 doc[attribute_key + '_ids'] = facet_ids
                 doc[attribute_key + '_values'] = facet_values
                 doc[attribute_key + '_facet'] = facets
+
+            generic_multiselect_attributes_raw = '{' + generic_multiselect_attributes_raw + '}'
+            generic_multiselect_attributes = json.loads(generic_multiselect_attributes_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
+
+            for attribute_key, attribute_values in generic_multiselect_attributes.items():
+                attribute_ids = []
+
+                for attribute_value in attribute_values:
+                    attribute_ids.append(attribute_value)
+
+                doc[attribute_key + '_ids'] = attribute_ids
 
         except Exception as ex:
             print({"msg": ex, "row": row})
