@@ -428,12 +428,7 @@ class CatalogIndexer:
             generic_multiselect_attributes = json.loads(generic_multiselect_attributes_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
 
             for attribute_key, attribute_values in generic_multiselect_attributes.items():
-                attribute_ids = []
-
-                for attribute_value in attribute_values:
-                    attribute_ids.append(attribute_value)
-
-                doc[attribute_key + '_ids'] = attribute_ids
+                doc[attribute_key] = attribute_values
 
         except Exception as ex:
             print({"msg": ex, "row": row})
