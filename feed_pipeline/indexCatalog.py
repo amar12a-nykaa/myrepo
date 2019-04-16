@@ -889,12 +889,12 @@ class CatalogIndexer:
                         pass
 
                 product_id = doc['product_id']
-                if(product_id in product_summary_data) and product_summary_data[product_id]:
-                  doc['views_in_last_month'] = product_summary_data[product_id]['views_in_last_month']
-                  doc['orders_in_last_month'] = product_summary_data[product_id]['orders_in_last_month']
-                  doc['revenue_in_last_month'] = product_summary_data[product_id]['revenue_in_last_month']
-                  doc['units_sold_in_last_month'] = product_summary_data[product_id]['units_sold_in_last_month']
-                  doc['cart_additions_in_last_month'] = product_summary_data[product_id]['cart_additions_in_last_month']
+                if product_history and (product_id in product_history) and product_history[product_id]:
+                  doc['views_in_last_month'] = product_history[product_id]['views_in_last_month']
+                  doc['orders_in_last_month'] = product_history[product_id]['orders_in_last_month']
+                  doc['revenue_in_last_month'] = product_history[product_id]['revenue_in_last_month']
+                  doc['units_sold_in_last_month'] = product_history[product_id]['units_sold_in_last_month']
+                  doc['cart_additions_in_last_month'] = product_history[product_id]['cart_additions_in_last_month']
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
 
