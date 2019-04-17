@@ -903,10 +903,11 @@ class CatalogIndexer:
                     CatalogIndexer.formatESDoc(doc)
 
                 input_docs.append(doc)
+                CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
             except Exception as e:
                 print(traceback.format_exc())
                 print("Error with %s: %s" % (row['sku'], str(e)))
-            CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
+
 
         # index_stop = timeit.default_timer()
         # index_duration = index_stop - index_start
