@@ -447,6 +447,7 @@ class CatalogIndexer:
             try:
                 CatalogIndexer.validate_catalog_feed_row(row)
                 doc = {}
+                CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
                 
                 doc['sku'] = row['sku']
                 if skus and doc['sku'] not in skus:
@@ -903,7 +904,6 @@ class CatalogIndexer:
                     CatalogIndexer.formatESDoc(doc)
 
                 input_docs.append(doc)
-                CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
             except Exception as e:
                 print(traceback.format_exc())
                 print("Error with %s: %s" % (row['sku'], str(e)))
