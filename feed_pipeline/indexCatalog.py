@@ -385,6 +385,54 @@ class CatalogIndexer:
             index = indexes['active_index']
         EsUtils.indexDocs(docs, index)
 
+    def update_generic_attributes_filters(doc, row):
+        generic_attributes_raw = row.get('generic_attributes', '')
+        generic_multiselect_attributes_raw = row.get('generic_multiselect_attributes', '')
+        generic_filters_raw = row.get('generic_filters', '')
+        try:
+            generic_attributes_raw = '{' + generic_attributes_raw + '}'
+            generic_attributes = json.loads(generic_attributes_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
+
+            for attribute_key, attribute_data in generic_attributes.items():
+                value = attribute_data.get('value')
+                type = attribute_data.get('type')
+
+                if type == 'int':
+                    value = int(value)
+                elif type == 'decimal':
+                    value = float(value)
+
+                doc[attribute_key] = value
+
+            generic_filters_raw = '{' + generic_filters_raw + '}'
+            generic_filters = json.loads(generic_filters_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
+
+            for attribute_key, facets_data in generic_filters.items():
+
+                facets = []
+                facet_ids = []
+                facet_values = []
+
+                for facet_data in facets_data:
+                    id = facet_data.get('id')
+                    value = facet_data.get('value')
+                    facet_ids.append(id)
+                    facet_values.append(value)
+                    facets.append({"id": id, "name": value})
+
+                doc[attribute_key + '_ids'] = facet_ids
+                doc[attribute_key + '_values'] = facet_values
+                doc[attribute_key + '_facet'] = facets
+
+            generic_multiselect_attributes_raw = '{' + generic_multiselect_attributes_raw + '}'
+            generic_multiselect_attributes = json.loads(generic_multiselect_attributes_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
+
+            for attribute_key, attribute_values in generic_multiselect_attributes.items():
+                doc[attribute_key] = attribute_values
+
+        except Exception as ex:
+            print({"msg": ex, "row": row})
+
     def formatESDoc(doc):
         for key, value in doc.items():
             if isinstance(value, list) and value == ['']:
@@ -399,6 +447,7 @@ class CatalogIndexer:
             try:
                 CatalogIndexer.validate_catalog_feed_row(row)
                 doc = {}
+                
                 doc['sku'] = row['sku']
                 if skus and doc['sku'] not in skus:
                     continue
@@ -870,6 +919,8 @@ class CatalogIndexer:
             except Exception as e:
                 print(traceback.format_exc())
                 print("Error with %s: %s" % (row['sku'], str(e)))
+            CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
+
         # index_stop = timeit.default_timer()
         # index_duration = index_stop - index_start
         # print("for loop time: %s seconds." % (time.strftime("%M min %S seconds", time.gmtime(index_duration))))
