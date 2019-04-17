@@ -15,21 +15,20 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType
 from pyspark.sql.functions import udf, col, desc
 import pyspark.sql.functions as func
-from IPython import embed
 
 #sys.path.append("/home/apis/nykaa")
 #from pas.v2.utils import Utils, RecommendationsUtils
 ORDER_SOURCE_NYKAA = ['Nykaa', 'Nykaa(Old)', 'NYKAA', 'CS-Manual']
 ORDER_SOURCE_NYKAAMEN = ['NykaaMen']
 
-#spark = SparkSession.builder.appName("CAB").getOrCreate()
-spark = SparkSession.builder \
-            .master("local[6]") \
-            .appName("CAB") \
-            .config("spark.executor.memory", "4G") \
-            .config("spark.storage.memoryFraction", 0.4) \
-            .config("spark.driver.memory", "26G") \
-            .getOrCreate()
+spark = SparkSession.builder.appName("CAB").getOrCreate()
+#spark = SparkSession.builder \
+#            .master("local[6]") \
+#            .appName("CAB") \
+#            .config("spark.executor.memory", "4G") \
+#            .config("spark.storage.memoryFraction", 0.4) \
+#            .config("spark.driver.memory", "26G") \
+#            .getOrCreate()
  
 sc = spark.sparkContext
 print(sc.getConf().getAll())
@@ -44,15 +43,15 @@ class RecommendationsUtils:
             VALUES %s ON DUPLICATE KEY UPDATE recommended_products_json=VALUES(recommended_products_json)
         """ % (table, values_str)
         values = tuple([str(_i) for row in rows for _i in row])
-        print(insert_recommendations_query)
-        print(values)
+        #print(insert_recommendations_query)
+        #print(values)
         cursor.execute(insert_recommendations_query, values)
 
     @staticmethod
     def add_recommendations_in_mysql(db, table, rows):
         cursor = db.cursor()
-        for i in range(0, len(rows), 100):
-            RecommendationsUtils._add_recommendations_in_mysql(cursor, table, rows[i:i+100])
+        for i in range(0, len(rows), 500):
+            RecommendationsUtils._add_recommendations_in_mysql(cursor, table, rows[i:i+500])
             db.commit()
 
 
@@ -244,83 +243,6 @@ def prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit,
     print('Data preparation done, returning dataframe')
     return df, results
 
-def compute_fbt(env, platform, start_datetime=None, end_datetime=None, limit=None):
-    df, results = prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit, separate_parent=True)
-    popular_variant_df = df.select(['parent_product_id', 'product_id']).groupBy(['parent_product_id', 'product_id']).count().sort(col('count').desc()).drop_duplicates(['parent_product_id'])
-    popular_variant = {row['parent_product_id']: row['product_id'] for row in popular_variant_df.collect()}
-    df.printSchema()
-    product_to_orders_count_df = df.groupBy('parent_product_id').agg(func.countDistinct('order_id')).withColumnRenamed('count(DISTINCT order_id)', 'orders_count').toPandas()
-    product_to_orders_count = dict(zip(product_to_orders_count_df.parent_product_id, product_to_orders_count_df.orders_count))
-    df = df.withColumnRenamed('parent_product_id', 'parent_product_id_x').join(df.withColumnRenamed('parent_product_id', 'parent_product_id_y'), on="order_id", how="inner")
-    df = df.select(['parent_product_id_x', 'parent_product_id_y', 'order_id']).distinct()
-    df = df[df.parent_product_id_x < df.parent_product_id_y]
-    df = df.groupBy(['parent_product_id_x', 'parent_product_id_y']).agg({'order_id': 'count'})
-    df = df.withColumnRenamed("count(order_id)", 'orders_intersection')
-
-    df = df[df.orders_intersection >= 2]
-
-    def compute_union_len(product_id_x, product_id_y, orders_intersection):
-        return product_to_orders_count[product_id_x] + product_to_orders_count[product_id_y] - orders_intersection
-
-    compute_union_len_udf = udf(compute_union_len, IntegerType())
-    df = df.withColumn("orders_union", compute_union_len_udf(df['parent_product_id_x'], df['parent_product_id_y'], df['orders_intersection']))
-    
-    def compute_similarity(orders_intersection, orders_union):
-        return orders_intersection/orders_union
-
-    compute_similarity_udf = udf(compute_similarity, FloatType())
-    df = df.withColumn("similarity", compute_similarity_udf(df['orders_intersection'], df['orders_union']))
-
-    v3_similar_products_dict = defaultdict(lambda: [])
-    direct_similar_products_dict = defaultdict(lambda: [])
-
-    categories = defaultdict(lambda: {'l1':[], 'l2': [], 'l3': []})
-    brands = defaultdict(lambda: [])
-    primary_categories = results['primary_categories']
-
-    for product_id, categories_str_list in primary_categories.items():
-        for categories_str in categories_str_list:
-            for category, obj in json.loads(categories_str).items():
-                if category in ['l1', 'l2', 'l3']:
-                    categories[product_id][category].append(obj['id'])
-
-    for product_id, brand_str_list in results['brand_facets'].items():
-        for brand_str in brand_str_list:
-            brands[product_id].append(json.loads(brand_str)['id'])
-
-    parent_2_children = defaultdict(lambda: [])
-    for child, parent in results['child_2_parent'].items():
-        parent_2_children[parent].append(child)
-
-    for row in df.collect():
-        if set(brands[row['parent_product_id_x']]).intersection(set(brands[row['parent_product_id_y']])) \
-            and (not set(categories[row['parent_product_id_x']]['l3']).intersection(set(categories[row['parent_product_id_y']]['l3']))) \
-            and set(categories[row['parent_product_id_x']]['l1']).intersection(set(categories[row['parent_product_id_y']]['l1'])):
-            v3_similar_products_dict[row['parent_product_id_x']].append((popular_variant.get(row['parent_product_id_y'], row['parent_product_id_y']), row['orders_intersection']))
-            v3_similar_products_dict[row['parent_product_id_y']].append((popular_variant.get(row['parent_product_id_x'], row['parent_product_id_x']), row['orders_intersection']))
-        direct_similar_products_dict[row['parent_product_id_x']].append((row['parent_product_id_y'], row['similarity']))
-        direct_similar_products_dict[row['parent_product_id_y']].append((row['parent_product_id_x'], row['similarity']))
-
-    print('Total Number of parent products: %d' % len(parent_2_children))
-    print('Total Number of child products: %d' % sum([len(variants) for parent, variants in parent_2_children.items()]))
-
-    rows = []
-    product_ids_updated = []
-    for product_id in direct_similar_products_dict:
-        product_ids_updated.append(product_id)
-        v3_similar_products = list(map(lambda e: int(e[0]), sorted(v3_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        direct_similar_products = list(map(lambda e: int(e[0]), sorted(direct_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        rows.append((platform, product_id, 'product', 'fbt', 'v3', str(v3_similar_products)))
-        rows.append((platform, product_id, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
-        variants = parent_2_children.get(product_id, [])
-        for variant in variants:
-            product_ids_updated.append(variant)
-            rows.append((platform, variant, 'product', 'fbt', 'v3', str(v3_similar_products)))
-            rows.append((platform, variant, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
-
-    print('Adding recommendations for %d products in DB' % len(product_ids_updated))
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
-
 def compute_recommendations(env, algo, platform, start_datetime=None, end_datetime=None, customer_id=None, limit=None):
     print("Computing u2p")
     df, results = prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit)
@@ -388,7 +310,6 @@ def compute_recommendations(env, algo, platform, start_datetime=None, end_dateti
             similar_products_dict[p[0]] += p[1]
         direct_similar_products = list(map(lambda e: int(e[0]), sorted(similar_products_dict.items(), key=lambda e: e[1], reverse=True)))
         direct_similar_products = list(filter(lambda x: x not in products_purchased, direct_similar_products))[:200]
-        print(direct_similar_products)
         rows.append((platform, customer_id, 'user', 'bought', algo, json.dumps(direct_similar_products)))
     print('Total number of customers: %d' % len(rows))
     RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
