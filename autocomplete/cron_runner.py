@@ -17,7 +17,7 @@ bucket = argv['bucket']
 
 missing_dates = get_missing_dates('search_terms_daily')
 print("data missing_dates in last 6 months: %s" % missing_dates)
-last_5_dates = enumerate_dates(days, -1)
+last_5_dates = enumerate_dates(days, 0)
 
 recent_missing_dates = missing_dates & last_5_dates
 print("data recent_missing_dates: %s" % recent_missing_dates)
