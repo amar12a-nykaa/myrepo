@@ -47,7 +47,7 @@ def get_missing_dates(collname, filt=None):
 
   dates_with_data = {x['_id'] for x in res}
 
-  all_dates = enumerate_dates(-30*6, -1)
+  all_dates = enumerate_dates(-30*6, 0)
   missing_dates = all_dates - dates_with_data 
   return missing_dates
 
