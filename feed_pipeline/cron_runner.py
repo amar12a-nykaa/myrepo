@@ -17,7 +17,7 @@ days = -1 * argv['days']
 
 missing_dates = get_missing_dates('raw_data')
 print("raw_data missing_dates in last 6 months: %s" % missing_dates)
-last_5_dates = enumerate_dates(days, -1)
+last_5_dates = enumerate_dates(days, 0)
 
 recent_missing_dates_raw = missing_dates & last_5_dates
 print("raw_data recent_missing_dates_raw: %s" % recent_missing_dates_raw)
@@ -32,7 +32,7 @@ for date in recent_missing_dates_raw:
 
 missing_dates = get_missing_dates('processed_data')
 print("preprocessing missing_dates in last 6 months: %s" % missing_dates)
-last_5_dates = enumerate_dates(days, -1)
+last_5_dates = enumerate_dates(days, 0)
 
 recent_missing_dates_preprocess = (missing_dates & last_5_dates) | recent_missing_dates_raw
 print("preprocessing missing_dates: %s" % recent_missing_dates_preprocess)
@@ -48,7 +48,7 @@ for date in recent_missing_dates_preprocess:
 #insert order and revenue data in mongo
 missing_dates = get_missing_dates('order_data')
 print("order_data missing_dates in last 6 months: %s" % missing_dates)
-last_5_dates = enumerate_dates(days, -1)
+last_5_dates = enumerate_dates(days, 0)
 
 recent_missing_dates_orderdata = (missing_dates & last_5_dates)
 print("processing missing_dates: %s" % recent_missing_dates_orderdata)
