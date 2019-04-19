@@ -10,6 +10,7 @@ from collections import defaultdict
 from contextlib import closing
 import mysql.connector
 from elasticsearch import helpers, Elasticsearch
+from joblib import Parallel, delayed
 
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType
@@ -25,7 +26,7 @@ ORDER_SOURCE_NYKAAMEN = ['NykaaMen']
 #spark = SparkSession.builder.appName("CAB").getOrCreate()
 spark = SparkSession.builder \
             .master("local[6]") \
-            .appName("CAB") \
+            .appName("U2P") \
             .config("spark.executor.memory", "4G") \
             .config("spark.storage.memoryFraction", 0.4) \
             .config("spark.driver.memory", "26G") \
@@ -44,15 +45,15 @@ class RecommendationsUtils:
             VALUES %s ON DUPLICATE KEY UPDATE recommended_products_json=VALUES(recommended_products_json)
         """ % (table, values_str)
         values = tuple([str(_i) for row in rows for _i in row])
-        print(insert_recommendations_query)
-        print(values)
+        #print(insert_recommendations_query)
+        #print(values)
         cursor.execute(insert_recommendations_query, values)
 
     @staticmethod
     def add_recommendations_in_mysql(db, table, rows):
         cursor = db.cursor()
-        for i in range(0, len(rows), 100):
-            RecommendationsUtils._add_recommendations_in_mysql(cursor, table, rows[i:i+100])
+        for i in range(0, len(rows), 200):
+            RecommendationsUtils._add_recommendations_in_mysql(cursor, table, rows[i:i+200])
             db.commit()
 
 
@@ -173,6 +174,20 @@ class Utils:
                     break
         return rows
 
+def compute_recommendation_rows(customer_ids, entity_type, recommendation_type, algo, customer_2_products_purchased, rows, direct_similar_products_dict):
+    for customer_id in customer_ids:
+        products_purchased = customer_2_products_purchased[customer_id]
+        similar_products = []
+        for product_purchased in products_purchased:
+            similar_products += direct_similar_products_dict[product_purchased]
+        similar_products_dict = defaultdict(lambda: 0)
+        for p in similar_products:
+            similar_products_dict[p[0]] += p[1]
+        direct_similar_products = list(map(lambda e: int(e[0]), sorted(similar_products_dict.items(), key=lambda e: e[1], reverse=True)))
+        direct_similar_products = list(filter(lambda x: x not in products_purchased, direct_similar_products))[:200]
+        #print(direct_similar_products)
+        rows.append((platform, customer_id, 'user', 'bought', algo, json.dumps(direct_similar_products)))
+
 def prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit, separate_parent=False):
     print("Preparing orders data")
 
@@ -181,7 +196,7 @@ def prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit,
     else:
         order_sources = ORDER_SOURCE_NYKAA
 
-    customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.order_status<>'Cancelled' AND fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_source IN (" + ",".join([("'%s'" % source) for source in order_sources]) + ") AND order_customerid IS NOT NULL %s %s %s" % (" AND order_date <= '%s' " % end_datetime if end_datetime else "", " AND order_date >= '%s' " % start_datetime if start_datetime else "", " limit %d" % limit if limit else "")
+    customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.order_status<>'Cancelled' AND fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_source IN (" + ",".join([("'%s'" % source) for source in order_sources]) + ") AND order_customerid IS NOT NULL %s %s " % (" AND order_date <= '%s' " % end_datetime if end_datetime else "", " AND order_date >= '%s' " % start_datetime if start_datetime else "")
     print(customer_orders_query)
     print('Fetching Data from Redshift')
     rows = Utils.fetchResultsInBatch(Utils.redshiftConnection(env), customer_orders_query, 10000)
@@ -244,83 +259,6 @@ def prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit,
     print('Data preparation done, returning dataframe')
     return df, results
 
-def compute_fbt(env, platform, start_datetime=None, end_datetime=None, limit=None):
-    df, results = prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit, separate_parent=True)
-    popular_variant_df = df.select(['parent_product_id', 'product_id']).groupBy(['parent_product_id', 'product_id']).count().sort(col('count').desc()).drop_duplicates(['parent_product_id'])
-    popular_variant = {row['parent_product_id']: row['product_id'] for row in popular_variant_df.collect()}
-    df.printSchema()
-    product_to_orders_count_df = df.groupBy('parent_product_id').agg(func.countDistinct('order_id')).withColumnRenamed('count(DISTINCT order_id)', 'orders_count').toPandas()
-    product_to_orders_count = dict(zip(product_to_orders_count_df.parent_product_id, product_to_orders_count_df.orders_count))
-    df = df.withColumnRenamed('parent_product_id', 'parent_product_id_x').join(df.withColumnRenamed('parent_product_id', 'parent_product_id_y'), on="order_id", how="inner")
-    df = df.select(['parent_product_id_x', 'parent_product_id_y', 'order_id']).distinct()
-    df = df[df.parent_product_id_x < df.parent_product_id_y]
-    df = df.groupBy(['parent_product_id_x', 'parent_product_id_y']).agg({'order_id': 'count'})
-    df = df.withColumnRenamed("count(order_id)", 'orders_intersection')
-
-    df = df[df.orders_intersection >= 2]
-
-    def compute_union_len(product_id_x, product_id_y, orders_intersection):
-        return product_to_orders_count[product_id_x] + product_to_orders_count[product_id_y] - orders_intersection
-
-    compute_union_len_udf = udf(compute_union_len, IntegerType())
-    df = df.withColumn("orders_union", compute_union_len_udf(df['parent_product_id_x'], df['parent_product_id_y'], df['orders_intersection']))
-    
-    def compute_similarity(orders_intersection, orders_union):
-        return orders_intersection/orders_union
-
-    compute_similarity_udf = udf(compute_similarity, FloatType())
-    df = df.withColumn("similarity", compute_similarity_udf(df['orders_intersection'], df['orders_union']))
-
-    v3_similar_products_dict = defaultdict(lambda: [])
-    direct_similar_products_dict = defaultdict(lambda: [])
-
-    categories = defaultdict(lambda: {'l1':[], 'l2': [], 'l3': []})
-    brands = defaultdict(lambda: [])
-    primary_categories = results['primary_categories']
-
-    for product_id, categories_str_list in primary_categories.items():
-        for categories_str in categories_str_list:
-            for category, obj in json.loads(categories_str).items():
-                if category in ['l1', 'l2', 'l3']:
-                    categories[product_id][category].append(obj['id'])
-
-    for product_id, brand_str_list in results['brand_facets'].items():
-        for brand_str in brand_str_list:
-            brands[product_id].append(json.loads(brand_str)['id'])
-
-    parent_2_children = defaultdict(lambda: [])
-    for child, parent in results['child_2_parent'].items():
-        parent_2_children[parent].append(child)
-
-    for row in df.collect():
-        if set(brands[row['parent_product_id_x']]).intersection(set(brands[row['parent_product_id_y']])) \
-            and (not set(categories[row['parent_product_id_x']]['l3']).intersection(set(categories[row['parent_product_id_y']]['l3']))) \
-            and set(categories[row['parent_product_id_x']]['l1']).intersection(set(categories[row['parent_product_id_y']]['l1'])):
-            v3_similar_products_dict[row['parent_product_id_x']].append((popular_variant.get(row['parent_product_id_y'], row['parent_product_id_y']), row['orders_intersection']))
-            v3_similar_products_dict[row['parent_product_id_y']].append((popular_variant.get(row['parent_product_id_x'], row['parent_product_id_x']), row['orders_intersection']))
-        direct_similar_products_dict[row['parent_product_id_x']].append((row['parent_product_id_y'], row['similarity']))
-        direct_similar_products_dict[row['parent_product_id_y']].append((row['parent_product_id_x'], row['similarity']))
-
-    print('Total Number of parent products: %d' % len(parent_2_children))
-    print('Total Number of child products: %d' % sum([len(variants) for parent, variants in parent_2_children.items()]))
-
-    rows = []
-    product_ids_updated = []
-    for product_id in direct_similar_products_dict:
-        product_ids_updated.append(product_id)
-        v3_similar_products = list(map(lambda e: int(e[0]), sorted(v3_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        direct_similar_products = list(map(lambda e: int(e[0]), sorted(direct_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        rows.append((platform, product_id, 'product', 'fbt', 'v3', str(v3_similar_products)))
-        rows.append((platform, product_id, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
-        variants = parent_2_children.get(product_id, [])
-        for variant in variants:
-            product_ids_updated.append(variant)
-            rows.append((platform, variant, 'product', 'fbt', 'v3', str(v3_similar_products)))
-            rows.append((platform, variant, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
-
-    print('Adding recommendations for %d products in DB' % len(product_ids_updated))
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
-
 def compute_recommendations(env, algo, platform, start_datetime=None, end_datetime=None, customer_id=None, limit=None):
     print("Computing u2p")
     df, results = prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit)
@@ -371,25 +309,26 @@ def compute_recommendations(env, algo, platform, start_datetime=None, end_dateti
     print('Computing similarity')
     df = df.withColumn("similarity", compute_similarity_udf(df['customers_intersection'], df['customers_union']))
 
+    #df = df.withColumnRenamed('product_id_x', 'product').withColumnRenamed('product_id_y', 'recommendation').union(df.withColumnRenamed('product_id_y', 'product').withColumnRenamed('product_id_x', 'recommendation'))
+
     direct_similar_products_dict = defaultdict(lambda: [])
 
     for row in df.collect():
-        direct_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['similarity']))
-        direct_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['similarity']))
+        if (row['is_luxe_x'] and row['is_luxe_y'])  or not row['is_luxe_x']:
+            direct_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['similarity']))
+        if (row['is_luxe_y'] and row['is_luxe_x'])  or not row['is_luxe_y']:
+            direct_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['similarity']))
 
 
     rows = []
-    for customer_id, products_purchased in customer_2_products_purchased.items():
-        similar_products = []
-        for product_purchased in products_purchased:
-            similar_products += direct_similar_products_dict[product_purchased]
-        similar_products_dict = defaultdict(lambda: 0)
-        for p in similar_products:
-            similar_products_dict[p[0]] += p[1]
-        direct_similar_products = list(map(lambda e: int(e[0]), sorted(similar_products_dict.items(), key=lambda e: e[1], reverse=True)))
-        direct_similar_products = list(filter(lambda x: x not in products_purchased, direct_similar_products))[:200]
-        print(direct_similar_products)
-        rows.append((platform, customer_id, 'user', 'bought', algo, json.dumps(direct_similar_products)))
+
+    customer_ids = list(customer_2_products_purchased.keys())
+    if limit:
+        customer_ids = customer_ids[:limit]
+
+    customer_ids_chunks = [customer_ids[i:i+100] for i in range(0, len(customer_ids), 100)]
+    Parallel(n_jobs=30, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(compute_recommendation_rows)(customer_ids_chunk, 'user', 'bought', algo, customer_2_products_purchased, rows, direct_similar_products_dict) for customer_ids_chunk in customer_ids_chunks)
+
     print('Total number of customers: %d' % len(rows))
     RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
 
