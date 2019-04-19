@@ -51,13 +51,8 @@ class RecommendationsUtils:
     @staticmethod
     def add_recommendations_in_mysql(db, table, rows):
         cursor = db.cursor()
-<<<<<<< HEAD
-        for i in range(0, len(rows), 200):
-            RecommendationsUtils._add_recommendations_in_mysql(cursor, table, rows[i:i+200])
-=======
         for i in range(0, len(rows), 500):
             RecommendationsUtils._add_recommendations_in_mysql(cursor, table, rows[i:i+500])
->>>>>>> 87d61188a4e3b90f4e1b2f31d3412ae86df7e1e5
             db.commit()
 
 
