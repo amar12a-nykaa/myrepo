@@ -16,21 +16,20 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType
 from pyspark.sql.functions import udf, col, desc
 import pyspark.sql.functions as func
-from IPython import embed
 
 #sys.path.append("/home/apis/nykaa")
 #from pas.v2.utils import Utils, RecommendationsUtils
 ORDER_SOURCE_NYKAA = ['Nykaa', 'Nykaa(Old)', 'NYKAA', 'CS-Manual']
 ORDER_SOURCE_NYKAAMEN = ['NykaaMen']
 
-#spark = SparkSession.builder.appName("CAB").getOrCreate()
-spark = SparkSession.builder \
-            .master("local[6]") \
-            .appName("U2P") \
-            .config("spark.executor.memory", "4G") \
-            .config("spark.storage.memoryFraction", 0.4) \
-            .config("spark.driver.memory", "26G") \
-            .getOrCreate()
+spark = SparkSession.builder.appName("U2P").getOrCreate()
+#spark = SparkSession.builder \
+#            .master("local[6]") \
+#            .appName("U2P") \
+#            .config("spark.executor.memory", "4G") \
+#            .config("spark.storage.memoryFraction", 0.4) \
+#            .config("spark.driver.memory", "26G") \
+#            .getOrCreate()
  
 sc = spark.sparkContext
 print(sc.getConf().getAll())
@@ -52,8 +51,13 @@ class RecommendationsUtils:
     @staticmethod
     def add_recommendations_in_mysql(db, table, rows):
         cursor = db.cursor()
+<<<<<<< HEAD
         for i in range(0, len(rows), 200):
             RecommendationsUtils._add_recommendations_in_mysql(cursor, table, rows[i:i+200])
+=======
+        for i in range(0, len(rows), 500):
+            RecommendationsUtils._add_recommendations_in_mysql(cursor, table, rows[i:i+500])
+>>>>>>> 87d61188a4e3b90f4e1b2f31d3412ae86df7e1e5
             db.commit()
 
 
@@ -329,6 +333,15 @@ def compute_recommendations(env, algo, platform, start_datetime=None, end_dateti
     customer_ids_chunks = [customer_ids[i:i+100] for i in range(0, len(customer_ids), 100)]
     Parallel(n_jobs=30, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(compute_recommendation_rows)(customer_ids_chunk, 'user', 'bought', algo, customer_2_products_purchased, rows, direct_similar_products_dict) for customer_ids_chunk in customer_ids_chunks)
 
+#        similar_products = []
+#        for product_purchased in products_purchased:
+#            similar_products += direct_similar_products_dict[product_purchased]
+#        similar_products_dict = defaultdict(lambda: 0)
+#        for p in similar_products:
+#            similar_products_dict[p[0]] += p[1]
+#        direct_similar_products = list(map(lambda e: int(e[0]), sorted(similar_products_dict.items(), key=lambda e: e[1], reverse=True)))
+#        direct_similar_products = list(filter(lambda x: x not in products_purchased, direct_similar_products))[:200]
+#        rows.append((platform, customer_id, 'user', 'bought', algo, json.dumps(direct_similar_products)))
     print('Total number of customers: %d' % len(rows))
     RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
 
