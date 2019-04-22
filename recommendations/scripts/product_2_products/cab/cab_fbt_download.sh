@@ -8,6 +8,7 @@ sudo ./configure
 sudo make altinstall
 sudo ln -s -f /usr/local/bin/python3.5 /usr/bin/python3
 sudo ln -s -f /usr/local/bin/pip3.5 /usr/bin/pip3
+sudo yum install -y postgresql-devel
 
 sudo pip3 install psycopg2
 sudo pip3 install pandas

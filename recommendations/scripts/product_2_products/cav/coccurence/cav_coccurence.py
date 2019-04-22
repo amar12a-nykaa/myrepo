@@ -102,9 +102,9 @@ class Utils:
                     "query": { "match_all": {} },
                     "_source": ["product_id", "is_luxe", "mrp", "parent_id", "primary_categories", "brand_facet", "sku", "media"]
                 }
-                response = es_conn.search(index='livecore', body=query, scroll='2m')
+                response = es_conn.search(index='livecore', body=query, scroll='15m')
             else:
-                response = es_conn.scroll(scroll_id=scroll_id, scroll='2m')
+                response = es_conn.scroll(scroll_id=scroll_id, scroll='15m')
 
             if not response['hits']['hits']:
                 break
@@ -229,8 +229,10 @@ def compute_cav(env, platform, files, desktop):
     product_2_mrp = results['product_2_mrp']
 
     for row in final_df.collect():
-        if not (luxe_dict.get(row['product_id_x'], False) ^ luxe_dict.get(row['product_id_y'], False)):
+        if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_x'], False))  or not luxe_dict.get(row['product_id_x'], False):
+        #if not (luxe_dict.get(row['product_id_x'], False) ^ luxe_dict.get(row['product_id_y'], False)):
             simple_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
+        if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_x'], False))  or not luxe_dict.get(row['product_id_y'], False):
             simple_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
 
             if product_2_mrp.get(row['product_id_x']) and product_2_mrp.get(row['product_id_y']):
