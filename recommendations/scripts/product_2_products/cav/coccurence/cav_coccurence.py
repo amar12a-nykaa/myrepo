@@ -229,8 +229,10 @@ def compute_cav(env, platform, files, desktop):
     product_2_mrp = results['product_2_mrp']
 
     for row in final_df.collect():
-        if not (luxe_dict.get(row['product_id_x'], False) ^ luxe_dict.get(row['product_id_y'], False)):
+        if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_x'], False))  or not luxe_dict.get(row['product_id_x'], False):
+        #if not (luxe_dict.get(row['product_id_x'], False) ^ luxe_dict.get(row['product_id_y'], False)):
             simple_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
+        if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_x'], False))  or not luxe_dict.get(row['product_id_y'], False):
             simple_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
 
             if product_2_mrp.get(row['product_id_x']) and product_2_mrp.get(row['product_id_y']):
