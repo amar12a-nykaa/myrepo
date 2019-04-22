@@ -55,6 +55,8 @@ wget --user="${FTP_USERNAME}" --password="${FTP_PASSWORD}" ftp://${FTP_SERVER}/$
 echo "Unzipping..."
 unzip -o "/tmp/${FILE_NAME}" -d "/tmp"
 aws s3 cp "/tmp/${BASE_FILE_NAME}.csv" s3://${BUCKET_NAME}/${S3_PREFIX_DATA}
+rm "/tmp/${FILE_NAME}"
+rm "/tmp/${BASE_FILE_NAME}.csv"
 
 echo "env=$ENV"
 echo "filename=$BASE_FILE_NAME.csv"
