@@ -16,6 +16,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType
 from pyspark.sql.functions import udf, col, desc
 import pyspark.sql.functions as func
+from pyspark.sql.window import Window
 
 #sys.path.append("/home/apis/nykaa")
 #from pas.v2.utils import Utils, RecommendationsUtils
@@ -179,15 +180,20 @@ def compute_recommendation_rows(customer_ids, entity_type, recommendation_type, 
         similar_products = []
         for product_purchased in products_purchased:
             similar_products += direct_similar_products_dict[product_purchased]
-        similar_products_dict = defaultdict(lambda: 0)
+        _similar_products_dict = defaultdict(lambda: [])
         for p in similar_products:
-            similar_products_dict[p[0]] += p[1]
+            _similar_products_dict[p[0]].append(p[1])
+
+        similar_products_dict = {}
+        for p in _similar_products_dict:
+            similar_products_dict[p] = sum(_similar_products_dict[p])/len(_similar_products_dict[p])
+
         direct_similar_products = list(map(lambda e: int(e[0]), sorted(similar_products_dict.items(), key=lambda e: e[1], reverse=True)))
         direct_similar_products = list(filter(lambda x: x not in products_purchased, direct_similar_products))[:200]
         #print(direct_similar_products)
         rows.append((platform, customer_id, 'user', 'bought', algo, json.dumps(direct_similar_products)))
 
-def prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit, separate_parent=False):
+def prepare_orders_dataframe(env, platform, p2p_start_datetime, p2p_end_datetime, limit, separate_parent=False):
     print("Preparing orders data")
 
     if platform == 'men':
@@ -195,7 +201,7 @@ def prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit,
     else:
         order_sources = ORDER_SOURCE_NYKAA
 
-    customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.order_status<>'Cancelled' AND fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_source IN (" + ",".join([("'%s'" % source) for source in order_sources]) + ") AND order_customerid IS NOT NULL %s %s " % (" AND order_date <= '%s' " % end_datetime if end_datetime else "", " AND order_date >= '%s' " % start_datetime if start_datetime else "")
+    customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku, order_date from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.order_status<>'Cancelled' AND fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_source IN (" + ",".join([("'%s'" % source) for source in order_sources]) + ") AND order_customerid IS NOT NULL %s %s " % (" AND order_date <= '%s' " % p2p_end_datetime if p2p_end_datetime else "", " AND order_date >= '%s' " % p2p_start_datetime if p2p_start_datetime else "")
     print(customer_orders_query)
     print('Fetching Data from Redshift')
     rows = Utils.fetchResultsInBatch(Utils.redshiftConnection(env), customer_orders_query, 10000)
@@ -204,7 +210,8 @@ def prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit,
             StructField("order_id", StringType(), True),
             StructField("customer_id", StringType(), True),
             StructField("product_id", IntegerType(), True),
-            StructField("product_sku", StringType(), True)])
+            StructField("product_sku", StringType(), True),
+            StructField("order_date", TimestampType(), True)])
 
     df = spark.createDataFrame(rows, schema)
     print('Total number of rows fetched: %d' % df.count())
@@ -248,19 +255,19 @@ def prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit,
 
     if separate_parent:
         print('Selecting distinct(order_id, customer_id, parent_product_id, product_id)')
-        df = df.select(['order_id', 'customer_id', 'parent_product_id', 'product_id']).distinct()
+        df = df.select(['order_id', 'customer_id', 'parent_product_id', 'product_id', 'order_date']).distinct()
     else:
         print('Selecting distinct(order_id, customer_id, product_id)')
-        df = df.select(['order_id', 'customer_id', 'product_id']).distinct()
+        df = df.select(['order_id', 'customer_id', 'product_id', 'order_date']).distinct()
     print('Total number of rows extracted: %d' % df.count())
     print('Total number of products: %d' % df.select('product_id').distinct().count())
 
     print('Data preparation done, returning dataframe')
     return df, results
 
-def compute_recommendations(env, algo, platform, start_datetime=None, end_datetime=None, customer_id=None, limit=None):
+def compute_recommendations(env, algo, platform, computation_start_datetime, p2p_start_datetime=None, p2p_end_datetime=None, customer_id=None, limit=None, orders_count=10):
     print("Computing u2p")
-    df, results = prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit)
+    df, results = prepare_orders_dataframe(env, platform, p2p_start_datetime, p2p_end_datetime, limit)
     luxe_products_dict = {p:True for p in results['luxe_products']}
     df = df.select(['product_id', 'customer_id']).distinct()
     df.printSchema()
@@ -270,12 +277,13 @@ def compute_recommendations(env, algo, platform, start_datetime=None, end_dateti
     product_to_customers_count = dict(zip(product_to_customers_count_df.product_id, product_to_customers_count_df.customers_count))
     print('Doing essential steps in computation')
 
-    _df = df
-    if customer_id:
-        _df = _df.filter(col('customer_id') == customer_id)
+    #_df = df
+    #if customer_id:
+    #    _df = _df.filter(col('customer_id') == customer_id)
 
-    customer_2_products_purchased = {row['customer_id']: row['products_purchased'] for row in _df.groupBy('customer_id').agg(func.collect_list('product_id').alias('products_purchased')).collect()}
+    #customer_2_products_purchased = {row['customer_id']: row['products_purchased'] for row in _df.groupby('customer_id').agg(func.collect_list('product_id').alias('products_purchased')).collect()}
 
+    #embed()
     df = df.withColumnRenamed('product_id', 'product_id_x').join(df.withColumnRenamed('product_id', 'product_id_y'), on="customer_id", how="inner")
     #df = df.select(['product_id_x', 'product_id_y', 'customer_id']).distinct()
     df = df[df.product_id_x < df.product_id_y]
@@ -321,6 +329,12 @@ def compute_recommendations(env, algo, platform, start_datetime=None, end_dateti
 
     rows = []
 
+    c2p_df, _ = prepare_orders_dataframe(env, platform, computation_start_datetime, None, None)
+    if customer_id:
+        c2p_df = c2p_df.filter(col('customer_id') == customer_id)
+
+    customer_2_products_purchased = {row['customer_id']: row['products'] for row in c2p_df.select(['customer_id', 'order_id', 'product_id', 'order_date']).distinct().withColumn('rank', func.dense_rank().over(Window.partitionBy('customer_id').orderBy(desc('order_date')))).filter(col('rank') <= orders_count).groupBy('customer_id').agg(func.collect_list('product_id').alias('products')).collect()}
+
     customer_ids = list(customer_2_products_purchased.keys())
     if limit:
         customer_ids = customer_ids[:limit]
@@ -364,22 +378,28 @@ def compute_recommendations(env, algo, platform, start_datetime=None, end_dateti
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--start-datetime')
-    parser.add_argument('--end-datetime')
+    parser.add_argument('--hours', type=int)
+    parser.add_argument('--days', type=int)
+    parser.add_argument('--computation-start-datetime')
+    parser.add_argument('--p2p-start-datetime')
+    parser.add_argument('--p2p-end-datetime')
     parser.add_argument('--customer-id')
     parser.add_argument('--algo', default='combined_coccurence_direct')
+    parser.add_argument('--orders-count', type=int, default=10)
     parser.add_argument('--limit', type=int)
     parser.add_argument('--env', required=True)
     parser.add_argument('--platform', required=True, choices=['nykaa','men'])
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
-    start_datetime = argv.get('start_datetime')
-    end_datetime = argv.get('end_datetime')
+    computation_start_datetime = argv.get('computation_start_datetime')
+    p2p_start_datetime = argv.get('p2p_start_datetime')
+    p2p_end_datetime = argv.get('p2p_end_datetime')
     limit = argv.get('limit')
     env = argv.get('env')
     platform = argv.get('platform')
     algo = argv.get('algo')
     customer_id = argv.get('customer_id')
+    orders_count = argv.get('orders_count')
 
-    compute_recommendations(env, algo, platform, start_datetime, end_datetime, customer_id, limit)
+    compute_recommendations(env, algo, platform, computation_start_datetime, p2p_start_datetime, p2p_end_datetime, customer_id, limit, orders_count)
