@@ -101,7 +101,9 @@ class Worker(threading.Thread):
                 product_ids=[]
                 for row in rows:
                   product_ids.append(row['product_id'])
-                product_history = product_history_table.find({"_id": {"$in": product_ids}})
+                db_result = product_history_table.find({"_id": {"$in": product_ids}})
+                for row in db_result:
+                  product_history[row['_id']] = row
                 CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history)
                 is_first=False
             except queue.Empty:
