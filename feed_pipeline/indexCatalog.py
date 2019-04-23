@@ -1,6 +1,8 @@
 #!/usr/bin/python
 import argparse
+import csv
 import json
+import os
 import pprint
 import socket
 import sys
@@ -8,7 +10,7 @@ import traceback
 import ast
 from operator import itemgetter
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 import re
@@ -22,6 +24,8 @@ import numpy
 from collections import defaultdict 
 from dateutil import tz
 
+import dateutil.relativedelta
+import datetime as dt
 
 sys.path.append('/home/apis/nykaa/')
 sys.path.append('/nykaa/scripts/sharedutils/')
@@ -87,10 +91,21 @@ class Worker(threading.Thread):
         super().__init__()
 
     def run(self):
+        is_first=True
         while True:
             try:
                 rows = self.q.get(timeout=3)  # 3s timeout
-                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter)
+                client = Utils.mongoClient()
+                product_history_table = client['search']['product_history']
+                product_history = {}
+                product_ids=[]
+                for row in rows:
+                  product_ids.append(row['product_id'])
+                db_result = product_history_table.find({"_id": {"$in": product_ids}})
+                for row in db_result:
+                  product_history[row['_id']] = row
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history)
+                is_first=False
             except queue.Empty:
                 return
             # do whatever work you have to do on work
@@ -197,6 +212,17 @@ class CatalogIndexer:
         "gravitymud": "gravitymud gravity mud",
         "youthmud": "youthmud youth mud",
     }
+
+    yesterday = datetime.now() - timedelta(days=1)
+    foldername = yesterday.strftime('%Y%m%d')
+    folderpath = "/nykaa/product_metadata/dt="+foldername
+
+    filepath = folderpath +"/"+foldername+".csv"
+
+    if os.path.exists(filepath):
+      os.remove(filepath)
+    if not os.path.exists(folderpath):
+      os.makedirs(folderpath)
 
     def print_errors(errors):
         for err in errors:
@@ -437,11 +463,12 @@ class CatalogIndexer:
         for key, value in doc.items():
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
-
-    def indexRecords(records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter):
+    @classmethod
+    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history):
         input_docs = []
         pws_fetch_products = []
         size_filter_flag = 0
+        csvfile = open(cls.filepath, 'a')
         # index_start = timeit.default_timer()
         for index, row in enumerate(records):
             try:
@@ -913,10 +940,25 @@ class CatalogIndexer:
                     except:
                         pass
 
+                product_id = doc['product_id']
+                if product_history and (product_id in product_history) and product_history[product_id]:
+                  doc['views_in_last_month'] = product_history[product_id]['views_in_last_month']
+                  doc['orders_in_last_month'] = product_history[product_id]['orders_in_last_month']
+                  doc['revenue_in_last_month'] = product_history[product_id]['revenue_in_last_month']
+                  doc['units_sold_in_last_month'] = product_history[product_id]['units_sold_in_last_month']
+                  doc['cart_additions_in_last_month'] = product_history[product_id]['cart_additions_in_last_month']
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
 
                 input_docs.append(doc)
+                csv_columns=[]
+                for key in doc:
+	                csv_columns.append(key)
+                writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
+                if is_first:
+                  writer.writeheader()
+                  is_first = False
+                writer.writerow(doc)
             except Exception as e:
                 print(traceback.format_exc())
                 print("Error with %s: %s" % (row['sku'], str(e)))
@@ -945,6 +987,7 @@ class CatalogIndexer:
 
     def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None):
         skus = skus or []
+        skus = [x for x in skus if x]
         if skus:
             print("Running Index Catalog for selected skus: %s" % skus)
         validate_popularity_data_health()
