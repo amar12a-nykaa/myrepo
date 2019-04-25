@@ -31,7 +31,7 @@
         "id": { "type": "keyword" },
         "query": { "type": "text", "analyzer": "default", "search_analyzer": "default_search"},
         "type": { "type": "keyword" },
-        "entity_id": { "type": "float" },
+        "entity_id": { "type": "keyword" },
         "entity_value": { "type": "text" },
         "mapped_name": { "type": "text" },
         "rank": { "type": "float" }

@@ -98,7 +98,24 @@ def get_filters():
     categories = pd.read_sql(query, con=mysql_conn)
     mysql_conn.close()
 
-    filters = pd.concat([filters, brands, categories])
+    price_intervals = np.array([['filter_id', 'filter_value', 'filter_name'],
+                                ['0-499', 'Price<500', 'price'], ['500-999', 'Price:500-999', 'price'],
+                                ['1000-1999', 'Price:1000-1999', 'price'], ['2000-3999', 'Price:2000-3999', 'price'],
+                                ['4000-*', 'Price>4000', 'price']])
+    price_data = pd.DataFrame(data=price_intervals[1:, :], columns=price_intervals[0, :])
+
+    discount_intervals = np.array([['filter_id', 'filter_value', 'filter_name'],
+                                   ['0-10', '0-10', 'Discount<10%'], ['10-*', 'Discount>10%', 'discount'],
+                                   ['20-*', 'Discount>20%', 'discount'], ['30-*', 'Discount>30%', 'discount'],
+                                   ['40-*', 'Discount>40%', 'discount']])
+    discount_data = pd.DataFrame(data=discount_intervals[1:, :], columns=discount_intervals[0, :])
+    
+    star_ratings = np.array([['filter_id', 'filter_value', 'filter_name'],
+                             ['1', 'Rating>1', 'star_rating'], ['2', 'Rating>2', 'star_rating'],
+                             ['3', 'Rating>3', 'star_rating'], ['4', 'Rating>4', 'star_rating']])
+    rating_data = pd.DataFrame(data=star_ratings[1:, :], columns=star_ratings[0, :])
+    
+    filters = pd.concat([filters, brands, categories, price_data, discount_data, rating_data])
     return filters
 
 
@@ -156,6 +173,7 @@ def index_guides(collection, active, inactive, swap, filename):
     guides = process_guides(filename)
     filters = get_filters()
     guides = pd.merge(guides, filters, on=['filter_name', 'filter_id'])
+    guides['filter_name'] = guides['filter_name'].apply(lambda x: x + '_range' if x in ['price', 'discount'] else x)
     guides['filter_name'] = guides['filter_name'].apply(lambda x: x + '_filter')
     insert_guides_in_es(guides, index)
 
