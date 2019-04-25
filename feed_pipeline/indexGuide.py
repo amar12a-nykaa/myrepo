@@ -1,6 +1,7 @@
 import argparse
 import sys
 import pandas as pd
+import numpy as np
 import json
 import os
 
@@ -21,23 +22,23 @@ def process_guides(filename='guide.csv'):
 
     # exclude filters
     df.dropna(subset=['filter_name', 'filter_value'], inplace=True)
-    filter_exclude_list = ['Price', 'Avg Customer Rating', 'Discount', 'Gender', 'Star_Rating']
-    df = df[~df['filter_name'].isin(filter_exclude_list)]
+    # filter_exclude_list = ['Price', 'Avg Customer Rating', 'Discount', 'Gender', 'Star_Rating']
+    # df = df[~df['filter_name'].isin(filter_exclude_list)]
 
     # normalize filter name
-    df['filter_name'] = df['filter_name'].apply(lambda x: x.replace(" ", "_").lower())
+    # df['filter_name'] = df['filter_name'].apply(lambda x: x.replace(" ", "_").lower())
 
     #normalize filter value
-    def get_category_value(row):
-        if row['filter_name'] == 'category':
-            cat_list = row['filter_value'].split(':')
-            cat_list = list(filter(None, cat_list))
-            category = cat_list[-1]
-            if len(cat_list) > 3:
-                category = cat_list[2]
-            row['filter_value'] = category
-        return row
-    df = df.apply(get_category_value, axis=1)
+    # def get_category_value(row):
+    #     if row['filter_name'] == 'category':
+    #         cat_list = row['filter_value'].split(':')
+    #         cat_list = list(filter(None, cat_list))
+    #         category = cat_list[-1]
+    #         if len(cat_list) > 3:
+    #             category = cat_list[2]
+    #         row['filter_value'] = category
+    #     return row
+    # df = df.apply(get_category_value, axis=1)
 
     # get top 100 keywords
     keyword_frequency = df.groupby('keyword').agg({"freq": "sum"}).reset_index()
@@ -65,6 +66,7 @@ def process_guides(filename='guide.csv'):
 
         guide_list.append(temp_df)
     guide = pd.concat(guide_list).reset_index()
+    guide.rename(columns={'filter_value': 'filter_id'}, inplace=True)
     return guide
 
 def get_filters():
@@ -153,7 +155,7 @@ def index_guides(collection, active, inactive, swap, filename):
 
     guides = process_guides(filename)
     filters = get_filters()
-    guides = pd.merge(guides, filters, on=['filter_name', 'filter_value'])
+    guides = pd.merge(guides, filters, on=['filter_name', 'filter_id'])
     guides['filter_name'] = guides['filter_name'].apply(lambda x: x + '_filter')
     insert_guides_in_es(guides, index)
 
