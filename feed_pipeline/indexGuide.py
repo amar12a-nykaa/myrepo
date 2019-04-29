@@ -127,7 +127,7 @@ def override_filter_value(df):
         entity_value = row['filter_value']
         replacement_text = row['display text']
         df['entity_value'] = df.apply(lambda x : replacement_text if (x['type'] == type and
-                                                x['entity_value'] == entity_value) else x['entity_value'], axis=1)
+                                                x['entity_id'] == str(entity_value)) else x['entity_value'], axis=1)
     return df
     
 def insert_guides_in_es(guides, collection):
@@ -172,6 +172,7 @@ def index_guides(collection, active, inactive, swap, filename):
 
     guides = process_guides(filename)
     filters = get_filters()
+    guides = guides.astype({'filter_id': str})
     guides = pd.merge(guides, filters, on=['filter_name', 'filter_id'])
     guides['filter_name'] = guides['filter_name'].apply(lambda x: x + '_range' if x in ['price', 'discount'] else x)
     guides['filter_name'] = guides['filter_name'].apply(lambda x: x + '_filter')

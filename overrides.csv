@@ -1,9 +1,47 @@
 filter_name,filter_value,display text
-skin_tone_filter,Medium/Wheatish,Medium/Wheatish Skin Tone
-skin_tone_filter,Fair/Light,Fair/Light Skin Tone
-skin_tone_filter,Dusky/Dark,Dusky/Dark Skin Tone
-skin_type_filter,Dry,Dry Skin
-skin_type_filter,Combination,Combination Skin
-skin_type_filter,Oily,Oily Skin
-skin_type_filter,Sensitive,Sensitive Skin
-skin_type_filter,Normal,Normal Skin
+price_range_filter,0-499,Price<500
+price_range_filter,500-999,Price:500-999
+price_range_filter,1000-1999,Price:1000-1999
+price_range_filter,2000-3999,Price:2000-3999
+price_range_filter,4000-*,Price>4000
+discount_range_filter,0-10,Discount<10%
+discount_range_filter,10-*,Discount>10%
+discount_range_filter,20-*,Discount>20%
+discount_range_filter,30-*,Discount>30%
+discount_range_filter,40-*,Discount>40%
+star_rating_filter,1,Rating>1
+star_rating_filter,2,Rating>2
+star_rating_filter,3,Rating>3
+star_rating_filter,4,Rating>4
+finish_filter,10881,Matte Finish
+finish_filter,20425,Creme Finish
+finish_filter,10880,Natural Finish
+finish_filter,10883,Glossy Finish
+finish_filter,20429,Mettalic Finish
+finish_filter,10884,Glitter Finish
+finish_filter,20426,Satin Finish
+finish_filter,10879,Shimmer Finish
+finish_filter,10882,Luminous Finish
+finish_filter,20427,Duochrome Finish
+finish_filter,10877,Tinted Finish
+finish_filter,10885,Clear Finish
+skin_tone_filter,10887,Medium/Wheatish Tone
+skin_tone_filter,10886,Fair/Light Tone
+skin_tone_filter,10888,Dusky/Dark Tone
+skin_type_filter,10781,Dry Skin
+skin_type_filter,10779,Oily Skin
+skin_type_filter,10780,Normal Skin
+skin_type_filter,10782,Combination Skin
+skin_type_filter,10778,Sensitive Skin
+hair_type_filter,11071,Thin Hair
+hair_type_filter,11072,Thick Hair
+hair_type_filter,11073,Straight Hair
+hair_type_filter,11074,Oily Hair
+hair_type_filter,11075,Normal Hair
+hair_type_filter,11076,Fine Hair
+hair_type_filter,11077,Dull Hair
+hair_type_filter,11078,Dry Hair
+hair_type_filter,11079,Curly Hair
+spf_filter,10870,Spf>30
+spf_filter,10873,Spf:15-30
+spf_filter,10872,Spf<15
