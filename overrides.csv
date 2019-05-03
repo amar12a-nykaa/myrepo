@@ -42,6 +42,6 @@ hair_type_filter,11076,Fine Hair
 hair_type_filter,11077,Dull Hair
 hair_type_filter,11078,Dry Hair
 hair_type_filter,11079,Curly Hair
-spf_filter,10870,Spf>30
-spf_filter,10873,Spf:15-30
-spf_filter,10872,Spf<15
+spf_filter,10870,Spf 30+
+spf_filter,10873,Spf 15-30
+spf_filter,10872,Spf <15
