@@ -938,7 +938,7 @@ class CatalogIndexer:
                     brand = doc.get("brand_facet_searchable", "") or ""
                     if not brand: 
                       print("ERROR ... Could not extract brand for product_id: %s" % doc['product_id'])
-                    title_searchable = row.get('title_searchable', "") if  "Nykaa Naturals" in brand else row.get('name', "")
+                    title_searchable = row.get('name', "")
                     doc['title_brand_category'] = " ".join([x for x in [title_searchable, doc.get("brand_facet_searchable", ""),doc.get("category_facet_searchable", "")] if x])
                 except:
                     print(traceback.format_exc())
