@@ -94,13 +94,14 @@ class Utils:
         brand_facets = {}
         sku_2_product_id = {}
         product_2_image = {}
+        product_in_stock = {}
 
         while True:
             if not scroll_id:
                 query = { 
                     "size": ES_BATCH_SIZE,
                     "query": { "match_all": {} },
-                    "_source": ["product_id", "is_luxe", "mrp", "parent_id", "primary_categories", "brand_facet", "sku", "media"]
+                    "_source": ["product_id", "is_luxe", "mrp", "parent_id", "primary_categories", "brand_facet", "sku", "media", "in_stock"]
                 }
                 response = es_conn.search(index='livecore', body=query, scroll='15m')
             else:
@@ -117,8 +118,9 @@ class Utils:
             brand_facets.update({int(p["_source"]["product_id"]): p["_source"].get("brand_facet") for p in response["hits"]["hits"] if p["_source"].get("brand_facet")})
             sku_2_product_id.update({p["_source"]["sku"]: int(p["_source"]["product_id"]) for p in response["hits"]["hits"]})
             product_2_image.update({int(p["_source"]["product_id"]): p['_source']['media'] for p in response['hits']['hits'] if p['_source'].get('media')})
+            product_in_stock.update({int(p['_source']['product_id']): p['_source']['in_stock'] for p in response['hits']['hits'] if p['_source'].get('in_stock')})
 
-        return {'luxe_products': luxe_products, 'product_2_mrp': product_2_mrp, 'child_2_parent': child_2_parent, 'primary_categories': primary_categories, 'brand_facets': brand_facets, 'sku_2_product_id': sku_2_product_id, 'product_2_image': product_2_image}
+        return {'luxe_products': luxe_products, 'product_2_mrp': product_2_mrp, 'child_2_parent': child_2_parent, 'primary_categories': primary_categories, 'brand_facets': brand_facets, 'sku_2_product_id': sku_2_product_id, 'product_2_image': product_2_image, 'product_in_stock': product_in_stock}
 
 
     @staticmethod
@@ -149,6 +151,8 @@ class Utils:
                 if batch_empty:
                     break
         return rows
+
+
 
 def prepare_data(files, desktop):
     schema = StructType([
@@ -227,6 +231,7 @@ def compute_cav(env, platform, files, desktop):
     luxe_dict = {p: True for p in results['luxe_products']}
 
     product_2_mrp = results['product_2_mrp']
+    product_in_stock = results['product_in_stock']
 
     for row in final_df.collect():
         if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_x'], False))  or not luxe_dict.get(row['product_id_x'], False):
@@ -238,8 +243,9 @@ def compute_cav(env, platform, files, desktop):
             if product_2_mrp.get(row['product_id_x']) and product_2_mrp.get(row['product_id_y']):
                 product_x_mrp = product_2_mrp[row['product_id_x']]
                 product_y_mrp = product_2_mrp[row['product_id_y']]
-                if abs((product_x_mrp - product_y_mrp)/product_x_mrp) <= 0.3 or abs((product_x_mrp - product_y_mrp)/product_y_mrp) <= 0.3:
+                if abs((product_x_mrp - product_y_mrp)/product_x_mrp) <= 0.1 and product_in_stock.get(row['product_id_y'], False):
                     simple_similar_products_mrp_cons_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
+                if abs((product_y_mrp - product_x_mrp)/product_y_mrp) <= 0.1 and product_in_stock.get(row['product_id_x'], False):
                     simple_similar_products_mrp_cons_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
 
     parent_2_children = defaultdict(lambda: [])
@@ -271,20 +277,42 @@ def compute_cav(env, platform, files, desktop):
     product_ids_updated = []
     for product_id in simple_similar_products_mrp_cons_dict:
         product_ids_updated.append(product_id)
+        _simple_similar_products = list(map(lambda e: int(e[0]), sorted(simple_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
         simple_similar_products = list(map(lambda e: e[0], sorted(simple_similar_products_mrp_cons_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
+        simple_similar_products = simple_similar_products[:2] + [p for p in _simple_similar_products if p not in simple_similar_products[:2]]
         if desktop:
-            rows.append((platform, product_id, 'product', 'viewed', 'coccurence_simple_mrp_cons_desktop', str(simple_similar_products)))
+            rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
         else:
-            rows.append((platform, product_id, 'product', 'viewed', 'coccurence_simple_mrp_cons', str(simple_similar_products)))
+            rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
         variants = parent_2_children.get(product_id, [])
         for variant in variants:
             product_ids_updated.append(variant)
             if desktop:
-                rows.append((platform, variant, 'product', 'viewed', 'coccurence_simple_mrp_cons_desktop', str(simple_similar_products)))
+                rows.append((platform, variant, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
             else:
-                rows.append((platform, variant, 'product', 'viewed', 'coccurence_simple_mrp_cons', str(simple_similar_products)))
+                rows.append((platform, variant, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
 
-    print('Adding recommendations for %d products with algo=coccurence_simple_mrp_cons in DB' % len(set(product_ids_updated)))
+    print('Adding recommendations for %d products with algo=premium_cs in DB' % len(set(product_ids_updated)))
+
+    product_ids_updated = []
+    for product_id in simple_similar_products_mrp_cons_dict:
+        product_ids_updated.append(product_id)
+        _simple_similar_products = list(map(lambda e: int(e[0]), sorted(simple_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
+        simple_similar_products = list(map(lambda e: e[0], sorted(simple_similar_products_mrp_cons_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
+        simple_similar_products = simple_similar_products[:4] + [p for p in _simple_similar_products if p not in simple_similar_products[:4]]
+        if desktop:
+            rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
+        else:
+            rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
+        variants = parent_2_children.get(product_id, [])
+        for variant in variants:
+            product_ids_updated.append(variant)
+            if desktop:
+                rows.append((platform, variant, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
+            else:
+                rows.append((platform, variant, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
+
+    print('Adding recommendations for %d products with algo=premium_cs in DB' % len(set(product_ids_updated)))
 
     RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
 
