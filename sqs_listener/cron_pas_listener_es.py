@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
+from nykaa.settings import *
 import argparse
 
 import subprocess
@@ -13,11 +14,11 @@ import queue
 import threading
 import traceback
 import json
-
+import socket
 total = 0
 CHUNK_SIZE = 200
 NUMBER_OF_THREADS = 4
-
+hostname = socket.gethostname()
 def synchronized(func):
     func.__lock__ = threading.Lock()
 
@@ -129,12 +130,7 @@ class ScheduledPriceUpdater:
         
         # Create SQS client
         sqs = boto3.client('sqs')
-        
-        #queue_url = 'https://sqs.ap-southeast-1.amazonaws.com/579953726837/myqueue.fifo '
-        queue_url = 'https://sqs.ap-southeast-1.amazonaws.com/911609873560/gludo_api.fifo'
-
-       # queue_url = 'https://sqs.ap-southeast-1.amazonaws.com/579953726837/myqueue.fifo '
-        
+        queue_url = DISCOVERY_SQS_ENDPOINT
         # Receive message from SQS queue
         while True:
           response = sqs.receive_message(
