@@ -58,20 +58,8 @@ COLD_START_DECAY_FACTOR_NEW = 0.99
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
-PRODUCT_PUNISH_LIST = [303813,262768,262770,262769]
-PRODUCT_POPULARITY_OVERRIDES =  { "417918": 60,
-                                  "417919": 56,
-                                  "417921": 55,
-                                  "417926": 54,
-                                  "417920": 52,
-                                  "417925": 51,
-                                  "417923": 49,
-                                  "417922": 48,
-                                  "417928": 45,
-                                  "417924": 43,
-                                  "37894":  40,
-                                  "417927": 40
-                                }
+PRODUCT_PUNISH_LIST = []
+PRODUCT_POPULARITY_OVERRIDES =  { "37894":  40 }
 
 client = MongoUtils.getClient()
 raw_data = client['search']['raw_data']
@@ -455,7 +443,7 @@ def applyBoost(df):
       row['popularity'] = row['popularity'] * PRODUCT_PUNISH_FACTOR
       row['popularity_new'] = row['popularity_new'] * PRODUCT_PUNISH_FACTOR_NEW
     return row
-  temp_df = temp_df.apply(punish_products_by_id, axis=1)
+  # temp_df = temp_df.apply(punish_products_by_id, axis=1)
 
   temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
   temp_df = temp_df.astype({'parent_id' : str})

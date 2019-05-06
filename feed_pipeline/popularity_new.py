@@ -46,7 +46,7 @@ COLD_START_DECAY_FACTOR_NEW = 0.99
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
-PRODUCT_PUNISH_LIST = [303813,262768,262770,262769]
+PRODUCT_PUNISH_LIST = []
     
 
 def get_product_validity():
@@ -342,7 +342,7 @@ def applyBoost(df):
       row['popularity'] = row['popularity'] * PRODUCT_PUNISH_FACTOR
       row['popularity_new'] = row['popularity_new'] * PRODUCT_PUNISH_FACTOR_NEW
     return row
-  temp_df = temp_df.apply(punish_products_by_id, axis=1)
+  # temp_df = temp_df.apply(punish_products_by_id, axis=1)
   temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
   temp_df = temp_df.astype({'id': str})
 
