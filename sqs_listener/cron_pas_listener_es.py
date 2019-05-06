@@ -14,11 +14,9 @@ import queue
 import threading
 import traceback
 import json
-import socket
 total = 0
 CHUNK_SIZE = 200
 NUMBER_OF_THREADS = 4
-hostname = socket.gethostname()
 def synchronized(func):
     func.__lock__ = threading.Lock()
 
