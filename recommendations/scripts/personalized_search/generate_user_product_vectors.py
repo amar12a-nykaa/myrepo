@@ -265,7 +265,7 @@ if __name__ == '__main__':
     limit = argv.get('limit', -1)
 
     if argv['add_vectors_from_mysql_to_es']:
-        docs = get_vectors_from_mysql_for_es(Utils.mlMysqlConnection(env), algo)
+        docs = get_vectors_from_mysql_for_es(DiscUtils.mlMysqlConnection(env), algo)
         for i in range(0, len(docs), 1000):
             DiscUtils.updateESCatalog(docs[i:i+1000])
         exit()
@@ -322,7 +322,7 @@ if __name__ == '__main__':
             rows.append((product_id, 'product', algo, json.dumps(vector)))
 
         print('Total number of rows to be added to DB: %s' % len(rows))
-        add_embedding_vectors_in_mysql(Utils.mlMysqlConnection(env), 'embedding_vectors', rows)
+        add_embedding_vectors_in_mysql(DiscUtils.mlMysqlConnection(env), 'embedding_vectors', rows)
 
     if add_in_es:
         print("Adding results in ES")

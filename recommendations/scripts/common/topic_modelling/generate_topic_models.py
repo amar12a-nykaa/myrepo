@@ -160,7 +160,7 @@ def prepare_orders_dataframe(env, start_datetime, with_children, limit):
     customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL %s %s" % (" AND order_date >= '%s' " % start_datetime if start_datetime else "", " limit %d" % limit if limit else "")
     print(customer_orders_query)
     print('Fetching Data from Redshift')
-    rows = DiscUtils.fetchResultsInBatch(Utils.redshiftConnection(env), customer_orders_query, 10000)
+    rows = DiscUtils.fetchResultsInBatch(DiscUtils.redshiftConnection(env), customer_orders_query, 10000)
     print('Data fetched')
     schema = StructType([
             StructField("order_id", StringType(), True),

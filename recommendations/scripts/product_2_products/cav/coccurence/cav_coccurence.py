@@ -286,7 +286,7 @@ def compute_cav(env, platform, files, desktop):
 
     print('Adding recommendations for %d products with algo=coccurence_simple_mrp_cons in DB' % len(set(product_ids_updated)))
 
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
+    RecommendationsUtils.add_recommendations_in_mysql(DiscUtils.mysqlConnection(env), 'recommendations_v2', rows)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for CAV script')

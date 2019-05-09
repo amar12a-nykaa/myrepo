@@ -24,7 +24,7 @@ def insert_recommendations_2_db(recommendation_rows):
     insert_recommendations_query = """ INSERT INTO recommendations_v2(entity_id, entity_type, recommendation_type, algo, recommended_products_json)
             VALUES %s ON DUPLICATE KEY UPDATE recommended_products_json=VALUES(recommended_products_json)
     """ % values_str
-    Utils.mysql_write(insert_recommendations_query, values, Utils.mysqlConnection('w'))
+    DiscUtils.mysql_write(insert_recommendations_query, values, DiscUtils.mysqlConnection('w'))
 
 def compute_recommendation_rows(customer_ids, entity_type, recommendation_type, algo, recommendations_generation_time, customer_2_product_chunks, recommendation_rows, product_2_recommendations, customer_2_orders, order_2_products):
     for customer_id in customer_ids:
@@ -41,14 +41,14 @@ def process_orders_df(start_datetime=None, customer_id=None):
             query = "SELECT fact_order_new.order_customerid, fact_order_new.nykaa_orderno, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_customerid IS NOT NULL ORDER BY order_date DESC"
 
     print(query)
-    rows = Utils.fetchResultsInBatch(Utils.redshiftConnection(), query, 10000)
+    rows = DiscUtils.fetchResultsInBatch(DiscUtils.redshiftConnection(), query, 10000)
     if not rows:
         print("No orders to process")
         return
     df = pd.DataFrame(rows)
     df.columns = ['customer_id', 'order_id', 'product_id', 'sku']
 
-    scroll_results = Utils.scrollESForResults()
+    scroll_results = DiscUtils.scrollESForResults()
     sku_2_product_id = scroll_results['sku_2_product_id']
     child_2_parent = scroll_results['child_2_parent']
 
@@ -86,7 +86,7 @@ def process_orders_df(start_datetime=None, customer_id=None):
     recommendation_rows = []
     for algo in ['coccurence_direct']:
         query = "SELECT entity_id, recommended_products_json FROM recommendations_v2 WHERE entity_type='product' AND recommendation_type='bought' AND algo='%s'" % algo
-        rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 10000)
+        rows = DiscUtils.fetchResultsInBatch(DiscUtils.mysqlConnection(), query, 10000)
         
         product_2_recommendations = {}
         for row in rows:
@@ -98,7 +98,7 @@ def process_orders_df(start_datetime=None, customer_id=None):
         Parallel(n_jobs=20, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(compute_recommendation_rows)(customer_ids_chunk, 'user', 'bought', algo, str(recommendations_generation_time), customer_2_product_chunks, recommendation_rows, product_2_recommendations, customer_2_orders, order_2_products) for customer_ids_chunk in customer_ids_chunks)
 
     print("Total Recommendation rows: %d" % len(recommendation_rows))
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection('w'), 'recommendations_v2', recommendation_rows)
+    RecommendationsUtils.add_recommendations_in_mysql(DiscUtils.mysqlConnection('w'), 'recommendations_v2', recommendation_rows)
     print(str(datetime.now()))
 
 
