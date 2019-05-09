@@ -11,7 +11,9 @@ import re
 from datetime import datetime, timedelta
 sys.path.append("/nykaa/api")
 from pipelineUtils import PipelineUtils
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
 
 quantile_lower_limit = .25

@@ -7,7 +7,9 @@ import psutil
 import argparse
 import operator
 sys.path.append("/home/shweta/nykaa/fresh_nykaa_apis/")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 import pydevd
 # Debug mode is activated when a product_id is passed as an argument to the script
 # Debug info for that product would be printed in console

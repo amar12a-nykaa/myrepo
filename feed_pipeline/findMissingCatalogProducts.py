@@ -1,7 +1,9 @@
 raise Exception("Assumption is that this file is not being used anymore - Mayank")
 import sys
 sys.path.append('/home/apis/pds_api/')
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 BATCH_SIZE = 20
 

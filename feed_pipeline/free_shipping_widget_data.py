@@ -4,7 +4,9 @@ import argparse
 from datetime import datetime, timedelta
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 sys.path.append("/home/ubuntu/nykaa_scripts/utils/")
 sys.path.append("/home/ubuntu/nykaa_scripts/sharedutils/")

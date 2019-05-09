@@ -6,7 +6,9 @@ import requests
 import urllib.parse
 import urllib.request
 from pipelineUtils import PipelineUtils
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 def getDataFromDb(skus):
     # mysql_conn = Utils.mysqlConnection('r')

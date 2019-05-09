@@ -5,7 +5,9 @@ import sys
 import pymongo
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from pipelineUtils import PipelineUtils
