@@ -31,7 +31,10 @@ from idutils import createId
 from categoryutils import getVariants
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils, MemcacheUtils
+from pas.v2.utils import MemcacheUtils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 ensure_mongo_indices_now()

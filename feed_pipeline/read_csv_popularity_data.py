@@ -18,7 +18,9 @@ from mongoutils import MongoUtils
 from loopcounter import LoopCounter
 
 sys.path.append('/home/apis/pds_api/')
-from pas.v2.utils import Utils, MemcacheUtils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 def valid_date(s):
   try:

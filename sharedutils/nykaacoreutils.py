@@ -15,7 +15,7 @@ from loopcounter import LoopCounter
 sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
-from disc.v2.utils import Utils as DiscUtils, MemcacheUtils
+from disc.v2.utils import Utils as DiscUtils
 
 __all__ = ['create_product_id_index']
 
