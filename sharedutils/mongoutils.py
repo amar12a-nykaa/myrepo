@@ -1,6 +1,8 @@
-from pymongo import MongoClient
+import sys 
+
 import socket 
 from IPython  import embed
+from pymongo import MongoClient
 
 hostname = socket.gethostname()
 if hostname.startswith('admin') or hostname.startswith('api'):

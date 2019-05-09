@@ -16,7 +16,11 @@ import mysql.connector
 import numpy
 import omniture
 import pandas as pd
-from pymongo import MongoClient
+
+
+
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 
 sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils as PasUtils

@@ -20,10 +20,10 @@ import pymongo
 import requests
 from furl import furl
 from IPython import embed
-from pymongo import MongoClient
 from stemming.porter2 import stem
 
 sys.path.append('/nykaa/scripts/sharedutils/')
+from mongoutils import MongoUtils
 from loopcounter import LoopCounter
 from esutils import EsUtils
 from apiutils import ApiUtils

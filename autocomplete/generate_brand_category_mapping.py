@@ -9,7 +9,6 @@ import traceback
 
 from IPython import embed
 from collections import defaultdict
-from pymongo import MongoClient 
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
@@ -17,6 +16,7 @@ from pas.v2.utils import Utils
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
 from idutils import strip_accents
+from mongoutils import MongoUtils
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 ensure_mongo_indices_now()

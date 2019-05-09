@@ -28,7 +28,9 @@ import dateutil.relativedelta
 import datetime as dt
 
 sys.path.append('/home/apis/nykaa/')
-sys.path.append('/nykaa/scripts/sharedutils/')
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
 sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
 
 from loopcounter import LoopCounter

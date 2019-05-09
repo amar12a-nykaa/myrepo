@@ -6,14 +6,16 @@ import socket
 
 import arrow
 from IPython import embed
-from pymongo import MongoClient
+
 import sys
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
+
 
 host = socket.gethostname()
 

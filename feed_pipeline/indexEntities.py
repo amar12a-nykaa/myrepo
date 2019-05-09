@@ -18,7 +18,7 @@ import os
 import requests
 from furl import furl
 from IPython import embed
-from pymongo import MongoClient
+
 from stemming.porter2 import stem
 
 sys.path.append('/nykaa/scripts/sharedutils/')

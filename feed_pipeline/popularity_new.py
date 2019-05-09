@@ -8,6 +8,7 @@ sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
 sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 from loopcounter import LoopCounter
 
 client = MongoUtils.getClient()

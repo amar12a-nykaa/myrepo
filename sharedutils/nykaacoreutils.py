@@ -6,7 +6,7 @@ import argparse
 import sys
 import arrow
 import csv
-from pymongo import MongoClient
+
 from IPython import embed
 
 sys.path.append("/nykaa/scripts/sharedutils")

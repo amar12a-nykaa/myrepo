@@ -1,6 +1,9 @@
 import sys
-from pymongo import MongoClient
+
 from IPython import embed
+
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils

@@ -19,14 +19,13 @@ from IPython import embed
 from collections import OrderedDict
 from contextlib import closing
 from datetime import date, timedelta
-from pymongo import MongoClient
 
 import arrow
 import mysql.connector
 import numpy
 import omniture
 import pandas as pd
-from pymongo import MongoClient, UpdateOne
+from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError
 from stemming.porter2 import stem
 
@@ -39,6 +38,8 @@ from pas.v2.utils import Utils
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 from cliutils import CliUtils
+from mongoutils import MongoUtils
+
 
 DAILY_COUNT_THRESHOLD = 2 
 

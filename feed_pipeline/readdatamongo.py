@@ -1,4 +1,4 @@
-from pymongo import MongoClient
+
 from pprint import pprint
 import json
 import string
@@ -13,6 +13,8 @@ import urllib.request
 from bson import json_util
 
 sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
 
 sys.path.append('/nykaa/api')
 

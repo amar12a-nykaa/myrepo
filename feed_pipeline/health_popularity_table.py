@@ -11,6 +11,10 @@ import requests
 from IPython import embed
 from elasticsearch import helpers, Elasticsearch
 
+
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
 client = MongoUtils.getClient()

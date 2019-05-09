@@ -19,13 +19,14 @@ import numpy
 import omniture
 import pandas as pd
 from pandas.io import sql
-from pymongo import MongoClient
+
 from popularity_new import calculate_new_popularity
 from pipelineUtils import PipelineUtils
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
 sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 from loopcounter import LoopCounter
 
 sys.path.append("/nykaa/scripts/feed_pipeline")

@@ -6,6 +6,10 @@ import sys
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import Utils
 
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
+
 client = MongoUtils.getClient()
 raw_data = client['search']['raw_data']
 product_history_table = client['search']['product_history']

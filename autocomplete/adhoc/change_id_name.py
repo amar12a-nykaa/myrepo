@@ -1,6 +1,6 @@
 import pprint
 import time
-from pymongo import MongoClient 
+ 
 import sys
 
 sys.path.append("/nykaa/api")
@@ -8,6 +8,8 @@ from pas.v2.utils import Utils
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
+from mongoutils import MongoUtils
+
 def create_product_id_index():
   start = time.time()
   product_id_index = {}

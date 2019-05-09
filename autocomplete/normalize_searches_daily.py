@@ -17,11 +17,16 @@ import omniture
 import pandas as pd
 import pymongo
 from IPython import embed
-from pymongo import MongoClient, UpdateOne
+from pymongo import UpdateOne
 from stemming.porter2 import stem
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
+
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
+
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 

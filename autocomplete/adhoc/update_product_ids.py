@@ -7,7 +7,6 @@ import sys
 import traceback
 from collections import OrderedDict
 from IPython import embed
-from pymongo import MongoClient
 from datetime import datetime
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -22,6 +21,8 @@ from pas.v2.utils import Utils
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
+from mongoutils import MongoUtils
+
 
 
 client = MongoUtils.getClient()

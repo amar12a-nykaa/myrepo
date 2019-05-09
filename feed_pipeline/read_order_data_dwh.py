@@ -5,6 +5,8 @@ import datetime
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
+from mongoutils import MongoUtils
+
 
 sys.path.append('/nykaa/api')
 from pas.v2.utils import Utils
