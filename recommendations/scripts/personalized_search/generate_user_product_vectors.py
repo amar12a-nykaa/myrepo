@@ -25,7 +25,9 @@ from elasticsearch import helpers, Elasticsearch
 import sys
 
 #test.print_cool()
-#from pas.v2.utils import Utils
+#from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 #sys.path.append("/home/ubuntu/nykaa_scripts/utils")
 #from gensimutils import GensimUtils
 class S3Utils:

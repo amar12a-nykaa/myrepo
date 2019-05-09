@@ -2,7 +2,9 @@ import pandas as pd
 import gc
 import sys
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 df = pd.read_csv('order_customer_data_with_archived.csv')
 products_df = df.filter(['product_id', 'product_name'])

@@ -4,7 +4,9 @@ import sys
 import argparse
 import json
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 import boto3
 
 pasdb = Utils.mysqlConnection()

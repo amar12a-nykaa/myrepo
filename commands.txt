@@ -1,0 +1,14 @@
+Command to run jupyter
+
+cd /home/ubuntu/nykaa_scripts/; nohup jupyter notebook 2>&1 > /tmp/jupyter_server.log &
+
+
+elasticdump   --input=http://priceapi-es-mirroring.nykaa-internal.com/yin   --output=/tmp/data.json   --type=data
+aws --profile datapipeline s3 cp /tmp/data.json  "s3://nykaadp-feeds/esdump/data.json"
+aws --profile datapipeline s3 cp "s3://nykaadp-feeds/esdump/data.json" /tmp/data.json
+elasticdump  --input /tmp/data.json --output=http://search-qa-api4-rrrhowwilvypwyfn7qgsih2aku.ap-southeast-1.es.amazonaws.com/yang
+
+find . -not -path '*/\.git*' -type f -exec sed -i 's/MONGO_CLIENT.*$//g' {} +
+find . -not -path '*/\.git*' -type f -exec sed -i "s:sys.path.append('/home/apis/nykaa/'):sys.path.append('/home/apis/pds_api/'):g" {} +
+
+find . -not -path '*/\.git*' -type f -exec sed -i -E 's/from pas.v2.utils import Utils$/from pas.v2.utils import Utils as PasUtils\nsys.path.append("\/home\/apis\/discovery_api")\nfrom disc.v2.utils import Utils as DiscUtils/g' {} +

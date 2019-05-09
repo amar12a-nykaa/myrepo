@@ -19,13 +19,16 @@ import numpy
 import omniture
 import pandas as pd
 from pandas.io import sql
-from pymongo import MongoClient
+
 from popularity_new import calculate_new_popularity
 from pipelineUtils import PipelineUtils
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 from loopcounter import LoopCounter
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
@@ -72,7 +75,7 @@ PRODUCT_POPULARITY_OVERRIDES =  { "417918": 60,
                                   "417927": 40
                                 }
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']

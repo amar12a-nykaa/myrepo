@@ -11,9 +11,10 @@ import requests
 from IPython import embed
 from elasticsearch import helpers, Elasticsearch
 
-sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
-
+sys.path.append('/home/apis/pds_api/')
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 index_alias_config = {
   "livecore": # This must be changed to 'catalog' 

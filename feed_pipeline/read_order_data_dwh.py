@@ -5,11 +5,15 @@ import datetime
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
+from mongoutils import MongoUtils
+
 
 sys.path.append('/nykaa/api')
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 
 def ensure_mongo_index():
   collection = 'order_data'

@@ -27,13 +27,17 @@ from dateutil import tz
 import dateutil.relativedelta
 import datetime as dt
 
-sys.path.append('/home/apis/nykaa/')
-sys.path.append('/nykaa/scripts/sharedutils/')
+sys.path.append('/home/apis/pds_api/')
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
 sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
 
 from loopcounter import LoopCounter
 from pas.v2.csvutils import read_csv_from_file
-from pas.v2.utils import CATALOG_COLLECTION_ALIAS, Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
 from esutils import EsUtils
@@ -43,7 +47,7 @@ NUMBER_OF_THREADS = 20
 RECORD_GROUP_SIZE = 100
 APPLIANCE_MAIN_CATEGORY_ID = "1390"
 
-conn = Utils.mysqlConnection()
+conn = DiscUtils.mysqlConnection()
 
 total = 0
 def synchronized(func):
@@ -95,7 +99,7 @@ class Worker(threading.Thread):
         while True:
             try:
                 rows = self.q.get(timeout=3)  # 3s timeout
-                client = Utils.mongoClient()
+                client = MongoUtils.getClient()
                 product_history_table = client['search']['product_history']
                 product_history = {}
                 product_ids=[]
@@ -292,18 +296,18 @@ class CatalogIndexer:
 
     def getCategoryFacetAttributesMap():
         cat_facet_attrs = {}
-        mysql_conn = Utils.nykaaMysqlConnection()
+        mysql_conn = DiscUtils.nykaaMysqlConnection()
         query = "SELECT * FROM nk_categories"
-        results = Utils.fetchResults(mysql_conn, query)
+        results = DiscUtils.fetchResults(mysql_conn, query)
         for result in results:
             cat_facet_attrs[str(result['category_id'])] = result
 
         return cat_facet_attrs
 
     def getOffersApiConfig():
-        mysql_conn = Utils.nykaaMysqlConnection()
+        mysql_conn = DiscUtils.nykaaMysqlConnection()
         query = "SELECT plain_value FROM core_variable_value cvv JOIN core_variable cv ON cv.variable_id = cvv.variable_id WHERE code = 'offers-api-config';"
-        results = Utils.fetchResults(mysql_conn, query)
+        results = DiscUtils.fetchResults(mysql_conn, query)
         offers_api_config = None
         for key, config_value in enumerate(results):
             if config_value['plain_value']:
@@ -312,9 +316,9 @@ class CatalogIndexer:
         return offers_api_config
 
     def getSizeFilterConfig():
-        mysql_conn = Utils.nykaaMysqlConnection()
+        mysql_conn = DiscUtils.nykaaMysqlConnection()
         query  = "SELECT plain_value FROM core_variable_value WHERE variable_id = (SELECT variable_id FROM core_variable WHERE CODE = 'enable_disable_flags')"
-        result = Utils.fetchResults(mysql_conn, query)
+        result = DiscUtils.fetchResults(mysql_conn, query)
         config = None
         for key, config_value in enumerate(result):
             if config_value['plain_value']:
@@ -407,7 +411,7 @@ class CatalogIndexer:
 
     def indexES(docs, index):
         if not index:
-            indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+            indexes = EsUtils.get_active_inactive_indexes("livecore")
             index = indexes['active_index']
         EsUtils.indexDocs(docs, index)
 
@@ -553,7 +557,7 @@ class CatalogIndexer:
                         if set_clause_arr:
                             set_clause = " set " + ", ".join(set_clause_arr)
                             query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause, sku=doc['sku'])
-                            Utils.mysql_write(query)
+                            DiscUtils.mysql_write(query)
                 except:
                     print(traceback.format_exc())
                     print("[ERROR] Failed to update product_id and parent_id for sku: %s" % doc['sku'])
@@ -1022,12 +1026,12 @@ class CatalogIndexer:
         #product_2_vector_lsi_200 = {}
         #product_2_vector_lsi_300 = {}
         print("Fetching embedding vectors for products")
-        index_check_results = Utils.fetchResults(Utils.mlMysqlConnection('r'), 'SHOW INDEXES FROM embedding_vectors')
+        index_check_results = DiscUtils.fetchResults(DiscUtils.mlMysqlConnection('r'), 'SHOW INDEXES FROM embedding_vectors')
         if len(list(filter(lambda x: x['Key_name'] == 'embedding_vector_scroll', index_check_results))) == 0:
             raise Exception('Index embedding_vector_scroll is not present in ml db')
-        product_2_vector_lsi_100 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es(Utils.mlMysqlConnection('r'), 'lsi_100', False)}
-        product_2_vector_lsi_200 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es(Utils.mlMysqlConnection('r'), 'lsi_200', False)}
-        product_2_vector_lsi_300 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es(Utils.mlMysqlConnection('r'), 'lsi_300', False)}
+        product_2_vector_lsi_100 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es(DiscUtils.mlMysqlConnection('r'), 'lsi_100', False)}
+        product_2_vector_lsi_200 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es(DiscUtils.mlMysqlConnection('r'), 'lsi_200', False)}
+        product_2_vector_lsi_300 = {doc['product_id']: doc for doc in get_vectors_from_mysql_for_es(DiscUtils.mlMysqlConnection('r'), 'lsi_300', False)}
 
         ctr = LoopCounter(name='Indexing %s' % search_engine, total=len(all_rows))
         q = queue.Queue(maxsize=0)

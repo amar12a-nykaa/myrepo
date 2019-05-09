@@ -1,12 +1,14 @@
 import sys
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 import argparse
 import json
 import requests
 import urllib.parse
 import urllib.request
 from pipelineUtils import PipelineUtils
-from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 def getDataFromDb(skus):
     # mysql_conn = Utils.mysqlConnection('r')

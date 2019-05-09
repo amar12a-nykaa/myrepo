@@ -11,9 +11,15 @@ import requests
 from IPython import embed
 from elasticsearch import helpers, Elasticsearch
 
-sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
-client = Utils.mongoClient()
+
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
+sys.path.append('/home/apis/pds_api/')
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
+client = MongoUtils.getClient()
 popularity_table = client['search']['popularity']
 
 count =0 

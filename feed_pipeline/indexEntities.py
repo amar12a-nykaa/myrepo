@@ -18,7 +18,7 @@ import os
 import requests
 from furl import furl
 from IPython import embed
-from pymongo import MongoClient
+
 from stemming.porter2 import stem
 
 sys.path.append('/nykaa/scripts/sharedutils/')
@@ -28,7 +28,9 @@ from idutils import createId
 from categoryutils import getVariants
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 filter_attribute_map = [("656","concern"), ("661","preference"), ("659","formulation"), ("664","finish"), ("658","color")]
 FILTER_WEIGHT = 50

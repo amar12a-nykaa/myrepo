@@ -8,16 +8,19 @@ import argparse
 import sys
 import arrow
 import csv
-from pymongo import MongoClient
+
 from IPython import embed
 
 import boto3
 
 sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 from loopcounter import LoopCounter
 
-sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import Utils, MemcacheUtils
+sys.path.append('/home/apis/pds_api/')
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 def valid_date(s):
   try:
@@ -109,7 +112,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
 
   assert platform in ['app', 'web']
 
-  client = Utils.mongoClient()
+  client = MongoUtils.getClient()
   raw_data = client['search']['raw_data']
 
 

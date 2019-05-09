@@ -1,4 +1,4 @@
-from pymongo import MongoClient
+
 from pprint import pprint
 import json
 import string
@@ -13,12 +13,16 @@ import urllib.request
 from bson import json_util
 
 sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
 
 sys.path.append('/nykaa/api')
 
-from pas.v2.utils import Utils, MemcacheUtils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 data = client['local']['feed3']
 
 

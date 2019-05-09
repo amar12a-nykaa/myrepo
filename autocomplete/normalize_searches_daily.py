@@ -17,11 +17,18 @@ import omniture
 import pandas as pd
 import pymongo
 from IPython import embed
-from pymongo import MongoClient, UpdateOne
+from pymongo import UpdateOne
 from stemming.porter2 import stem
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
+
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
+
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 
@@ -31,7 +38,7 @@ ps = PorterStemmer()
 
 DAILY_THRESHOLD = 3
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
 corrected_search_query = client['search']['corrected_search_query']

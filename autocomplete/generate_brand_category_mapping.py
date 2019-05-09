@@ -9,14 +9,16 @@ import traceback
 
 from IPython import embed
 from collections import defaultdict
-from pymongo import MongoClient 
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
 from idutils import strip_accents
+from mongoutils import MongoUtils
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 ensure_mongo_indices_now()
@@ -45,7 +47,7 @@ BLACKLISTED_FACETS = ['old_brand_facet', ]
 POPULARITY_THRESHOLD = 0.1
 
 def build_product_popularity_index():
-  client = Utils.mongoClient()
+  client = MongoUtils.getClient()
   global popularity_index
   popularity_table = client['search']['popularity']
   #max_popularity = popularity_table.aggregate([{"$group":{ "_id": "max", "max":{"$max": "$popularity"}}}])

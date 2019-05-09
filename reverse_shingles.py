@@ -21,24 +21,27 @@ import pymongo
 import requests
 from furl import furl
 from IPython import embed
-from pymongo import MongoClient
+
 from stemming.porter2 import stem
 from elasticsearch import helpers, Elasticsearch
 
 sys.path.append('/nykaa/scripts/sharedutils/')
+from mongoutils import MongoUtils
 from loopcounter import LoopCounter
 from esutils import EsUtils
 from apiutils import ApiUtils
 from idutils import createId
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils, MemcacheUtils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 
 collection='autocomplete'
-search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']
-query_product_map_table = Utils.mongoClient()['search']['query_product_map']
-query_product_not_found_table = Utils.mongoClient()['search']['query_product_not_found']
+search_terms_normalized_daily = MongoUtils.getClient()['search']['search_terms_normalized_daily']
+query_product_map_table = MongoUtils.getClient()['search']['query_product_map']
+query_product_not_found_table = MongoUtils.getClient()['search']['query_product_not_found']
 top_queries = []
 es = Utils.esConn()
 es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']

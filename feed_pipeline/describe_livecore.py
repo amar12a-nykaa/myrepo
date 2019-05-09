@@ -9,7 +9,9 @@ from loopcounter import LoopCounter
 from esutils import EsUtils
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils, MemcacheUtils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 es = Utils.esConn()
 active_index = es.cat.aliases("livecore", format="json")[0]['index']
