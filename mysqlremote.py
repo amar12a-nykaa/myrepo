@@ -13,7 +13,7 @@ from machines import machines
 
 DUUMPFILE = "/tmp/sqldump.sql"
 conn_details = {}
-conn = Utils.mysqlConnection(mode='w', connection_details = conn_details)
+conn = PasUtils.mysqlConnection(mode='w', connection_details = conn_details)
 parser = argparse.ArgumentParser()
 parser.add_argument("unnamed", nargs="*")
 group = parser.add_mutually_exclusive_group(required=True)

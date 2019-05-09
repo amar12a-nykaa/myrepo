@@ -101,8 +101,8 @@ def indexESData(file_path, force_run):
 
     # Verify correctness of indexing by comparing total number of documents in both active and inactive collections
     body = {"query": {"match_all": {}}, "size": 0}
-    num_docs_active = Utils.makeESRequest(body, active_index)['hits']['total']
-    num_docs_inactive = Utils.makeESRequest(body, inactive_index)['hits']['total']
+    num_docs_active = DiscUtils.makeESRequest(body, active_index)['hits']['total']
+    num_docs_inactive = DiscUtils.makeESRequest(body, inactive_index)['hits']['total']
     print('ES Number of documents in active index(%s): %s' % (active_index, num_docs_active))
     print('ES Number of documents in inactive index(%s): %s' % (inactive_index, num_docs_inactive))
 

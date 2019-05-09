@@ -30,8 +30,8 @@ from mongoutils import MongoUtils
 client = MongoUtils.getClient()
 master_feed= client['feed_pipeline']['master_feed']
 
-conn =  Utils.mysqlConnection()
-conn_nykaa =  Utils.nykaaMysqlConnection()
+conn =  PasUtils.mysqlConnection()
+conn_nykaa =  PasUtils.nykaaMysqlConnection()
 #embed()
 
 ctr = LoopCounter(name='Updating product_id and parent_id', total=master_feed.count())
@@ -51,7 +51,7 @@ for doc in master_feed.find({}, {"product_id": 1, "parent_id": 1, "sku": 1}).lim
 			set_clause = " set " + ", ".join(set_clause_arr)
 			query = "update products {set_clause} where sku ='{sku}' ".format(set_clause=set_clause, sku=doc['sku'])
 			#print(query)
-			Utils.mysql_write(query, connection=conn)
+			PasUtils.mysql_write(query, connection=conn)
 	except:
 		print(traceback.format_exc())
 

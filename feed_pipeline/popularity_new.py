@@ -54,7 +54,7 @@ def get_product_validity():
 
   query = """select product_id, parent_id, is_in_stock, mrp, disabled
                 from products"""
-  mysql_conn = Utils.mysqlConnection()
+  mysql_conn = PasUtils.mysqlConnection()
   data = pd.read_sql(query, con=mysql_conn)
   mysql_conn.close()
   data.mrp = data.mrp.fillna(0)
@@ -74,7 +74,7 @@ def create_child_parent_map():
               JOIN catalog_product_entity_int cpei ON cpei.entity_id = cpsl.parent_id
               WHERE e.type_id = 'simple' and cpei.attribute_id = 80 AND cpei.value = 1
               GROUP BY cpsl.product_id;"""
-  nykaa_conn = Utils.nykaaMysqlConnection()
+  nykaa_conn = PasUtils.nykaaMysqlConnection()
   child_parent_map = pd.read_sql(query, con=nykaa_conn)
   child_parent_map = child_parent_map.astype({'parent_id': str, 'product_id': str})
   print(child_parent_map.columns)
@@ -313,7 +313,7 @@ def calculate_new_popularity():
 def applyBoost(df):
   query = """select product_id, sku_type, brand_code, mrp, l3_id from dim_sku"""
   print(query)
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   product_attr = pd.read_sql(query, con=redshift_conn)
   redshift_conn.close()
 
@@ -360,7 +360,7 @@ def handleColdStart(df):
   temp_df = temp_df.astype({'id': int, 'popularity': float, 'popularity_new': float})
 
   query = """select product_id, l3_id from product_category_mapping"""
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   product_category_mapping = pd.read_sql(query, con=redshift_conn)
 
   product_data = pd.merge(temp_df, product_category_mapping, left_on=['id'], right_on=['product_id'])

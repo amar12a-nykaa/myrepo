@@ -6,9 +6,9 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 sys.path.append('/home/apis/pds_api/')
-from pas.v2.utils import DiscUtils as PasUtils
+from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
-from disc.v2.utils import DiscUtils as DiscUtils
+from disc.v2.utils import Utils as DiscUtils
 from pas.v2.utils import MemcacheUtils
 #from pas.v2.models import Product
 from IPython import embed 

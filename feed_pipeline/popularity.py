@@ -89,7 +89,7 @@ def build_product_sales_map(startdate='2018-04-01'):
   where_clause = "orderdetail_dt_created >='{0}'".format(startdate)
   query =  """select product_id, sum(OrderDetail_QTY) as qty_ordered from fact_order_detail_new  where {0}  group by product_id""".format(where_clause)
   print (query)
-  redshift_conn =  Utils.redshiftConnection()
+  redshift_conn =  PasUtils.redshiftConnection()
   cur  =  redshift_conn.cursor()
 
   cur.execute(query)
@@ -104,7 +104,7 @@ def build_parent_child_distribution_map():
               where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 30) and product_id is not null 
               group by 1,2;"""
   print(query)
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   data = pd.read_sql(query,con=redshift_conn)
   parent_data = data.groupby('parent_product_id', as_index=False)['orders'].sum()
   parent_data.rename(columns={'orders': 'total_order'}, inplace=True)
@@ -134,7 +134,7 @@ def valid_date(s):
 def create_product_attribute():
   query = """select product_id, sku_type, brand_code, mrp, l3_id from dim_sku"""
   print(query)
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   product_attribute = pd.read_sql(query, con=redshift_conn)
   return product_attribute
 
@@ -391,8 +391,8 @@ def override_popularity():
 def get_all_the_child_products(parent_id):
   query  = "select distinct(product_id) from catalog_product_super_link where parent_id  = '{0}'".format(parent_id)
 
-  mysql_conn = Utils.nykaaMysqlConnection()
-  data = Utils.mysql_read(query, connection=mysql_conn)
+  mysql_conn = PasUtils.nykaaMysqlConnection()
+  data = PasUtils.mysql_read(query, connection=mysql_conn)
   res  = []
   for row in data:
     res.append(str(row['product_id'] ))
@@ -474,7 +474,7 @@ def handleColdStart(df):
   temp_df.drop(['product_id', 'sku_type', 'mrp', 'l3_id'], axis=1, inplace=True)
 
   query = """select product_id, l3_id from product_category_mapping"""
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   product_category_mapping = pd.read_sql(query, con=redshift_conn)
 
   product_data = pd.merge(temp_df, product_category_mapping, left_on=['parent_id'], right_on=['product_id'])
@@ -497,7 +497,7 @@ def handleColdStart(df):
   result = pd.merge(result, product_popularity, left_on='product_id', right_on='product_id')
 
   query = """select product_id, sku_created from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   product_creation = pd.read_sql(query, con=redshift_conn)
 
   result = pd.merge(result, product_creation, on='product_id')
@@ -536,7 +536,7 @@ def applyOffers(df):
   end_date = start_date + datetime.timedelta(days=1)
   start_date = start_date.strftime('%Y-%m-%d 06:00:00')
   end_date = end_date.strftime('%Y-%m-%d')
-  conn = Utils.nykaaMysqlConnection(force_production=True)
+  conn = PasUtils.nykaaMysqlConnection(force_production=True)
 
   query = """select entity_id as offer_id from nykaa_offers where enabled=1 and app = 1 and start_date < '%s' and end_date > '%s'"""%(end_date, start_date)
   offers = pd.read_sql(query, con=conn)

@@ -12,7 +12,7 @@ def querysolr(skus):
   params['q'] = ' OR '.join(['(sku:'+sku.upper()+')' for sku in skus])
   params['fl'] = 'sku'
 
-  response = Utils.makeSolrRequest(params)
+  response = PasUtils.makeSolrRequest(params)
   docs = response.get("docs", [])
   skus_from_solr = [doc['sku'] for doc in docs]
   for sku in skus:
@@ -23,10 +23,10 @@ def querysolr(skus):
 
 
 # DB handler
-mysql_conn = Utils.mysqlConnection('r')
+mysql_conn = PasUtils.mysqlConnection('r')
 
 query = "SELECT sku FROM products"
-results = Utils.fetchResults(mysql_conn, query)
+results = PasUtils.fetchResults(mysql_conn, query)
 skus_from_db = []
 for product in results:
   skus_from_db.append(product['sku']) 
@@ -37,10 +37,10 @@ if skus_from_db:
   querysolr(skus_from_db)
 
 mysql_conn.close()
-mysql_conn = Utils.mysqlConnection('r')
+mysql_conn = PasUtils.mysqlConnection('r')
 
 query = "SELECT sku FROM bundles"
-results = Utils.fetchResults(mysql_conn, query)
+results = PasUtils.fetchResults(mysql_conn, query)
 skus_from_db = []
 for bundle in results:
   skus_from_db.append(bundle['sku'])

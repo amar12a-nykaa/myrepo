@@ -20,7 +20,7 @@ class NykaaImporter:
 
   def importData():
     # DB handlers for nykaa and pws DBs
-    NykaaImporter.pws_mysql_conn = Utils.mysqlConnection('w')
+    NykaaImporter.pws_mysql_conn = PasUtils.mysqlConnection('w')
     NykaaImporter.pws_cursor = NykaaImporter.pws_mysql_conn.cursor()
 
     NykaaImporter.importAttributes()
@@ -34,9 +34,9 @@ class NykaaImporter:
   def importAttributes():
     # Import attributes
     attr_start = timeit.default_timer()
-    nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+    nykaa_mysql_conn = PasUtils.nykaaMysqlConnection()
     query = "SELECT option_id, value FROM eav_attribute_option_value GROUP BY option_id"
-    results = Utils.fetchResults(nykaa_mysql_conn, query)
+    results = PasUtils.fetchResults(nykaa_mysql_conn, query)
 
     count = 0
     for option in results:
@@ -46,7 +46,7 @@ class NykaaImporter:
       if name and name.strip():
         color_codes = []
         color_query = "SELECT * FROM colorfamily_codes WHERE color_id=%s"
-        color_results = Utils.fetchResults(nykaa_mysql_conn, color_query, (option_id,))
+        color_results = PasUtils.fetchResults(nykaa_mysql_conn, color_query, (option_id,))
         if color_results:
           color_codes = color_results[0]['color_code'].split(',') if color_results[0]['color_code'].strip() else []
 
@@ -81,15 +81,15 @@ class NykaaImporter:
   def importBrandCategoryAttributes():
     cat_imp_start = timeit.default_timer()
     #Import Brand-Category level info like app_sorting, featured_products
-    nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+    nykaa_mysql_conn = PasUtils.nykaaMysqlConnection()
     query = 'SHOW columns FROM category_information'
-    results = Utils.fetchResults(nykaa_mysql_conn, query)
+    results = PasUtils.fetchResults(nykaa_mysql_conn, query)
     magento_fields = [result['Field'] for result in results]
 
 
-    gludo_mysql_conn = Utils.mysqlConnection()
+    gludo_mysql_conn = PasUtils.mysqlConnection()
     query = 'SHOW columns FROM brand_category_information'
-    results = Utils.fetchResults(gludo_mysql_conn, query)
+    results = PasUtils.fetchResults(gludo_mysql_conn, query)
     gludo_fields = [result['Field'] for result in results]
 
     extra_fields = [value for value in gludo_fields if value in magento_fields]
@@ -131,7 +131,7 @@ class NykaaImporter:
             LEFT JOIN nk_brands AS nkb ON nkb.brand_id = cce.entity_id
             WHERE cur.store_id = 0 AND cur.product_id IS NULL
             GROUP BY category_id;"""
-    results = Utils.fetchResults(nykaa_mysql_conn, query)
+    results = PasUtils.fetchResults(nykaa_mysql_conn, query)
     count = 0
     for item in results:
       try:
@@ -193,9 +193,9 @@ class NykaaImporter:
   def importOfferAttributes():
     offer_imp_start = timeit.default_timer()
     # Import offer attributes: featured_products and app_sorting
-    nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+    nykaa_mysql_conn = PasUtils.nykaaMysqlConnection()
     query = "SELECT entity_id AS offer_id, name, app_sorting, custom_sort, filter_params, filter_values FROM `nykaa_offers`"
-    results = Utils.fetchResults(nykaa_mysql_conn, query)
+    results = PasUtils.fetchResults(nykaa_mysql_conn, query)
     count = 0
     for item in results:
       try:
@@ -230,7 +230,7 @@ class NykaaImporter:
   def importMetaInformation():
     meta_info_start = timeit.default_timer()
     # Import category meta information
-    nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+    nykaa_mysql_conn = PasUtils.nykaaMysqlConnection()
     query = """SELECT e.entity_id AS category_id, CONCAT(ccevt.value, ' | Nykaa') AS meta_title, REPLACE(REPLACE(ccetk.value, '\r', ''), '\n', '') AS meta_keywords, 
                REPLACE(REPLACE(ccetd.value, '\r', ''), '\n', '') AS meta_description,
                REPLACE(REPLACE(cceh1.value, '\r', ''), '\n', '') AS h1_tag
@@ -241,7 +241,7 @@ class NykaaImporter:
                LEFT JOIN catalog_category_entity_text cceh1 ON cceh1.entity_id = e.entity_id AND cceh1.attribute_id = (
                SELECT attribute_id FROM eav_attribute WHERE attribute_code = 'category_meta_title' and entity_type_id = 3)
                WHERE ccevt.value IS NOT NULL OR ccetk.value IS NOT NULL OR ccetd.value IS NOT NULL OR cceh1.value IS NOT NULL;"""
-    results = Utils.fetchResults(nykaa_mysql_conn, query)
+    results = PasUtils.fetchResults(nykaa_mysql_conn, query)
     count = 0
     for result in results:
       try:

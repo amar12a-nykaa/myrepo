@@ -39,7 +39,7 @@ def generateMagentoOrders():
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
 
-    nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+    nykaa_mysql_conn = PasUtils.nykaaMysqlConnection()
     query = """SELECT sku, qty_ordered AS quantity, quote_id
                FROM sales_flat_order_item sfoi JOIN sales_flat_order sfo 
                ON (sfoi.order_id = sfo.entity_id)
@@ -50,7 +50,7 @@ def generateMagentoOrders():
     if argv['sku']:
       query = "select * from (%s)A where sku = '%s'" % (query, argv['sku'])
       print(query)
-    results = Utils.fetchResults(nykaa_mysql_conn, query)
+    results = PasUtils.fetchResults(nykaa_mysql_conn, query)
     for row in results:
       writer.writerow({'sku': row['sku'], 'quantity': int(row['quantity']), 'quote_id': int(row['quote_id'])})
 

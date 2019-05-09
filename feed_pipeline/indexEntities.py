@@ -82,9 +82,9 @@ class EntityIndexer:
       "Kama Ayurveda": ["Kama"],
       "Layer'r": ["Layer"],
     }
-    mysql_conn = Utils.mysqlConnection()
+    mysql_conn = PasUtils.mysqlConnection()
     query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
-    results = Utils.fetchResults(mysql_conn, query)
+    results = PasUtils.fetchResults(mysql_conn, query)
     ctr = LoopCounter(name='Brand Indexing')
     for row in results:
       ctr += 1 
@@ -123,9 +123,9 @@ class EntityIndexer:
       }
       return doc
     docs = []
-    mysql_conn = Utils.mysqlConnection()
+    mysql_conn = PasUtils.mysqlConnection()
     query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' order by name, category_popularity desc"
-    results = Utils.fetchResults(mysql_conn, query)
+    results = PasUtils.fetchResults(mysql_conn, query)
     ctr = LoopCounter(name='Category Indexing')
     prev_cat = None
     for row in results:
@@ -154,9 +154,9 @@ class EntityIndexer:
   def index_brands_categories(collection):
     docs = []
 
-    mysql_conn = Utils.mysqlConnection()
+    mysql_conn = PasUtils.mysqlConnection()
     query = "SELECT brand_id, brand, category_name, category_id, popularity FROM brand_category"
-    results = Utils.fetchResults(mysql_conn, query)
+    results = PasUtils.fetchResults(mysql_conn, query)
     ctr = LoopCounter(name='Brand Category Indexing' )
     for row in results:
       ctr += 1 
@@ -183,13 +183,13 @@ class EntityIndexer:
     EsUtils.indexDocs(docs, collection)
 
   def index_filters(collection):
-    mysql_conn = Utils.nykaaMysqlConnection(force_production=True)
+    mysql_conn = PasUtils.nykaaMysqlConnection(force_production=True)
     for filt in filter_attribute_map:
       id = filt[0]
       filter = filt[1]
       query = """select eov.value as name, eov.option_id as filter_id from eav_attribute_option eo join eav_attribute_option_value eov
                     on eo.option_id = eov.option_id and eov.store_id = 0 where attribute_id = %s"""%id
-      results = Utils.fetchResults(mysql_conn, query)
+      results = PasUtils.fetchResults(mysql_conn, query)
       ctr = LoopCounter(name='%s Indexing' % filter)
       docs = []
       for row in results:

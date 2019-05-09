@@ -38,12 +38,12 @@ def calculate_ctr(row):
     return row
 
 def get_yesterday_trending():
-    mysql_conn = Utils.mysqlConnection('r')
+    mysql_conn = PasUtils.mysqlConnection('r')
 
-    if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
+    if not PasUtils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
         return None
     prev=[]
-    for each in Utils.mysql_read("select q from trending_searches"):
+    for each in PasUtils.mysql_read("select q from trending_searches"):
         prev.append(word_clean(each.get('q')))
     return prev
 
@@ -206,13 +206,13 @@ def get_trending_searches(filename):
 
 
 def insert_trending_searches(data):
-    mysql_conn = Utils.mysqlConnection('w')
+    mysql_conn = PasUtils.mysqlConnection('w')
     cursor = mysql_conn.cursor()
 
-    if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
-        Utils.mysql_write("create table trending_searches(type VARCHAR(64),url VARCHAR(255),q VARCHAR(255))",
+    if not PasUtils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
+        PasUtils.mysql_write("create table trending_searches(type VARCHAR(64),url VARCHAR(255),q VARCHAR(255))",
                           connection=mysql_conn)
-    Utils.mysql_write("delete from trending_searches", connection=mysql_conn)
+    PasUtils.mysql_write("delete from trending_searches", connection=mysql_conn)
 
     for word in data:
         ls = word.split()

@@ -59,7 +59,7 @@ def format_term(term):
 
 def normalize_array(query):
     index = set()
-    for row in Utils.mysql_read(query): 
+    for row in PasUtils.mysql_read(query): 
         row = row['term']
         for term in row.split(" "):
             term = format_term(term)

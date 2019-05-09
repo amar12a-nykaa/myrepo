@@ -73,7 +73,7 @@ query = {
     "size": 500
 }
 
-response = Utils.makeESRequest(query, index='livecore')
+response = PasUtils.makeESRequest(query, index='livecore')
 with open('top_500_products_recommendations.csv', newline='') as csvfile:
     csv_writer = csv.writer(csvfile)
     popular_products = [hit['_source']['product_id'] for hit in response['hits']['hits']]
@@ -82,7 +82,7 @@ with open('top_500_products_recommendations.csv', newline='') as csvfile:
         row = [productid2name[product_id]] + [recommendation[1] for recommendation in recommendations]
         csv_writer.writerow(row)
 
-pasdb = Utils.mysqlConnection('w')
+pasdb = PasUtils.mysqlConnection('w')
 cursor = pasdb.cursor()
 create_recommendations_table_query = """ CREATE TABLE IF NOT EXISTS recommendations (
                             entity_id INT UNSIGNED NOT NULL, 

@@ -339,7 +339,7 @@ class CatalogIndexer:
         attempts = 3
         while (attempts):
             try:
-                pas_object = json.loads(urlopen(req).read().decode('utf-8'))
+                pas_object = json.loads(str(urlopen(req).read().decode('utf-8')))
                 break
             except:
                 attempts -= 1

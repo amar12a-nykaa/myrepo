@@ -49,7 +49,7 @@ def upload_special_price_to_s3(batch_size = 1000):
   print('----Query2-----')
 
   f.close()
-  Utils.upload_file_to_s3(file_name)
+  PasUtils.upload_file_to_s3(file_name)
   os.remove(file_name)
 
 
@@ -57,7 +57,7 @@ def upload_special_price_to_s3(batch_size = 1000):
 def write_to_result_to_file(query, file, batch_size):
   gludo_url = get_gludo_url()
   print('gludo_url', gludo_url)
-  connection = Utils.mysqlConnection()
+  connection = PasUtils.mysqlConnection()
   with closing(connection.cursor()) as cursor:
     cursor.execute(query)
     products_array = []
