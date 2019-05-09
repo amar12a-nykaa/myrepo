@@ -6,9 +6,9 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 sys.path.append('/home/apis/pds_api/')
-from pas.v2.utils import Utils as PasUtils
+from pas.v2.utils import DiscUtils as PasUtils
 sys.path.append("/home/apis/discovery_api")
-from disc.v2.utils import Utils as DiscUtils
+from disc.v2.utils import DiscUtils as DiscUtils
 from pas.v2.utils import MemcacheUtils
 #from pas.v2.models import Product
 from IPython import embed 
@@ -51,11 +51,11 @@ class PipelineUtils:
 
     if missing_option_ids:
       # get details from DB
-      mysql_conn = Utils.mysqlConnection('r')
+      mysql_conn = DiscUtils.mysqlConnection('r')
 
       in_p = ','.join(['%s']*len(missing_option_ids))
       query = "SELECT fa.id, fa.name, av.value FROM filter_attributes fa LEFT JOIN attribute_values av ON (fa.id = av.attribute_id) WHERE fa.id IN (%s)"%in_p
-      results = Utils.fetchResults(mysql_conn, query, tuple(missing_option_ids))
+      results = DiscUtils.fetchResults(mysql_conn, query, tuple(missing_option_ids))
       for result in results:
         option_id = result['id']
         option_value = result['value']
@@ -76,10 +76,10 @@ class PipelineUtils:
   def getCategoryFacetAttributes(cat_ids):
     # get details from Nykaa DB
     cat_facet_attrs = []
-    mysql_conn = Utils.nykaaMysqlConnection()
+    mysql_conn = DiscUtils.nykaaMysqlConnection()
     in_p = ','.join(['%s']*len(cat_ids))
     query = "SELECT * FROM nk_categories WHERE category_id IN (%s)"%in_p
-    results = Utils.fetchResults(mysql_conn, query, tuple(cat_ids))
+    results = DiscUtils.fetchResults(mysql_conn, query, tuple(cat_ids))
     for result in results:
       cat_facet_attrs.append(result)
 
@@ -110,7 +110,7 @@ class PipelineUtils:
       if add_limit:
         querydsl['size'] = len(products) + 1
 
-      response = Utils.makeESRequest(querydsl, index='livecore')
+      response = DiscUtils.makeESRequest(querydsl, index='livecore')
       docs = response['hits']['hits']
       for doc in docs:
         final_products_to_update.append({'sku': doc['_source']['sku'], 'type': doc['_source']['type']})
@@ -155,15 +155,15 @@ class PipelineUtils:
 
     # check if product is part of bundle
     if product_type == 'simple':
-      mysql_conn = Utils.mysqlConnection('r')
+      mysql_conn = DiscUtils.mysqlConnection('r')
       query = "SELECT product_sku, bundle_sku FROM bundle_products_mappings WHERE product_sku=%s"
-      results = Utils.fetchResults(mysql_conn, query, (sku,))
+      results = DiscUtils.fetchResults(mysql_conn, query, (sku,))
       for res in results:
         products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
 
     update_docs = PipelineUtils.getProductsToIndex(products)
     if update_docs:
-      Utils.updateESCatalog(update_docs)
+      DiscUtils.updateESCatalog(update_docs)
     return len(update_docs)
 
 

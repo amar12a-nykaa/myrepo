@@ -27,7 +27,7 @@ from dateutil import tz
 import dateutil.relativedelta
 import datetime as dt
 
-sys.path.append('/home/apis/pds_api/')
+#sys.path.append('/home/apis/pds_api/')
 sys.path.append("/nykaa/scripts/sharedutils")
 from mongoutils import MongoUtils
 
@@ -35,7 +35,7 @@ sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
 
 from loopcounter import LoopCounter
 from pas.v2.csvutils import read_csv_from_file
-from pas.v2.utils import Utils as PasUtils
+#from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 from pipelineUtils import PipelineUtils
@@ -43,7 +43,12 @@ from popularity_api import get_popularity_for_id, validate_popularity_data_healt
 from esutils import EsUtils
 from generate_user_product_vectors import get_vectors_from_mysql_for_es
 
-NUMBER_OF_THREADS = 20
+hostname = socket.gethostname()
+if not(hostname.startswith('admin') or hostname.startswith('preprod')):
+	NUMBER_OF_THREADS = 2
+else:
+	NUMBER_OF_THREADS = 20
+
 RECORD_GROUP_SIZE = 100
 APPLIANCE_MAIN_CATEGORY_ID = "1390"
 

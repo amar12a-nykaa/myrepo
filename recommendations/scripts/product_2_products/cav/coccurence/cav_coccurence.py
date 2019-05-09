@@ -84,7 +84,7 @@ class Utils:
 
     @staticmethod
     def scrollESForResults(env):
-        es_conn = Utils.esConn(env)
+        es_conn = DiscUtils.esConn(env)
         ES_BATCH_SIZE = 10000
         scroll_id = None
         luxe_products = []
@@ -180,7 +180,7 @@ def prepare_data(files, desktop):
     print("Rows count: " + str(df.count()))
 
     print('Scrolling ES for results')
-    results = Utils.scrollESForResults(env)
+    results = DiscUtils.scrollESForResults(env)
     print('Scrolling ES done')
     child_2_parent = results['child_2_parent']
 

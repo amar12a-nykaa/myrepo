@@ -43,7 +43,7 @@ search_terms_normalized_daily = MongoUtils.getClient()['search']['search_terms_n
 query_product_map_table = MongoUtils.getClient()['search']['query_product_map']
 query_product_not_found_table = MongoUtils.getClient()['search']['query_product_not_found']
 top_queries = []
-es = Utils.esConn()
+es = DiscUtils.esConn()
 es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']
 
 singles = defaultdict(int)

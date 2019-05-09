@@ -53,14 +53,14 @@ index_alias_config = {
 class EsUtils:
 
   def get_connection():
-    return Utils.esConn()
+    return DiscUtils.esConn()
 
   def get_index_client():
-    return elasticsearch.client.IndicesClient(Utils.esConn())
+    return elasticsearch.client.IndicesClient(DiscUtils.esConn())
 
   def get_index_from_alias(alias):
     response = {}
-    es = Utils.esConn()
+    es = DiscUtils.esConn()
     if es.indices.exists_alias(alias):
       response = es.indices.get_alias(
         index=alias
@@ -109,7 +109,7 @@ class EsUtils:
   def switch_index_alias(alias, from_index, to_index):
     response = {}
     try:
-      es = Utils.esConn()
+      es = DiscUtils.esConn()
       response = es.indices.update_aliases(
         body={
           "actions" : [
@@ -129,7 +129,7 @@ class EsUtils:
   def clear_index_data(index):
     response = {}
     try:
-      es = Utils.esConn()
+      es = DiscUtils.esConn()
       response = es.delete_by_query(
         index=index,
         body={
@@ -187,7 +187,7 @@ class EsUtils:
 
     response = {}
     try:
-      es = Utils.esConn()
+      es = DiscUtils.esConn()
       helpers.bulk(es, upload_docs, request_timeout=120)
     except Exception as e:
       print(traceback.format_exc())
@@ -207,9 +207,9 @@ class EsUtils:
 
     try:
       # Create connection object at both region
-      source_client = Utils.esConnCustom(from_region)
-      target_client = Utils.esConnCustom(target_region)
-      setting_client = elasticsearch.client.IndicesClient(Utils.esConnCustom(target_region))
+      source_client = DiscUtils.esConnCustom(from_region)
+      target_client = DiscUtils.esConnCustom(target_region)
+      setting_client = elasticsearch.client.IndicesClient(DiscUtils.esConnCustom(target_region))
 
       # Set refresh_interval to -1 to enable faster indexing
       sett = {'refresh_interval': '-1'}

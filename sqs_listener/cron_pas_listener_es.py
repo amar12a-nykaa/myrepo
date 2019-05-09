@@ -99,8 +99,8 @@ class ScheduledPriceUpdater:
         new_sku_list = list(set(sku_list) | set(psku_list))
         sku_string = "','".join(new_sku_list)
         query = "SELECT product_sku, bundle_sku FROM bundle_products_mappings WHERE product_sku in('" + sku_string + "')"
-        mysql_conn = Utils.mysqlConnection('r')
-        results = Utils.fetchResults(mysql_conn, query)
+        mysql_conn = PasUtils.mysqlConnection('r')
+        results = PasUtils.fetchResults(mysql_conn, query)
         mysql_conn.close()
         for res in results:
             products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
@@ -110,7 +110,7 @@ class ScheduledPriceUpdater:
         try:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit = True)
             if update_docs:
-                Utils.updateESCatalog(update_docs)
+                DiscUtils.updateESCatalog(update_docs)
                 for single_doc in update_docs:
                     print("sku : %s" % single_doc['sku'])
         except Exception as e:
@@ -158,7 +158,7 @@ class ScheduledPriceUpdater:
           update_docs = json.loads(message['Body'])
           print("receipt_handle: %s" % receipt_handle)
           print(update_docs)
-          Utils.updateESCatalog(update_docs)
+          DiscUtils.updateESCatalog(update_docs)
 
           sqs.delete_message(
               QueueUrl=queue_url,
@@ -191,8 +191,8 @@ class ScheduledPriceUpdater:
 
         query = "SELECT sku, psku, type FROM products" + where_clause + product_type_condition
         print("[%s] " % getCurrentDateTime() + query % (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
-        mysql_conn = Utils.mysqlConnection('r')
-        results = Utils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
+        mysql_conn = PasUtils.mysqlConnection('r')
+        results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
         mysql_conn.close()
 
         print("[%s] Starting simple product updates" % getCurrentDateTime())
@@ -217,8 +217,8 @@ class ScheduledPriceUpdater:
         # Code for bundle products
         products = []
         query = "SELECT sku FROM bundles" + where_clause
-        mysql_conn = Utils.mysqlConnection('r')
-        results = Utils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime))
+        mysql_conn = PasUtils.mysqlConnection('r')
+        results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime))
         mysql_conn.close()
         print("[%s] Starting bundle product updates" % getCurrentDateTime())
 
@@ -231,7 +231,7 @@ class ScheduledPriceUpdater:
         try:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit=True)
             if update_docs:
-                Utils.updateESCatalog(update_docs)
+                DiscUtils.updateESCatalog(update_docs)
                 for singleBundle in update_docs:
                     print("bundle sku: %s" % singleBundle['sku'])
         except Exception as e:

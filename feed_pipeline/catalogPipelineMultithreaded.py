@@ -11,7 +11,6 @@ import traceback
 import subprocess
 import urllib.request
 import csv
-
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
@@ -19,11 +18,19 @@ from importDataFromNykaa import NykaaImporter
 from indexCatalog import CatalogIndexer
 from update_bestseller_product_to_es import update_bestseller_data
 
-
-sys.path.append('/home/apis/pds_api/')
-from pas.v2.utils import Utils as PasUtils
-sys.path.append("/home/apis/discovery_api")
+sys.path.append("/home/apis/discovery_api/")
 from disc.v2.utils import Utils as DiscUtils
+#print(django.conf.ENVIRONMENT_VARIABLE)
+#print(os.environ['DJANGO_SETTINGS_MODULE_DISCOVERY'])
+#print(DiscUtils.test)
+#sys.path.append('/home/apis/pds_api/')
+#from pas.v2.utils import Utils as PasUtils
+#print(django.conf.ENVIRONMENT_VARIABLE)
+#print(os.environ['DJANGO_SETTINGS_MODULE_DISCOVERY'])
+
+
+#print(PasUtils.test)
+#print(DiscUtils.test)
 
 # FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
 # FEED_URL_PREPROD = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
