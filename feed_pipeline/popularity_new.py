@@ -10,7 +10,7 @@ from pas.v2.utils import Utils
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']
 order_data = client['search']['order_data']

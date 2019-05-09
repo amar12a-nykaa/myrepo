@@ -36,9 +36,9 @@ from pas.v2.utils import Utils, MemcacheUtils
 
 
 collection='autocomplete'
-search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']
-query_product_map_table = Utils.mongoClient()['search']['query_product_map']
-query_product_not_found_table = Utils.mongoClient()['search']['query_product_not_found']
+search_terms_normalized_daily = MongoUtils.getClient()['search']['search_terms_normalized_daily']
+query_product_map_table = MongoUtils.getClient()['search']['query_product_map']
+query_product_not_found_table = MongoUtils.getClient()['search']['query_product_not_found']
 top_queries = []
 es = Utils.esConn()
 es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']

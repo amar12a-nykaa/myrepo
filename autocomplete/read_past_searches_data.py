@@ -42,7 +42,7 @@ from cliutils import CliUtils
 
 DAILY_COUNT_THRESHOLD = 2 
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_formatted = client['search']['search_terms_daily_formatted']
 ensure_mongo_indices_now()
@@ -117,7 +117,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
   product_id_arg = product_id
   assert platform in ['app', 'web']
 
-  client = Utils.mongoClient()
+  client = MongoUtils.getClient()
   search_terms_daily = client['search']['search_terms_daily']
 
 

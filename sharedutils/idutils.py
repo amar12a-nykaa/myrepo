@@ -2,8 +2,10 @@ import unicodedata
 import re
 import sys
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+sys.path.append("/home/apis/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 from nltk.stem import PorterStemmer
 from nltk.tokenize import sent_tokenize, word_tokenize

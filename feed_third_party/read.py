@@ -18,7 +18,7 @@ sys.path.append('/home/apis/nykaa/')
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 data = client['local']['feed3']
 
 

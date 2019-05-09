@@ -4,7 +4,7 @@ import pymongo
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 
 
 def ensure_mongo_collection(collection_list, db):

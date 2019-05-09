@@ -17,7 +17,7 @@ from pas.v2.utils import Utils
 
 host = socket.gethostname()
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity = client['search']['popularity']

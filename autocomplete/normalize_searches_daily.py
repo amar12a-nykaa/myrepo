@@ -31,7 +31,7 @@ ps = PorterStemmer()
 
 DAILY_THRESHOLD = 3
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
 corrected_search_query = client['search']['corrected_search_query']

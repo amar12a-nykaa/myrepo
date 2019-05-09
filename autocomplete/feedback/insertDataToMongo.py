@@ -9,7 +9,7 @@ from pas.v2.utils import Utils
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from pipelineUtils import PipelineUtils
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 collection_name = 'feedback_data_autocomplete'
 
 def insertFeedBackDataInMongo(filename='feedback_autocomplete_result.json'):

@@ -13,7 +13,9 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 
 sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import Utils, MemcacheUtils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils, MemcacheUtils
 
 __all__ = ['create_product_id_index']
 
@@ -21,7 +23,7 @@ def create_product_id_index():
   start = time.time()
   product_id_index = {}
 
-  nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+  nykaa_mysql_conn = DiscUtils.nykaaMysqlConnection()
   query = """
     SELECT a.entity_id as product_id, a.key_id as parent_id, a.sku as sku
     FROM(
@@ -40,7 +42,7 @@ def create_product_id_index():
     """
 
   delta = time.time() - start
-  for p in Utils.mysql_read(query, connection=nykaa_mysql_conn):
+  for p in DiscUtils.mysql_read(query, connection=nykaa_mysql_conn):
     p = {k:str(v) for k,v in p.items()}
     product_id_index[p['product_id']] = p
 

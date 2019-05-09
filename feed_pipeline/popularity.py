@@ -72,7 +72,7 @@ PRODUCT_POPULARITY_OVERRIDES =  { "417918": 60,
                                   "417927": 40
                                 }
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']

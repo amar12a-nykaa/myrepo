@@ -95,7 +95,7 @@ class Worker(threading.Thread):
         while True:
             try:
                 rows = self.q.get(timeout=3)  # 3s timeout
-                client = Utils.mongoClient()
+                client = MongoUtils.getClient()
                 product_history_table = client['search']['product_history']
                 product_history = {}
                 product_ids=[]

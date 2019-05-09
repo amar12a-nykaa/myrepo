@@ -37,10 +37,10 @@ from ensure_mongo_indexes import ensure_mongo_indices_now
 ensure_mongo_indices_now()
 
 collection='autocomplete'
-search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']
-query_product_map_table = Utils.mongoClient()['search']['query_product_map']
-query_product_not_found_table = Utils.mongoClient()['search']['query_product_not_found']
-feedback_data_autocomplete = Utils.mongoClient()['search']['feedback_data_autocomplete']
+search_terms_normalized_daily = MongoUtils.getClient()['search']['search_terms_normalized_daily']
+query_product_map_table = MongoUtils.getClient()['search']['query_product_map']
+query_product_not_found_table = MongoUtils.getClient()['search']['query_product_not_found']
+feedback_data_autocomplete = MongoUtils.getClient()['search']['feedback_data_autocomplete']
 top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = Utils.esConn()
@@ -478,7 +478,7 @@ def validate_min_count(force_run, allowed_min_docs):
 
 def index_products(collection, searchengine):
 
-  popularity = Utils.mongoClient()['search']['popularity']
+  popularity = MongoUtils.getClient()['search']['popularity']
   count = {'value': 0}
     
   def flush_index_products(rows, productList=[]):

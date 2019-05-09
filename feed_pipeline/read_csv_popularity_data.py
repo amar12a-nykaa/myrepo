@@ -109,7 +109,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
 
   assert platform in ['app', 'web']
 
-  client = Utils.mongoClient()
+  client = MongoUtils.getClient()
   raw_data = client['search']['raw_data']
 
 

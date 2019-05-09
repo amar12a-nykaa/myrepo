@@ -5,7 +5,7 @@ from IPython import embed
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 popularity_table = client['search']['popularity']
 
 def get_popularity_for_id(product_id, parent_id=None):

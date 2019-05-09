@@ -13,7 +13,7 @@ from elasticsearch import helpers, Elasticsearch
 
 sys.path.append('/home/apis/nykaa/')
 from pas.v2.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 popularity_table = client['search']['popularity']
 
 count =0 
