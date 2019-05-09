@@ -5,7 +5,7 @@ import sys
 import requests
 import os
 import boto3
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import Utils
 from pas.v2.utils import UserProfileServiceDynamoDb 
 from contextlib import closing

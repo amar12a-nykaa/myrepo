@@ -11,7 +11,7 @@ import requests
 from IPython import embed
 from elasticsearch import helpers, Elasticsearch
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
 
 

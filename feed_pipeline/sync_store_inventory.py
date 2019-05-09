@@ -8,7 +8,7 @@ import traceback
 import subprocess
 from ftplib import FTP
 import csv
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import StoreDbUtils
 
 hostname = socket.gethostname()

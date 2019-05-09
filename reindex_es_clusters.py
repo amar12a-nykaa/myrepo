@@ -4,7 +4,7 @@ import argparse
 import time
 import timeit
 from elasticsearch import helpers, Elasticsearch
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import Utils
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils

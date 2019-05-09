@@ -5,7 +5,7 @@ import requests
 import urllib.parse
 import urllib.request
 from datetime import datetime
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
 #from pas.v2.models import Product
 from IPython import embed 

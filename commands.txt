@@ -9,4 +9,4 @@ aws --profile datapipeline s3 cp "s3://nykaadp-feeds/esdump/data.json" /tmp/data
 elasticdump  --input /tmp/data.json --output=http://search-qa-api4-rrrhowwilvypwyfn7qgsih2aku.ap-southeast-1.es.amazonaws.com/yang
 
 find . -not -path '*/\.git*' -type f -exec sed -i 's/MONGO_CLIENT.*$//g' {} +
-
+find . -not -path '*/\.git*' -type f -exec sed -i "s:sys.path.append('/home/apis/nykaa/'):sys.path.append('/home/apis/pds_api/'):g" {} +

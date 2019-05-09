@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 import argparse
 import json
 import requests

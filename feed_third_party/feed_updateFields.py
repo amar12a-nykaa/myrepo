@@ -20,7 +20,7 @@ sys.path.append("/nykaa/scripts/sharedutils")
 
 from loopcounter import LoopCounter
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 
 from pas.v2.utils import Utils, MemcacheUtils
 

@@ -18,7 +18,7 @@ from indexEntities import EntityIndexer
 
 from importDataFromNykaa import NykaaImporter
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import Utils
 
 FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"

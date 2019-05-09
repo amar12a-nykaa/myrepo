@@ -2,7 +2,7 @@ import sys
 import argparse
 from contextlib import closing
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 
 from pas.v2.utils import Utils, hostname, CATALOG_COLLECTION_ALIAS
 from elasticsearch import helpers, Elasticsearch

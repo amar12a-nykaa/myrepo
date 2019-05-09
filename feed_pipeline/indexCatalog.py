@@ -27,7 +27,7 @@ from dateutil import tz
 import dateutil.relativedelta
 import datetime as dt
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 sys.path.append("/nykaa/scripts/sharedutils")
 from mongoutils import MongoUtils
 

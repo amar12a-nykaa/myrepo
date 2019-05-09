@@ -15,7 +15,7 @@ import urllib.request
 
 sys.path.append("/nykaa/scripts/sharedutils")
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 
 from pas.v2.utils import Utils, MemcacheUtils
 

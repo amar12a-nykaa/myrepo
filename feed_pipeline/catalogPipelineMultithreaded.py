@@ -20,7 +20,7 @@ from indexCatalog import CatalogIndexer
 from update_bestseller_product_to_es import update_bestseller_data
 
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
 
 # FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"

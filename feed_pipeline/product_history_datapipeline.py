@@ -3,7 +3,7 @@ import dateutil.relativedelta
 import datetime as dt
 import sys
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import Utils
 
 sys.path.append("/nykaa/scripts/sharedutils")

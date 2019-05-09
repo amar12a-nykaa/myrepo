@@ -4,7 +4,7 @@ import sys
 import boto3
 import pandas as pd
 import subprocess
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import Utils
 from pas.v2.utils import UserProfileServiceDynamoDb
 from os import listdir

@@ -4,8 +4,8 @@ from dateutil import tz
 #from pipelineUtils import PipelineUtils
 from datetime import datetime, timedelta
 
-#sys.path.append('/home/apis/nykaa/')
-sys.path.append('/home/apis/nykaa_price_availabilty_api')
+#sys.path.append('/home/apis/pds_api/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
 from nykaa.settings import *
 import argparse

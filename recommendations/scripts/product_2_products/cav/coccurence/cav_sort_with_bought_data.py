@@ -7,7 +7,7 @@ import psutil
 import argparse
 import operator
 import pandas as pd
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 from pas.v2.utils import Utils, RecommendationsUtils
 sys.path.append("/home/ubuntu/nykaa_scripts/utils/")
 from pandasutils import parallelize_dataframe

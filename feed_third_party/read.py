@@ -16,7 +16,7 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from mongoutils import MongoUtils
 
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/home/apis/pds_api/')
 
 sys.path.append("/nykaa/api")
 from pas.v2.utils import Utils
