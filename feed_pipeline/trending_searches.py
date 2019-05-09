@@ -9,7 +9,7 @@ from nltk.stem import PorterStemmer
 from datetime import date,datetime,timedelta
 from health_check import enumerate_dates
 
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils, EntityUtils
 
 porter = PorterStemmer()

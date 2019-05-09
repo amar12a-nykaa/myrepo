@@ -17,7 +17,7 @@ import numpy
 import omniture
 import pandas as pd
 
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
@@ -34,7 +34,7 @@ processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']
 
 
-for p in Utils.mysql_read("select product_id, mrp, sku from products limit 100"):
+for p in PasUtils.mysql_read("select product_id, mrp, sku from products limit 100"):
   if not p['product_id']:
     continue
   print(p)

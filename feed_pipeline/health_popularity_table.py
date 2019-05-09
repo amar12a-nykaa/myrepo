@@ -23,7 +23,7 @@ client = MongoUtils.getClient()
 popularity_table = client['search']['popularity']
 
 count =0 
-for row in Utils.mysql_read("select * from products where type ='configurable' and disabled = 0  and product_id is not null"):
+for row in PasUtils.mysql_read("select * from products where type ='configurable' and disabled = 0  and product_id is not null"):
   product_id = row['product_id']
   _type = row['type']
   if not popularity_table.find_one({"_id": product_id}):

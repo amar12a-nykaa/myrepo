@@ -9,7 +9,7 @@ import operator
 import pandas as pd
 sys.path.append("/nykaa/nykaa_scripts/utils")
 from loopcounter import LoopCounter
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils, RecommendationsUtils
 from joblib import Parallel, delayed
 from datetime import datetime, timedelta

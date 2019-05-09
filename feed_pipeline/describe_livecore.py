@@ -8,7 +8,7 @@ sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
 from esutils import EsUtils
 
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils

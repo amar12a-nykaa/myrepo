@@ -22,7 +22,7 @@ from pandas.io import sql
 
 from popularity_new import calculate_new_popularity
 from pipelineUtils import PipelineUtils
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils

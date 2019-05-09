@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 import re
 from datetime import datetime, timedelta
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pipelineUtils import PipelineUtils
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")

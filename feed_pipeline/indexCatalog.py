@@ -345,6 +345,9 @@ class CatalogIndexer:
                 attempts -= 1
                 print("WARNING ... Attempts remaining: %s, Failed to fetch data: %s %s " % (
                 attempts, request_url, request_data))
+                if attempts == 0:
+                  embed()
+                  raise
 
         pas_object = pas_object.get('skus')
 

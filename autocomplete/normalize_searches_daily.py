@@ -20,7 +20,7 @@ from IPython import embed
 from pymongo import UpdateOne
 from stemming.porter2 import stem
 
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils

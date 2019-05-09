@@ -30,7 +30,7 @@ from apiutils import ApiUtils
 from idutils import createId
 from categoryutils import getVariants
 
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import MemcacheUtils
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
@@ -58,7 +58,7 @@ MIN_COUNTS = {
   "search_query": 40000,
   "category_facet": 300,
 }
-Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
+PasUtils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
 brandLandingMap = {"herm" : "/hermes?ptype=lst&id=7917"}
 
