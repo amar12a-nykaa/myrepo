@@ -4,7 +4,7 @@ from contextlib import closing
 
 sys.path.append('/home/apis/pds_api/')
 
-from pas.v2.utils import Utils, hostname, CATALOG_COLLECTION_ALIAS
+from pas.v2.utils import Utils, hostname
 from elasticsearch import helpers, Elasticsearch
 
 sys.path.append('/nykaa/scripts/sharedutils/')
@@ -41,7 +41,7 @@ def update_bestseller_data(batch_size):
 	try:
 		print('update_bestseller_data Started ')
 		print('batch_size : ', batch_size)
-		indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+		indexes = EsUtils.get_active_inactive_indexes("livecore")
 		active_index = indexes['active_index']
 		print("ES Active Index: %s" % active_index)
 

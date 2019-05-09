@@ -35,7 +35,7 @@ sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
 
 from loopcounter import LoopCounter
 from pas.v2.csvutils import read_csv_from_file
-from pas.v2.utils import CATALOG_COLLECTION_ALIAS, Utils
+from pas.v2.utils import Utils
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
 from esutils import EsUtils
@@ -409,7 +409,7 @@ class CatalogIndexer:
 
     def indexES(docs, index):
         if not index:
-            indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+            indexes = EsUtils.get_active_inactive_indexes("livecore")
             index = indexes['active_index']
         EsUtils.indexDocs(docs, index)
 

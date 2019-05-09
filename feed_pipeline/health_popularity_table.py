@@ -16,7 +16,7 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from mongoutils import MongoUtils
 
 sys.path.append('/home/apis/pds_api/')
-from pas.v2.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
+from pas.v2.utils import Utils
 client = MongoUtils.getClient()
 popularity_table = client['search']['popularity']
 

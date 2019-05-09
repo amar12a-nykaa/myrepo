@@ -6,7 +6,7 @@ import requests
 import urllib.parse
 import urllib.request
 from pipelineUtils import PipelineUtils
-from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
+from pas.v2.utils import Utils
 
 def getDataFromDb(skus):
     # mysql_conn = Utils.mysqlConnection('r')

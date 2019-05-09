@@ -21,7 +21,7 @@ from update_bestseller_product_to_es import update_bestseller_data
 
 
 sys.path.append('/home/apis/pds_api/')
-from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
+from pas.v2.utils import Utils
 
 # FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
 # FEED_URL_PREPROD = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
@@ -55,7 +55,7 @@ if getCount() > 1:
 
 
 def indexESData(file_path, force_run):
-    indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+    indexes = EsUtils.get_active_inactive_indexes("livecore")
     active_index = indexes['active_index']
     inactive_index = indexes['inactive_index']
     print("ES Active Index: %s" % active_index)
@@ -111,7 +111,7 @@ def indexESData(file_path, force_run):
     if argv['no_swap'] == True:
         print("\n\nIndex switch is not allowed. ACTIVE INDEX: %s\n\n" % active_index)
     else:
-        resp = EsUtils.switch_index_alias(CATALOG_COLLECTION_ALIAS, active_index, inactive_index)
+        resp = EsUtils.switch_index_alias("livecore", active_index, inactive_index)
 
     print("\n\nFinished running catalog pipeline for ElasticSearch. NEW ACTIVE INDEX: %s\n\n" % inactive_index)
 

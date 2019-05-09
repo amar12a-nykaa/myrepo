@@ -26,13 +26,14 @@ from stemming.porter2 import stem
 from elasticsearch import helpers, Elasticsearch
 
 sys.path.append('/nykaa/scripts/sharedutils/')
+from mongoutils import MongoUtils
 from loopcounter import LoopCounter
 from esutils import EsUtils
 from apiutils import ApiUtils
 from idutils import createId
 
 sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils, MemcacheUtils
+from pas.v2.utils import Utils
 
 
 collection='autocomplete'
