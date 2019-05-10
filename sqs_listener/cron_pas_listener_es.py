@@ -158,7 +158,10 @@ class ScheduledPriceUpdater:
           update_docs = json.loads(message['Body'])
           print("receipt_handle: %s" % receipt_handle)
           print(update_docs)
-          DiscUtils.updateESCatalog(update_docs)
+          try:
+            DiscUtils.updateESCatalog(update_docs)
+          except Exception as e:
+            print("Exception!! Some SKUs that are missing in ES..")
 
           sqs.delete_message(
               QueueUrl=queue_url,
