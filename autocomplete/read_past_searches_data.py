@@ -31,7 +31,7 @@ from stemming.porter2 import stem
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
@@ -59,7 +59,7 @@ def format_term(term):
 
 def normalize_array(query):
     index = set()
-    for row in Utils.mysql_read(query): 
+    for row in PasUtils.mysql_read(query): 
         row = row['term']
         for term in row.split(" "):
             term = format_term(term)

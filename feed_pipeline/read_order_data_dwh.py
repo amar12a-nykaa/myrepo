@@ -43,7 +43,7 @@ def read_data(start_date, end_date):
               from fact_order_detail_new
               where orderdetail_dt_created between '%s' and '%s' and product_id is not null
               group by 1,2,3 """%(start_date, end_date)
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   cur = redshift_conn.cursor()
   cur.execute(query)
   rows = cur.fetchall()

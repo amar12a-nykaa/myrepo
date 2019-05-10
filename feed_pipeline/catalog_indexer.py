@@ -1,49 +1,56 @@
 #!/usr/bin/python
+
 import argparse
+import ast
 import csv
+import dateparser
+import datetime as dt
+import dateutil.relativedelta
 import json
+import numpy
 import os
 import pprint
+import queue
+import re
 import socket
 import sys
-import traceback
-import ast
-from operator import itemgetter
-from collections import OrderedDict
-from datetime import datetime, timedelta
-from urllib.parse import urlparse
-from urllib.request import Request, urlopen
-import re
-import dateparser
-from IPython import embed
+import threading
 import time
 import timeit
-import queue
-import threading
-import numpy
+import traceback
+
+from IPython import embed
+from collections import OrderedDict
 from collections import defaultdict 
+from datetime import datetime, timedelta
 from dateutil import tz
+from operator import itemgetter
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
-import dateutil.relativedelta
-import datetime as dt
+from pipelineUtils import PipelineUtils
+from popularity_api import get_popularity_for_id, validate_popularity_data_health
 
-sys.path.append('/home/apis/pds_api/')
 sys.path.append("/nykaa/scripts/sharedutils")
+from esutils import EsUtils
+from loopcounter import LoopCounter
 from mongoutils import MongoUtils
 
 sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
-
-from loopcounter import LoopCounter
-from pas.v2.csvutils import read_csv_from_file
-from pas.v2.utils import Utils as PasUtils
-sys.path.append("/home/apis/discovery_api")
-from disc.v2.utils import Utils as DiscUtils
-from pipelineUtils import PipelineUtils
-from popularity_api import get_popularity_for_id, validate_popularity_data_health
-from esutils import EsUtils
 from generate_user_product_vectors import get_vectors_from_mysql_for_es
 
-NUMBER_OF_THREADS = 20
+sys.path.append("/home/apis/pds_api")
+from pas.v2.csvutils import read_csv_from_file
+
+sys.path.append("/home/apis/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
+
+hostname = socket.gethostname()
+if not(hostname.startswith('admin') or hostname.startswith('preprod')):
+	NUMBER_OF_THREADS = 2
+else:
+	NUMBER_OF_THREADS = 20
+
 RECORD_GROUP_SIZE = 100
 APPLIANCE_MAIN_CATEGORY_ID = "1390"
 
@@ -334,12 +341,15 @@ class CatalogIndexer:
         attempts = 3
         while (attempts):
             try:
-                pas_object = json.loads(urlopen(req).read().decode('utf-8'))
+                pas_object = json.loads(str(urlopen(req).read().decode('utf-8')))
                 break
             except:
                 attempts -= 1
                 print("WARNING ... Attempts remaining: %s, Failed to fetch data: %s %s " % (
                 attempts, request_url, request_data))
+                if attempts == 0:
+                  embed()
+                  raise
 
         pas_object = pas_object.get('skus')
 

@@ -8,6 +8,7 @@ alias gs='git status '
 alias gb='git branch '
 alias pull='git pull'
 alias push='git push'
+alias gprs='echo "https://github.com/"`cat  .git/config  | grep git@github.com | sed "s/.*git@github.com://g" | sed "s/.git$//"`"/pulls"'
 
 alias api='cd /home/apis/nykaa'
 alias api1='cd /home/apis/pds_api'

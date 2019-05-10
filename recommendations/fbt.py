@@ -13,7 +13,7 @@ from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
-nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+nykaa_mysql_conn = DiscUtils.nykaaMysqlConnection()
 
 simple_similar_products_dict = {}
 direct_similar_products_dict = {}
@@ -98,7 +98,7 @@ def get_recommendations(product_id, recommendations_cnt=10, with_name=True, algo
         },
         "_source": ['title_text_split', 'product_id']
     }
-    response = Utils.makeESRequest(query, index='livecore')
+    response = DiscUtils.makeESRequest(query, index='livecore')
     product_id_2_name = {int(hit['_source']['product_id']): hit['_source']['title_text_split'] for hit in
                          response['hits']['hits']}
     return [(recommendation_id, product_id_2_name[recommendation_id]) for recommendation_id in recommendation_ids]
@@ -164,7 +164,7 @@ def write_data_in_table(db, cursor, rows):
 
 
 def populate_recommendations_in_mysql(unique_products):
-    pasdb = Utils.mysqlConnection('w')
+    pasdb = DiscUtils.mysqlConnection('w')
     cursor = pasdb.cursor()
 
     create_recommendation_table(cursor)
@@ -203,7 +203,7 @@ def populate_recommendations_in_mysql(unique_products):
 
 
 def populate_simple_variant_recommendation():
-    nykaadb = Utils.nykaaMysqlConnection()
+    nykaadb = DiscUtils.nykaaMysqlConnection()
     nykaa_cursor = nykaadb.cursor()
     query = "select parent_id, child_id from catalog_product_relation"
     nykaa_cursor.execute(query)
@@ -219,7 +219,7 @@ def populate_simple_variant_recommendation():
             if not value in parent_2_children:
                 parent_2_children[value] = []
             parent_2_children[value].append(int(key))
-    pasdb = Utils.mysqlConnection('w')
+    pasdb = DiscUtils.mysqlConnection('w')
     cursor = pasdb.cursor()
     products_count = 0
     for parent, variants in parent_2_children.items():
@@ -253,7 +253,7 @@ def populate_simple_variant_recommendation():
 
 def create_child_2_parent_map():
     query = "select child_id, parent_id from catalog_product_relation"
-    rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), query, 50000)
+    rows = DiscUtils.fetchResultsInBatch(DiscUtils.nykaaMysqlConnection(), query, 50000)
     child_2_parent = {row[0]: row[1] for row in rows}
 
     with open("child_product_2_parent.json", "r+") as f:
@@ -278,10 +278,10 @@ if __name__ == "__main__":
         df = pd.DataFrame()
 
         orders_query = """SELECT order_id, product_id FROM sales_flat_order_item WHERE order_id <> 0 AND mrp > 1;"""
-        rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), orders_query, 10000)
+        rows = DiscUtils.fetchResultsInBatch(DiscUtils.nykaaMysqlConnection(), orders_query, 10000)
         df.append(rows)
         orders_archive_query = """SELECT order_id, product_id FROM sales_flat_order_item_archive WHERE order_id <> 0 AND mrp > 1;"""
-        rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), orders_archive_query, 10000)
+        rows = DiscUtils.fetchResultsInBatch(DiscUtils.nykaaMysqlConnection(), orders_archive_query, 10000)
         df.append(rows)
         df.columns = ['order_id', 'product_id']
 

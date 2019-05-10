@@ -30,7 +30,7 @@ from apiutils import ApiUtils
 from idutils import createId
 from categoryutils import getVariants
 
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import MemcacheUtils
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
@@ -46,7 +46,7 @@ query_product_not_found_table = MongoUtils.getClient()['search']['query_product_
 feedback_data_autocomplete = MongoUtils.getClient()['search']['feedback_data_autocomplete']
 top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
-es = Utils.esConn()
+es = DiscUtils.esConn()
 
 GLOBAL_FAST_INDEXING = False
 
@@ -58,7 +58,7 @@ MIN_COUNTS = {
   "search_query": 40000,
   "category_facet": 300,
 }
-Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
+PasUtils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
 brandLandingMap = {"herm" : "/hermes?ptype=lst&id=7917"}
 
@@ -146,7 +146,7 @@ def create_map_search_product():
       "_source" : ["title", "score", "media", "product_url", "product_id", "price", "type"]
     }
 
-    response = Utils.makeESRequest(querydsl, es_index)
+    response = DiscUtils.makeESRequest(querydsl, es_index)
     docs = response['hits']['hits']
 
     if not docs:
@@ -257,9 +257,9 @@ def index_search_queries(collection, searchengine):
 def index_brands(collection, searchengine):
   docs = []
 
-  mysql_conn = Utils.mysqlConnection()
+  mysql_conn = DiscUtils.mysqlConnection()
   query = "SELECT brand_id, brand, brand_popularity, brand_popularity_men, brand_url, brand_men_url FROM brands ORDER BY brand_popularity DESC"
-  results = Utils.fetchResults(mysql_conn, query)
+  results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
@@ -316,9 +316,9 @@ def index_categories(collection, searchengine):
 
   docs = []
 
-  mysql_conn = Utils.mysqlConnection()
+  mysql_conn = DiscUtils.mysqlConnection()
   query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, category_popularity_men FROM l3_categories_clean order by name, category_popularity desc"
-  results = Utils.fetchResults(mysql_conn, query)
+  results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   prev_cat = None
   for row in results:
@@ -370,9 +370,9 @@ def index_brands_categories(collection, searchengine):
 
   docs = []
 
-  mysql_conn = Utils.mysqlConnection()
+  mysql_conn = DiscUtils.mysqlConnection()
   query = "SELECT brand_id, brand, category_name, category_id, popularity, popularity_men FROM brand_category"
-  results = Utils.fetchResults(mysql_conn, query)
+  results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
@@ -396,9 +396,9 @@ def index_brands_categories(collection, searchengine):
 def index_category_facets(collection, searchengine):
   docs = []
 
-  mysql_conn = Utils.mysqlConnection()
+  mysql_conn = DiscUtils.mysqlConnection()
   query = "SELECT category_name, category_id, facet_val, popularity, popularity_men FROM category_facets"
-  results = Utils.fetchResults(mysql_conn, query)
+  results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Facet Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
@@ -441,8 +441,8 @@ def validate_min_count(force_run, allowed_min_docs):
 # Verify correctness of indexing by comparing total number of documents in both active and inactive indexes
   params = {'q': '*:*', 'rows': '0'}
   query = { "size": 0, "query":{ "match_all": {} } }
-  num_docs_active = Utils.makeESRequest(query, index=active_index)['hits']['total']
-  num_docs_inactive = Utils.makeESRequest(query, index=inactive_index)['hits']['total']
+  num_docs_active = DiscUtils.makeESRequest(query, index=active_index)['hits']['total']
+  num_docs_inactive = DiscUtils.makeESRequest(query, index=inactive_index)['hits']['total']
   print('Number of documents in active index(%s): %s'%(active_index, num_docs_active))
   print('Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
 
@@ -466,7 +466,7 @@ def validate_min_count(force_run, allowed_min_docs):
     querydsl = { "size": 0, "query":{ "match": {"type": _type} } }
     indexes = EsUtils.get_active_inactive_indexes('autocomplete')
     es_index = indexes['inactive_index']
-    return Utils.makeESRequest(querydsl, es_index)['hits']['total']
+    return DiscUtils.makeESRequest(querydsl, es_index)['hits']['total']
 
   for _type, count in MIN_COUNTS.items():
     found_count = get_count(_type)
@@ -606,7 +606,7 @@ def fetch_product_by_ids(ids):
     queries.append(json.dumps(query))
 
   product = {}
-  response = Utils.makeESRequest(queries, 'livecore', msearch=True)
+  response = DiscUtils.makeESRequest(queries, 'livecore', msearch=True)
   final_docs = {}
   for docs in [x['hits']['hits'] for x in response['responses']]:
     if docs:

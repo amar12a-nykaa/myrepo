@@ -8,12 +8,12 @@ sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
 from esutils import EsUtils
 
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
-es = Utils.esConn()
+es = DiscUtils.esConn()
 active_index = es.cat.aliases("livecore", format="json")[0]['index']
 num_docs_active = es.count("livecore")['count']
 resp = {

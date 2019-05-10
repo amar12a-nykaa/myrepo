@@ -6,8 +6,8 @@ import argparse
 import datetime
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
-from health_check import get_missing_dates, enumerate_dates
-from read_csv_popularity_data import read_file_by_date
+from popularity_health_check import get_missing_dates, enumerate_dates
+from popularity_read_csv_feed import read_file_by_date
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--days", type=int, default=5)

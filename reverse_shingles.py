@@ -32,7 +32,7 @@ from esutils import EsUtils
 from apiutils import ApiUtils
 from idutils import createId
 
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
@@ -43,7 +43,7 @@ search_terms_normalized_daily = MongoUtils.getClient()['search']['search_terms_n
 query_product_map_table = MongoUtils.getClient()['search']['query_product_map']
 query_product_not_found_table = MongoUtils.getClient()['search']['query_product_not_found']
 top_queries = []
-es = Utils.esConn()
+es = DiscUtils.esConn()
 es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']
 
 singles = defaultdict(int)

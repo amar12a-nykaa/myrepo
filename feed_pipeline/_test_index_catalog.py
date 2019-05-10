@@ -26,7 +26,7 @@ def test_index(url, sample_count):
 					"match": {"_id": row_sku}
 			}
 		}
-		response = Utils.makeESRequest(query, index='livecore')
+		response = DiscUtils.makeESRequest(query, index='livecore')
 		if len(response['hits']['hits']) == 0:
 			continue
 

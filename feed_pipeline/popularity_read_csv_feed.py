@@ -40,7 +40,7 @@ def create_product_id_index():
   start = time.time()
   product_id_index = {}
 
-  nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+  nykaa_mysql_conn = PasUtils.nykaaMysqlConnection()
   query = """
     SELECT a.entity_id as product_id, a.key_id as parent_id
     FROM(
@@ -59,7 +59,7 @@ def create_product_id_index():
     """
   
   delta = time.time() - start 
-  for p in Utils.mysql_read(query, connection=nykaa_mysql_conn):
+  for p in PasUtils.mysql_read(query, connection=nykaa_mysql_conn):
     p = {k:str(v) for k,v in p.items()}
     product_id_index[p['product_id']] = p
 

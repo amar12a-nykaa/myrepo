@@ -3,13 +3,13 @@ from collections import defaultdict
 import sys
 import argparse
 import json
-sys.path.append("/nykaa/api")
+sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 import boto3
 
-pasdb = Utils.mysqlConnection()
+pasdb = DiscUtils.mysqlConnection()
 cursor = pasdb.cursor()
 
 if __name__ == "__main__":
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     store_in_mysql(rows)
 
-    nykaadb = Utils.nykaaMysqlConnection()
+    nykaadb = DiscUtils.nykaaMysqlConnection()
     nykaa_cursor = nykaadb.cursor()
 
     def extract_data(query): 

@@ -12,3 +12,5 @@ find . -not -path '*/\.git*' -type f -exec sed -i 's/MONGO_CLIENT.*$//g' {} +
 find . -not -path '*/\.git*' -type f -exec sed -i "s:sys.path.append('/home/apis/nykaa/'):sys.path.append('/home/apis/pds_api/'):g" {} +
 
 find . -not -path '*/\.git*' -type f -exec sed -i -E 's/from pas.v2.utils import Utils$/from pas.v2.utils import Utils as PasUtils\nsys.path.append("\/home\/apis\/discovery_api")\nfrom disc.v2.utils import Utils as DiscUtils/g' {} +
+
+for f in `grep -rl Utils.esConn * `; do sed -i 's/ Utils\./ DiscUtils./g' $f; done 

@@ -43,7 +43,7 @@ def update_bestseller_data(batch_size):
 	try:
 		print('update_bestseller_data Started ')
 		print('batch_size : ', batch_size)
-		indexes = EsDiscUtils.get_active_inactive_indexes("livecore")
+		indexes = EsUtils.get_active_inactive_indexes("livecore")
 		active_index = indexes['active_index']
 		print("ES Active Index: %s" % active_index)
 

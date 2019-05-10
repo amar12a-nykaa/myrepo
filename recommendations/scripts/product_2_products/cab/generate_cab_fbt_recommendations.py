@@ -104,7 +104,7 @@ class Utils:
 
     @staticmethod
     def scrollESForResults(env):
-        es_conn = Utils.esConn(env)
+        es_conn = DiscUtils.esConn(env)
         ES_BATCH_SIZE = 10000
         scroll_id = None
         luxe_products = []
@@ -181,7 +181,7 @@ def prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit,
     customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_source IN (" + ",".join([("'%s'" % source) for source in order_sources]) + ") AND order_customerid IS NOT NULL %s %s %s" % (" AND order_date <= '%s' " % end_datetime if end_datetime else "", " AND order_date >= '%s' " % start_datetime if start_datetime else "", " limit %d" % limit if limit else "")
     print(customer_orders_query)
     print('Fetching Data from Redshift')
-    rows = Utils.fetchResultsInBatch(Utils.redshiftConnection(env), customer_orders_query, 10000)
+    rows = DiscUtils.fetchResultsInBatch(DiscUtils.redshiftConnection(env), customer_orders_query, 10000)
     print('Data fetched')
     schema = StructType([
             StructField("order_id", StringType(), True),
@@ -195,7 +195,7 @@ def prepare_orders_dataframe(env, platform, start_datetime, end_datetime, limit,
     print('Total number of rows extracted: %d' % df.count())
     print('Total number of products: %d' % df.select('product_id').distinct().count())
     print('Scrolling ES for results')
-    results = Utils.scrollESForResults(env)
+    results = DiscUtils.scrollESForResults(env)
     print('Scrolling ES done')
     child_2_parent = results['child_2_parent']
     sku_2_product_id = results['sku_2_product_id']
@@ -316,7 +316,7 @@ def compute_fbt(env, platform, start_datetime=None, end_datetime=None, limit=Non
             rows.append((platform, variant, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
 
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
+    RecommendationsUtils.add_recommendations_in_mysql(DiscUtils.mysqlConnection(env), 'recommendations_v2', rows)
 
 def compute_cab(env, cab_algo, platform, start_datetime=None, end_datetime=None, limit=None):
     print("Computing CAB")
@@ -390,7 +390,7 @@ def compute_cab(env, cab_algo, platform, start_datetime=None, end_datetime=None,
 
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
     print('Total number of rows: %d' % len(rows))
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
+    RecommendationsUtils.add_recommendations_in_mysql(DiscUtils.mysqlConnection(env), 'recommendations_v2', rows)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
