@@ -1,47 +1,49 @@
 #!/usr/bin/python
+
 import argparse
+import ast
 import csv
+import dateparser
+import datetime as dt
+import dateutil.relativedelta
 import json
+import numpy
 import os
 import pprint
+import queue
+import re
 import socket
 import sys
-import traceback
-import ast
-from operator import itemgetter
-from collections import OrderedDict
-from datetime import datetime, timedelta
-from urllib.parse import urlparse
-from urllib.request import Request, urlopen
-import re
-import dateparser
-from IPython import embed
+import threading
 import time
 import timeit
-import queue
-import threading
-import numpy
+import traceback
+
+from IPython import embed
+from collections import OrderedDict
 from collections import defaultdict 
+from datetime import datetime, timedelta
 from dateutil import tz
+from operator import itemgetter
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
-import dateutil.relativedelta
-import datetime as dt
+from pipelineUtils import PipelineUtils
+from popularity_api import get_popularity_for_id, validate_popularity_data_health
 
-#sys.path.append('/home/apis/pds_api/')
 sys.path.append("/nykaa/scripts/sharedutils")
+from esutils import EsUtils
+from loopcounter import LoopCounter
 from mongoutils import MongoUtils
 
 sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
+from generate_user_product_vectors import get_vectors_from_mysql_for_es
 
-from loopcounter import LoopCounter
+sys.path.append("/home/apis/pds_api")
 from pas.v2.csvutils import read_csv_from_file
-#from pas.v2.utils import Utils as PasUtils
+
 sys.path.append("/home/apis/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
-from pipelineUtils import PipelineUtils
-from popularity_api import get_popularity_for_id, validate_popularity_data_health
-from esutils import EsUtils
-from generate_user_product_vectors import get_vectors_from_mysql_for_es
 
 hostname = socket.gethostname()
 if not(hostname.startswith('admin') or hostname.startswith('preprod')):
