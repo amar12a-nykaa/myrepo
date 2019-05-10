@@ -21,18 +21,16 @@ import pandas as pd
 from pandas.io import sql
 
 from popularity_new import calculate_new_popularity
-from pipelineUtils import PipelineUtils
+from popularity_api import get_popularity_for_id  
+
 sys.path.append("/home/apis/pds_api")
 from pas.v2.utils import Utils as PasUtils
-sys.path.append("/home/apis/discovery_api")
-from disc.v2.utils import Utils as DiscUtils
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from mongoutils import MongoUtils
 from loopcounter import LoopCounter
+from apiutils import ApiUtils
 
-sys.path.append("/nykaa/scripts/feed_pipeline")
-from popularity_api import get_popularity_for_id  
 
 WEIGHT_VIEWS = 10
 WEIGHT_UNITS = 30
@@ -401,8 +399,7 @@ def get_all_the_child_products(parent_id):
 
 def check_if_product_available(product_id):
 
-  api =  'http://'+ PipelineUtils.getAPIHost()+'/apis/v2/product.list?id={0}'.format(product_id)
-  #api =  'http://preprod-api.nyk00-int.network/apis/v2/product.list?id={0}'.format(product_id)
+  api = 'http://'+ ApiUtils.get_host() +'/apis/v2/product.list?id={0}'.format(product_id)
   r  = requests.get(api)
   data  = {}
   try:

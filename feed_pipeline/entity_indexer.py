@@ -212,7 +212,7 @@ class EntityIndexer:
         print(row['name'], ctr.count)
       EsUtils.indexDocs(docs, collection)
 
-  def indexEntities(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False,
+  def index(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False,
                       index_brands_arg=False, index_filters_arg=False, index_all=False):
     index = None
     print('Starting Processing')
