@@ -161,7 +161,7 @@ class ScheduledPriceUpdater:
           try:
             DiscUtils.updateESCatalog(update_docs)
           except Exception as e:
-            print("Skipping the SKUs that are missing in ES!!")
+            print("Exception!! Some SKUs that are missing in ES..")
 
           sqs.delete_message(
               QueueUrl=queue_url,
