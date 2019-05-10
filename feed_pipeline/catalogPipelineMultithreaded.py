@@ -75,7 +75,7 @@ def indexESData(file_path, force_run):
     if index_client.exists(inactive_index):
         print("Deleting index: %s" % inactive_index)
         index_client.delete(inactive_index)
-    schema = json.load(open(os.path.join(os.path.dirname(__file__), 'schema.json')))
+    schema = json.load(open(os.path.join(os.path.dirname(__file__), 'catalog_schema.json')))
     index_client.create(inactive_index, schema)
     sett = {'refresh_interval': '-1'}
     index_client.put_settings(sett, inactive_index)
