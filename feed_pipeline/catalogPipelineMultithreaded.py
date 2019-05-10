@@ -14,7 +14,7 @@ import csv
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
-from importDataFromNykaa import NykaaImporter
+from catalog_nykaa_importer import NykaaImporter
 from catalog_indexer import CatalogIndexer
 from update_bestseller_product_to_es import update_bestseller_data
 
