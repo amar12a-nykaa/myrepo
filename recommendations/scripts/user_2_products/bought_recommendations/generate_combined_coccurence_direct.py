@@ -17,7 +17,7 @@ from pyspark.sql.types import StructType, StructField, IntegerType, StringType, 
 from pyspark.sql.functions import udf, col, desc
 import pyspark.sql.functions as func
 
-#sys.path.append("/home/apis/pds_api/")
+#sys.path.append("/var/www/pds_api/")
 #from pas.v2.utils import Utils, RecommendationsUtils
 ORDER_SOURCE_NYKAA = ['Nykaa', 'Nykaa(Old)', 'NYKAA', 'CS-Manual']
 ORDER_SOURCE_NYKAAMEN = ['NykaaMen']

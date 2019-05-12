@@ -9,7 +9,7 @@ import sys
 import tempfile
 import re
 
-sys.path.append("/home/apis/pds_api")
+sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils, RecommendationsUtils
 sys.path.append("/home/ubuntu/nykaa_scripts/sharedutils")
 from loopcounter import LoopCounter

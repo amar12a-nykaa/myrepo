@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/apis/discovery_api/')
+sys.path.append('/var/www/discovery_api/')
 from disc.v2.utils import MemcacheUtils
 MemcacheUtils.flush_all() 
 

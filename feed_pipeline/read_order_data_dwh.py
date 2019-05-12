@@ -10,7 +10,7 @@ from mongoutils import MongoUtils
 
 sys.path.append('/nykaa/api')
 from pas.v2.utils import Utils as PasUtils
-sys.path.append("/home/apis/discovery_api")
+sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
 client = MongoUtils.getClient()

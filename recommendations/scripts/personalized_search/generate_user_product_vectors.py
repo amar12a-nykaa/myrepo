@@ -26,7 +26,7 @@ import sys
 
 #test.print_cool()
 #from pas.v2.utils import Utils as PasUtils
-sys.path.append("/home/apis/discovery_api")
+sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 #sys.path.append("/home/ubuntu/nykaa_scripts/utils")
 #from gensimutils import GensimUtils
