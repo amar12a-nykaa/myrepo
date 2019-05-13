@@ -14,9 +14,9 @@ import IPython
 from pytz import timezone
 
 
-sys.path.append('/home/apis/pds_api/')
+sys.path.append('/var/www/pds_api/')
 from pas.v2.utils import Utils as PasUtils
-sys.path.append("/home/apis/discovery_api")
+sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
 

@@ -18,12 +18,12 @@ from catalog_nykaa_importer import NykaaImporter
 from catalog_indexer import CatalogIndexer
 from update_bestseller_product_to_es import update_bestseller_data
 
-sys.path.append("/home/apis/discovery_api/")
+sys.path.append("/var/www/discovery_api/")
 from disc.v2.utils import Utils as DiscUtils
 #print(django.conf.ENVIRONMENT_VARIABLE)
 #print(os.environ['DJANGO_SETTINGS_MODULE_DISCOVERY'])
 #print(DiscUtils.test)
-#sys.path.append('/home/apis/pds_api/')
+#sys.path.append('/var/www/pds_api/')
 #from pas.v2.utils import Utils as PasUtils
 #print(django.conf.ENVIRONMENT_VARIABLE)
 #print(os.environ['DJANGO_SETTINGS_MODULE_DISCOVERY'])
