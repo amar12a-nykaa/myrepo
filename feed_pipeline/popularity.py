@@ -23,7 +23,7 @@ from pandas.io import sql
 from popularity_new import calculate_new_popularity
 from popularity_api import get_popularity_for_id  
 
-sys.path.append("/home/apis/pds_api")
+sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
 
 sys.path.append("/nykaa/scripts/sharedutils")

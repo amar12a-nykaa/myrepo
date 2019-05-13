@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/home/apis/pds_api/')
+sys.path.append('/var/www/pds_api/')
 import argparse
 import json
 import requests
@@ -7,7 +7,7 @@ import urllib.parse
 import urllib.request
 from pipelineUtils import PipelineUtils
 from pas.v2.utils import Utils as PasUtils
-sys.path.append("/home/apis/discovery_api")
+sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
 def getDataFromDb(skus):

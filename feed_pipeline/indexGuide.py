@@ -4,7 +4,7 @@ import pandas as pd
 import json
 import os
 
-sys.path.append("/home/apis/pds_api")
+sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils, EntityUtils
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils

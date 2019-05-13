@@ -3,17 +3,31 @@ import argparse
 import os
 import mysql.connector
 import sys
-sys.path.append("/home/apis/pds_api")
+sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
-sys.path.append("/home/apis/discovery_api")
+
+sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
-sys.path.append("/nykaa/scripts")
-from machines import machines
+from nykaa import settings
+
+GLUDO_MYSQL_WRITE = "price-api-qa.cjmplqztt198.ap-southeast-1.rds.amazonaws.com"
+GLUDO_MYSQL_READ = "price-api-qa.cjmplqztt198.ap-southeast-1.rds.amazonaws.com"
+GLUDO_MYSQL_USER = "api"
+GLUDO_MYSQL_PASSWORD = "aU%v#sq1"
+
+
+
 
 DUUMPFILE = "/tmp/sqldump.sql"
-conn_details = {}
-conn = PasUtils.mysqlConnection(mode='w', connection_details = conn_details)
+conn_details = {
+  "host": GLUDO_MYSQL_WRITE,
+  "user": GLUDO_MYSQL_USER,
+  "password": GLUDO_MYSQL_PASSWORD,
+  "database": "nykaa"
+}
+
+conn = PasUtils.mysqlConnection(mode='w')
 parser = argparse.ArgumentParser()
 parser.add_argument("unnamed", nargs="*")
 group = parser.add_mutually_exclusive_group(required=True)

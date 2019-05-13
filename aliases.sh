@@ -11,8 +11,8 @@ alias push='git push'
 alias gprs='echo "https://github.com/"`cat  .git/config  | grep git@github.com | sed "s/.*git@github.com://g" | sed "s/.git$//"`"/pulls"'
 
 alias api='cd /home/apis/nykaa'
-alias api1='cd /home/apis/pds_api'
-alias api2='cd /home/apis/discovery_api'
+alias api1='cd /var/www/pds_api'
+alias api2='cd /var/www/discovery_api'
 alias adminftp='cd /nykaa/adminftp'
 
 alias nykaaproddb="mysql -h dbmaster-qa.cjmplqztt198.ap-southeast-1.rds.amazonaws.com -uapi -paU%v#sq1 -D nykaalive1"
