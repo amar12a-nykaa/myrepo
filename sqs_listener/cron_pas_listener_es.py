@@ -125,7 +125,6 @@ class ScheduledPriceUpdater:
         q = queue.Queue(maxsize=0)
         current_datetime = getCurrentDateTime()
         last_datetime = current_datetime - timedelta(hours=1)
-
         from IPython import embed
         import boto3
         
@@ -162,12 +161,12 @@ class ScheduledPriceUpdater:
             DiscUtils.updateESCatalog(update_docs)
           except Exception as e:
             print("Exception!! Some SKUs that are missing in ES..")
-
-          sqs.delete_message(
+          finally:
+            sqs.delete_message(
               QueueUrl=queue_url,
               ReceiptHandle=receipt_handle
-          )
-          print('Received and deleted message: %s' % message)
+            )
+            print('Received and deleted message: %s' % message)
 
 
 
