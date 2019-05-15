@@ -171,6 +171,8 @@ class ScheduledPriceUpdater:
               update_docs.clear()
               if is_queue_empty:
                 break
+          if is_queue_empty:
+            break
 
         endts=time.time()
         diff = endts - startts
