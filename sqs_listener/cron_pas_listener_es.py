@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import time
 import sys
 from dateutil import tz
 #from pipelineUtils import PipelineUtils
@@ -113,8 +114,6 @@ class ScheduledPriceUpdater:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit = True)
             if update_docs:
                 DiscUtils.updateESCatalog(update_docs)
-                for single_doc in update_docs:
-                    print("sku : %s" % single_doc['sku'])
         except Exception as e:
             print(traceback.format_exc())
 
@@ -123,7 +122,6 @@ class ScheduledPriceUpdater:
 
 
     def update():
-        # Current time
         q = queue.Queue(maxsize=0)
         current_datetime = getCurrentDateTime()
         last_datetime = current_datetime - timedelta(hours=1)
@@ -134,6 +132,9 @@ class ScheduledPriceUpdater:
         sqs = boto3.client('sqs')
         queue_url = DISCOVERY_SQS_ENDPOINT
         # Receive message from SQS queue
+        startts = time.time()
+        update_docs = []
+        is_queue_empty=False
         while True:
           response = sqs.receive_message(
               QueueUrl=queue_url,
@@ -147,30 +148,33 @@ class ScheduledPriceUpdater:
               VisibilityTimeout=10,
               WaitTimeSeconds=0
           )
-          if 'Messages' not in response:
-            print("No more messages")
-            break
-        
-          message = response['Messages'][0]
-          receipt_handle = message['ReceiptHandle']
-          print( "== process here ==")  
-          # Delete received message from queue
-          print("message", message['Body'])
-          update_docs = json.loads(message['Body'])
-          print("receipt_handle: %s" % receipt_handle)
-          print(update_docs)
-          try:
-            DiscUtils.updateESCatalog(update_docs)
-          except Exception as e:
-            print("Exception!! Some SKUs that are missing in ES..")
-          finally:
+          if 'Messages' in response:
+            message = response['Messages'][0]
+            receipt_handle = message['ReceiptHandle']
+            # Delete received message from queue
+            update_docs.append(json.loads(message['Body']))
             sqs.delete_message(
-              QueueUrl=queue_url,
-              ReceiptHandle=receipt_handle
-            )
-            print('Received and deleted message: %s' % message)
+                QueueUrl=queue_url,
+                ReceiptHandle=receipt_handle
+              )
+          else:
+            is_queue_empty=True
+            print("No more messages")
 
+          if len(update_docs)==100 or (len(update_docs)>=1 and is_queue_empty) :
+            try:
+              print("updating 100 documents...")
+              DiscUtils.updateESCatalog(update_docs)
+            except Exception as e:
+              print("Exception!! Some SKUs that are missing in ES..")
+            finally:
+              update_docs.clear()
+              if is_queue_empty:
+                break
 
+        endts=time.time()
+        diff = endts - startts
+        print("Time taken:  %s seconds" % diff)
 
         exit()
 
