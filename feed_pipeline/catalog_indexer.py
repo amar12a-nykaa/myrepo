@@ -961,6 +961,10 @@ class CatalogIndexer:
                   doc['revenue_in_last_month'] = product_history[product_id]['revenue_in_last_month']
                   doc['units_sold_in_last_month'] = product_history[product_id]['units_sold_in_last_month']
                   doc['cart_additions_in_last_month'] = product_history[product_id]['cart_additions_in_last_month']
+                
+                if doc.get('type', '') == 'bundle':
+                    doc['title_brand_category'] += " " + "combo"
+                
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
 
