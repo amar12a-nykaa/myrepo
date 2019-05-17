@@ -162,35 +162,36 @@ def normalize_search_terms():
             final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
         final_df.popularity = final_df.popularity.fillna(0)
 
-        final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
-        final_df.drop(['popularity'], axis=1, inplace=True)
+        # final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
+        # final_df.drop(['popularity'], axis=1, inplace=True)
         #print(final_df)
 
     # Calculate total popularity
-    print ("Calculating total popularity")
-    date_6months_ago = arrow.now().replace(days=-6*30, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(tzinfo=None)
+    # print ("Calculating total popularity")
+    # date_6months_ago = arrow.now().replace(days=-6*30, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(tzinfo=None)
+    #
+    # bucket_results = []
+    # for term in search_terms_daily.aggregate([
+    #     #{"$match": {"term" : {"$in": ['Lipstick', 'nars']}}},
+    #     {"$match": {"date": {"$gte": date_6months_ago}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
+    #     #{"$match": {"date": {"$gte": date_6months_ago, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
+    #     {"$project": {"term": { "$toLower": "$term"}, "date":"$date","count": "$internal_search_term_conversion_instance" }},
+    #     {"$group": {"_id": "$term", "count": {"$sum": "$count"} }},
+    #     {"$sort":{ "count": -1}},
+    # ], allowDiskUse=True):
+    #     term['id'] = term.pop("_id")
+    #     bucket_results.append(term)
+    #
+    # df = pd.DataFrame(bucket_results)
+    # df['norm_count'] = normalize(df['count'])
+    # df['popularity_total'] = df['norm_count']
+    # df = df.set_index('id')
 
-    bucket_results = []
-    for term in search_terms_daily.aggregate([
-        #{"$match": {"term" : {"$in": ['Lipstick', 'nars']}}},
-        {"$match": {"date": {"$gte": date_6months_ago}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
-        #{"$match": {"date": {"$gte": date_6months_ago, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
-        {"$project": {"term": { "$toLower": "$term"}, "date":"$date","count": "$internal_search_term_conversion_instance" }},
-        {"$group": {"_id": "$term", "count": {"$sum": "$count"} }}, 
-        {"$sort":{ "count": -1}},
-    ], allowDiskUse=True):
-        term['id'] = term.pop("_id")
-        bucket_results.append(term)
-
-    df = pd.DataFrame(bucket_results)
-    df['norm_count'] = normalize(df['count'])
-    df['popularity_total'] = df['norm_count']
-    df = df.set_index('id')
-
-    a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
-    a.popularity_recent = a.popularity_recent.fillna(0) 
-    a['popularity'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
-    a.popularity = a.popularity.fillna(0) 
+    # a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
+    a = final_df.reset_index()
+    # a.popularity_recent = a.popularity_recent.fillna(0)
+    # a['popularity'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
+    # a.popularity = a.popularity.fillna(0)
 
     requests = []
     corrections = []
