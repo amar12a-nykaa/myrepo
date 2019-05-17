@@ -195,7 +195,7 @@ def get_product_detail(product_id):
     return {}
 
 def helper_function(weekly_category_wise_count_map, weekly_category_brand_count_map, weekly_brand_count_map, docs, already_dotd_products):
-  new_docs  = sorted(docs, key=lambda x: float(x.get('discount', 0)), reverse=True)
+  # new_docs  = sorted(docs, key=lambda x: float(x.get('discount', 0)), reverse=True)
 
   daily_category_count_map = {}
   daily_brand_count_map = {}

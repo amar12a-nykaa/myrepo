@@ -938,7 +938,7 @@ class CatalogIndexer:
                     brand = doc.get("brand_facet_searchable", "") or ""
                     if not brand: 
                       print("ERROR ... Could not extract brand for product_id: %s" % doc['product_id'])
-                    title_searchable = row.get('title_searchable', "") if  "Nykaa Naturals" in brand else row.get('name', "")
+                    title_searchable = row.get('name', "")
                     doc['title_brand_category'] = " ".join([x for x in [title_searchable, doc.get("brand_facet_searchable", ""),doc.get("category_facet_searchable", "")] if x])
                 except:
                     print(traceback.format_exc())
@@ -961,6 +961,10 @@ class CatalogIndexer:
                   doc['revenue_in_last_month'] = product_history[product_id]['revenue_in_last_month']
                   doc['units_sold_in_last_month'] = product_history[product_id]['units_sold_in_last_month']
                   doc['cart_additions_in_last_month'] = product_history[product_id]['cart_additions_in_last_month']
+                
+                if doc.get('type', '') == 'bundle':
+                    doc['title_brand_category'] += " " + "combo"
+                
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
 
