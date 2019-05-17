@@ -127,7 +127,6 @@ class ScheduledPriceUpdater:
         last_datetime = current_datetime - timedelta(hours=1)
         from IPython import embed
         import boto3
-        
         # Create SQS client
         sqs = boto3.client('sqs')
         queue_url = DISCOVERY_SQS_ENDPOINT
@@ -141,7 +140,7 @@ class ScheduledPriceUpdater:
               AttributeNames=[
                   'SentTimestamp'
               ],
-              MaxNumberOfMessages=1,
+              MaxNumberOfMessages=10,
               MessageAttributeNames=[
                   'All'
               ],
@@ -149,11 +148,12 @@ class ScheduledPriceUpdater:
               WaitTimeSeconds=0
           )
           if 'Messages' in response:
-            message = response['Messages'][0]
-            receipt_handle = message['ReceiptHandle']
-            # Delete received message from queue
-            update_docs.append(json.loads(message['Body']))
-            sqs.delete_message(
+            for message in response['Messages']:
+              #message = response['Messages'][0]
+              receipt_handle = message['ReceiptHandle']
+              # Delete received message from queue
+              update_docs.append(json.loads(message['Body']))
+              sqs.delete_message(
                 QueueUrl=queue_url,
                 ReceiptHandle=receipt_handle
               )
@@ -161,9 +161,8 @@ class ScheduledPriceUpdater:
             is_queue_empty=True
             print("No more messages")
 
-          if len(update_docs)==100 or (len(update_docs)>=1 and is_queue_empty) :
+          if len(update_docs)==1000 or (len(update_docs)>=1 and is_queue_empty) :
             try:
-              print("updating 100 documents...")
               DiscUtils.updateESCatalog(update_docs)
             except Exception as e:
               print("Exception!! Some SKUs that are missing in ES..")
@@ -177,7 +176,6 @@ class ScheduledPriceUpdater:
         endts=time.time()
         diff = endts - startts
         print("Time taken:  %s seconds" % diff)
-
         exit()
 
         try:
