@@ -14,3 +14,5 @@ find . -not -path '*/\.git*' -type f -exec sed -i "s:sys.path.append('/var/www/n
 find . -not -path '*/\.git*' -type f -exec sed -i -E 's/from pas.v2.utils import Utils$/from pas.v2.utils import Utils as PasUtils\nsys.path.append("\/home\/apis\/discovery_api")\nfrom disc.v2.utils import Utils as DiscUtils/g' {} +
 
 for f in `grep -rl Utils.esConn * `; do sed -i 's/ Utils\./ DiscUtils./g' $f; done 
+
+vulture . | grep "unused function" | grep -vE 'utils|testcases|pytest'
