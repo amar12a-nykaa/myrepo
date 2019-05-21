@@ -133,6 +133,7 @@ class ScheduledPriceUpdater:
         # Receive message from SQS queue
         startts = time.time()
         update_docs = []
+        receiptHandles = []
         is_queue_empty=False
         while True:
           response = sqs.receive_message(
@@ -151,12 +152,8 @@ class ScheduledPriceUpdater:
             for message in response['Messages']:
               #message = response['Messages'][0]
               receipt_handle = message['ReceiptHandle']
-              # Delete received message from queue
               update_docs.append(json.loads(message['Body']))
-              sqs.delete_message(
-                QueueUrl=queue_url,
-                ReceiptHandle=receipt_handle
-              )
+              receiptHandles.append(receipt_handle)
           else:
             is_queue_empty=True
             print("No more messages")
@@ -168,6 +165,11 @@ class ScheduledPriceUpdater:
               print("Exception!! Some SKUs that are missing in ES..")
             finally:
               update_docs.clear()
+              for recHandle in receiptHandles:
+                sqs.delete_message(
+                  QueueUrl=queue_url,
+                  ReceiptHandle=recHandle
+                ) 
               if is_queue_empty:
                 break
           if is_queue_empty:
