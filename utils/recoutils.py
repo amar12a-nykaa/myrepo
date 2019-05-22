@@ -8,6 +8,11 @@ if os.environ.get('NYKAA_EMR_ENVIRONMENT'):
 else:
     env = socket.gethostname()
 
+if env.startswith('admin') or env.startswith('prod-emr'):
+    env = 'prod'
+else:
+    env = 'non_prod'
+
 class RecoUtils:
 
     def get_env_details():
