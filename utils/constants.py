@@ -1,6 +1,5 @@
 import os
 from recoutils import RecoUtils
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType, ArrayType
 
 env_details = RecoUtils.get_env_details()
 
@@ -64,12 +63,6 @@ BIG_INSTANCE = {
     'InstanceGroups': [BIG_MASTER_INSTANCE, BIG_CORE_INSTANCE]
 }
 
-ORDERS_SCHEMA = StructType([
-        StructField("order_id", StringType(), True),
-        StructField("customer_id", StringType(), True),
-        StructField("product_id", IntegerType(), True),
-        StructField("product_sku", StringType(), True),
-        StructField("order_date", TimestampType(), True)])
 
 ORDER_SOURCE_NYKAA = ['Nykaa', 'Nykaa(Old)', 'NYKAA', 'CS-Manual']
 ORDER_SOURCE_NYKAAMEN = ['NykaaMen']

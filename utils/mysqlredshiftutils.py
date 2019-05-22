@@ -5,6 +5,7 @@ from contextlib import closing
 
 import sys
 sys.path.append('/home/ubuntu/nykaa_scripts/utils')
+sys.path.append('/home/hadoop/nykaa_scripts/utils')
 from recoutils import RecoUtils
 
 env_details = RecoUtils.get_env_details()
