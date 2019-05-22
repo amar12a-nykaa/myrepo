@@ -1,6 +1,8 @@
 import os
 import socket
 
+from pyspark.sql import SparkSession
+
 if os.environ.get('NYKAA_EMR_ENVIRONMENT'):
     env = os.environ['NYKAA_EMR_ENVIRONMENT']
 else:
@@ -14,24 +16,16 @@ class RecoUtils:
         else:
             return {'bucket_name': 'nykaa-dev-recommendations', 'key_name': 'nka-qa-emr', 'subnet_id': 'subnet-6608c22f', 'env': 'non_prod'}
 
-    def get_download_code_steps():
-        env_details = RecoUtils.get_env_details()
-        return [
-            {
-                'Name': 'Changing the hostname',
-                'ActionOnFailure': 'TERMINATE_CLUSTER',
-                'HadoopJarStep': {
-                    'Jar': 'command-runner.jar',
-                    'Args': ['sh', '-c', 'export NYKAA_EMR_ENVIRONMENT="dev-emr"' ]
-                }
-            },{
-                'Name': 'Downloading code',
-                'ActionOnFailure': 'TERMINATE_CLUSTER',
-                'HadoopJarStep': {
-                    'Jar': 'command-runner.jar',
-                    'Args': [
-                        'aws', 's3', 'cp', 's3://%s/nykaa_scripts' % env_details['bucket_name'], '/home/hadoop/nykaa_scripts', '--recursive'
-                    ]
-                }
-        }]
+    def get_spark_instance(name='Spark Instance'):
+        if env in ['prod-emr', 'dev-emr']:
+            return SparkSession.builder.appName(name).getOrCreate()
+        else:
+            return SparkSession.builder \
+                    .master("local[10]") \
+                    .appName(name) \
+                    .config("spark.executor.memory", "4G") \
+                    .config("spark.storage.memoryFraction", 0.4) \
+                    .config("spark.driver.memory", "12G") \
+                    .getOrCreate()
+
 

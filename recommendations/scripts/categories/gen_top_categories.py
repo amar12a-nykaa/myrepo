@@ -23,7 +23,7 @@ import pyspark.sql.functions as func
 from pyspark.sql.window import Window
 
 import sys
-sys.path.append("/home/ubuntu/nykaa_scripts_2/utils")
+sys.path.append("/home/ubuntu/nykaa_scripts/utils")
 sys.path.append("/home/hadoop/nykaa_scripts/utils")
 from s3utils import S3Utils
 import constants as Constants
@@ -67,6 +67,13 @@ class CategoriesUtils:
         for i in range(0, len(rows), 500):
             CategoriesUtils._add_categories_in_mysql(cursor, table, rows[i:i+500])
             db.commit()
+
+    @staticmethod
+    def add_categories_in_ups(rows):
+        dynamodb = boto3.resource('dynamodb')
+        table = dynamodb.Table('user_profile_service')
+        for row in rows:
+            table.update_item(Key={'user_id': '%s' % row['customer_id']}, UpdateExpression='SET categories = :val', ExpressionAttributeValues={':val': row['value']})
 
 class Utils:
 
@@ -140,7 +147,7 @@ class Utils:
         else:
             raise Exception('Unknown env')
         print(ES_ENDPOINT)
-        es = Elasticsearch(['http://%s:80' % ES_ENDPOINT])
+        es = Elasticsearch(['http://%s:80' % ES_ENDPOINT], timeout=120)
         return es
 
     @staticmethod
@@ -324,8 +331,10 @@ def generate_top_categories_for_user(env, platform, start_datetime, end_datetime
     norm_model = models.NormModel()
     sorted_cats_udf = udf(lambda customer_id, user_cat_doc: list(filter(lambda x: x not in customer_2_last_order_categories[customer_id], map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(user_cat_doc)]]), key=lambda e: -e[1])))) + customer_2_last_order_categories[customer_id], ArrayType(IntegerType()))
     df = df.withColumn('sorted_cats', sorted_cats_udf('customer_id', 'l3_category_freq'))
-    rows = [('lsi', row['customer_id'], row['sorted_cats']) for row in df.collect()]
-    CategoriesUtils.add_categories_in_mysql(Utils.mlMysqlConnection(env), 'categories_recommendations', rows)
+    #rows = [('lsi', row['customer_id'], row['sorted_cats']) for row in df.collect()]
+    rows = [{'customer_id': row['customer_id'], 'value': {'lsi': row['sorted_cats']}} for row in df.collect()]
+    #rows = [('lsi', row['customer_id'], row['sorted_cats']) for row in df.collect()]
+    CategoriesUtils.add_categories_in_ups(rows)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
