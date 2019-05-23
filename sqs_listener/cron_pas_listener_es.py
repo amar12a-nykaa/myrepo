@@ -74,7 +74,7 @@ if getCount() >= 2:
     print("getCount(): %r" % getCount())
     print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
     print(str(
-        subprocess.check_source_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
+        subprocess.check_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
                                 shell=True)))
     exit()
 
