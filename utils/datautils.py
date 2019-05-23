@@ -10,6 +10,7 @@ sys.path.append('/home/ubuntu/nykaa_scripts/utils')
 sys.path.append('/home/hadoop/nykaa_scripts/utils')
 from mysqlredshiftutils import MysqlRedshiftUtils
 from esutils import ESUtils
+from sparkutils import SparkUtils
 import constants as Constants
 
 class DataUtils:
@@ -29,7 +30,7 @@ class DataUtils:
         rows = MysqlRedshiftUtils.fetchResultsInBatch(MysqlRedshiftUtils.redshiftConnection(), customer_orders_query, 10000)
         print('Data fetched')
 
-        df = spark.createDataFrame(rows, Constants.ORDERS_SCHEMA)
+        df = spark.createDataFrame(rows, SparkUtils.ORDERS_SCHEMA)
         print('Total number of rows fetched: %d' % df.count())
         df.printSchema()
         print('Total number of rows extracted: %d' % df.count())

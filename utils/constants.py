@@ -23,6 +23,13 @@ SMALL_INSTANCE = {
     'KeepJobFlowAliveWhenNoSteps': False \
 }
 
+BIG_INSTANCE_SAMPLE = {
+    'TerminationProtected': False, \
+    'Ec2KeyName': env_details['key_name'], \
+    'Ec2SubnetId': env_details['subnet_id'], \
+    'KeepJobFlowAliveWhenNoSteps': False \
+}
+
 BIG_MASTER_INSTANCE = {
     'Name': 'Master',
     'InstanceType': 'm5.12xlarge',

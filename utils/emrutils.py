@@ -51,6 +51,16 @@ class EMRUtils:
                 VisibleToAllUsers=True,
                 Steps= before_steps + EMRUtils.get_emr_setup_steps() + after_steps,
                 Configurations = configurations,
+                Tags=[
+                    {
+                        'Key': 'Category',
+                        'Value': 'Gludo'
+                    },
+                    {
+                        'Key': 'Purpose',
+                        'Value': 'EMR'
+                    }
+                ],
                 BootstrapActions=[
                     {
                         'Name': 'Bootstrap',
