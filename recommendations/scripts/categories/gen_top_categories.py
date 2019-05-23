@@ -2,6 +2,7 @@ import json
 import traceback
 import psycopg2
 import argparse
+import time
 import boto3
 import os
 import sys
@@ -72,8 +73,12 @@ class CategoriesUtils:
     def add_categories_in_ups(rows):
         dynamodb = boto3.resource('dynamodb')
         table = dynamodb.Table('user_profile_service')
-        for row in rows:
+        last_wait_ctr = 0
+        for i, row in enumerate(rows):
             table.update_item(Key={'user_id': '%s' % row['customer_id']}, UpdateExpression='SET categories = :val', ExpressionAttributeValues={':val': row['value']})
+            if i - last_wait_ctr >= 100000:
+                last_wait_ctr = i
+                time.sleep(120)
 
 class Utils:
 
