@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import time
 import sys
 from dateutil import tz
 #from pipelineUtils import PipelineUtils
@@ -13,7 +14,7 @@ from disc.v2.utils import Utils as DiscUtils
 from nykaa.settings import DISCOVERY_SQS_ENDPOINT
 
 import argparse
-
+import elasticsearch
 import subprocess
 import queue
 import threading
@@ -73,7 +74,7 @@ if getCount() >= 2:
     print("getCount(): %r" % getCount())
     print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
     print(str(
-        subprocess.check_source_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
+        subprocess.check_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
                                 shell=True)))
     exit()
 
@@ -113,8 +114,6 @@ class ScheduledPriceUpdater:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit = True)
             if update_docs:
                 DiscUtils.updateESCatalog(update_docs)
-                for single_doc in update_docs:
-                    print("sku : %s" % single_doc['sku'])
         except Exception as e:
             print(traceback.format_exc())
 
@@ -123,125 +122,64 @@ class ScheduledPriceUpdater:
 
 
     def update():
-        # Current time
         q = queue.Queue(maxsize=0)
         current_datetime = getCurrentDateTime()
         last_datetime = current_datetime - timedelta(hours=1)
         from IPython import embed
         import boto3
-        
         # Create SQS client
         sqs = boto3.client('sqs')
         queue_url = DISCOVERY_SQS_ENDPOINT
         # Receive message from SQS queue
+        startts = time.time()
+        update_docs = []
+        is_queue_empty=False
         while True:
           response = sqs.receive_message(
               QueueUrl=queue_url,
               AttributeNames=[
                   'SentTimestamp'
               ],
-              MaxNumberOfMessages=1,
+              MaxNumberOfMessages=10,
               MessageAttributeNames=[
                   'All'
               ],
-              VisibilityTimeout=10,
+              VisibilityTimeout=30,
               WaitTimeSeconds=0
           )
-          if 'Messages' not in response:
+          if 'Messages' in response:
+            for message in response['Messages']:
+              #message = response['Messages'][0]
+              receipt_handle = message['ReceiptHandle']
+              update_docs.append(json.loads(message['Body'])[0])
+              sqs.delete_message(
+                QueueUrl=queue_url,
+                ReceiptHandle=receipt_handle
+              ) 
+          else:
+            is_queue_empty=True
             print("No more messages")
+
+          if len(update_docs)==1000 or (len(update_docs)>=1 and is_queue_empty) :
+            try:
+              print("Updating %s docs" % len(update_docs))
+              DiscUtils.updateESCatalog(update_docs)
+            except elasticsearch.helpers.BulkIndexError as e:
+              missing_skus = []
+              for error in e.errors:
+                if(error['update']['error']['type'] == "document_missing_exception"):
+                  missing_skus.append(error['update']['data']['doc']['sku'])
+              if missing_skus:
+                print("Missing SKUs in ES %s" % missing_skus)  
+            finally:
+              update_docs.clear()
+          if is_queue_empty:
             break
-        
-          message = response['Messages'][0]
-          receipt_handle = message['ReceiptHandle']
-          print( "== process here ==")  
-          # Delete received message from queue
-          print("message", message['Body'])
-          update_docs = json.loads(message['Body'])
-          print("receipt_handle: %s" % receipt_handle)
-          print(update_docs)
-          try:
-            DiscUtils.updateESCatalog(update_docs)
-          except Exception as e:
-            print("Exception!! Some SKUs that are missing in ES..")
-          finally:
-            sqs.delete_message(
-              QueueUrl=queue_url,
-              ReceiptHandle=receipt_handle
-            )
-            print('Received and deleted message: %s' % message)
 
-
-
+        endts=time.time()
+        diff = endts - startts
+        print("Time taken:  %s seconds" % diff)
         exit()
-
-        try:
-            with open("last_update_time.txt", "r+") as f:
-                content = f.read()
-                if content:
-                    last_datetime = content
-                    print("reading last_datetime from file: %s" % last_datetime)
-                f.seek(0)
-                f.write(str(current_datetime))
-                f.truncate()
-        except FileNotFoundError:
-            print("FileNotFoundError")
-            with open("last_update_time.txt", "w") as f:
-                f.write(str(current_datetime))
-        except Exception as e:
-            print("[ERROR] %s" % str(e))
-        where_clause = " WHERE ((schedule_start > %s AND schedule_start <= %s) OR (schedule_end > %s AND schedule_end <= %s))"
-        product_type_condition = " AND type = %s"
-        product_updated_count = 0
-
-        query = "SELECT sku, psku, type FROM products" + where_clause + product_type_condition
-        print("[%s] " % getCurrentDateTime() + query % (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
-        mysql_conn = PasUtils.mysqlConnection('r')
-        results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
-        mysql_conn.close()
-
-        print("[%s] Starting simple product updates" % getCurrentDateTime())
-        chunk_size = argv['batch_size']
-        num_of_threads = argv['threads']
-        
-        if not chunk_size:
-            chunk_size = CHUNK_SIZE
-
-        if not num_of_threads:
-            num_of_threads = NUMBER_OF_THREADS
-
-        chunk_results = list(ScheduledPriceUpdater.getChunks(results, chunk_size))
-
-        for single_chunk in chunk_results:
-            q.put_nowait(single_chunk)
-
-        for _ in range(num_of_threads):
-            Worker(q).start()
-        q.join()
-
-        # Code for bundle products
-        products = []
-        query = "SELECT sku FROM bundles" + where_clause
-        mysql_conn = PasUtils.mysqlConnection('r')
-        results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime))
-        mysql_conn.close()
-        print("[%s] Starting bundle product updates" % getCurrentDateTime())
-
-        for bundle in results:
-            product_updated_count += 1
-            products.append({'sku': bundle['sku'], 'type': 'bundle'})
-            if product_updated_count % 100 == 0:
-                print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
-
-        try:
-            update_docs = PipelineUtils.getProductsToIndex(products, add_limit=True)
-            if update_docs:
-                DiscUtils.updateESCatalog(update_docs)
-                for singleBundle in update_docs:
-                    print("bundle sku: %s" % singleBundle['sku'])
-        except Exception as e:
-            print(traceback.format_exc())
-
-        print("\n[%s] Total %s products updated." % (getCurrentDateTime(), product_updated_count))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
