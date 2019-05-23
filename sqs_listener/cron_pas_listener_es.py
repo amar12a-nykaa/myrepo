@@ -151,7 +151,7 @@ class ScheduledPriceUpdater:
             for message in response['Messages']:
               #message = response['Messages'][0]
               receipt_handle = message['ReceiptHandle']
-              update_docs.append(json.loads(message['Body']))
+              update_docs.append(json.loads(message['Body'])[0])
               sqs.delete_message(
                 QueueUrl=queue_url,
                 ReceiptHandle=receipt_handle
