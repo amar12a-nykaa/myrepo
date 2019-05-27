@@ -30,9 +30,16 @@ def word_clean(word):
 
 def get_entities(row):
     result,coverage = EntityUtils.get_matched_entities(row['ist'])
-    row['brand'] = result['brand']['entity'] if 'brand' in result else 'None'
-    row['category'] = result['category']['entity'] if 'category' in result else 'None'
+    entities = list(result.keys())
+    row['brand'] = result['brand']['entity'] if 'brand' in result else ''
+    row['category'] = result['category']['entity'] if 'category' in result else ''
     row['coverage'] = coverage
+    if 'brand' in entities:
+        entities.remove('brand')
+    if 'category' in entities:
+        entities.remove('category')
+    if len(entities) > 0:
+        row['other_entities'] = True
 
     return row
 
@@ -41,12 +48,12 @@ def calculate_ctr(row):
     return row
 
 def get_yesterday_trending():
-    mysql_conn = PasUtils.mysqlConnection('r')
+    mysql_conn = Utils.mysqlConnection('r')
 
-    if not PasUtils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
+    if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
         return None
     prev=[]
-    for each in PasUtils.mysql_read("select q from trending_searches"):
+    for each in Utils.mysql_read("select q from trending_searches"):
         prev.append(word_clean(each.get('q')))
     return prev
 
@@ -57,34 +64,16 @@ def get_results(final_df,prev_trending_terms):
     for index, row in final_df.iterrows():
         brand = row['brand']
         category = row['category']
-        if brand != 'None' and brand in included_list['brand']:
+        if brand and brand in included_list['brand']:
             continue
-        if category != 'None' and category in included_list['category']:
+        if category and category in included_list['category']:
             continue
         if prev_trending_terms is not None and row['cleaned_term'] in prev_trending_terms:
             continue
         included_list['brand'].append(brand)
         included_list['category'].append(category)
-        ist_list = row['ist'].split()
-        i = 0
-        brand_list = brand.split()
-        cat_list = category.split()
-        for brand_word in brand_list:
-            i = 0
-            for ist_word in ist_list:
-                if brand_word != 'None' and word_clean(ist_word) == word_clean(brand_word):
-                    ist_list[i] = brand_word
-                i += 1
-
-        for cat_word in cat_list:
-            i = 0
-            for ist_word in ist_list:
-                if cat_word != 'None' and word_clean(ist_word) == word_clean(cat_word):
-                    ist_list[i] = cat_word
-                i += 1
-        word = ' '.join(ist_list)
-
-        result.append(word)
+        word = brand + ' ' + category
+        result.append(word.strip())
         count = count + 1
         if count >= RESULT_SIZE:
             break
@@ -93,12 +82,13 @@ def get_results(final_df,prev_trending_terms):
 def select_version(final_df,prev_trending_terms,algo):
 
     if algo == 1:
-        final_df = final_df[(final_df.coverage == 100)]
+        final_df = final_df[(final_df['other_entities'] == False)]
+        final_df = final_df[(final_df.coverage == 100) & (~((final_df.brand=='') & (final_df.category=='')))]
         result = get_results(final_df,prev_trending_terms)
         return result
 
     if algo == 2:
-        final_df = final_df[(final_df.brand != 'None')]
+        final_df = final_df[(final_df.brand != '')]
         result = get_results(final_df, prev_trending_terms)
         return result
 
@@ -199,6 +189,7 @@ def get_trending_searches(filename):
     final_df['brand'] = ''
     final_df['category'] = ''
     final_df['coverage'] = 0
+    final_df['other_entities'] = False
     final_df = final_df.apply(get_entities, axis=1)
 
     prev_trending_terms = get_yesterday_trending()
@@ -209,13 +200,13 @@ def get_trending_searches(filename):
 
 
 def insert_trending_searches(data):
-    mysql_conn = PasUtils.mysqlConnection('w')
+    mysql_conn = Utils.mysqlConnection('w')
     cursor = mysql_conn.cursor()
 
-    if not PasUtils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
-        PasUtils.mysql_write("create table trending_searches(type VARCHAR(64),url VARCHAR(255),q VARCHAR(255))",
+    if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
+        Utils.mysql_write("create table trending_searches(type VARCHAR(64),url VARCHAR(255),q VARCHAR(255))",
                           connection=mysql_conn)
-    PasUtils.mysql_write("delete from trending_searches", connection=mysql_conn)
+    Utils.mysql_write("delete from trending_searches", connection=mysql_conn)
 
     for word in data:
         ls = word.split()
