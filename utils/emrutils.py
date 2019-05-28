@@ -13,15 +13,18 @@ class EMRUtils:
 
     def get_emr_setup_steps():
         env_details = RecoUtils.get_env_details()
-        return [
+        return [ 
             {
-                'Name': 'Changing the hostname',
+                'Name': 'Setting environment',
                 'ActionOnFailure': 'TERMINATE_CLUSTER',
                 'HadoopJarStep': {
                     'Jar': 'command-runner.jar',
-                    'Args': ['sh', '-c', 'export NYKAA_EMR_ENVIRONMENT="%s"' % ('prod-emr' if env_details['env'] == 'prod' else 'dev-emr')]
+                    'Args': [
+                        'sudo', 'sh', '-c', 'echo %s > /home/hadoop/env.conf' % ('prod-emr' if env_details['env'] == 'prod' else 'dev-emr')
+                    ]
                 }
-            },{
+            },
+            {
                 'Name': 'Downloading code',
                 'ActionOnFailure': 'TERMINATE_CLUSTER',
                 'HadoopJarStep': {
@@ -63,7 +66,7 @@ class EMRUtils:
                 ],
                 BootstrapActions=[
                     {
-                        'Name': 'Bootstrap',
+                        'Name': 'Bootstrap downloads',
                         'ScriptBootstrapAction': {
                             'Path': 's3://%s/%s' % (env_details['bucket_name'], Constants.BOOTSTRAP_FILE)
                         }
@@ -73,3 +76,9 @@ class EMRUtils:
             print(response)
         except:
             print(traceback.format_exc())
+
+    def add_emr_steps(cluster_id, steps):
+        response = EMRUtils.get_emr_client().add_job_flow_steps(
+            JobFlowId=cluster_id,
+            Steps = steps
+        )
