@@ -15,7 +15,7 @@ import constants as Constants
 
 class DataUtils:
 
-    def prepare_orders_dataframe(spark, platform, parented, start_datetime, end_datetime, customer_start_datetime):
+    def prepare_orders_dataframe(spark, platform, parented, start_datetime, end_datetime, customer_start_datetime, customer_id=None):
         if platform == 'men':
             order_sources = Constants.ORDER_SOURCE_NYKAAMEN
         else:
@@ -24,6 +24,8 @@ class DataUtils:
         customer_orders_query = "SELECT fact_order_new.nykaa_orderno as order_id, fact_order_new.order_customerid as customer_id, fact_order_detail_new.product_id, fact_order_detail_new.product_sku, order_date from fact_order_new INNER JOIN fact_order_detail_new ON fact_order_new.nykaa_orderno=fact_order_detail_new.nykaa_orderno WHERE fact_order_new.order_status<>'Cancelled' AND fact_order_new.nykaa_orderno <> 0 AND product_mrp > 1 AND order_source IN (" + ",".join([("'%s'" % source) for source in order_sources]) + ") AND order_customerid IS NOT NULL %s %s " % (" AND order_date <= '%s' " % end_datetime if end_datetime else "", " AND order_date >= '%s' " % start_datetime if start_datetime else "")
         if customer_start_datetime:
             customer_orders_query += " AND fact_order_new.order_customerid IN (SELECT DISTINCT(order_customerid) FROM fact_order_new WHERE order_date > '%s')" % customer_start_datetime
+        if customer_id:
+            customer_orders_query += " AND fact_order_new.order_customerid=%s" % customer_id
 
         print(customer_orders_query)
         print('Fetching Data from Redshift')

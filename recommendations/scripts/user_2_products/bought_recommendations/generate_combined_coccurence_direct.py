@@ -176,9 +176,9 @@ def compute_recommendations(algo, platform, computation_start_datetime, p2p_star
 
     rows = []
 
-    c2p_df, _ = DataUtils.prepare_orders_dataframe(spark, platform, True, None, None, computation_start_datetime)
-    if customer_id:
-        c2p_df = c2p_df.filter(col('customer_id') == customer_id)
+    c2p_df, _ = DataUtils.prepare_orders_dataframe(spark, platform, True, None, None, computation_start_datetime, customer_id)
+    #if customer_id:
+    #    c2p_df = c2p_df.filter(col('customer_id') == customer_id)
 
 #    customer_2_products_purchased = {row['customer_id']: row['products'] for row in c2p_df.select(['customer_id', 'order_id', 'product_id', 'order_date']).distinct().withColumn('rank', func.dense_rank().over(Window.partitionBy('customer_id').orderBy(desc('order_date')))).filter(col('rank') <= orders_count).groupBy('customer_id').agg(func.collect_list('product_id').alias('products')).collect()}
 
@@ -215,7 +215,7 @@ if __name__ == '__main__':
     parser.add_argument('--use-months', type=int, default=6)
     parser.add_argument('--orders-count', type=int, default=10)
     parser.add_argument('--limit', type=int)
-    parser.add_argument('--platform', required=True, choices=['nykaa','men'])
+    parser.add_argument('--platform', choices=['nykaa','men'], default='nykaa')
 
     argv = vars(parser.parse_args())
     verbose = argv['verbose']
@@ -238,4 +238,5 @@ if __name__ == '__main__':
 
     computation_start_datetime = datetime.now() - timedelta(days=use_months*30)
 
+    print(RecoUtils.get_env_details())
     compute_recommendations(algo, platform, start_datetime, computation_start_datetime, None, customer_id, limit, orders_count)
