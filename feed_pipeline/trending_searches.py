@@ -5,11 +5,12 @@ import arrow
 import re
 import os
 import urllib
+import json
 from nltk.stem import PorterStemmer
 from datetime import date,datetime,timedelta
 
 sys.path.append("/var/www/pds_api")
-from pas.v2.utils import Utils, EntityUtils
+from pas.v2.utils import Utils, EntityUtils, MemcacheUtils
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from dateutils import enumerate_dates
@@ -220,6 +221,9 @@ def insert_trending_searches(data):
 
     cursor.close()
     mysql_conn.close()
+    key = "trending-searches-%s" % str(date)
+    results = Utils.mysql_read("SELECT type,url,q from trending_searches where date=%s" % date_today , connection=mysql_conn)
+    MemcacheUtils.set(key, json.dumps(results))
 
 
 
