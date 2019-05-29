@@ -164,6 +164,7 @@ class ScheduledPriceUpdater:
               DiscUtils.updateESCatalog(update_docs)
               print("Done with one batch of bulk upload")
             except elasticsearch.helpers.BulkIndexError as e:
+              #print("OOPS - BulkIndexError ")
               missing_skus = []
               for error in e.errors:
                 if(error['update']['error']['type'] == "document_missing_exception"):
@@ -180,6 +181,7 @@ class ScheduledPriceUpdater:
         endts=time.time()
         diff = endts - startts
         print("Time taken:  %s seconds" % diff)
+
         exit()
 
 if __name__ == "__main__":
