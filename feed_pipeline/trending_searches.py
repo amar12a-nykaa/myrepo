@@ -17,7 +17,7 @@ from dateutils import enumerate_dates
 
 porter = PorterStemmer()
 RESULT_SIZE = 5
-
+date_2days_before = (date.today() - timedelta(days=2)).strftime('%d-%m-%Y')
 
 def word_clean(word):
     word = str(word).lower()
@@ -53,7 +53,7 @@ def get_yesterday_trending():
     if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
         return None
     prev=[]
-    for each in Utils.mysql_read("select q from trending_searches"):
+    for each in Utils.mysql_read("select q from trending_searches where date>=%s" % date_2days_before):
         prev.append(word_clean(each.get('q')))
     return prev
 
@@ -204,16 +204,16 @@ def insert_trending_searches(data):
     cursor = mysql_conn.cursor()
 
     if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
-        Utils.mysql_write("create table trending_searches(type VARCHAR(64),url VARCHAR(255),q VARCHAR(255))",
+        Utils.mysql_write("create table trending_searches(type VARCHAR(64),url VARCHAR(255),q VARCHAR(255),date VARCHAR(64))",
                           connection=mysql_conn)
-    Utils.mysql_write("delete from trending_searches", connection=mysql_conn)
-
+    Utils.mysql_write("delete from trending_searches where date<=%s" % date_2days_before , connection=mysql_conn)
+    date_today = datetime.today().strftime('%d-%m-%Y')
     for word in data:
         ls = word.split()
         word = " ".join(ls)
         url = "/search/result/?" + str(urllib.parse.urlencode({'q': word}))
-        values = ('query',url, word)
-        query = """INSERT INTO trending_searches (type, url,q) VALUES ("%s","%s","%s") """ % (values)
+        values = ('query',url, word, date_today)
+        query = """INSERT INTO trending_searches (type, url,q, date_today) VALUES ("%s","%s","%s","%s") """ % (values)
 
         cursor.execute(query)
         mysql_conn.commit()
