@@ -222,6 +222,7 @@ def insert_trending_searches(data):
     mysql_conn.close()
 
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--filename", type=str, default='trending.csv')
