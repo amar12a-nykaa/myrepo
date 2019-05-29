@@ -67,6 +67,32 @@ class Utils:
                     print("MySQL connection failed 3 times. Giving up..")
                     raise
 
+    @staticmethod
+    def mlMysqlConnection(env, connection_details=None):
+        if env == 'prod':
+            host = "ml-db-master.nykaa-internal.com"
+            password = 'fjxcneXnq2gptsTs'
+        elif env in ['non_prod', 'preprod', 'qa']:
+            host = 'nka-preprod-ml.cjmplqztt198.ap-southeast-1.rds.amazonaws.com'
+            password = 'JKaPHGB4JWXM'
+        else:
+            raise Exception('Unknow env')
+        user = 'ml'
+        db = 'nykaa_ml'
+        for i in [0, 1, 2]:
+            try:
+                if connection_details is not None and isinstance(connection_details, dict):
+                    connection_details['host'] = host
+                    connection_details['user'] = user
+                    connection_details['password'] = password
+                    connection_details['database'] = db
+                return mysql.connector.connect(host=host, user=user, password=password, database=db)
+            except:
+                print("MySQL connection failed! Retyring %d.." % i)
+                if i == 2:
+                    print(traceback.format_exc())
+                    print("MySQL connection failed 3 times. Giving up..")
+                    raise
 
     @staticmethod
     def esConn(env):
@@ -234,18 +260,18 @@ def compute_cav(env, platform, files, desktop):
     product_in_stock = results['product_in_stock']
 
     for row in final_df.collect():
-        if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_x'], False))  or not luxe_dict.get(row['product_id_x'], False):
+        if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_y'], False))  or not luxe_dict.get(row['product_id_x'], False):
         #if not (luxe_dict.get(row['product_id_x'], False) ^ luxe_dict.get(row['product_id_y'], False)):
             simple_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
-        if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_x'], False))  or not luxe_dict.get(row['product_id_y'], False):
+        if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_y'], False))  or not luxe_dict.get(row['product_id_y'], False):
             simple_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
 
             if product_2_mrp.get(row['product_id_x']) and product_2_mrp.get(row['product_id_y']):
                 product_x_mrp = product_2_mrp[row['product_id_x']]
                 product_y_mrp = product_2_mrp[row['product_id_y']]
-                if abs((product_x_mrp - product_y_mrp)/product_x_mrp) <= 0.1 and product_in_stock.get(row['product_id_y'], False):
+                if ((product_x_mrp - product_y_mrp)/product_x_mrp) <= 0.1 and product_in_stock.get(row['product_id_y'], False):
                     simple_similar_products_mrp_cons_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
-                if abs((product_y_mrp - product_x_mrp)/product_y_mrp) <= 0.1 and product_in_stock.get(row['product_id_x'], False):
+                if ((product_y_mrp - product_x_mrp)/product_y_mrp) <= 0.1 and product_in_stock.get(row['product_id_x'], False):
                     simple_similar_products_mrp_cons_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
 
     parent_2_children = defaultdict(lambda: [])
