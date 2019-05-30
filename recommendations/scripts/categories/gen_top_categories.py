@@ -73,12 +73,8 @@ class CategoriesUtils:
     def add_categories_in_ups(rows):
         dynamodb = boto3.resource('dynamodb')
         table = dynamodb.Table('user_profile_service')
-        last_wait_ctr = 0
         for i, row in enumerate(rows):
             table.update_item(Key={'user_id': '%s' % row['customer_id']}, UpdateExpression='SET categories = :val', ExpressionAttributeValues={':val': row['value']})
-            if i - last_wait_ctr >= 100000:
-                last_wait_ctr = i
-                time.sleep(120)
 
 class Utils:
 
@@ -339,7 +335,10 @@ def generate_top_categories_for_user(env, platform, start_datetime, end_datetime
     #rows = [('lsi', row['customer_id'], row['sorted_cats']) for row in df.collect()]
     rows = [{'customer_id': row['customer_id'], 'value': {'lsi': row['sorted_cats']}} for row in df.collect()]
     #rows = [('lsi', row['customer_id'], row['sorted_cats']) for row in df.collect()]
+    print("Writing the categories recommendations " + str(datetime.now()))
+    print("Total number of customers to be updated: %d" % len(rows))
     CategoriesUtils.add_categories_in_ups(rows)
+    print("Done Writing the categories recommendations " + str(datetime.now()))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
