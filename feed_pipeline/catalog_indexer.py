@@ -392,7 +392,7 @@ class CatalogIndexer:
                     if doc['type'] == 'bundle':
                         bundle_products = pas.get('products', {})
                         product_qty_map = {}
-                        for product_sku in doc.get('product_skus', []):
+                        for product_sku in (doc.get('product_skus', []) or []):
                             prod_obj = bundle_products.get(product_sku)
                             if prod_obj:
                                 product_qty_map[product_sku] = prod_obj.get('quantity_in_bundle', 0)
