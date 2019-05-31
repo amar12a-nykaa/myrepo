@@ -43,6 +43,12 @@ def incrementGlobalCounter(increment):
 
 
 class ThreadManager:
+    """
+        A generic class for running multithreaded applications. 
+        We can resuse this class for other purpose too. 
+        This is to be used along with WorkerThread class
+    """
+
     def __init__(self, q, callback):
         self.threads = []
         self.q = q
@@ -67,6 +73,12 @@ class ThreadManager:
 
 
 class WorkerThread(threading.Thread):
+    """
+        A generic class for running multithreaded applications. 
+        We can resuse this class for other purpose too. 
+        This is best used along with ThreadManager class
+    """
+
     def __init__(self, q, callback, name):
         self.q = q
         self.callback = callback
@@ -106,6 +118,11 @@ NUMBER_OF_THREADS = 1
 
 
 class SQSConsumer:
+    """
+    TODO: THis consumer can go berserk if number of threads are increased and number of products per bulk are increased beyond a point. 
+    We need a throttling mechanism to cap the maximum rate of Indexing.
+    """
+
     @classmethod
     def __init__(self):
         self.q = queue.Queue(maxsize=0)
@@ -123,7 +140,6 @@ class SQSConsumer:
         num_products_processed = 0
 
         while not is_sqs_empty:
-            #time.sleep(1)
             response = self.sqs.receive_message(
                 QueueUrl=DISCOVERY_SQS_ENDPOINT,
                 AttributeNames=["SentTimestamp"],
@@ -143,9 +159,6 @@ class SQSConsumer:
                 is_sqs_empty = True
                 print("SQS is empty!")
 
-            # DELETE ME
-            # is_sqs_empty = True
-
             if len(update_docs) >= ES_BULK_UPLOAD_BATCH_SIZE or (len(update_docs) >= 1 and is_sqs_empty):
                 print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
                 self.q.put_nowait(update_docs)
@@ -162,6 +175,9 @@ class SQSConsumer:
 
     @classmethod
     def upload_one_chunk(cls, chunk, threadname):
+        """
+        Callback function called by a thread to bulk upload the products
+        """
         try:
             update_docs = chunk
             print(threadname + ": Sending %s docs to bulk upload" % len(update_docs))
