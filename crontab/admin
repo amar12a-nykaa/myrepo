@@ -16,3 +16,4 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 0 1 * * * root /usr/local/bin/aws s3 sync /nykaa/adminftp s3://prod-nykaafeeds/search_autocomplete/ 
 0 * * * * root /usr/local/bin/aws s3 cp /data/nykaa/master_feed_gludo.csv  s3://nykaadp-feeds/master_feed_gludo/master_feed_gludo.csv
 0 23 * * * root /usr/bin/python /nykaa/scripts/feed_pipeline/product_history_datapipeline.py
+* * * * * root /usr/bin/python -u /home/ubuntu/nykaa_scripts/sqs_listener/cron_pas_listener_es.py 2>&1 >> /tmp/cron_pas_listener_es.py
