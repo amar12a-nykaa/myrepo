@@ -14,6 +14,7 @@ from emrutils import EMRUtils
 if __name__ == '__main__':
     command_line_arguments = sys.argv[1:]
     config = '%s/%s' % (Constants.HOME_DIR, Constants.SMALL_EMR_CONFIG)
+    #config = '%s/%s' % (Constants.HOME_DIR, Constants.BIG_EMR_CONFIG)
     env_details = RecoUtils.get_env_details()
     steps = [
         {
@@ -27,4 +28,11 @@ if __name__ == '__main__':
             }
         }
     ]
+    instance_groups = {
+        'InstanceGroups': [
+            Constants.BIG_MASTER_INSTANCE,
+            dict(Constants.BIG_CORE_INSTANCE, **{'InstanceCount': 1})
+        ]
+    }
+    #EMRUtils.launch_spark_emr('Gen Top Categories', config, [], steps, dict(Constants.BIG_INSTANCE_SAMPLE, **instance_groups))
     EMRUtils.launch_spark_emr('Gen top Categories', config, [], steps, dict(Constants.SMALL_INSTANCE, **{'MasterInstanceType': 'm5.12xlarge'}))
