@@ -20,7 +20,6 @@ sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
 
-
 total = 0
 CHUNK_SIZE = 200
 
@@ -43,9 +42,34 @@ def incrementGlobalCounter(increment):
     return total
 
 
-class WorkerThread(threading.Thread):
-    def __init__(self, q, name):
+class ThreadManager:
+    def __init__(self, q, callback):
+        self.threads = []
         self.q = q
+        self.callback = callback
+
+    def start_threads(self, number_of_threads):
+        for i, _ in enumerate(range(number_of_threads)):
+            name = "T" + str(i)
+            thread = WorkerThread(self.q, callback=self.callback, name=name)
+            thread.start()
+            self.threads.append(thread)
+
+    def stop_workers(self):
+        for _ in range(NUMBER_OF_THREADS):
+            print("Adding None to queue")
+            self.q.put(None)
+
+    def join(self):
+        print("Waiting for threads to finish .. ")
+        for thread in self.threads:
+            thread.join()
+
+
+class WorkerThread(threading.Thread):
+    def __init__(self, q, callback, name):
+        self.q = q
+        self.callback = callback
         super().__init__(name=name)
 
     def run(self):
@@ -57,7 +81,7 @@ class WorkerThread(threading.Thread):
                     self.q.task_done()
                     break
                 else:
-                    SQSConsumer.upload_one_chunk(chunk, threadname=self.name)
+                    self.callback(chunk=chunk, threadname=self.name)
                     self.q.task_done()
             except queue.Empty:
                 print(self.name + " zz..")
@@ -77,8 +101,8 @@ def getCurrentDateTime():
 print("=" * 30 + " %s ======= " % getCurrentDateTime())
 
 
-ES_BULK_UPLOAD_BATCH_SIZE = 1000
-NUMBER_OF_THREADS = 2
+ES_BULK_UPLOAD_BATCH_SIZE = 100
+NUMBER_OF_THREADS = 1
 
 
 class SQSConsumer:
@@ -86,13 +110,9 @@ class SQSConsumer:
     def __init__(self):
         self.q = queue.Queue(maxsize=0)
         self.sqs = boto3.client("sqs")
-        self.threads = []
 
-        for i, _ in enumerate(range(NUMBER_OF_THREADS)):
-            name = "T" + str(i)
-            thread = WorkerThread(self.q, name=name)
-            thread.start()
-            self.threads.append(thread)
+        self.thread_manager = ThreadManager(self.q, callback=self.upload_one_chunk)
+        self.thread_manager.start_threads(NUMBER_OF_THREADS)
 
     def start(self,):
         # Receive message from SQS queue
@@ -103,6 +123,7 @@ class SQSConsumer:
         num_products_processed = 0
 
         while not is_sqs_empty:
+            #time.sleep(1)
             response = self.sqs.receive_message(
                 QueueUrl=DISCOVERY_SQS_ENDPOINT,
                 AttributeNames=["SentTimestamp"],
@@ -122,20 +143,17 @@ class SQSConsumer:
                 is_sqs_empty = True
                 print("SQS is empty!")
 
+            # DELETE ME
+            # is_sqs_empty = True
+
             if len(update_docs) >= ES_BULK_UPLOAD_BATCH_SIZE or (len(update_docs) >= 1 and is_sqs_empty):
                 print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
                 self.q.put_nowait(update_docs)
                 num_products_processed += len(update_docs)
                 update_docs = []
 
-        # stop workers
-        for _ in range(NUMBER_OF_THREADS):
-            print("Adding None to queue")
-            self.q.put(None)
-
-        print("Waiting for threads to finish .. ")
-        for thread in self.threads:
-            thread.join()
+        self.thread_manager.stop_workers()
+        self.thread_manager.join()
 
         print("All threads finished")
         time_taken = time.time() - startts
@@ -159,13 +177,18 @@ class SQSConsumer:
                         "Unhandled Error for sku '%s' - %s"
                         % (error["update"]["data"]["doc"]["sku"], error["update"]["error"]["type"])
                     )
-            print("Missing Skus", len(missing_skus))
+            print("Missing Skus count", len(missing_skus))
+            print("Missing Skus", missing_skus)
+        except:
+            raise
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch_size", type=int, help="number of records in single index request")
     parser.add_argument("--threads", type=int, help="number of records in single index request")
     argv = vars(parser.parse_args())
+    if argv["threads"]:
+        NUMBER_OF_THREADS = argv["threads"]
+
     consumer = SQSConsumer()
     consumer.start()
