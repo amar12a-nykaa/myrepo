@@ -180,6 +180,7 @@ class SQSConsumer:
         """
         try:
             update_docs = chunk
+            print(chunk)
             print(threadname + ": Sending %s docs to bulk upload" % len(update_docs))
             DiscUtils.updateESCatalog(update_docs, refresh=True)
             print(threadname + ": Done with one batch of bulk upload")

@@ -31,10 +31,10 @@ from idutils import createId
 from categoryutils import getVariants
 
 sys.path.append("/var/www/pds_api")
-from pas.v2.utils import MemcacheUtils
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
+from disc.v2.utils import MemcacheUtils
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 ensure_mongo_indices_now()
