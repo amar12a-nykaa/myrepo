@@ -24,6 +24,30 @@ total = 0
 CHUNK_SIZE = 200
 
 
+def getCurrentDateTime():
+    current_datetime = datetime.utcnow()
+    from_zone = tz.gettz("UTC")
+    to_zone = tz.gettz("Asia/Kolkata")
+    current_datetime = current_datetime.replace(tzinfo=from_zone)
+    current_datetime = current_datetime.astimezone(to_zone)
+    return current_datetime
+
+
+def getCount():
+    return int(subprocess.check_output(
+        "ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
+        shell=True).strip())
+
+
+if getCount() >= 2:
+    print("getCount(): %r" % getCount())
+    print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
+    print(str(
+        subprocess.check_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
+                                shell=True)))
+    exit()
+
+
 def synchronized(func):
     func.__lock__ = threading.Lock()
 
@@ -101,13 +125,6 @@ class WorkerThread(threading.Thread):
                 continue
 
 
-def getCurrentDateTime():
-    current_datetime = datetime.utcnow()
-    from_zone = tz.gettz("UTC")
-    to_zone = tz.gettz("Asia/Kolkata")
-    current_datetime = current_datetime.replace(tzinfo=from_zone)
-    current_datetime = current_datetime.astimezone(to_zone)
-    return current_datetime
 
 
 print("=" * 30 + " %s ======= " % getCurrentDateTime())

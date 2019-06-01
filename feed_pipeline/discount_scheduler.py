@@ -62,7 +62,7 @@ print("=" * 30 + " %s ======= " % getCurrentDateTime())
 
 def getCount():
     return int(subprocess.check_output(
-        "ps aux | grep python | grep indexScheduledPricesOptimized.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
+        "ps aux | grep python | grep discount_scheduler.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
         shell=True).strip())
 
 
@@ -70,7 +70,7 @@ if getCount() >= 2:
     print("getCount(): %r" % getCount())
     print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
     print(str(
-        subprocess.check_source_output("ps aux | grep python | grep indexScheduledPricesOptimized.py | grep -vE 'vim|grep|/bin/sh' ",
+        subprocess.check_source_output("ps aux | grep python | grep discount_scheduler.py | grep -vE 'vim|grep|/bin/sh' ",
                                 shell=True)))
     exit()
 
