@@ -19,6 +19,7 @@ from dateutils import enumerate_dates
 porter = PorterStemmer()
 RESULT_SIZE = 5
 date_2days_before = (date.today() - timedelta(days=2)).strftime('%d-%m-%Y')
+date_today = date.today().strftime('%d-%m-%Y')
 
 def word_clean(word):
     word = str(word).lower()
@@ -143,7 +144,7 @@ def get_trending_searches(filename):
                 flag = 1
 
     if flag == 1:
-        filepath = '/nykaa/adminftp/' + filename
+        filepath = 'feed_pipeline/' + filename
         df = pd.read_csv(filepath)
 
     # renaming columns
@@ -214,16 +215,13 @@ def insert_trending_searches(data):
         word = " ".join(ls)
         url = "/search/result/?" + str(urllib.parse.urlencode({'q': word}))
         values = ('query',url, word, date_today)
-        query = """INSERT INTO trending_searches (type, url,q, date_today) VALUES ("%s","%s","%s","%s") """ % (values)
+        query = """INSERT INTO trending_searches (type, url,q, date) VALUES ("%s","%s","%s","%s") """ % (values)
 
         cursor.execute(query)
         mysql_conn.commit()
 
     cursor.close()
     mysql_conn.close()
-    key = "trending-searches-%s" % str(date)
-    results = Utils.mysql_read("SELECT type,url,q from trending_searches where date=%s" % date_today , connection=mysql_conn)
-    MemcacheUtils.set(key, json.dumps(results))
 
 
 
