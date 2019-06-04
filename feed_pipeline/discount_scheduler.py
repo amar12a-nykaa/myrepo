@@ -14,7 +14,9 @@ import subprocess
 import queue
 import threading
 import traceback
-
+import dateutil.parser
+import json
+from ..utils.priceUpdateLogUtils import PriceUpdateLogUtils
 total = 0
 CHUNK_SIZE = 200
 NUMBER_OF_THREADS = 4
@@ -87,6 +89,8 @@ class ScheduledPriceUpdater:
         products = []
         sku_list = []
         psku_list = []
+        totalProductsToLog = []
+        totalBundlesToLog = []
 
         for single_product in product_chunk:
             sku_list.append(single_product['sku'])
@@ -94,15 +98,35 @@ class ScheduledPriceUpdater:
             products.append({'sku': single_product['sku'], 'type': single_product['type']})
             if single_product['psku'] and single_product['psku'] != single_product['sku']:
                 products.append({'sku': single_product['psku'], 'type': 'configurable'})
+            totalProductsToLog.append(
+                (
+                    single_product['sku'],
+                    'cron_update',
+                    'es',
+                    dateutil.parser.parse(single_product['schedule_start'], dayfirst=True),
+                    dateutil.parser.parse(single_product['schedule_end'], dayfirst=True),
+                    json.dumps({"scheduled_discount":single_product['scheduled_discount']})
+                )
+            )
 
         new_sku_list = list(set(sku_list) | set(psku_list))
         sku_string = "','".join(new_sku_list)
-        query = "SELECT product_sku, bundle_sku FROM bundle_products_mappings WHERE product_sku in('" + sku_string + "')"
+        query = "SELECT product_sku, bundle_sku,scheduled_discount,schedule_start,schedule_end FROM bundle_products_mappings WHERE product_sku in('" + sku_string + "')"
         mysql_conn = PasUtils.mysqlConnection('r')
         results = PasUtils.fetchResults(mysql_conn, query)
         mysql_conn.close()
         for res in results:
             products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
+            totalBundlesToLog.append(
+                (
+                    res['bundle_sku'],
+                    'cron_update',
+                    'es',
+                    dateutil.parser.parse(single_product['schedule_start'], dayfirst=True),
+                    dateutil.parser.parse(single_product['schedule_end'], dayfirst=True),
+                    json.dumps({"scheduled_discount": single_product['scheduled_discount']})
+                )
+            )
 
         products = [dict(t) for t in {tuple(d.items()) for d in products}]
         update_docs = []
@@ -117,7 +141,8 @@ class ScheduledPriceUpdater:
 
         total_count = incrementGlobalCounter(len(update_docs))
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
-
+        PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(totalProductsToLog)
+        PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(totalBundlesToLog)
 
     def update():
         # Current time
@@ -143,7 +168,7 @@ class ScheduledPriceUpdater:
         product_type_condition = " AND type = %s"
         product_updated_count = 0
 
-        query = "SELECT sku, psku, type FROM products" + where_clause + product_type_condition
+        query = "SELECT sku, psku, type,scheduled_discount,schedule_start,schedule_end FROM products" + where_clause + product_type_condition
         print("[%s] " % getCurrentDateTime() + query % (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
         mysql_conn = PasUtils.mysqlConnection('r')
         results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
