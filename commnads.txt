@@ -1,3 +1,0 @@
-Command to run jupyter
-
-cd /home/ubuntu/nykaa_scripts/; nohup jupyter notebook 2>&1 > /tmp/jupyter_server.log &

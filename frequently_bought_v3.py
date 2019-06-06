@@ -7,7 +7,9 @@ import psutil
 import argparse
 import operator
 sys.path.append("/home/shweta/nykaa/fresh_nykaa_apis/")
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 import pydevd
 # Debug mode is activated when a product_id is passed as an argument to the script
 # Debug info for that product would be printed in console
@@ -39,7 +41,7 @@ BATCH_SIZE = 1000
 ES_BATCH_SIZE = 10000
 VARIANTS_LIMIT = 100
 
-nykaadb = Utils.nykaaMysqlConnection()
+nykaadb = DiscUtils.nykaaMysqlConnection()
 cursor = nykaadb.cursor()
 
 # Construct a list/map of L1 categories from the start so that the orders query is more human-readable
@@ -348,7 +350,7 @@ for product_id, bought_with in product_bought_with_dict.items():
 
 
 # Saves all results to PAS DB
-pasdb = Utils.mysqlConnection('w')
+pasdb = DiscUtils.mysqlConnection('w')
 cursor = pasdb.cursor()
 
 def write_results_to_db():
@@ -399,7 +401,7 @@ def _add_configurable_product(product_id, source):
            {"discount": {"order": "desc"}}
        ]
    }
-   response = Utils.makeESRequest(query, index='livecore')
+   response = DiscUtils.makeESRequest(query, index='livecore')
    sorted_variants = [int(hit['_source']['product_id']) for hit in response['hits']['hits']]
    if not sorted_variants:
        product_with_no_variants_in_es.append(source['product_id'])
@@ -441,7 +443,7 @@ def single_configurable_product(product_id):
 
 def add_all_configurable_products():
     print("Adding for configurable products")
-    es_conn = Utils.esConn()
+    es_conn = DiscUtils.esConn()
     scroll_id = None
     added_product_ids = []
     failed_product_ids = []

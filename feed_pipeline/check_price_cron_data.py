@@ -1,38 +1,21 @@
 import sys
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/var/www/pds_api/')
 import argparse
 import json
 import requests
 import urllib.parse
 import urllib.request
 from pipelineUtils import PipelineUtils
-from pas.v2.utils import Utils, MemcacheUtils, CATALOG_COLLECTION_ALIAS
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 def getDataFromDb(skus):
-    # mysql_conn = Utils.mysqlConnection('r')
-    # sku_string = "','".join(skus)
 
     final_products_to_update = []
     for key,doc in enumerate(skus):
         final_products_to_update.append({'sku': skus[doc]['sku'], 'type': skus[doc]['type']})
 
-    # query = """SELECT sku, type, mrp, msp,
-    #             CASE
-    #                 WHEN CURRENT_TIMESTAMP() BETWEEN schedule_start AND schedule_end AND scheduled_discount IS NOT NULL
-    #                     THEN round(scheduled_discount,2)
-    #                 ELSE round(discount,2)
-    #             END AS 'discount',
-    #             CASE
-    #                 WHEN CURRENT_TIMESTAMP() BETWEEN schedule_start AND schedule_end AND scheduled_discount IS NOT NULL
-    #                     THEN ROUND(mrp - ((scheduled_discount/100)*mrp))
-    #                 WHEN CURRENT_TIMESTAMP() NOT BETWEEN schedule_start AND schedule_end AND discount IS NOT NULL
-    #                     THEN ROUND(mrp - ((discount/100)*mrp))
-    #                 ELSE sp
-    #             END as 'price'
-    #         FROM products WHERE sku IN('"""+ sku_string +"')"
-    #
-    # results = Utils.fetchResults(mysql_conn, query)
-    # mysql_conn.close()
     params = json.dumps({"products": final_products_to_update}).encode('utf8')
     req = urllib.request.Request("http://" + PipelineUtils.getAPIHost() + "/apis/v2/pas.get", data=params,
                                  headers={'content-type': 'application/json'})
@@ -59,7 +42,7 @@ def getDataFromES(skus, size, sort_limit):
         querydsl['_source'] = ['sku', 'mrp', 'price', 'discount','type']
         querydsl['size'] = size
         querydsl['from'] = -1
-    esResponse = Utils.makeESRequest(querydsl, index='livecore')
+    esResponse = DiscUtils.makeESRequest(querydsl, index='livecore')
     docs = esResponse['hits']['hits']
     for single_doc in docs:
         sku_unit = single_doc['_source']['sku']
@@ -71,7 +54,7 @@ def getDataFromES(skus, size, sort_limit):
 
 def getESTotalCount(indexName):
     body = {"query": {"match_all": {}}, "size": 0}
-    return Utils.makeESRequest(body, indexName)['hits']['total']
+    return DiscUtils.makeESRequest(body, indexName)['hits']['total']
 
 def compareData(skus, batch_limit, upto):
     count = 0

@@ -19,17 +19,18 @@ import numpy
 import omniture
 import pandas as pd
 from pandas.io import sql
-from pymongo import MongoClient
+
 from popularity_new import calculate_new_popularity
-from pipelineUtils import PipelineUtils
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+from popularity_api import get_popularity_for_id  
+
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
 
 sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 from loopcounter import LoopCounter
+from apiutils import ApiUtils
 
-sys.path.append("/nykaa/scripts/feed_pipeline")
-from popularity_api import get_popularity_for_id  
 
 WEIGHT_VIEWS = 10
 WEIGHT_UNITS = 30
@@ -39,8 +40,8 @@ PUNISH_FACTOR=0.7
 BOOST_FACTOR=1.1
 PRODUCT_PUNISH_FACTOR = 0.5
 POPULARITY_DECAY_FACTOR = 0.5
-POPULARITY_TOTAL_RATIO = 0.1
-POPULARITY_BUCKET_RATIO = 0.9
+POPULARITY_TOTAL_RATIO = 0
+POPULARITY_BUCKET_RATIO = 1
 COLD_START_DECAY_FACTOR = 0.99
 
 WEIGHT_VIEWS_NEW = 10
@@ -51,28 +52,16 @@ PUNISH_FACTOR_NEW=0.7
 BOOST_FACTOR_NEW=1.1
 PRODUCT_PUNISH_FACTOR_NEW = 0.5
 POPULARITY_DECAY_FACTOR_NEW = 0.5
-POPULARITY_TOTAL_RATIO_NEW = 0.1
-POPULARITY_BUCKET_RATIO_NEW = 0.9
+POPULARITY_TOTAL_RATIO_NEW = 0
+POPULARITY_BUCKET_RATIO_NEW = 1
 COLD_START_DECAY_FACTOR_NEW = 0.99
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
-PRODUCT_PUNISH_LIST = [303813,262768,262770,262769]
-PRODUCT_POPULARITY_OVERRIDES =  { "417918": 60,
-                                  "417919": 56,
-                                  "417921": 55,
-                                  "417926": 54,
-                                  "417920": 52,
-                                  "417925": 51,
-                                  "417923": 49,
-                                  "417922": 48,
-                                  "417928": 45,
-                                  "417924": 43,
-                                  "37894":  40,
-                                  "417927": 40
-                                }
+PRODUCT_PUNISH_LIST = []
+PRODUCT_POPULARITY_OVERRIDES =  { "37894":  40 }
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']
@@ -86,7 +75,7 @@ def build_product_sales_map(startdate='2018-04-01'):
   where_clause = "orderdetail_dt_created >='{0}'".format(startdate)
   query =  """select product_id, sum(OrderDetail_QTY) as qty_ordered from fact_order_detail_new  where {0}  group by product_id""".format(where_clause)
   print (query)
-  redshift_conn =  Utils.redshiftConnection()
+  redshift_conn =  PasUtils.redshiftConnection()
   cur  =  redshift_conn.cursor()
 
   cur.execute(query)
@@ -101,7 +90,7 @@ def build_parent_child_distribution_map():
               where sku_type = 'CONFIG' and orderdetail_dt_created >= (CURRENT_DATE - 30) and product_id is not null 
               group by 1,2;"""
   print(query)
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   data = pd.read_sql(query,con=redshift_conn)
   parent_data = data.groupby('parent_product_id', as_index=False)['orders'].sum()
   parent_data.rename(columns={'orders': 'total_order'}, inplace=True)
@@ -131,7 +120,7 @@ def valid_date(s):
 def create_product_attribute():
   query = """select product_id, sku_type, brand_code, mrp, l3_id from dim_sku"""
   print(query)
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   product_attribute = pd.read_sql(query, con=redshift_conn)
   return product_attribute
 
@@ -388,8 +377,8 @@ def override_popularity():
 def get_all_the_child_products(parent_id):
   query  = "select distinct(product_id) from catalog_product_super_link where parent_id  = '{0}'".format(parent_id)
 
-  mysql_conn = Utils.nykaaMysqlConnection()
-  data = Utils.mysql_read(query, connection=mysql_conn)
+  mysql_conn = PasUtils.nykaaMysqlConnection()
+  data = PasUtils.mysql_read(query, connection=mysql_conn)
   res  = []
   for row in data:
     res.append(str(row['product_id'] ))
@@ -398,8 +387,7 @@ def get_all_the_child_products(parent_id):
 
 def check_if_product_available(product_id):
 
-  api =  'http://'+ PipelineUtils.getAPIHost()+'/apis/v2/product.list?id={0}'.format(product_id)
-  #api =  'http://preprod-api.nyk00-int.network/apis/v2/product.list?id={0}'.format(product_id)
+  api = 'http://'+ ApiUtils.get_host() +'/apis/v2/product.list?id={0}'.format(product_id)
   r  = requests.get(api)
   data  = {}
   try:
@@ -455,7 +443,7 @@ def applyBoost(df):
       row['popularity'] = row['popularity'] * PRODUCT_PUNISH_FACTOR
       row['popularity_new'] = row['popularity_new'] * PRODUCT_PUNISH_FACTOR_NEW
     return row
-  temp_df = temp_df.apply(punish_products_by_id, axis=1)
+  # temp_df = temp_df.apply(punish_products_by_id, axis=1)
 
   temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
   temp_df = temp_df.astype({'parent_id' : str})
@@ -471,7 +459,7 @@ def handleColdStart(df):
   temp_df.drop(['product_id', 'sku_type', 'mrp', 'l3_id'], axis=1, inplace=True)
 
   query = """select product_id, l3_id from product_category_mapping"""
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   product_category_mapping = pd.read_sql(query, con=redshift_conn)
 
   product_data = pd.merge(temp_df, product_category_mapping, left_on=['parent_id'], right_on=['product_id'])
@@ -494,7 +482,7 @@ def handleColdStart(df):
   result = pd.merge(result, product_popularity, left_on='product_id', right_on='product_id')
 
   query = """select product_id, sku_created from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   product_creation = pd.read_sql(query, con=redshift_conn)
 
   result = pd.merge(result, product_creation, on='product_id')
@@ -533,7 +521,7 @@ def applyOffers(df):
   end_date = start_date + datetime.timedelta(days=1)
   start_date = start_date.strftime('%Y-%m-%d 06:00:00')
   end_date = end_date.strftime('%Y-%m-%d')
-  conn = Utils.nykaaMysqlConnection(force_production=True)
+  conn = PasUtils.nykaaMysqlConnection(force_production=True)
 
   query = """select entity_id as offer_id from nykaa_offers where enabled=1 and app = 1 and start_date < '%s' and end_date > '%s'"""%(end_date, start_date)
   offers = pd.read_sql(query, con=conn)

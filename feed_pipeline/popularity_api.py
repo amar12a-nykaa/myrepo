@@ -1,11 +1,16 @@
 import sys
-from pymongo import MongoClient
+
 from IPython import embed
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 
-client = Utils.mongoClient()
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
+
+client = MongoUtils.getClient()
 popularity_table = client['search']['popularity']
 
 def get_popularity_for_id(product_id, parent_id=None):

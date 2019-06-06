@@ -11,17 +11,26 @@ import traceback
 import subprocess
 import urllib.request
 import csv
-
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
-from importDataFromNykaa import NykaaImporter
-from indexCatalog import CatalogIndexer
+from catalog_nykaa_importer import NykaaImporter
+from catalog_indexer import CatalogIndexer
 from update_bestseller_product_to_es import update_bestseller_data
 
+sys.path.append("/var/www/discovery_api/")
+from disc.v2.utils import Utils as DiscUtils
+#print(django.conf.ENVIRONMENT_VARIABLE)
+#print(os.environ['DJANGO_SETTINGS_MODULE_DISCOVERY'])
+#print(DiscUtils.test)
+#sys.path.append('/var/www/pds_api/')
+#from pas.v2.utils import Utils as PasUtils
+#print(django.conf.ENVIRONMENT_VARIABLE)
+#print(os.environ['DJANGO_SETTINGS_MODULE_DISCOVERY'])
 
-sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import Utils, CATALOG_COLLECTION_ALIAS
+
+#print(PasUtils.test)
+#print(DiscUtils.test)
 
 # FEED_URL = "http://www.nykaa.com/media/feed/master_feed_gludo.csv"
 # FEED_URL_PREPROD = "http://preprod.nykaa.com/media/feed/master_feed_gludo.csv"
@@ -55,7 +64,7 @@ if getCount() > 1:
 
 
 def indexESData(file_path, force_run):
-    indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+    indexes = EsUtils.get_active_inactive_indexes("livecore")
     active_index = indexes['active_index']
     inactive_index = indexes['inactive_index']
     print("ES Active Index: %s" % active_index)
@@ -66,7 +75,7 @@ def indexESData(file_path, force_run):
     if index_client.exists(inactive_index):
         print("Deleting index: %s" % inactive_index)
         index_client.delete(inactive_index)
-    schema = json.load(open(os.path.join(os.path.dirname(__file__), 'schema.json')))
+    schema = json.load(open(os.path.join(os.path.dirname(__file__), 'catalog_schema.json')))
     index_client.create(inactive_index, schema)
     sett = {'refresh_interval': '-1'}
     index_client.put_settings(sett, inactive_index)
@@ -92,8 +101,8 @@ def indexESData(file_path, force_run):
 
     # Verify correctness of indexing by comparing total number of documents in both active and inactive collections
     body = {"query": {"match_all": {}}, "size": 0}
-    num_docs_active = Utils.makeESRequest(body, active_index)['hits']['total']
-    num_docs_inactive = Utils.makeESRequest(body, inactive_index)['hits']['total']
+    num_docs_active = DiscUtils.makeESRequest(body, active_index)['hits']['total']
+    num_docs_inactive = DiscUtils.makeESRequest(body, inactive_index)['hits']['total']
     print('ES Number of documents in active index(%s): %s' % (active_index, num_docs_active))
     print('ES Number of documents in inactive index(%s): %s' % (inactive_index, num_docs_inactive))
 
@@ -111,7 +120,7 @@ def indexESData(file_path, force_run):
     if argv['no_swap'] == True:
         print("\n\nIndex switch is not allowed. ACTIVE INDEX: %s\n\n" % active_index)
     else:
-        resp = EsUtils.switch_index_alias(CATALOG_COLLECTION_ALIAS, active_index, inactive_index)
+        resp = EsUtils.switch_index_alias("livecore", active_index, inactive_index)
 
     print("\n\nFinished running catalog pipeline for ElasticSearch. NEW ACTIVE INDEX: %s\n\n" % inactive_index)
 

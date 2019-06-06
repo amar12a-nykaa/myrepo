@@ -7,9 +7,12 @@ import requests
 import json
 import time
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/var/www/pds_api/')
 
-from pas.v2.utils import Utils, hostname
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
+from pas.v2.utils import hostname
 
 from contextlib import closing
 
@@ -46,7 +49,7 @@ def upload_special_price_to_s3(batch_size = 1000):
   print('----Query2-----')
 
   f.close()
-  Utils.upload_file_to_s3(file_name)
+  PasUtils.upload_file_to_s3(file_name)
   os.remove(file_name)
 
 
@@ -54,7 +57,7 @@ def upload_special_price_to_s3(batch_size = 1000):
 def write_to_result_to_file(query, file, batch_size):
   gludo_url = get_gludo_url()
   print('gludo_url', gludo_url)
-  connection = Utils.mysqlConnection()
+  connection = PasUtils.mysqlConnection()
   with closing(connection.cursor()) as cursor:
     cursor.execute(query)
     products_array = []

@@ -5,11 +5,15 @@ import datetime
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
+from mongoutils import MongoUtils
+
 
 sys.path.append('/nykaa/api')
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 
 def ensure_mongo_index():
   collection = 'order_data'
@@ -39,7 +43,7 @@ def read_data(start_date, end_date):
               from fact_order_detail_new
               where orderdetail_dt_created between '%s' and '%s' and product_id is not null
               group by 1,2,3 """%(start_date, end_date)
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   cur = redshift_conn.cursor()
   cur.execute(query)
   rows = cur.fetchall()

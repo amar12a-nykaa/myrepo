@@ -3,15 +3,17 @@ import datetime
 import argparse
 import time
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/var/www/pds_api/')
 
-from pas.v2.utils import Utils, hostname
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 
 def get_category_details(batch_size):
 	print('batch size : ', batch_size)
 	start_date = (datetime.datetime.now() + datetime.timedelta(-30)).strftime('%Y-%m-%d')
-	nykaa_redshift_connection = Utils.redshiftConnection()
+	nykaa_redshift_connection = PasUtils.redshiftConnection()
 
 	fetch_query = """select parent_sku sku, listagg(child_sku, ',') within group (order by count desc) child_skus from (
 	select child.sku child_sku, parent.sku parent_sku, count(*) from dim_sku parent 
@@ -24,7 +26,7 @@ def get_category_details(batch_size):
 	group by child.sku, parent.sku) y
 	group by parent_sku;"""
 
-	results = Utils.fetchResults(nykaa_redshift_connection, fetch_query)
+	results = PasUtils.fetchResults(nykaa_redshift_connection, fetch_query)
 
 	batch_array = []
 	batch = []
@@ -42,7 +44,7 @@ def get_category_details(batch_size):
 
 	nykaa_redshift_connection.close()
 
-	gludo_connection = Utils.mysqlConnection('w')
+	gludo_connection = PasUtils.mysqlConnection('w')
 	purge_query = 'DELETE FROM bestseller_product_mapping;'
 	gludo_connection.cursor().execute(purge_query)
 	print('bestseller_product_mapping purged')

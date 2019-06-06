@@ -8,9 +8,13 @@ alias gs='git status '
 alias gb='git branch '
 alias pull='git pull'
 alias push='git push'
+alias gprs='echo "https://github.com/"`cat  .git/config  | grep git@github.com | sed "s/.*git@github.com://g" | sed "s/.git$//"`"/pulls"'
 
 alias api='cd /home/apis/nykaa'
+alias api1='cd /var/www/pds_api'
+alias api2='cd /var/www/discovery_api'
 alias adminftp='cd /nykaa/adminftp'
+alias autopep8x='autopep8 --in-place --indent-size 2 --ignore E501,E265'
 
 alias nykaaproddb="mysql -h dbmaster-qa.cjmplqztt198.ap-southeast-1.rds.amazonaws.com -uapi -paU%v#sq1 -D nykaalive1"
 alias nykaa_analytics=" mysql -h nykaa-analytics.nyk00-int.network -u analytics -pP1u8Sxh7kNr"

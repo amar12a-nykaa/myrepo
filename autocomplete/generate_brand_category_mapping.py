@@ -9,14 +9,16 @@ import traceback
 
 from IPython import embed
 from collections import defaultdict
-from pymongo import MongoClient 
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
 from idutils import strip_accents
+from mongoutils import MongoUtils
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 ensure_mongo_indices_now()
@@ -45,7 +47,7 @@ BLACKLISTED_FACETS = ['old_brand_facet', ]
 POPULARITY_THRESHOLD = 0.1
 
 def build_product_popularity_index():
-  client = Utils.mongoClient()
+  client = MongoUtils.getClient()
   global popularity_index
   popularity_table = client['search']['popularity']
   #max_popularity = popularity_table.aggregate([{"$group":{ "_id": "max", "max":{"$max": "$popularity"}}}])
@@ -57,11 +59,11 @@ def get_category_details():
   global cat_id_index
 
   #Category id - name mapping
-  nykaa_redshift_connection = Utils.redshiftConnection()
+  nykaa_redshift_connection = PasUtils.redshiftConnection()
   query = """select distinct l3_id, l3_name as primary_l3 from product_category_mapping 
               where l1_id not in (194,7287) and l2_id not in (345,734,2058,2064,2091,3962,652,3049,3050,8440)
               and l3_id not in (4036,3746,3745,3819,6612);"""
-  results = Utils.fetchResults(nykaa_redshift_connection, query)
+  results = PasUtils.fetchResults(nykaa_redshift_connection, query)
   for row in results:
     _id = str(row['l3_id'])
     name = row['primary_l3'].strip()
@@ -69,9 +71,9 @@ def get_category_details():
   nykaa_redshift_connection.close()
 
   #Category name-url mapping
-  nykaa_replica_db_conn = Utils.nykaaMysqlConnection(force_production=True)
+  nykaa_replica_db_conn = PasUtils.nykaaMysqlConnection(force_production=True)
   query = "SELECT DISTINCT category_id, request_path AS url FROM nykaalive1.core_url_rewrite WHERE product_id IS NULL AND category_id IS NOT NULL"
-  results = Utils.fetchResults(nykaa_replica_db_conn, query)
+  results = PasUtils.fetchResults(nykaa_replica_db_conn, query)
   for row in results:
     _id = str(row['category_id'])
     url = row['url']
@@ -112,10 +114,10 @@ def update_category_table(products):
     if(MEN in v):
       category_popularity[k][MEN] = category_popularity[k][MEN] / max_category_popularity_men * 100 + 100
 
-  mysql_conn = Utils.mysqlConnection('w')
+  mysql_conn = PasUtils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
 
-  Utils.mysql_write("delete from l3_categories", connection = mysql_conn)
+  PasUtils.mysql_write("delete from l3_categories", connection = mysql_conn)
   query = "REPLACE INTO l3_categories(id, name, url, men_url, category_popularity, category_popularity_men) VALUES (%s, %s, %s, %s, %s, %s) "
   #print("CAT_ID_INDEX: %s" % CAT_ID_INDEX)
   for _id, d in cat_id_index.items():
@@ -130,7 +132,7 @@ def update_category_table(products):
   cursor.close()
   mysql_conn.close()
 
-  Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
+  PasUtils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
 def getProducts():
   products = []
@@ -138,7 +140,7 @@ def getProducts():
   global brand_name_name
 
   #Brand id - name mapping
-  nykaa_replica_db_conn = Utils.nykaaMysqlConnection(force_production=True)
+  nykaa_replica_db_conn = PasUtils.nykaaMysqlConnection(force_production=True)
   query = """
           select distinct name, id, url, brands_v1 
           FROM(
@@ -154,7 +156,7 @@ def getProducts():
              WHERE cur.product_id IS NULL
           )A
           """
-  results = Utils.fetchResults(nykaa_replica_db_conn, query)
+  results = PasUtils.fetchResults(nykaa_replica_db_conn, query)
   for brand in results:
     brand_name = brand['name'].replace("’", "'")
     brand_name = strip_accents(brand_name)
@@ -171,12 +173,12 @@ def getProducts():
   nykaa_replica_db_conn.close()
 
   print("Fetching products from DWH")
-  nykaa_redshift_connection = Utils.redshiftConnection()
+  nykaa_redshift_connection = PasUtils.redshiftConnection()
   query = """SELECT 
                 ds.product_id AS simple_id, pcm.l3_id AS category_l3_id, ds.brand_name as brand, ds.is_men 
              FROM dim_sku ds JOIN product_category_mapping pcm ON ds.product_id = pcm.product_id 
              WHERE pcm.l3_id != 0"""
-  results = Utils.fetchResults(nykaa_redshift_connection, query)
+  results = PasUtils.fetchResults(nykaa_redshift_connection, query)
   if not results:
     raise Exception("Could not fetch data from dwh databases")
   for row in results:
@@ -247,10 +249,10 @@ def getMappings(products):
 
 def saveMappings(brand_category_mappings):
   print("Saving brand category mappings in DB..")
-  mysql_conn = Utils.mysqlConnection('w')
+  mysql_conn = PasUtils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
 
-  Utils.mysql_write("delete from brands", connection = mysql_conn)
+  PasUtils.mysql_write("delete from brands", connection = mysql_conn)
 
   query = "REPLACE INTO brands (brand, brand_id, brands_v1, brand_popularity, brand_popularity_men, top_categories, top_categories_men, brand_url, brand_men_url) " \
           "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
@@ -321,9 +323,9 @@ def saveMappings(brand_category_mappings):
 
 def update_brand_category_table():
   assert brand_cat_popularity
-  if not Utils.mysql_read("SHOW TABLES LIKE 'brand_category'"):
-    Utils.mysql_write("create table brand_category(brand varchar(30), brand_id varchar(32), category_id varchar(32), category_name varchar(32), popularity float, popularity_men float)")
-  Utils.mysql_write("delete from brand_category")
+  if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category'"):
+    PasUtils.mysql_write("create table brand_category(brand varchar(30), brand_id varchar(32), category_id varchar(32), category_name varchar(32), popularity float, popularity_men float)")
+  PasUtils.mysql_write("delete from brand_category")
 
   max_pop_Nykaa = 0
   max_pop_Men = 0
@@ -349,15 +351,15 @@ def update_brand_category_table():
           brand_name = brand_name_name[brand] if brand in brand_name_name else brand
           q = query % (brand_name.replace("'", "''"), brand_id, category_id, category_name.replace("'", "''"), pop[NYKAA], pop[MEN])
           # print(q)
-          Utils.mysql_write(q)
+          PasUtils.mysql_write(q)
       except:
         print(traceback.format_exc())
 
 def update_brand_category_facets_table():
 #  assert BRAND_CAT_POPULARITY
-  if not Utils.mysql_read("SHOW TABLES LIKE 'brand_category_facets'"):
-    Utils.mysql_write("create table brand_category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32), category_name varchar(32), facet varchar(20), popularity float)")
-  Utils.mysql_write("delete from brand_category_facets")
+  if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category_facets'"):
+    PasUtils.mysql_write("create table brand_category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32), category_name varchar(32), facet varchar(20), popularity float)")
+  PasUtils.mysql_write("delete from brand_category_facets")
 
   
   def agg_query(category_id, brand_id):
@@ -402,7 +404,7 @@ def update_brand_category_facets_table():
 
   max_pop = 0 
   arr = []
-  for res in Utils.mysql_read("select * from brand_category"):
+  for res in PasUtils.mysql_read("select * from brand_category"):
     category_id = res['category_id']
     brand_id = res['brand_id']
     brand = res['brand']
@@ -425,7 +427,7 @@ def update_brand_category_facets_table():
   for brand, brand_id, category_id, category_name, facet, popularity in arr:
     popularity = popularity/ max_pop * 50 
     q = query % (brand, brand_id, category_id, category_name, facet, popularity)
-    Utils.mysql_write(q)
+    PasUtils.mysql_write(q)
     print(q)
 
 def getAggQueryResult(facet1, facet2):
@@ -488,9 +490,9 @@ def getFacetPopularityArray(results, max_pop, max_pop_men):
   return tempArr, max_pop, max_pop_men
 
 def update_category_facets_table():
-  if not Utils.mysql_read("SHOW TABLES LIKE 'category_facets'"):
-    Utils.mysql_write("create table category_facets(category_id varchar(32), category_name varchar(32), facet_name varchar(20), facet_val varchar(20), popularity float)")
-  Utils.mysql_write("delete from category_facets")
+  if not PasUtils.mysql_read("SHOW TABLES LIKE 'category_facets'"):
+    PasUtils.mysql_write("create table category_facets(category_id varchar(32), category_name varchar(32), facet_name varchar(20), facet_val varchar(20), popularity float)")
+  PasUtils.mysql_write("delete from category_facets")
 
   arr = []
   max_pop = 0
@@ -539,7 +541,7 @@ def update_category_facets_table():
     popularity = row['popularity']/ max_pop * WEIGHT_CATEGORY_FACET
     popularity_men = row['popularity_men']/max_pop_men * WEIGHT_CATEGORY_FACET if max_pop_men > 0 else 0
     query = query % (row['category_id'], category_name, row['facet_name'], row['facet_val'].strip().replace("'", "''"), popularity, popularity_men)
-    Utils.mysql_write(query)
+    PasUtils.mysql_write(query)
 
 
 def generate_brand_category_mapping():

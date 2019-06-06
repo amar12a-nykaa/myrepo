@@ -2,20 +2,22 @@ import sys
 import argparse
 from contextlib import closing
 
-sys.path.append('/home/apis/nykaa/')
+sys.path.append('/var/www/pds_api/')
 
-from pas.v2.utils import Utils, hostname, CATALOG_COLLECTION_ALIAS
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 from elasticsearch import helpers, Elasticsearch
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
-es_connection = Utils.esConn()
+es_connection = DiscUtils.esConn()
 
 
 def update_es_bestseller_products(docs):
 	try:
-		es = Utils.esConn()
+		es = DiscUtils.esConn()
 		actions = []
 		for doc in docs:
 			actions.append({
@@ -41,12 +43,12 @@ def update_bestseller_data(batch_size):
 	try:
 		print('update_bestseller_data Started ')
 		print('batch_size : ', batch_size)
-		indexes = EsUtils.get_active_inactive_indexes(CATALOG_COLLECTION_ALIAS)
+		indexes = EsUtils.get_active_inactive_indexes("livecore")
 		active_index = indexes['active_index']
 		print("ES Active Index: %s" % active_index)
 
 		fetch_query = """SELECT sku, bestseller_child_skus FROM bestseller_product_mapping;"""
-		connection = Utils.mysqlConnection('r')
+		connection = DiscUtils.mysqlConnection('r')
 		with closing(connection.cursor()) as cursor:
 			cursor.execute(fetch_query)
 			products_array = []

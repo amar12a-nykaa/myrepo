@@ -4,8 +4,10 @@ import sys
 import boto3
 import pandas as pd
 import subprocess
-sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import Utils
+sys.path.append('/var/www/pds_api/')
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 from pas.v2.utils import UserProfileServiceDynamoDb
 from os import listdir
 from datetime import datetime, timedelta

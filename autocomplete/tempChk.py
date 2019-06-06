@@ -1,7 +1,9 @@
 import sys
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 correct_term_list = ["everyuth","kerastase","farsali","krylon","armaf","Cosrx","focallure","ennscloset","studiowest","odonil","gucci","kryolan",
                      "sephora","foreo","footwear","rhoda","Fenty","Hilary","spoolie","jovees","devacurl","biore","quirky","stay","parampara","dermadew",
@@ -29,7 +31,7 @@ def getValue1(query):
                     }
                   }
               }""" % (query)
-    es_result = Utils.makeESRequest(es_query, "livecore")
+    es_result = DiscUtils.makeESRequest(es_query, "livecore")
     if len(es_result['suggest']['phrase_suggestion'][0]['options']) > 0:
         return es_result['suggest']['phrase_suggestion'][0]['options'][0]['text']
     return query
@@ -50,7 +52,7 @@ def getValue2(query):
                     }
                   }
               }""" % (query)
-    es_result = Utils.makeESRequest(es_query, "livecore")
+    es_result = DiscUtils.makeESRequest(es_query, "livecore")
     if es_result.get('suggest', {}).get('term_suggester'):
         modified_query = query.lower()
         for term_suggestion in es_result['suggest']['term_suggester']:
@@ -89,7 +91,7 @@ def getValue3(query):
             }
           }
     }""" % (query,query)
-    es_result = Utils.makeESRequest(es_query, "livecore")
+    es_result = DiscUtils.makeESRequest(es_query, "livecore")
     doc_found = es_result['hits']['hits'][0]['_source']['title_brand_category'] if len(es_result['hits']['hits']) > 0 else ""
     doc_found = doc_found.lower()
     doc_found = doc_found.split()
@@ -138,7 +140,7 @@ def getValue4(query):
            }
          }
     }""" % (query)
-    es_result = Utils.makeESRequest(es_query, "autocomplete")
+    es_result = DiscUtils.makeESRequest(es_query, "autocomplete")
     if len(es_result['suggest']['phrase_suggestion'][0]['options']) > 0:
         return es_result['suggest']['phrase_suggestion'][0]['options'][0]['text']
     return query
@@ -344,7 +346,7 @@ def chkPositive():
         "_source" : ["entity", "type"],
         "size" : 10000
         }"""
-    es_result = Utils.makeESRequest(es_query, "autocomplete")
+    es_result = DiscUtils.makeESRequest(es_query, "autocomplete")
     for row in es_result['hits']['hits']:
         try:
             entity = row['_source']['entity']

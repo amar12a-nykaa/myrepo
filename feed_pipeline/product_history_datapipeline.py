@@ -3,10 +3,16 @@ import dateutil.relativedelta
 import datetime as dt
 import sys
 
-sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import Utils
+sys.path.append('/var/www/pds_api/')
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
-client = Utils.mongoClient()
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
+
+client = MongoUtils.getClient()
 raw_data = client['search']['raw_data']
 product_history_table = client['search']['product_history']
 product_history_table_inactive = client['search']['product_history_inactive']

@@ -6,8 +6,8 @@ import traceback
 import urllib.parse
 import urllib.request
 from tomorrow import threads
-sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import Utils
+sys.path.append('/var/www/pds_api/')
+from pas.v2.utils import Utils as PasUtils
 from pas.v2.csvutils import read_csv_from_file
 from feed_pipeline.pipelineUtils import PipelineUtils
 
@@ -42,7 +42,7 @@ results = []
 
 if sync_db:
   # Sync availability info by picking up from Nykaa DB
-  nykaa_mysql_conn = Utils.nykaaMysqlConnection()
+  nykaa_mysql_conn = PasUtils.nykaaMysqlConnection()
   limit = "11111111"
   #limit = "100"
   query = """SELECT * FROM
@@ -55,7 +55,7 @@ if sync_db:
              WHERE (cpe.type_id='simple') AND cpe.sku IS NOT NULL GROUP BY 1,3)a
              WHERE (a.parent_id IS NOT NULL AND a.parent_sku IS NOT NULL) OR (a.parent_id IS NULL AND a.parent_sku IS NULL)
              LIMIT %s;"""%limit
-  results = Utils.fetchResults(nykaa_mysql_conn, query)
+  results = PasUtils.fetchResults(nykaa_mysql_conn, query)
 elif file_path:
   results = read_csv_from_file(file_path)
    

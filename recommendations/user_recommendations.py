@@ -9,7 +9,7 @@ import operator
 import pandas as pd
 sys.path.append("/nykaa/nykaa_scripts/utils")
 from loopcounter import LoopCounter
-sys.path.append("/nykaa/api")
+sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils, RecommendationsUtils
 from joblib import Parallel, delayed
 from datetime import datetime, timedelta
@@ -25,7 +25,7 @@ def process_orders(start_datetime=None):
         print("No start date")
         query = "SELECT DISTINCT(customer_id) FROM sales_flat_order WHERE customer_id IS NOT NULL"
 
-    rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), query, 10000)     
+    rows = DiscUtils.fetchResultsInBatch(DiscUtils.nykaaMysqlConnection(), query, 10000)     
     customer_ids = [str(row[0]) for row in rows]
     if len(customer_ids) == 0:
         print("No customer ids to process")
@@ -34,7 +34,7 @@ def process_orders(start_datetime=None):
     print("Processing for %d customers" % len(customer_ids))
 
     query = "SELECT customer_id, entity_id from sales_flat_order WHERE customer_id in (%s) ORDER BY created_at DESC ;" % (",".join(customer_ids))
-    rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), query, 10000)     
+    rows = DiscUtils.fetchResultsInBatch(DiscUtils.nykaaMysqlConnection(), query, 10000)     
     customer_2_orders = defaultdict(lambda: [])
     for row in rows:
         if len(customer_2_orders[row[0]]) <= 10:
@@ -46,7 +46,7 @@ def process_orders(start_datetime=None):
     print("Computing %d orders" % len(order_ids))
 
     order_products_query = "SELECT order_id, product_id FROM sales_flat_order_item WHERE order_id <> 0 AND mrp > 1 AND parent_item_id IS NULL AND order_id IN (%s);" % ",".join([str(order_id) for order_id in order_ids])
-    rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), order_products_query, 10000)     
+    rows = DiscUtils.fetchResultsInBatch(DiscUtils.nykaaMysqlConnection(), order_products_query, 10000)     
     order_2_products = defaultdict(lambda: [])
     for row in rows:
         order_2_products[row[0]].append(row[1])
@@ -71,7 +71,7 @@ def process_orders(start_datetime=None):
     insert_recommendations_query = """ INSERT INTO recommendations_v3(entity_id, entity_type, recommendation_type, algo, recommended_products_json)
             VALUES %s ON DUPLICATE KEY UPDATE recommended_products_json=VALUES(recommended_products_json)
     """ % values_str
-    Utils.mysql_write(insert_recommendations_query, values, Utils.mysqlConnection())
+    DiscUtils.mysql_write(insert_recommendations_query, values, DiscUtils.mysqlConnection())
 
 def insert_recommendations_2_db(recommendation_rows):
     values_str = ", ".join(["(%s, %s, %s, %s, %s)" for i in range(len(recommendation_rows))])
@@ -79,7 +79,7 @@ def insert_recommendations_2_db(recommendation_rows):
     insert_recommendations_query = """ INSERT INTO recommendations_v2(entity_id, entity_type, recommendation_type, algo, recommended_products_json)
             VALUES %s ON DUPLICATE KEY UPDATE recommended_products_json=VALUES(recommended_products_json)
     """ % values_str
-    Utils.mysql_write(insert_recommendations_query, values, Utils.mysqlConnection())
+    DiscUtils.mysql_write(insert_recommendations_query, values, DiscUtils.mysqlConnection())
 
 def compute_recommendation_rows(customer_ids, customer_2_product_chunks, recommendation_rows, product_2_recommendations):
     for customer_id in customer_ids:
@@ -90,7 +90,7 @@ def process_orders_df(start_datetime=None):
         query = "SELECT sfo.customer_id, sfoi.order_id, sfoi.product_id FROM sales_flat_order_item sfoi INNER JOIN sales_flat_order sfo ON sfo.entity_id=sfoi.order_id WHERE sfoi.order_id <> 0 AND sfoi.mrp > 1 AND sfoi.parent_item_id IS NULL AND sfo.customer_id IS NOT NULL AND sfo.created_at > '%s' ORDER BY sfo.created_at DESC;" % start_datetime
     else:
         query = "SELECT sfo.customer_id, sfoi.order_id, sfoi.product_id FROM sales_flat_order_item sfoi INNER JOIN sales_flat_order sfo ON sfo.entity_id=sfoi.order_id WHERE sfoi.order_id <> 0 AND sfoi.mrp > 1 AND sfoi.parent_item_id IS NULL AND sfo.customer_id IS NOT NULL ORDER BY sfo.created_at DESC;"
-    rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), query, 10000)
+    rows = DiscUtils.fetchResultsInBatch(DiscUtils.nykaaMysqlConnection(), query, 10000)
     if not rows:
         print("No orders to process")
         return
@@ -116,7 +116,7 @@ def process_orders_df(start_datetime=None):
                 print("No products in order: %d" % order_id)
 
     query = "SELECT entity_id, recommended_products_json FROM recommendations_v2 WHERE entity_type='product' AND recommendation_type='bought' AND algo='coccurence_direct'"
-    rows = Utils.fetchResultsInBatch(Utils.mysqlConnection(), query, 10000)
+    rows = DiscUtils.fetchResultsInBatch(DiscUtils.mysqlConnection(), query, 10000)
     
     product_2_recommendations = {}
     for row in rows:

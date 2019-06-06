@@ -5,8 +5,10 @@ import sys
 import requests
 import os
 import boto3
-sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import Utils
+sys.path.append('/var/www/pds_api/')
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 from pas.v2.utils import UserProfileServiceDynamoDb 
 from contextlib import closing
 sys.path.append('/nykaa/scripts/sharedutils/')
@@ -31,7 +33,7 @@ def updateDyanamodb(row,db):
 
 
 db = UserProfileServiceDynamoDb()
-connection = Utils.redshiftConnection()
+connection = PasUtils.redshiftConnection()
 #cursor= connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
 query = """
             select customer_id, firstname, lastname, gender, dob, email FROM customer_info c JOIN customer_view v ON c.customer_id=v.id WHERE v.order_total_at_mrp > 0        """

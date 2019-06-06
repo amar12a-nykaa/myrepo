@@ -10,7 +10,7 @@ sys.path.append("/home/ubuntu/nykaa_scripts/sharedutils/")
 
 def get_product_category():
     category_query = "SELECT entity_id, value from catalog_product_entity_varchar WHERE attribute_id = '807';"
-    rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), category_query, 50000)
+    rows = DiscUtils.fetchResultsInBatch(DiscUtils.nykaaMysqlConnection(), category_query, 50000)
     print("Total rows extracted: %d" % len(rows))
     product_2_l3category = {row[0] : row[1] for row in rows}
     return product_2_l3category
@@ -22,7 +22,7 @@ def filter_by_l3_category(source_algo, algo, limit=None):
         source_algo, limit)
     else:
         query = "SELECT entity_id, recommended_products_json FROM `recommendations_v2` WHERE entity_type='product' and recommendation_type='viewed' and algo='%s'" % source_algo
-    mysql_conn = Utils.mysqlConnection('w')
+    mysql_conn = DiscUtils.mysqlConnection('w')
     cursor = mysql_conn.cursor()
     cursor.execute(query)
     rows = []
@@ -38,7 +38,7 @@ def filter_by_l3_category(source_algo, algo, limit=None):
         if new_recommendations:
             rows.append((str(product_id), 'product', 'viewed', algo, json.dumps(new_recommendations)))
 
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection('w'), 'recommendations_v2', rows)
+    RecommendationsUtils.add_recommendations_in_mysql(DiscUtils.mysqlConnection('w'), 'recommendations_v2', rows)
 
 
 if __name__ == '__main__':

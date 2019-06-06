@@ -16,7 +16,9 @@ sys.path.append('/nykaa/scripts/autocomplete/feedback')
 from insertDataToMongo import insertFeedBackDataInMongo
 
 sys.path.append('/nykaa/api/')
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 from index import index_engine
 from generate_brand_category_mapping import generate_brand_category_mapping
@@ -49,27 +51,6 @@ index_start = timeit.default_timer()
 index_engine(engine='elasticsearch', collection=inactive_index, swap=True, index_all=True)
 index_duration = timeit.default_timer() - index_start
 
-## Verify correctness of indexing by comparing total number of documents in both active and inactive indexes
-#params = {'q': '*:*', 'rows': '0'}
-#num_docs_active = Utils.makeESRequest(params, index=active_index)['numFound']
-#num_docs_inactive = Utils.makeESRequest(params, index=inactive_index)['numFound']
-#print('Number of documents in active index(%s): %s'%(active_index, num_docs_active))
-#print('Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
-#
-## if it decreased more than 5% of current, abort and throw an error
-#if not num_docs_active:
-#  if num_docs_inactive:
-#    docs_ratio = 1
-#  else:
-#    docs_ratio = 0
-#else:
-#  docs_ratio = num_docs_inactive/num_docs_active
-#if docs_ratio < 0.95 and not force_run:
-#  msg = "[ERROR] Number of documents decreased by more than 5% of current documents. Please verify the data or run with --force option to force run the indexing."
-#  print(msg)
-#  raise Exception(msg)
-#
-#resp = EsUtils.switch_index_alias(AUTOCOMPLETE, active_index, inactive_index)
 
 script_stop = timeit.default_timer()
 script_duration = script_stop - script_start

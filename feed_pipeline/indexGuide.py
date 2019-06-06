@@ -5,8 +5,10 @@ import numpy as np
 import json
 import os
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils, EntityUtils
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import EntityUtils
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
@@ -70,7 +72,7 @@ def process_guides(filename='guide.csv'):
     return guide
 
 def get_filters():
-    mysql_conn = Utils.nykaaMysqlConnection(force_production=True)
+    mysql_conn = PasUtils.nykaaMysqlConnection(force_production=True)
     query = """select eov.option_id as filter_id, eov.value as filter_value, e.attribute_code as filter_name 
                from eav_attribute e 
                   join eav_attribute_option eo on e.attribute_id = eo.attribute_id
@@ -82,7 +84,7 @@ def get_filters():
 
     filters['filter_name'] = filters['filter_name'].apply(lambda x: x[:-3])
     filters = filters.astype({'filter_id': str})
-    mysql_conn = Utils.mysqlConnection()
+    mysql_conn = PasUtils.mysqlConnection()
     #get color codes
     query = """SELECT attribute_id as filter_id, group_concat(value) as color_code FROM attribute_values group by 1"""
     color_codes = pd.read_sql(query, con=mysql_conn)

@@ -4,13 +4,16 @@ import arrow
 import numpy
 import datetime
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 from loopcounter import LoopCounter
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']
 order_data = client['search']['order_data']
@@ -21,8 +24,8 @@ WEIGHT_UNITS = 0
 WEIGHT_ORDERS = 40
 WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 50
-POPULARITY_TOTAL_RATIO = 0.1
-POPULARITY_BUCKET_RATIO = 0.9
+POPULARITY_TOTAL_RATIO = 0
+POPULARITY_BUCKET_RATIO = 1
 PUNISH_FACTOR=0.7
 BOOST_FACTOR=1.1
 PRODUCT_PUNISH_FACTOR = 0.5
@@ -43,7 +46,7 @@ COLD_START_DECAY_FACTOR_NEW = 0.99
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
-PRODUCT_PUNISH_LIST = [303813,262768,262770,262769]
+PRODUCT_PUNISH_LIST = []
     
 
 def get_product_validity():
@@ -51,7 +54,7 @@ def get_product_validity():
 
   query = """select product_id, parent_id, is_in_stock, mrp, disabled
                 from products"""
-  mysql_conn = Utils.mysqlConnection()
+  mysql_conn = PasUtils.mysqlConnection()
   data = pd.read_sql(query, con=mysql_conn)
   mysql_conn.close()
   data.mrp = data.mrp.fillna(0)
@@ -71,7 +74,7 @@ def create_child_parent_map():
               JOIN catalog_product_entity_int cpei ON cpei.entity_id = cpsl.parent_id
               WHERE e.type_id = 'simple' and cpei.attribute_id = 80 AND cpei.value = 1
               GROUP BY cpsl.product_id;"""
-  nykaa_conn = Utils.nykaaMysqlConnection()
+  nykaa_conn = PasUtils.nykaaMysqlConnection()
   child_parent_map = pd.read_sql(query, con=nykaa_conn)
   child_parent_map = child_parent_map.astype({'parent_id': str, 'product_id': str})
   print(child_parent_map.columns)
@@ -310,7 +313,7 @@ def calculate_new_popularity():
 def applyBoost(df):
   query = """select product_id, sku_type, brand_code, mrp, l3_id from dim_sku"""
   print(query)
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   product_attr = pd.read_sql(query, con=redshift_conn)
   redshift_conn.close()
 
@@ -339,7 +342,7 @@ def applyBoost(df):
       row['popularity'] = row['popularity'] * PRODUCT_PUNISH_FACTOR
       row['popularity_new'] = row['popularity_new'] * PRODUCT_PUNISH_FACTOR_NEW
     return row
-  temp_df = temp_df.apply(punish_products_by_id, axis=1)
+  # temp_df = temp_df.apply(punish_products_by_id, axis=1)
   temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
   temp_df = temp_df.astype({'id': str})
 
@@ -357,7 +360,7 @@ def handleColdStart(df):
   temp_df = temp_df.astype({'id': int, 'popularity': float, 'popularity_new': float})
 
   query = """select product_id, l3_id from product_category_mapping"""
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   product_category_mapping = pd.read_sql(query, con=redshift_conn)
 
   product_data = pd.merge(temp_df, product_category_mapping, left_on=['id'], right_on=['product_id'])
