@@ -9,7 +9,7 @@ import sys
 import tempfile
 import re
 
-sys.path.append("/nykaa/api")
+sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils, RecommendationsUtils
 sys.path.append("/home/ubuntu/nykaa_scripts/sharedutils")
 from loopcounter import LoopCounter
@@ -94,9 +94,9 @@ if __name__ == '__main__':
     product2recommendations = {}
     Parallel(n_jobs=20, verbose=1, pre_dispatch='1.5*n_jobs', backend="threading")(delayed(compute_recommendations)(metric_ids[i:i+1000], metric_corpus_dict, rows, product2recommendations) for i in range(0, len(metric_ids), 1000))
 
-    results = Utils.scrollESForResults()
+    results = DiscUtils.scrollESForResults()
     for child_id, parent_id in results['child_2_parent'].items():
         if product2recommendations.get(parent_id):
             rows.append((str(child_id), entity_type, recommendation_type, algo, json.dumps(product2recommendations[parent_id])))
 
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection('w'), 'recommendations_v2', rows)
+    RecommendationsUtils.add_recommendations_in_mysql(DiscUtils.mysqlConnection('w'), 'recommendations_v2', rows)

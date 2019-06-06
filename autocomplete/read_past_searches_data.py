@@ -19,30 +19,33 @@ from IPython import embed
 from collections import OrderedDict
 from contextlib import closing
 from datetime import date, timedelta
-from pymongo import MongoClient
 
 import arrow
 import mysql.connector
 import numpy
 import omniture
 import pandas as pd
-from pymongo import MongoClient, UpdateOne
+from pymongo import UpdateOne
 from pymongo.errors import BulkWriteError
 from stemming.porter2 import stem
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from loopcounter import LoopCounter
 from cliutils import CliUtils
+from mongoutils import MongoUtils
+
 
 DAILY_COUNT_THRESHOLD = 2 
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_formatted = client['search']['search_terms_daily_formatted']
 ensure_mongo_indices_now()
@@ -56,7 +59,7 @@ def format_term(term):
 
 def normalize_array(query):
     index = set()
-    for row in Utils.mysql_read(query): 
+    for row in PasUtils.mysql_read(query): 
         row = row['term']
         for term in row.split(" "):
             term = format_term(term)
@@ -117,7 +120,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
   product_id_arg = product_id
   assert platform in ['app', 'web']
 
-  client = Utils.mongoClient()
+  client = MongoUtils.getClient()
   search_terms_daily = client['search']['search_terms_daily']
 
 

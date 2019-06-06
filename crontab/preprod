@@ -1,8 +1,9 @@
 SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-* * * * * root /usr/bin/python /home/ubuntu/nykaa_scripts/feed_pipeline/indexSchedulePricesOptimized.py --threads 4 --batch_size 100 2>&1 >> /var/log/nykaa/schedule_price_cron.log
+* * * * * root /usr/bin/python /home/ubuntu/nykaa_scripts/feed_pipeline/discount_scheduler.py --threads 4 --batch_size 100 2>&1 >> /var/log/nykaa/schedule_price_cron.log
 0 0 * * * root /usr/bin/python /nykaa/scripts/feed_pipeline/cron_runner.py  2>&1 >> /var/log/feed_pipeline_cron.log
 
-0 0 * * * root /usr/bin/python /nykaa/scripts/feed_pipeline/health_check.py -m  
+0 0 * * * root /usr/bin/python /nykaa/scripts/feed_pipeline/health_check.py -m 
+* * * * * root /usr/bin/python -u /home/ubuntu/nykaa_scripts/sqs_listener/cron_pas_listener_es.py 2>&1 >> /tmp/cron_pas_listener_es.py
 

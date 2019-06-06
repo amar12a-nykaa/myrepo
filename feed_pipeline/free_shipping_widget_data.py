@@ -3,8 +3,10 @@ import json
 import argparse
 from datetime import datetime, timedelta
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 sys.path.append("/home/ubuntu/nykaa_scripts/utils/")
 sys.path.append("/home/ubuntu/nykaa_scripts/sharedutils/")
@@ -15,14 +17,15 @@ purchase_count_threshold = 100
 
 def populateFrequentProductDetails():
     global back_date_90_days
-    redshift_conn = Utils.redshiftConnection()
-    mysql_conn = Utils.mysqlConnection('w')
+    redshift_conn = PasUtils.redshiftConnection()
+    mysql_conn = PasUtils.mysqlConnection('w')
     truncate_table = False
     try:
         query = """select s.product_id, s.l3_id, 
-                    case when s.mrp <= 100 then 'BELOW 100'
-                         when s.mrp > 100 and s.mrp <= 200 then 'BELOW 200'
-                         when s.mrp > 200 then 'ABOVE 200'
+                    case when s.mrp <= 50  then 'BELOW 50'
+                         when s.mrp <= 100 then 'BELOW 100'
+                         when s.mrp <= 150 then 'BELOW 150'
+                         when s.mrp <= 200 then 'BELOW 200'
                     end as bucket,
                     count(*) as purchase_count
                     from fact_order_detail_new fodn join
@@ -39,20 +42,20 @@ def populateFrequentProductDetails():
         for row in cursor.fetchall():
             rows.append((str(row[0]), row[1], row[2], row[3]))
         print("doing mysql queries")
-        Utils.mysql_write("""create table if not exists free_shipping_recommendation(product_id varchar(50),
+        PasUtils.mysql_write("""create table if not exists free_shipping_recommendation(product_id varchar(50),
                                 category varchar(255), bucket varchar(50),bought_count int(11))""")
-        Utils.mysql_write("""create table free_shipping_recommendation_tmp select * from free_shipping_recommendation""")
-        Utils.mysql_write("""truncate table free_shipping_recommendation""")
+        PasUtils.mysql_write("""create table free_shipping_recommendation_tmp select * from free_shipping_recommendation""")
+        PasUtils.mysql_write("""truncate table free_shipping_recommendation""")
         truncate_table = True
         add_freeshipping_recommendations_in_mysql(mysql_conn, rows)
-        Utils.mysql_write("""drop table free_shipping_recommendation_tmp""")
+        PasUtils.mysql_write("""drop table free_shipping_recommendation_tmp""")
     except Exception as e:
         print("Not ABLE TO RETRIEVE FREQUENT PRODUCT DATA")
         print(e)
         if truncate_table:
-            Utils.mysql_write("""truncate table free_shipping_recommendation""")
-            Utils.mysql_write("""insert into free_shipping_recommendation select * from free_shipping_recommendation_tmp""")
-            Utils.mysql_write("""drop table free_shipping_recommendation_tmp""")
+            PasUtils.mysql_write("""truncate table free_shipping_recommendation""")
+            PasUtils.mysql_write("""insert into free_shipping_recommendation select * from free_shipping_recommendation_tmp""")
+            PasUtils.mysql_write("""drop table free_shipping_recommendation_tmp""")
         return
 
 def _add_recommendations_in_mysql(cursor, rows):

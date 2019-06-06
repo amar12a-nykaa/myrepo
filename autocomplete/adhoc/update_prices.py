@@ -16,21 +16,25 @@ import mysql.connector
 import numpy
 import omniture
 import pandas as pd
-from pymongo import MongoClient
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
+
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 
 import requests
 import IPython
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 raw_data = client['search']['raw_data']
 processed_data = client['search']['processed_data']
 popularity_table = client['search']['popularity']
 
 
-for p in Utils.mysql_read("select product_id, mrp, sku from products limit 100"):
+for p in PasUtils.mysql_read("select product_id, mrp, sku from products limit 100"):
   if not p['product_id']:
     continue
   print(p)

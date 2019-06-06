@@ -9,9 +9,11 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 import re
 from datetime import datetime, timedelta
-sys.path.append("/nykaa/api")
+sys.path.append("/var/www/pds_api")
 from pipelineUtils import PipelineUtils
-from pas.v2.utils import Utils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health
 
 quantile_lower_limit = .25
@@ -102,7 +104,7 @@ def get_intent_set():
 
 def get_rating_set():
   global back_date_7_days
-  redshift_conn =  Utils.redshiftConnection()
+  redshift_conn =  PasUtils.redshiftConnection()
   print (back_date_7_days)
   try:
     query = """select product_sku, product_id, rating_star, date(created_at), status_code from reviews_qna where status_code in ('Approved','Pending')  and created_at >='{0}'""".format(back_date_7_days)
@@ -121,7 +123,7 @@ def get_rating_set():
 def get_sales_data():
   global back_date_7_days
   
-  redshift_conn =  Utils.redshiftConnection()
+  redshift_conn =  PasUtils.redshiftConnection()
   query  = """select ds.product_id as entity_id , count( distinct fodn.nykaa_orderno) from fact_order_detail_new fodn
   left join fact_order_new fon on fon.nykaa_orderno = fodn.nykaa_orderno
   left join dim_sku ds on ds.sku = fodn.product_sku  
@@ -138,7 +140,7 @@ def get_sales_data():
   return product_sales_data_set
 
 def get_product_sku_data():
-  redshift_conn =  Utils.redshiftConnection()
+  redshift_conn =  PasUtils.redshiftConnection()
   product_sku_query = """select  distinct sku, sku_type, product_id from dim_sku  where sku is not NULL and sku_type is not Null and product_id is not NULL"""
 
   product_sku_raw_data = pd.read_sql(product_sku_query, redshift_conn)
@@ -193,7 +195,7 @@ def get_product_detail(product_id):
     return {}
 
 def helper_function(weekly_category_wise_count_map, weekly_category_brand_count_map, weekly_brand_count_map, docs, already_dotd_products):
-  new_docs  = sorted(docs, key=lambda x: float(x.get('discount', 0)), reverse=True)
+  # new_docs  = sorted(docs, key=lambda x: float(x.get('discount', 0)), reverse=True)
 
   daily_category_count_map = {}
   daily_brand_count_map = {}
@@ -280,7 +282,7 @@ def helper_function(weekly_category_wise_count_map, weekly_category_brand_count_
   return final_list
 
 def get_dotd_products(dt):
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
   query =  "select distinct product_id,sku from deal_of_the_day_data where date_time >='{0}' and date_time <'{1}'".format( back_date_7_days, dt)
   cur  = redshift_conn.cursor()
   cur.execute(query)
@@ -361,7 +363,7 @@ def get_final_eligible_product_list(docs, dt):
   return final_list
 
 def dump_to_redshift(docs, dt):
-  redshift_conn = Utils.redshiftConnection()
+  redshift_conn = PasUtils.redshiftConnection()
 
   cur =  redshift_conn.cursor()
   delete_query  =  "delete from deal_of_the_day_data where date_time ='{0}'".format(dt)
@@ -505,7 +507,7 @@ if __name__ == '__main__':
       query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') 
                 on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.\
                 format(pid, product_id_sku_details_map.get(pid).get('sku'), starttime, endtime, position)
-      Utils.mysql_write(query)
+      PasUtils.mysql_write(query)
       position = position + 1
   remaining_length = 30-position
   for counter, doc in enumerate(new_docs[:30]):
@@ -515,13 +517,13 @@ if __name__ == '__main__':
       if doc.get('product_id') in featured_list:
         continue
       print (doc) 
-      mysql_conn =  Utils.mysqlConnection('w')
+      mysql_conn =  PasUtils.mysqlConnection('w')
       product_id = str(doc.get('product_id'))
       sku = doc.get('sku')
       query =  """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}') 
                   on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """.\
                   format(product_id, sku, starttime, endtime,position)
-      ans  = Utils.mysql_write(query)
+      ans  = PasUtils.mysql_write(query)
       position = position + 1
       sets_list = []
       if int(product_id) in list(rating_set['entity_id']):

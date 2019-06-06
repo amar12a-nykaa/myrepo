@@ -11,9 +11,10 @@ import requests
 from IPython import embed
 from elasticsearch import helpers, Elasticsearch
 
-sys.path.append('/home/apis/nykaa/')
-from pas.v2.utils import CATALOG_COLLECTION_ALIAS, MemcacheUtils, Utils
-
+sys.path.append('/var/www/pds_api/')
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 
 index_alias_config = {
   "livecore": # This must be changed to 'catalog' 
@@ -39,20 +40,27 @@ index_alias_config = {
       "config" : "entity",
       "unique_field" : "_id",
       "type" : "entity"
+    },
+  "guide":
+    {
+      "collections": ['guide_yin', 'guide_yang'],
+      "config": "guide",
+      "unique_field": "_id",
+      "type": "entity"
     }
 }
 
 class EsUtils:
 
   def get_connection():
-    return Utils.esConn()
+    return DiscUtils.esConn()
 
   def get_index_client():
-    return elasticsearch.client.IndicesClient(Utils.esConn())
+    return elasticsearch.client.IndicesClient(DiscUtils.esConn())
 
   def get_index_from_alias(alias):
     response = {}
-    es = Utils.esConn()
+    es = DiscUtils.esConn()
     if es.indices.exists_alias(alias):
       response = es.indices.get_alias(
         index=alias
@@ -76,9 +84,13 @@ class EsUtils:
                 schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/entity_schema.json'))
                 es.indices.create(index = index, body = schema)
                 es.indices.put_alias(index= index, name = alias)
+              if index in ['guide_yin', 'guide_yang']:
+                schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/guide_schema.json'))
+                es.indices.create(index = index, body = schema)
+                es.indices.put_alias(index= index, name = alias)
             else:
               es.indices.put_alias(index= index, name = alias)
-
+    response = es.indices.get_alias(index=alias)
     for index, index_aliases in response.items():
       return index
 
@@ -97,7 +109,7 @@ class EsUtils:
   def switch_index_alias(alias, from_index, to_index):
     response = {}
     try:
-      es = Utils.esConn()
+      es = DiscUtils.esConn()
       response = es.indices.update_aliases(
         body={
           "actions" : [
@@ -117,7 +129,7 @@ class EsUtils:
   def clear_index_data(index):
     response = {}
     try:
-      es = Utils.esConn()
+      es = DiscUtils.esConn()
       response = es.delete_by_query(
         index=index,
         body={
@@ -175,7 +187,7 @@ class EsUtils:
 
     response = {}
     try:
-      es = Utils.esConn()
+      es = DiscUtils.esConn()
       helpers.bulk(es, upload_docs, request_timeout=120)
     except Exception as e:
       print(traceback.format_exc())
@@ -186,7 +198,41 @@ class EsUtils:
     print("Swapping Index")
     indexes = EsUtils.get_active_inactive_indexes(alias)
     EsUtils.switch_index_alias(alias, from_index=indexes['active_index'], to_index=indexes['inactive_index'])
-  
+
+  def reindex_two_clusters(self, from_region, target_region, from_index, to_index):
+    hostname = socket.gethostname()
+    if not(hostname.startswith('admin') or hostname.startswith('preprod')):
+      print("Reindexing is allowed only in preprod & production environments")
+      raise Exception("Exiting..... error")
+
+    try:
+      # Create connection object at both region
+      source_client = DiscUtils.esConnCustom(from_region)
+      target_client = DiscUtils.esConnCustom(target_region)
+      setting_client = elasticsearch.client.IndicesClient(DiscUtils.esConnCustom(target_region))
+
+      # Set refresh_interval to -1 to enable faster indexing
+      sett = {'refresh_interval': '-1'}
+      setting_client.put_settings(sett, to_index)
+
+      # reindex data from one region to other
+      elasticsearch.helpers.reindex(client=source_client, source_index=from_index, target_index=to_index, target_client=target_client, chunk_size=500)
+
+      # reset refresh_interval to 1 seccond once indexing is finished
+      sett = {'refresh_interval': '1s'}
+      setting_client.put_settings(sett, to_index)
+
+      # forcefully refresh index at target region to reflect changes
+      try:
+        setting_client.refresh(index=to_index, request_timeout=120)
+      except Exception as e:
+        print(traceback.format_exc())
+        raise Exception("Index refresh failed.....")
+
+    except:
+      print(traceback.format_exc())
+      print("Error occured....")
+      raise
 
 if __name__ == "__main__":
   ret = EsUtils.get_active_inactive_indexes('livecore')

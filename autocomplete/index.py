@@ -20,29 +20,33 @@ import pymongo
 import requests
 from furl import furl
 from IPython import embed
-from pymongo import MongoClient
 from stemming.porter2 import stem
 
 sys.path.append('/nykaa/scripts/sharedutils/')
+from mongoutils import MongoUtils
 from loopcounter import LoopCounter
 from esutils import EsUtils
 from apiutils import ApiUtils
 from idutils import createId
+from categoryutils import getVariants
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils, MemcacheUtils
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
+from disc.v2.utils import MemcacheUtils
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 ensure_mongo_indices_now()
 
 collection='autocomplete'
-search_terms_normalized_daily = Utils.mongoClient()['search']['search_terms_normalized_daily']
-query_product_map_table = Utils.mongoClient()['search']['query_product_map']
-query_product_not_found_table = Utils.mongoClient()['search']['query_product_not_found']
-feedback_data_autocomplete = Utils.mongoClient()['search']['feedback_data_autocomplete']
+search_terms_normalized_daily = MongoUtils.getClient()['search']['search_terms_normalized_daily']
+query_product_map_table = MongoUtils.getClient()['search']['query_product_map']
+query_product_not_found_table = MongoUtils.getClient()['search']['query_product_not_found']
+feedback_data_autocomplete = MongoUtils.getClient()['search']['feedback_data_autocomplete']
 top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
-es = Utils.esConn()
+es = DiscUtils.esConn()
 
 GLOBAL_FAST_INDEXING = False
 
@@ -52,156 +56,11 @@ MIN_COUNTS = {
   "category": 200,
   "brand_category": 10000,
   "search_query": 40000,
-  "category_facet": 600,
+  "category_facet": 300,
 }
-Utils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
+PasUtils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
-multicategoryList = {
-    "3161": {"variant": ["Aria Leya"], "name": "Aria + Leya"},
-    "1612": {"variant": ["Arthritis", "Osteoporosis"], "name": "Arthritis & Osteoporosis"},
-    "1466": {"variant": ["Badges", "Clothing Pins"], "name": "Badges and Clothing Pins"},
-    "4387": {"variant": ["Bags", "Wallets"], "name": "Bags and Wallets"},
-    "1311": {"variant": ["Bath Gels", "Shower Gels"], "name": "Bath / Shower Gels"},
-    "232": {"variant": ["BB Cream", "CC Cream"], "name": "BB & CC Cream"},
-    "2086": {"variant": ["Beard Care", "Moustache Care"], "name": "Beard & Moustache Care"},
-    "2604": {"variant": ["Beard Care", "Moustache Care"], "name": "Beard & Moustache Care"},
-    "4059": {"variant": ["Beard Trimming", "Beard Shaving"], "name": "Beard Trimming & Shaving"},
-    "3627": {"variant": ["Blankets", "Comforters"], "name": "Blankets & Comforters"},
-    "1422": {"variant": ["Body Mist", "Body Spray"], "name": "Body Mist/Spray"},
-    "1644": {"variant": ["Body Mist", "Body Spray"], "name": "Body Mist/Spray"},
-    "970": {"variant": ["Body Mist", "Body Spray"], "name": "Body Mist/Spray"},
-    "406": {"variant": ["Body Mist", "Body Splashes"], "name": "Body mists and splashes"},
-    "1386": {"variant": ["Body Scrubbers", "Body Brushes"], "name": "Body Scrubbers & Brushes"},
-    "3452": {"variant": ["Body Wrap", "Body Envelopment"], "name": "Body Wrap/ Envelopment"},
-    "6925": {"variant": ["Bodysuits", "Rompers"], "name": "Bodysuits & Rompers"},
-    "6931": {"variant": ["Bodysuits", "Rompers"], "name": "Bodysuits & Rompers"},
-    "1607": {"variant": ["Bones", "Joints"], "name": "Bones & Joints"},
-    "3652": {"variant": ["Bowls", "Platters"], "name": "Bowls & Platters"},
-    "3097": {"variant": ["Bra", "Panty"], "name": "Bra / Panty"},
-    "2023": {"variant": ["Brain", "Memory"], "name": "Brain & Memory"},
-    "3109": {"variant": ["Bridal", "Sexy"], "name": "Bridal / Sexy"},
-    "3083": {"variant": ["Brief", "Hipster"], "name": "Brief / Hipster"},
-    "3101": {"variant": ["Camis", "Tops"], "name": "Camis / Tops"},
-    "3662": {"variant": ["Candle Holders", "Votives"], "name": "Candle Holders & Votives"},
-    "3628": {"variant": ["Candle Holders", "Votives"], "name": "Candle Holders & Votives"},
-    "4525": {"variant": ["Capris", "Leggings"], "name": "Capris/Leggings"},
-    "4377": {"variant": ["Cards", "Envelopes"], "name": "Cards and Envelopes"},
-    "563": {"variant": ["Chains", "Waist Chains"], "name": "Chains and Waist Chains"},
-    "1324": {"variant": ["Colognes", "Perfumes"], "name": "Colognes & Perfumes (EDT & EDP)"},
-    "7337": {"variant": ["Colognes", "Perfumes"], "name": "Colognes and Perfumes (EDT and EDP)"},
-    "430":  {"variant": ["Cotton Buds", "Cotton Balls"], "name": "Cotton Buds & Balls"},
-    "1647": {"variant": ["Cotton Buds", "Cotton Balls"], "name": "Cotton Buds and Balls"},
-    "1675": {"variant": ["Cotton Buds", "Cotton Balls", "Cotton Wipes"], "name": "Cotton Buds, Balls & Wipes"},
-    "1815": {"variant": ["Crabtree", "Evelyn"], "name": "Crabtree & Evelyn"},
-    "1676": {"variant": ["Creams", "Lotions", "Oils"], "name": "Creams, Lotions & Oils"},
-    "1411": {"variant": ["Curling Irons", "Stylers"], "name": "Curling Irons/Stylers"},
-    "346": {"variant": ["Curly", "Wavy"], "name": "Curly & Wavy"},
-    "3631": {"variant": ["Cushions", "Covers"], "name": "Cushions & Covers"},
-    "2078": {"variant": ["Dark Circles", "Wrinkles"], "name": "Dark Circles / Wrinkles"},
-    "536": {"variant": ["Dark Circles", "Wrinkles"], "name": "Dark Circles/Wrinkles"},
-    "289": {"variant": ["Day Cream", "Night Cream"], "name": "Day/Night Cream"},
-    "3069": {"variant": ["Demi", "Balconette"], "name": "Demi / Balconette"},
-    "377": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-Ons"},
-    "971": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-Ons"},
-    "979": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-ons"},
-    "1323": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-ons"},
-    "1650": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-Ons"},
-    "7336": {"variant": ["Deodorants", "Roll Ons"], "name": "Deodorants/Roll-ons"},
-    "2046": {"variant": ["Dry Hair", "Frizzy Hair"], "name": "Dry & Frizzy Hair"},
-    "573": {"variant": ["Dry Hair", "Frizzy Hair"], "name": "Dry & Frizzy Hair"},
-    "362": {"variant": ["Dryers", "Stylers"], "name": "Dryers & Stylers"},
-    "967": {"variant": ["EDT", "Colognes"], "name": "EDT/Colognes"},
-    "7562": {"variant": ["Face Care", "Body Care"], "name": "Face & Body Care"},
-    "290": {"variant": ["Floss", "Tongue Cleaners"], "name": "Floss & Tongue Cleaners"},
-    "331": {"variant": ["Gels", "Waxes"], "name": "Gels & Waxes"},
-    "3626": {"variant": ["Gift Bags", "Gift Boxes"], "name": "Gift Bags & Boxes"},
-    "4386": {"variant": ["Gift Bags", "Gift Boxes"], "name": "Gift Bags and Boxes"},
-    "2041": {"variant": ["Hair Creams", "Hair Masks"], "name": "Hair Creams & Masks"},
-    "793":  {"variant": ["Hair Gels", "Hair Wax"], "name": "Hair Gels & Wax"},
-    "5949": {"variant": ["Hair Tools", "Hair Accessories"], "name": "Hair Tools & Accessories"},
-    "1608": {"variant": ["Hair", "Skin", "Nails"], "name": "Hair, Skin & Nails"},
-    "1214": {"variant": ["Hairfall", "Thinning"], "name": "Hairfall & Thinning"},
-    "583": {"variant": ["Hand Creams", "Foot Creams"], "name": "Hand & Foot Creams"},
-    "1318": {"variant": ["Hand Care", "Foot Care"], "name": "Hand and Foot Care"},
-    "3671": {"variant": ["Idols", "Murti"], "name": "Idols / Murti"},
-    "4432": {"variant": ["Joker", "Witch"], "name": "Joker & Witch"},
-    "3737": {"variant": ["Jugs", "Carafe"], "name": "Jugs & Carafe"},
-    "3094": {"variant": ["Leggings", "Pants"], "name": "Leggings / Pants"},
-    "6909": {"variant": ["Lens Solution", "Lens Accessories"], "name": "Lens Solution & Accessories"},
-    "396":  {"variant": ["Loofahs", "Sponges"], "name": "Loofahs & Sponges"},
-    "371":  {"variant": ["Lotions", "Creams"], "name": "Lotions & Creams"},
-    "691":  {"variant": ["Lotions", "Creams"], "name": "Lotions & Creams"},
-    "4397": {"variant": ["Makeup Pouches", "Vanity Kits"], "name": "Makeup Pouches and Vanity Kits"},
-    "5987": {"variant": ["Manicure", "Pedicure"], "name": "Manicure & Pedicure"},
-    "3277": {"variant": ["Manicure Kits", "Pedicure Kits"], "name": "Manicure & Pedicure Kits"},
-    "688": {"variant": ["Manicure Kits", "Pedicure Kits"], "name": "Manicure & Pedicure Kits"},
-    "529": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
-    "1303": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
-    "227": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
-    "7309": {"variant": ["Masks", "Peels"], "name": "Masks & Peels"},
-    "2075": {"variant": ["Massage Oil", "Body Oil"], "name": "Massage / Body Oil"},
-    "554": {"variant": ["Massage Oils", "Carrier Oils"], "name": "Massage / Carrier Oils"},
-    "1315": {"variant": ["Massage Oils", "Aromatherapy Oils"], "name": "Massage & Aromatherapy Oils"},
-    "1516": {"variant": ["Massage Gels", "Massage Creams"], "name": "Massage Gels & Creams"},
-    "3656": {"variant": ["Mugs", "Cups"], "name": "Mugs & Cups"},
-    "4376": {"variant": ["Notebooks", "Notepads", "Folders"], "name": "Notebooks, Notepads and Folders"},
-    "4527": {"variant": ["Panties", "Girl Shorts"], "name": "Panties/Girl Shorts"},
-    "3077": {"variant": ["Pasties", "Stick-ons"], "name": "Pasties / Stick-ons"},
-    "974": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
-    "962": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
-    "375": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
-    "3568": {"variant": ["Perfumes"], "name": "Perfumes (EDT & EDP)"},
-    "1322": {"variant": ["Perfumes"], "name": "Perfumes (EDT/EDP)"},
-    "1290": {"variant": ["Pre Shaves", "Post Shaves"], "name": "Pre & Post Shaves"},
-    "1410": {"variant": ["Pre Shaves", "Post Shaves"], "name": "Pre & Post Shaves"},
-    "7292": {"variant": ["Pre Shaves", "Post Shaves"], "name": "Pre & Post Shaves"},
-    "4412": {"variant": ["Ray", "Dale"], "name": "Ray & Dale"},
-    "1287": {"variant": ["Razors", "Cartridges"], "name": "Razors & Cartridges"},
-    "1398": {"variant": ["Razors", "Cartridges"], "name": "Razors & Cartridges"},
-    "7289": {"variant": ["Razors", "Cartridges"], "name": "Razors & Cartridges"},
-    "363": {"variant": ["Rollers", "Curlers"], "name": "Rollers & Curlers"},
-    "2478": {"variant": ["Salon", "Spa"], "name": "Salon/Spa"},
-    "3115": {"variant": ["Sarongs", "Cover-ups"], "name": "Sarongs & Cover-ups"},
-    "4372": {"variant": ["Scarves", "Stoles"], "name": "Scarves and Stoles"},
-    "369": {"variant": ["Scrubs", "Exfoliants"], "name": "Scrubs & Exfoliants"},
-    "530": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
-    "1304": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
-    "282": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
-    "7310": {"variant": ["Scrubs", "Exfoliators"], "name": "Scrubs & Exfoliators"},
-    "6926": {"variant": ["Sets", "Suits"], "name": "Sets & Suits"},
-    "6932": {"variant": ["Sets", "Suits"], "name": "Sets & Suits"},
-    "7138": {"variant": ["Shaping Camis", "Shaping Slips"], "name": "Shaping Camis & Slips"},
-    "1288": {"variant": ["Shavers", "Trimmers"], "name": "Shavers & Trimmers"},
-    "2085": {"variant": ["Shavers", "Trimmers"], "name": "Shavers & Trimmers"},
-    "7290": {"variant": ["Shavers", "Trimmers"], "name": "Shavers & Trimmers"},
-    "800": {"variant": ["Shavers", "Trimmers"], "name": "Shavers & Trimmers"},
-    "39": {"variant": ["Shaving", "Hair Removal"], "name": "Shaving & Hair Removal"},
-    "1553": {"variant": ["Shaving Creams", "Shaving Foams", "Shaving Gels"], "name": "Shaving Cream, Foams & Gels"},
-    "1289": {"variant": ["Shaving Creams", "Shaving Foams", "Shaving Gels"], "name": "Shaving Creams, Foams & Gels"},
-    "7291": {"variant": ["Shaving Creams", "Shaving Foams", "Shaving Gels"], "name": "Shaving Creams, Foams & Gels"},
-    "1484": {"variant": ["Shopping Bags", "Shopping Totes"], "name": "Shopping Bags and Totes"},
-    "368": {"variant": ["Shower Gels", "Body Wash"], "name": "Shower Gels & Body Wash"},
-    "4526": {"variant": ["Slips", "Skirts"], "name": "Slips/Skirts"},
-    "271": {"variant": ["Sponges", "Applicators"], "name": "Sponges & Applicators"},
-    "3455": {"variant": ["Steam", "Bath"], "name": "Steam / Bath"},
-    "3079": {"variant": ["Stockings", "Garters"], "name": "Stockings / Garters"},
-    "3668": {"variant": ["Storage", "Organization"], "name": "Storage & Organization"},
-    "6933": {"variant": ["T-Shirts", "Shirts"], "name": "T-Shirts & Shirts"},
-    "3654": {"variant": ["Table Mats", "Table Runners"], "name": "Table Mats & Runners"},
-    "4528": {"variant": ["Tanks", "Camis"], "name": "Tanks & Camis"},
-    "3092": {"variant": ["Tanks", "Tees"], "name": "Tanks & Tees"},
-    "746": {"variant": ["Teeth Care", "Dental Care"], "name": "Teeth & Dental Care"},
-    "7466": {"variant": ["Tissue Boxes", "Handkerchiefs"], "name": "Tissue Boxes & Handkerchiefs"},
-    "223": {"variant": ["Toners", "Astringents"], "name": "Toners & Astringents"},
-    "6927": {"variant": ["Tops", "T-Shirts"], "name": "Tops & T-Shirts"},
-    "1481": {"variant": ["Travel Bags", "Backpacks"], "name": "Travel Bags and Backpacks"},
-    "4524": {"variant": ["Tummy", "Waist Cinchers"], "name": "Tummy And Waist Cinchers"},
-    "3650": {"variant": ["Wall Art", "Wall Mirrors"], "name": "Wall Art & Mirrors"},
-    "3658": {"variant": ["Wine Gift Boxes", "Wine Holders"], "name": "Wine Gift Boxes & Holders"},
-    "3105": {"variant": ["Wraps", "Gowns"], "name": "Wraps / Gowns"}
-  }
-
-brandLandingMap = {"herm" : "https://www.nykaa.com/hermes?ptype=lst&id=7917"}
+brandLandingMap = {"herm" : "/hermes?ptype=lst&id=7917"}
 
 def get_feedback_data(entity):
     search_term = entity.lower()
@@ -287,7 +146,7 @@ def create_map_search_product():
       "_source" : ["title", "score", "media", "product_url", "product_id", "price", "type"]
     }
 
-    response = Utils.makeESRequest(querydsl, es_index)
+    response = DiscUtils.makeESRequest(querydsl, es_index)
     docs = response['hits']['hits']
 
     if not docs:
@@ -365,7 +224,7 @@ def index_search_queries(collection, searchengine):
       if(query != corrected_query):
         is_corrected = True
       _type = 'search_query'
-      url = "http://www.nykaa.com/search/result/?q=" + corrected_query.replace(" ", "+")
+      url = "/search/result/?q=" + corrected_query.replace(" ", "+")
       data = json.dumps({"type": _type, "url": url, "corrected_query" : corrected_query})
       entity = query 
       cnt_search += 1 
@@ -398,9 +257,9 @@ def index_search_queries(collection, searchengine):
 def index_brands(collection, searchengine):
   docs = []
 
-  mysql_conn = Utils.mysqlConnection()
+  mysql_conn = DiscUtils.mysqlConnection()
   query = "SELECT brand_id, brand, brand_popularity, brand_popularity_men, brand_url, brand_men_url FROM brands ORDER BY brand_popularity DESC"
-  results = Utils.fetchResults(mysql_conn, query)
+  results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
@@ -432,13 +291,12 @@ def index_brands(collection, searchengine):
   index_docs(searchengine, docs, collection)
 
 def index_categories(collection, searchengine):
-  global multicategoryList
 
   def getCategoryDoc(row, variant):
     category_url = row['url']
     category_men_url = row['men_url']
-    url = "http://www.nykaa.com/search/result/?q=" + variant.replace(" ", "+")
-    men_url = "http://www.nykaaman.com/search/result/?q=" + variant.replace(" ", "+")
+    url = "/search/result/?q=" + variant.replace(" ", "+")
+    men_url = "/search/result/?q=" + variant.replace(" ", "+")
     is_men = False
     if row['category_popularity_men'] > 0:
       is_men = True
@@ -458,9 +316,9 @@ def index_categories(collection, searchengine):
 
   docs = []
 
-  mysql_conn = Utils.mysqlConnection()
+  mysql_conn = DiscUtils.mysqlConnection()
   query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, category_popularity_men FROM l3_categories_clean order by name, category_popularity desc"
-  results = Utils.fetchResults(mysql_conn, query)
+  results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   prev_cat = None
   for row in results:
@@ -472,8 +330,9 @@ def index_categories(collection, searchengine):
       continue
     prev_cat = row['category_name']
 
-    if row['category_id'] in multicategoryList:
-      for variant in multicategoryList[row['category_id']]['variant']:
+    variants = getVariants(row['category_id'])
+    if variants:
+      for variant in variants:
         categoryDoc = getCategoryDoc(row, variant)
         docs.append(categoryDoc)
     else:
@@ -487,15 +346,14 @@ def index_categories(collection, searchengine):
   index_docs(searchengine, docs, collection)
 
 def index_brands_categories(collection, searchengine):
-  global multicategoryList
 
   def getBrandCategoryDoc(row, variant):
     is_men = False
     if row['popularity_men'] > 0:
       is_men = True
 
-    url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['brand'] + " " + variant
-    men_url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['brand'] + " " + variant
+    url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
+    men_url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
     doc = {"_id": createId(row['brand'] + "_" + variant),
                  "entity": row['brand'] + " " + variant,
                  "weight": row['popularity'],
@@ -512,17 +370,17 @@ def index_brands_categories(collection, searchengine):
 
   docs = []
 
-  mysql_conn = Utils.mysqlConnection()
+  mysql_conn = DiscUtils.mysqlConnection()
   query = "SELECT brand_id, brand, category_name, category_id, popularity, popularity_men FROM brand_category"
-  results = Utils.fetchResults(mysql_conn, query)
+  results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
     if ctr.should_print():
       print(ctr.summary)
-
-    if row['category_id'] in multicategoryList:
-      for variant in multicategoryList[row['category_id']]['variant']:
+    variants = getVariants(row['category_id'])
+    if variants:
+      for variant in variants:
         brandCategoryDoc = getBrandCategoryDoc(row, variant)
         docs.append(brandCategoryDoc)
     else:
@@ -538,9 +396,9 @@ def index_brands_categories(collection, searchengine):
 def index_category_facets(collection, searchengine):
   docs = []
 
-  mysql_conn = Utils.mysqlConnection()
+  mysql_conn = DiscUtils.mysqlConnection()
   query = "SELECT category_name, category_id, facet_val, popularity, popularity_men FROM category_facets"
-  results = Utils.fetchResults(mysql_conn, query)
+  results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Facet Indexing - ' + searchengine)
   for row in results:
     ctr += 1 
@@ -551,8 +409,8 @@ def index_category_facets(collection, searchengine):
     if row['popularity_men'] > 0:
       is_men = True
 
-    url = "http://www.nykaa.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
-    men_url = "http://www.nykaaman.com/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
+    url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
+    men_url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
     docs.append({"_id": createId(row['facet_val'] +"_"+row['category_name']), 
         "entity": row['facet_val'] + " " + row['category_name'],  
         "weight": row['popularity'],
@@ -583,8 +441,8 @@ def validate_min_count(force_run, allowed_min_docs):
 # Verify correctness of indexing by comparing total number of documents in both active and inactive indexes
   params = {'q': '*:*', 'rows': '0'}
   query = { "size": 0, "query":{ "match_all": {} } }
-  num_docs_active = Utils.makeESRequest(query, index=active_index)['hits']['total']
-  num_docs_inactive = Utils.makeESRequest(query, index=inactive_index)['hits']['total']
+  num_docs_active = DiscUtils.makeESRequest(query, index=active_index)['hits']['total']
+  num_docs_inactive = DiscUtils.makeESRequest(query, index=inactive_index)['hits']['total']
   print('Number of documents in active index(%s): %s'%(active_index, num_docs_active))
   print('Number of documents in inactive index(%s): %s'%(inactive_index, num_docs_inactive))
 
@@ -608,7 +466,7 @@ def validate_min_count(force_run, allowed_min_docs):
     querydsl = { "size": 0, "query":{ "match": {"type": _type} } }
     indexes = EsUtils.get_active_inactive_indexes('autocomplete')
     es_index = indexes['inactive_index']
-    return Utils.makeESRequest(querydsl, es_index)['hits']['total']
+    return DiscUtils.makeESRequest(querydsl, es_index)['hits']['total']
 
   for _type, count in MIN_COUNTS.items():
     found_count = get_count(_type)
@@ -623,7 +481,7 @@ def validate_min_count(force_run, allowed_min_docs):
 
 def index_products(collection, searchengine):
 
-  popularity = Utils.mongoClient()['search']['popularity']
+  popularity = MongoUtils.getClient()['search']['popularity']
   count = {'value': 0}
     
   def flush_index_products(rows, productList=[]):
@@ -654,6 +512,9 @@ def index_products(collection, searchengine):
 
       _type = 'product'
       url = product['product_url']
+      url_parts = url.partition('com')
+      if len(url_parts) == 3:
+        url = url_parts[2]
       image = product['image']
       image_base = product['image_base']
       men_url = None
@@ -745,7 +606,7 @@ def fetch_product_by_ids(ids):
     queries.append(json.dumps(query))
 
   product = {}
-  response = Utils.makeESRequest(queries, 'livecore', msearch=True)
+  response = DiscUtils.makeESRequest(queries, 'livecore', msearch=True)
   final_docs = {}
   for docs in [x['hits']['hits'] for x in response['responses']]:
     if docs:

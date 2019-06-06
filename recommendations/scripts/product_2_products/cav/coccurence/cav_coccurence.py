@@ -110,7 +110,7 @@ class Utils:
 
     @staticmethod
     def scrollESForResults(env):
-        es_conn = Utils.esConn(env)
+        es_conn = DiscUtils.esConn(env)
         ES_BATCH_SIZE = 10000
         scroll_id = None
         luxe_products = []
@@ -210,7 +210,7 @@ def prepare_data(files, desktop):
     print("Rows count: " + str(df.count()))
 
     print('Scrolling ES for results')
-    results = Utils.scrollESForResults(env)
+    results = DiscUtils.scrollESForResults(env)
     print('Scrolling ES done')
     child_2_parent = results['child_2_parent']
 
@@ -340,7 +340,7 @@ def compute_cav(env, platform, files, desktop):
 
     print('Adding recommendations for %d products with algo=premium_cs in DB' % len(set(product_ids_updated)))
 
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
+    RecommendationsUtils.add_recommendations_in_mysql(DiscUtils.mysqlConnection(env), 'recommendations_v2', rows)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for CAV script')

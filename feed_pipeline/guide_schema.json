@@ -1,0 +1,41 @@
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "my_stemming": {
+          "type": "stemmer",
+          "language": "minimal_english"
+        }
+      },
+      "analyzer": {
+        "default": {
+          "filter": [
+            "lowercase",
+            "asciifolding"
+          ],
+          "tokenizer": "keyword"
+        },
+        "default_search": {
+          "filter": [
+            "lowercase",
+            "asciifolding"
+          ],
+          "tokenizer": "keyword"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "entity": {
+      "properties": {
+        "id": { "type": "keyword" },
+        "query": { "type": "text", "analyzer": "default", "search_analyzer": "default_search"},
+        "type": { "type": "keyword" },
+        "entity_id": { "type": "float" },
+        "entity_value": { "type": "text" },
+        "mapped_name": { "type": "text" },
+        "rank": { "type": "float" }
+      }
+    }
+  }
+}

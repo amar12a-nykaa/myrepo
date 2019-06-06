@@ -25,7 +25,9 @@ from elasticsearch import helpers, Elasticsearch
 import sys
 
 #test.print_cool()
-#from pas.v2.utils import Utils
+#from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
 #sys.path.append("/home/ubuntu/nykaa_scripts/utils")
 #from gensimutils import GensimUtils
 class S3Utils:
@@ -141,7 +143,7 @@ class Utils:
 
     @staticmethod
     def scrollESForResults(env):
-        es_conn = Utils.esConn(env)
+        es_conn = DiscUtils.esConn(env)
         ES_BATCH_SIZE = 10000
         scroll_id = None
         luxe_products = []
@@ -226,12 +228,12 @@ def add_embedding_vectors_in_mysql(db, table, rows):
 def get_vectors_from_mysql_for_es(connection, algo, sku=True):
     print("Getting vectors from mysql for es")
     query = "SELECT entity_id, embedding_vector FROM embedding_vectors WHERE entity_type='product' AND algo='%s'" % algo
-    rows = Utils.fetchResultsInBatch(connection, query, 1000)
+    rows = DiscUtils.fetchResultsInBatch(connection, query, 1000)
     print("Total number of products from mysql: %d" % len(rows))
     embedding_vector_field_name = 'embedding_vector_%s' % algo
     if not sku:
         return [{'product_id': str(row[0]), embedding_vector_field_name: json.loads(row[1])} for row in rows]
-    product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults(env)['sku_2_product_id'].items()}
+    product_id_2_sku = {product_id: sku for sku, product_id in DiscUtils.scrollESForResults(env)['sku_2_product_id'].items()}
     docs = []
     for row in rows:
         if product_id_2_sku.get(row[0]):
@@ -263,9 +265,9 @@ if __name__ == '__main__':
     limit = argv.get('limit', -1)
 
     if argv['add_vectors_from_mysql_to_es']:
-        docs = get_vectors_from_mysql_for_es(Utils.mlMysqlConnection(env), algo)
+        docs = get_vectors_from_mysql_for_es(DiscUtils.mlMysqlConnection(env), algo)
         for i in range(0, len(docs), 1000):
-            Utils.updateESCatalog(docs[i:i+1000])
+            DiscUtils.updateESCatalog(docs[i:i+1000])
         exit()
 
     bucket_name = argv['bucket_name']
@@ -320,15 +322,15 @@ if __name__ == '__main__':
             rows.append((product_id, 'product', algo, json.dumps(vector)))
 
         print('Total number of rows to be added to DB: %s' % len(rows))
-        add_embedding_vectors_in_mysql(Utils.mlMysqlConnection(env), 'embedding_vectors', rows)
+        add_embedding_vectors_in_mysql(DiscUtils.mlMysqlConnection(env), 'embedding_vectors', rows)
 
     if add_in_es:
         print("Adding results in ES")
-        product_id_2_sku = {product_id: sku for sku, product_id in Utils.scrollESForResults(env)['sku_2_product_id'].items()}
+        product_id_2_sku = {product_id: sku for sku, product_id in DiscUtils.scrollESForResults(env)['sku_2_product_id'].items()}
 
         docs = []
         embedding_vector_field_name = "embedding_vector_" % algo
         for product_id, vector in product_vectors.items():
             docs.append({'sku': product_id_2_sku['product_id'], embedding_vector_field_name: vector})
 
-        Utils.updateESCatalog(docs)
+        DiscUtils.updateESCatalog(docs)

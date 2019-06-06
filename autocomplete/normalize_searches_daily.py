@@ -17,11 +17,18 @@ import omniture
 import pandas as pd
 import pymongo
 from IPython import embed
-from pymongo import MongoClient, UpdateOne
+from pymongo import UpdateOne
 from stemming.porter2 import stem
 
-sys.path.append("/nykaa/api")
-from pas.v2.utils import Utils
+sys.path.append("/var/www/pds_api")
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
+
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
+
+
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 
@@ -31,7 +38,7 @@ ps = PorterStemmer()
 
 DAILY_THRESHOLD = 3
 
-client = Utils.mongoClient()
+client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
 corrected_search_query = client['search']['corrected_search_query']
@@ -85,7 +92,7 @@ def getQuerySuggestion(query_id, query, algo):
                 }
               }
         }""" % (query,query)
-        es_result = Utils.makeESRequest(es_query, "livecore")
+        es_result = DiscUtils.makeESRequest(es_query, "livecore")
         doc_found = es_result['hits']['hits'][0]['_source']['title_brand_category'] if len(es_result['hits']['hits']) > 0 else ""
         doc_found = doc_found.lower()
         doc_found = doc_found.split()
@@ -115,8 +122,7 @@ def normalize(a):
 
 def normalize_search_terms():
 
-
-    date_buckets = [(0, 60), (61, 120), (121, 180), (181, 240)]
+    date_buckets = [(0, 60), (61, 120), (121, 180)]
     dfs = []
 
     bucket_results = []
@@ -156,43 +162,44 @@ def normalize_search_terms():
             final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
         final_df.popularity = final_df.popularity.fillna(0)
 
-        final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
-        final_df.drop(['popularity'], axis=1, inplace=True)
+        # final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
+        # final_df.drop(['popularity'], axis=1, inplace=True)
         #print(final_df)
 
     # Calculate total popularity
-    print ("Calculating total popularity")
-    date_6months_ago = arrow.now().replace(days=-6*30, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(tzinfo=None)
+    # print ("Calculating total popularity")
+    # date_6months_ago = arrow.now().replace(days=-6*30, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(tzinfo=None)
+    #
+    # bucket_results = []
+    # for term in search_terms_daily.aggregate([
+    #     #{"$match": {"term" : {"$in": ['Lipstick', 'nars']}}},
+    #     {"$match": {"date": {"$gte": date_6months_ago}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
+    #     #{"$match": {"date": {"$gte": date_6months_ago, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
+    #     {"$project": {"term": { "$toLower": "$term"}, "date":"$date","count": "$internal_search_term_conversion_instance" }},
+    #     {"$group": {"_id": "$term", "count": {"$sum": "$count"} }},
+    #     {"$sort":{ "count": -1}},
+    # ], allowDiskUse=True):
+    #     term['id'] = term.pop("_id")
+    #     bucket_results.append(term)
+    #
+    # df = pd.DataFrame(bucket_results)
+    # df['norm_count'] = normalize(df['count'])
+    # df['popularity_total'] = df['norm_count']
+    # df = df.set_index('id')
 
-    bucket_results = []
-    for term in search_terms_daily.aggregate([
-        #{"$match": {"term" : {"$in": ['Lipstick', 'nars']}}},
-        {"$match": {"internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
-        #{"$match": {"date": {"$gte": date_6months_ago, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
-        {"$project": {"term": { "$toLower": "$term"}, "date":"$date","count": "$internal_search_term_conversion_instance" }},
-        {"$group": {"_id": "$term", "count": {"$sum": "$count"} }}, 
-        {"$sort":{ "count": -1}},
-    ], allowDiskUse=True):
-        term['id'] = term.pop("_id")
-        bucket_results.append(term)
-
-    df = pd.DataFrame(bucket_results)
-    df['norm_count'] = normalize(df['count'])
-    df['popularity_total'] = df['norm_count']
-    df = df.set_index('id')
-
-    a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
-    a.popularity_recent = a.popularity_recent.fillna(0) 
-    a['popularity'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
-    a.popularity = a.popularity.fillna(0) 
+    # a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
+    a = final_df.reset_index()
+    # a.popularity_recent = a.popularity_recent.fillna(0)
+    # a['popularity'] = 100 * normalize(0.7 * a['popularity_total'] + 0.3 * a['popularity_recent'])
+    # a.popularity = a.popularity.fillna(0)
 
     requests = []
     corrections = []
     #brand_index = normalize_array("select brand as term from nykaa.brands where brand like 'l%'")
     #category_index = normalize_array("select name as term from nykaa.l3_categories")
     search_terms_normalized.remove({})
-    cats_stemmed = set([ps.stem(x['name']) for x in Utils.mysql_read("select name from l3_categories ")])
-    brands_stemmed = set([ps.stem(x['brand']) for x in Utils.mysql_read("select brand from brands")])
+    cats_stemmed = set([ps.stem(x['name']) for x in PAsUtils.mysql_read("select name from l3_categories ")])
+    brands_stemmed = set([ps.stem(x['brand']) for x in PasUtils.mysql_read("select brand from brands")])
     cats_brands_stemmed = cats_stemmed | brands_stemmed
 
     for i, row in a.iterrows():
@@ -228,64 +235,6 @@ def normalize_search_terms():
         search_terms_normalized.bulk_write(requests)
         corrected_search_query.bulk_write(corrections)
 
-"""
-  current_month = arrow.now().format("YYYY-MM")
-  res = search_terms_daily.aggregate(
-    [
-      #{"$limit" :1000},
-      {"$match": {"month": {"$lt": current_month}, "count": {"$gt": 200 }}},
-      {"$project": {"term": { "$toLower": "$term"}, "month":"$month", "count": "$count"}},
-      {"$group": {"_id": "$term", "count": {"$sum": "$count"}}}, 
-      {"$sort":{ "count": -1}},
-      #{"$limit" :100},
-    ])
-
-  def normalize_term(term):
-    term = term.lower()
-    term = re.sub('[^A-Za-z0-9 ]', "", term) 
-    term = re.sub("colour", 'color', term)
-    return stem(term)
-    
-  def normalize_array(query):
-    index = set()
-    for row in Utils.mysql_read(query): 
-      row = row['term']
-      for term in row.split(" "):
-        term = normalize_term(term)
-        index.add(term)
-    return index
-
-  brand_index = normalize_array("select brand as term from nykaa.brands where brand like 'l%'")
-  category_index = normalize_array("select name as term from nykaa.l3_categories")
-  search_terms_normalized.remove({})
-
-  first = True
-  for row in res:
-    if first:
-      max_query_count = row['count']
-      first = False
-    popularity = row['count'] / max_query_count * 100
-    if not row['_id']:
-      continue
-    terms_not_found = []
-    for term in row['_id'].split(" "):
-      term = normalize_term(term)
-      if term in brand_index:
-        #print("found %s in brand_index" % term)
-        pass
-      elif term in category_index:
-        #print("found %s in category_index" % term)
-        pass
-      else:
-        terms_not_found.append(term)
-
-    if not terms_not_found:
-      continue
-
-    search_terms_normalized.update({"_id":  re.sub('[^A-Za-z0-9]+', '_', row['_id'].lower())}, {"query": row['_id'].lower(), "count": row['count'], 'popularity': popularity}, upsert=True)
-
-  print("Terms not found: %s" % terms_not_found)
-"""
 
 if __name__ == "__main__":
   normalize_search_terms()

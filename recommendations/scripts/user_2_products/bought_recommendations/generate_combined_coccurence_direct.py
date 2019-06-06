@@ -25,7 +25,7 @@ from datautils import DataUtils
 from mysqlredshiftutils import MysqlRedshiftUtils
 from sparkutils import SparkUtils
 
-#sys.path.append("/home/apis/nykaa")
+#sys.path.append("/var/www/pds_api/")
 #from pas.v2.utils import Utils, RecommendationsUtils
 
 spark = SparkUtils.get_spark_instance()
@@ -201,6 +201,7 @@ def compute_recommendations(algo, platform, computation_start_datetime, p2p_star
 
     print('Total number of customers: %d' % len(rows))
     MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
