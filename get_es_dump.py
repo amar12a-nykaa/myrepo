@@ -34,8 +34,8 @@ while True:
     luxe_products += [int(p['_source']['product_id']) for p in response['hits']['hits'] if p["_source"]["is_luxe"]]
     product_2_mrp.update({int(p["_source"]["product_id"]): p["_source"]["mrp"] for p in response["hits"]["hits"]})
 
-with open("luxe.json", "r+") as f:
+with open("/tmp/luxe.json", "r+") as f:
     json.dump(luxe_products, f, indent=4)
 
-with open("product_2_mrp.json", "r+") as f:
+with open("/tmp/product_2_mrp.json", "r+") as f:
     json.dump(product_2_mrp, f, indent=4)
