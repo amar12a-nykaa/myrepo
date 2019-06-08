@@ -14,7 +14,7 @@ class MongoUtils:
 
   @classmethod
   def getClient(cls):
-    return MongoClient(MONGO_CLIENT, serverSelectionTimeoutMS=5)
+    return MongoClient(MONGO_CLIENT)
 
 if __name__ == '__main__':
   c = MongoUtils.getClient()
