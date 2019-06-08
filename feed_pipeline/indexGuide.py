@@ -5,7 +5,9 @@ import json
 import os
 
 sys.path.append("/var/www/pds_api")
-from pas.v2.utils import Utils, EntityUtils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import EntityUtils
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 

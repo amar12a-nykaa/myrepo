@@ -273,6 +273,6 @@ if __name__ == "__main__":
   required_args = ['category', 'brand', 'filters']
   index_all = not any([argv[x] for x in required_args])
 
-  EntityIndexer.indexEntities(collection=argv['collection'], active=argv['active'], inactive=argv['inactive'],
+  EntityIndexer.index(collection=argv['collection'], active=argv['active'], inactive=argv['inactive'],
                             swap=argv['swap'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'],
                             index_filters_arg=argv['filters'], index_all=index_all)
