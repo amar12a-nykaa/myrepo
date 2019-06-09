@@ -17,6 +17,8 @@ import traceback
 import dateutil.parser
 import json
 from ..utils.priceUpdateLogUtils import PriceUpdateLogUtils
+import uuid
+
 total = 0
 CHUNK_SIZE = 200
 NUMBER_OF_THREADS = 4
@@ -91,7 +93,7 @@ class ScheduledPriceUpdater:
         psku_list = []
         totalProductsToLog = []
         totalBundlesToLog = []
-
+        batch_Id = uuid.uuid4().int
         for single_product in product_chunk:
             sku_list.append(single_product['sku'])
             psku_list.append(single_product['psku'])
@@ -100,11 +102,8 @@ class ScheduledPriceUpdater:
                 products.append({'sku': single_product['psku'], 'type': 'configurable'})
             totalProductsToLog.append(
                 (
+                    batch_Id,
                     single_product['sku'],
-                    'cron_update',
-                    'es',
-                    dateutil.parser.parse(single_product['schedule_start'], dayfirst=True),
-                    dateutil.parser.parse(single_product['schedule_end'], dayfirst=True),
                     json.dumps({"scheduled_discount":single_product['scheduled_discount']})
                 )
             )
@@ -119,11 +118,8 @@ class ScheduledPriceUpdater:
             products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
             totalBundlesToLog.append(
                 (
+                    batch_Id,
                     res['bundle_sku'],
-                    'cron_update',
-                    'es',
-                    dateutil.parser.parse(single_product['schedule_start'], dayfirst=True),
-                    dateutil.parser.parse(single_product['schedule_end'], dayfirst=True),
                     json.dumps({"scheduled_discount": single_product['scheduled_discount']})
                 )
             )
@@ -141,8 +137,11 @@ class ScheduledPriceUpdater:
 
         total_count = incrementGlobalCounter(len(update_docs))
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
-        PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(totalProductsToLog)
-        PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(totalBundlesToLog)
+
+        schedule_start = dateutil.parser.parse(single_product['schedule_start'], dayfirst=True)
+        schedule_end = dateutil.parser.parse(single_product['schedule_end'], dayfirst=True)
+        PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", schedule_start, schedule_end,totalProductsToLog)
+        PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", schedule_start, schedule_end, totalBundlesToLog)
 
     def update():
         # Current time
