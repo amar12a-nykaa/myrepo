@@ -5,12 +5,11 @@ import arrow
 import re
 import os
 import urllib
-import json
 from nltk.stem import PorterStemmer
 from datetime import date,datetime,timedelta
 
 sys.path.append("/var/www/pds_api")
-from pas.v2.utils import Utils, EntityUtils, MemcacheUtils
+from pas.v2.utils import Utils as PasUtils, EntityUtils
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from dateutils import enumerate_dates
@@ -33,12 +32,14 @@ def word_clean(word):
 def get_entities(row):
     result,coverage = EntityUtils.get_matched_entities(row['ist'])
     entities = list(result.keys())
-    row['brand'] = result['brand']['entity'] if 'brand' in result else ''
-    row['category'] = result['category']['entity'] if 'category' in result else ''
+    row['brand'] = ''
+    row['category'] = ''
     row['coverage'] = coverage
-    if 'brand' in entities:
+    if 'brand' in result :
+        row['brand'] = result['brand']['entity']
         entities.remove('brand')
-    if 'category' in entities:
+    if 'category' in result:
+        row['category'] = result['category']['entity']
         entities.remove('category')
     if len(entities) > 0:
         row['other_entities'] = True
@@ -50,12 +51,12 @@ def calculate_ctr(row):
     return row
 
 def get_yesterday_trending():
-    mysql_conn = Utils.mysqlConnection('r')
+    mysql_conn = PasUtils.mysqlConnection('r')
 
-    if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
+    if not PasUtils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
         return None
     prev=[]
-    for each in Utils.mysql_read("select q from trending_searches where date>=%s" % date_2days_before):
+    for each in PasUtils.mysql_read("select q from trending_searches where date>=%s" % date_2days_before):
         prev.append(word_clean(each.get('q')))
     return prev
 
@@ -202,13 +203,13 @@ def get_trending_searches(filename):
 
 
 def insert_trending_searches(data):
-    mysql_conn = Utils.mysqlConnection('w')
+    mysql_conn = PasUtils.mysqlConnection('w')
     cursor = mysql_conn.cursor()
 
-    if not Utils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
-        Utils.mysql_write("create table trending_searches(type VARCHAR(64),url VARCHAR(255),q VARCHAR(255),date VARCHAR(64))",
+    if not PasUtils.mysql_read("SHOW TABLES LIKE 'trending_searches'", connection=mysql_conn):
+        PasUtils.mysql_write("create table trending_searches(type VARCHAR(64),url VARCHAR(255),q VARCHAR(255),date VARCHAR(64))",
                           connection=mysql_conn)
-    Utils.mysql_write("delete from trending_searches where date<=%s" % date_2days_before , connection=mysql_conn)
+    PasUtils.mysql_write("delete from trending_searches where date<=%s" % date_2days_before , connection=mysql_conn)
     date_today = datetime.today().strftime('%d-%m-%Y')
     for word in data:
         ls = word.split()
