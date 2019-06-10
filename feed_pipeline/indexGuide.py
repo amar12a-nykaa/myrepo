@@ -1,6 +1,7 @@
 import argparse
 import sys
 import pandas as pd
+import numpy as np
 import json
 import os
 
@@ -23,23 +24,23 @@ def process_guides(filename='guide.csv'):
 
     # exclude filters
     df.dropna(subset=['filter_name', 'filter_value'], inplace=True)
-    filter_exclude_list = ['Price', 'Avg Customer Rating', 'Discount', 'Gender', 'Star_Rating']
-    df = df[~df['filter_name'].isin(filter_exclude_list)]
+    # filter_exclude_list = ['Price', 'Avg Customer Rating', 'Discount', 'Gender', 'Star_Rating']
+    # df = df[~df['filter_name'].isin(filter_exclude_list)]
 
     # normalize filter name
-    df['filter_name'] = df['filter_name'].apply(lambda x: x.replace(" ", "_").lower())
+    # df['filter_name'] = df['filter_name'].apply(lambda x: x.replace(" ", "_").lower())
 
     #normalize filter value
-    def get_category_value(row):
-        if row['filter_name'] == 'category':
-            cat_list = row['filter_value'].split(':')
-            cat_list = list(filter(None, cat_list))
-            category = cat_list[-1]
-            if len(cat_list) > 3:
-                category = cat_list[2]
-            row['filter_value'] = category
-        return row
-    df = df.apply(get_category_value, axis=1)
+    # def get_category_value(row):
+    #     if row['filter_name'] == 'category':
+    #         cat_list = row['filter_value'].split(':')
+    #         cat_list = list(filter(None, cat_list))
+    #         category = cat_list[-1]
+    #         if len(cat_list) > 3:
+    #             category = cat_list[2]
+    #         row['filter_value'] = category
+    #     return row
+    # df = df.apply(get_category_value, axis=1)
 
     # get top 100 keywords
     keyword_frequency = df.groupby('keyword').agg({"freq": "sum"}).reset_index()
@@ -67,6 +68,7 @@ def process_guides(filename='guide.csv'):
 
         guide_list.append(temp_df)
     guide = pd.concat(guide_list).reset_index()
+    guide.rename(columns={'filter_value': 'filter_id'}, inplace=True)
     return guide
 
 def get_filters():
@@ -98,7 +100,24 @@ def get_filters():
     categories = pd.read_sql(query, con=mysql_conn)
     mysql_conn.close()
 
-    filters = pd.concat([filters, brands, categories])
+    price_intervals = np.array([['filter_id', 'filter_value', 'filter_name'],
+                                ['0-499', 'Price<500', 'price'], ['500-999', 'Price:500-999', 'price'],
+                                ['1000-1999', 'Price:1000-1999', 'price'], ['2000-3999', 'Price:2000-3999', 'price'],
+                                ['4000-*', 'Price>4000', 'price']])
+    price_data = pd.DataFrame(data=price_intervals[1:, :], columns=price_intervals[0, :])
+
+    discount_intervals = np.array([['filter_id', 'filter_value', 'filter_name'],
+                                   ['0-10', '0-10', 'Discount<10%'], ['10-*', 'Discount>10%', 'discount'],
+                                   ['20-*', 'Discount>20%', 'discount'], ['30-*', 'Discount>30%', 'discount'],
+                                   ['40-*', 'Discount>40%', 'discount']])
+    discount_data = pd.DataFrame(data=discount_intervals[1:, :], columns=discount_intervals[0, :])
+    
+    star_ratings = np.array([['filter_id', 'filter_value', 'filter_name'],
+                             ['1', 'Rating>1', 'star_rating'], ['2', 'Rating>2', 'star_rating'],
+                             ['3', 'Rating>3', 'star_rating'], ['4', 'Rating>4', 'star_rating']])
+    rating_data = pd.DataFrame(data=star_ratings[1:, :], columns=star_ratings[0, :])
+    
+    filters = pd.concat([filters, brands, categories, price_data, discount_data, rating_data])
     return filters
 
 
@@ -110,7 +129,7 @@ def override_filter_value(df):
         entity_value = row['filter_value']
         replacement_text = row['display text']
         df['entity_value'] = df.apply(lambda x : replacement_text if (x['type'] == type and
-                                                x['entity_value'] == entity_value) else x['entity_value'], axis=1)
+                                                x['entity_id'] == str(entity_value)) else x['entity_value'], axis=1)
     return df
     
 def insert_guides_in_es(guides, collection):
@@ -155,7 +174,9 @@ def index_guides(collection, active, inactive, swap, filename):
 
     guides = process_guides(filename)
     filters = get_filters()
-    guides = pd.merge(guides, filters, on=['filter_name', 'filter_value'])
+    guides = guides.astype({'filter_id': str})
+    guides = pd.merge(guides, filters, on=['filter_name', 'filter_id'])
+    guides['filter_name'] = guides['filter_name'].apply(lambda x: x + '_range' if x in ['price', 'discount'] else x)
     guides['filter_name'] = guides['filter_name'].apply(lambda x: x + '_filter')
     insert_guides_in_es(guides, index)
 
