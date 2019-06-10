@@ -5,8 +5,9 @@ import argparse
 import datetime
 import zipfile
 
+sys.path.append("/nykaa/scripts/sharedutils")
+from dateutils import enumerate_dates
 sys.path.append("/nykaa/scripts/feed_pipeline")
-from sharedutils.dateutils import enumerate_dates
 from pipelineUtils import PipelineUtils
 
 parser = argparse.ArgumentParser()
