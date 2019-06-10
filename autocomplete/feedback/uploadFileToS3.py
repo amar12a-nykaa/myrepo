@@ -6,7 +6,7 @@ import datetime
 import zipfile
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
-from health_check import enumerate_dates
+from sharedutils.dateutils import enumerate_dates
 from pipelineUtils import PipelineUtils
 
 parser = argparse.ArgumentParser()
