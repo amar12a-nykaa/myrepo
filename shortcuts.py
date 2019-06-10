@@ -1,4 +1,3 @@
-import IPython
 import os
 import os.path
 shortcuts = [

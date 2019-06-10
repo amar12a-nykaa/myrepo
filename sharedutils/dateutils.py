@@ -23,6 +23,8 @@ def enumerate_dates(startdate, enddate):
     date = date.replace(days=1)
   return all_dates
 
+
+
 if __name__ == "__main__":
 
   print(enumerate_dates(-3, +2))

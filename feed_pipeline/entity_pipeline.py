@@ -16,7 +16,7 @@ sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 from entity_indexer import EntityIndexer
 
-from importDataFromNykaa import NykaaImporter
+from catalog_nykaa_importer import NykaaImporter
 
 sys.path.append('/var/www/pds_api/')
 from pas.v2.utils import Utils as PasUtils

@@ -1,24 +1,26 @@
 #!/usr/bin/python
+import time
 import sys
 from dateutil import tz
-from pipelineUtils import PipelineUtils
 from datetime import datetime, timedelta
 
 sys.path.append('/var/www/pds_api/')
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
-import argparse
 
+from nykaa.settings import DISCOVERY_SQS_ENDPOINT
+
+import argparse
+import elasticsearch
 import subprocess
 import queue
 import threading
 import traceback
-
+import json
 total = 0
 CHUNK_SIZE = 200
 NUMBER_OF_THREADS = 4
-
 def synchronized(func):
     func.__lock__ = threading.Lock()
 
@@ -62,16 +64,16 @@ print("=" * 30 + " %s ======= " % getCurrentDateTime())
 
 def getCount():
     return int(subprocess.check_output(
-        "ps aux | grep python | grep discount_scheduler.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
+        "ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
         shell=True).strip())
 
 
 if getCount() >= 2:
-    print("getCount(): %r" % getCount())
+    #print("getCount(): %r" % getCount())
     print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
-    print(str(
-        subprocess.check_source_output("ps aux | grep python | grep discount_scheduler.py | grep -vE 'vim|grep|/bin/sh' ",
-                                shell=True)))
+    str(
+        subprocess.check_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
+                                shell=True))
     exit()
 
 
@@ -110,8 +112,6 @@ class ScheduledPriceUpdater:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit = True)
             if update_docs:
                 DiscUtils.updateESCatalog(update_docs)
-                for single_doc in update_docs:
-                    print("sku : %s" % single_doc['sku'])
         except Exception as e:
             print(traceback.format_exc())
 
@@ -120,78 +120,69 @@ class ScheduledPriceUpdater:
 
 
     def update():
-        # Current time
         q = queue.Queue(maxsize=0)
         current_datetime = getCurrentDateTime()
         last_datetime = current_datetime - timedelta(hours=1)
-        try:
-            with open("last_update_time.txt", "r+") as f:
-                content = f.read()
-                if content:
-                    last_datetime = content
-                    print("reading last_datetime from file: %s" % last_datetime)
-                f.seek(0)
-                f.write(str(current_datetime))
-                f.truncate()
-        except FileNotFoundError:
-            print("FileNotFoundError")
-            with open("last_update_time.txt", "w") as f:
-                f.write(str(current_datetime))
-        except Exception as e:
-            print("[ERROR] %s" % str(e))
-        where_clause = " WHERE ((schedule_start > %s AND schedule_start <= %s) OR (schedule_end > %s AND schedule_end <= %s))"
-        product_type_condition = " AND type = %s"
-        product_updated_count = 0
+        from IPython import embed
+        import boto3
+        # Create SQS client
+        sqs = boto3.client('sqs')
+        queue_url = DISCOVERY_SQS_ENDPOINT
+        # Receive message from SQS queue
+        startts = time.time()
+        update_docs = []
+        is_queue_empty=False
+        while True:
+          response = sqs.receive_message(
+              QueueUrl=queue_url,
+              AttributeNames=[
+                  'SentTimestamp'
+              ],
+              MaxNumberOfMessages=10,
+              MessageAttributeNames=[
+                  'All'
+              ],
+              VisibilityTimeout=30,
+              WaitTimeSeconds=0
+          )
+          if 'Messages' in response:
+            for message in response['Messages']:
+              #message = response['Messages'][0]
+              receipt_handle = message['ReceiptHandle']
+              update_docs.append(json.loads(message['Body'])[0])
+              sqs.delete_message(
+                QueueUrl=queue_url,
+                ReceiptHandle=receipt_handle
+              ) 
+          else:
+            is_queue_empty=True
+            print("No more messages")
 
-        query = "SELECT sku, psku, type FROM products" + where_clause + product_type_condition
-        print("[%s] " % getCurrentDateTime() + query % (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
-        mysql_conn = PasUtils.mysqlConnection('r')
-        results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
-        mysql_conn.close()
+          if len(update_docs)==1000 or (len(update_docs)>=1 and is_queue_empty) :
+            try:
+              print("Sending %s docs to bulk upload" % len(update_docs))
+              DiscUtils.updateESCatalog(update_docs)
+              print("Done with one batch of bulk upload")
+            except elasticsearch.helpers.BulkIndexError as e:
+              #print("OOPS - BulkIndexError ")
+              missing_skus = []
+              for error in e.errors:
+                if(error['update']['error']['type'] == "document_missing_exception"):
+                  missing_skus.append(error['update']['data']['doc']['sku'])
+                else:
+                  print("Unhandled Error for sku '%s' - %s" % (error['update']['data']['doc']['sku'], error['update']['error']['type'])  )
+              if missing_skus:
+                print("Missing SKUs in ES %s" % missing_skus)  
+            finally:
+              update_docs.clear()
+          if is_queue_empty:
+            break
 
-        print("[%s] Starting simple product updates" % getCurrentDateTime())
-        chunk_size = argv['batch_size']
-        num_of_threads = argv['threads']
-        
-        if not chunk_size:
-            chunk_size = CHUNK_SIZE
+        endts=time.time()
+        diff = endts - startts
+        print("Time taken:  %s seconds" % diff)
 
-        if not num_of_threads:
-            num_of_threads = NUMBER_OF_THREADS
-
-        chunk_results = list(ScheduledPriceUpdater.getChunks(results, chunk_size))
-
-        for single_chunk in chunk_results:
-            q.put_nowait(single_chunk)
-
-        for _ in range(num_of_threads):
-            Worker(q).start()
-        q.join()
-
-        # Code for bundle products
-        products = []
-        query = "SELECT sku FROM bundles" + where_clause
-        mysql_conn = PasUtils.mysqlConnection('r')
-        results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime))
-        mysql_conn.close()
-        print("[%s] Starting bundle product updates" % getCurrentDateTime())
-
-        for bundle in results:
-            product_updated_count += 1
-            products.append({'sku': bundle['sku'], 'type': 'bundle'})
-            if product_updated_count % 100 == 0:
-                print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
-
-        try:
-            update_docs = PipelineUtils.getProductsToIndex(products, add_limit=True)
-            if update_docs:
-                DiscUtils.updateESCatalog(update_docs)
-                for singleBundle in update_docs:
-                    print("bundle sku: %s" % singleBundle['sku'])
-        except Exception as e:
-            print(traceback.format_exc())
-
-        print("\n[%s] Total %s products updated." % (getCurrentDateTime(), product_updated_count))
+        exit()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

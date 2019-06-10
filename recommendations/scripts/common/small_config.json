@@ -1,0 +1,21 @@
+[ 
+	{ 
+		"Classification": "spark", 
+		"Properties": { "maximizeResourceAllocation": "true" } 
+	}, 
+	{ 
+		"Classification": "spark-defaults", 
+		"Properties": { "spark.driver.maxResultSize": "0", "spark.driver.cores": "4", "spark.driver.memory": "10G" } 
+	}, 
+    {
+        "Classification": "spark-env",
+        "Configurations": [
+            {
+                "Classification": "export",
+                "Properties": {
+                    "PYSPARK_PYTHON": "/usr/bin/python3"
+                }
+            }
+        ]
+    }
+]
