@@ -222,6 +222,8 @@ class CatalogIndexer:
         "thirstymud": "thirstymud thirsty mud",
         "gravitymud": "gravitymud gravity mud",
         "youthmud": "youthmud youth mud",
+        "waxing": "waxing wax",
+        "wax": "wax waxing"
     }
 
     yesterday = datetime.now() - timedelta(days=1)
