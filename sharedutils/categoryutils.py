@@ -145,7 +145,20 @@ multicategoryList = {
     "8403": {"variant": ["Under Eye Creams", "Eye Serums"], "name": "Under Eye Cream & Serums"},
     "3650": {"variant": ["Wall Art", "Wall Mirrors"], "name": "Wall Art & Mirrors"},
     "3658": {"variant": ["Wine Gift Boxes", "Wine Holders"], "name": "Wine Gift Boxes & Holders"},
-    "3105": {"variant": ["Wraps", "Gowns"], "name": "Wraps / Gowns"}
+    "3105": {"variant": ["Wraps", "Gowns"], "name": "Wraps / Gowns"},
+    "4366":	{"variant":["Bracelets", "Bangles"],"name":"Bracelets and Bangles"},
+    "4395":	{"variant":["Candles", "Diffusers"], "name":"Candles and Diffusers"},
+    "1298":	{"variant":["Hair Oil"],"name":"Hair Oils"},
+    "8434":	{"variant":	["Hand Masks", "Foot Masks"],"name":"Hand & Foot Masks"},
+    "3095":	{"variant":["Jackets", "Hoodies"],"name":"Jackets & Hoodies"},
+    "8400":	{"variant":["Face Masks", "Masks & Peels"],"name":"Masks & Peels"},
+    "8381":	{"variant":["Scrubs","Exfoliators"],"name":"Scrubs & Exfoliators"},
+    "545":	{"variant":["Hair Serum"],"name":"Serum"},
+    "8397": {"variant":["Face Serum","Serums & Essence"],"name":"Serums & Essence"},
+    "8426":	{"variant":["Shower Gels","Body Wash"],"name":"Shower Gels & Body Wash"},
+    "364":	{"variant":["Hair Straighteners"],"name":"Straighteners"},
+    "8392":	{"variant":["Toner"],"name":"Toners & Mists"},
+    "1483":	{"variant":["Laptop Bags","Laptop Sleeves"],"name":"Laptop Bags and Sleeves"}
   }
 
 
