@@ -3,8 +3,10 @@ import sys
 import psycopg2
 import traceback
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType
-from pyspark.sql.functions import concat, col, lit, udf, isnan
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType, BooleanType, ArrayType
+from pyspark.sql.functions import concat, col, lit, udf, isnan, desc
+import pyspark.sql.functions as func
+from pyspark.sql.window import Window
 from contextlib import closing
 import math
 import boto3
@@ -14,171 +16,27 @@ from collections import defaultdict
 import mysql.connector
 import argparse
 from elasticsearch import helpers, Elasticsearch
+from ftplib import FTP
+import zipfile
 
-class RecommendationsUtils:
+sys.path.append('/home/ubuntu/nykaa_scripts/utils')
+sys.path.append('/home/hadoop/nykaa_scripts/utils')
+from recoutils import RecoUtils
+from datautils import DataUtils
+from sparkutils import SparkUtils
+from mysqlredshiftutils import MysqlRedshiftUtils
+from esutils import ESUtils
+from s3utils import S3Utils
 
-    @staticmethod
-    def _add_recommendations_in_mysql(cursor, table, rows):
-        values_str = ", ".join(["(%s, %s, %s, %s, %s, %s)" for i in range(len(rows))])
-        values = tuple([_i for row in rows for _i in row])
-        insert_recommendations_query = """ INSERT INTO %s(catalog_tag_filter, entity_id, entity_type, recommendation_type, algo, recommended_products_json)
-            VALUES %s ON DUPLICATE KEY UPDATE recommended_products_json=VALUES(recommended_products_json)
-        """ % (table, values_str)
-        values = tuple([str(_i) for row in rows for _i in row])
-        cursor.execute(insert_recommendations_query, values)
+spark = SparkUtils.get_spark_instance('CAV')
+sc = spark.sparkContext
 
-    @staticmethod
-    def add_recommendations_in_mysql(db, table, rows):
-        cursor = db.cursor()
-        for i in range(0, len(rows), 100):
-            RecommendationsUtils._add_recommendations_in_mysql(cursor, table, rows[i:i+100])
-            db.commit()
+s3 = boto3.client('s3')
 
-class Utils:
+env_details = RecoUtils.get_env_details()
 
-    @staticmethod
-    def mysqlConnection(env, connection_details=None):
-        if env == 'prod':
-            host = "dbmaster.ciel4c1bqlwh.ap-southeast-1.rds.amazonaws.com"
-            password = 'Cheaj92pDHtDq8hU'
-        elif env in ['non_prod', 'preprod']:
-            host = 'price-api-preprod.cjmplqztt198.ap-southeast-1.rds.amazonaws.com'
-            password = 'yNKNy33xG'
-        elif env == 'qa':
-            host = 'price-api-qa.cjmplqztt198.ap-southeast-1.rds.amazonaws.com'
-        else:
-            raise Exception('Unknow env')
-        user = 'recommendation'
-        #user = 'api'
-        #password = 'aU%v#sq1'
-        db = 'nykaa'
-        for i in [0, 1, 2]:
-            try:
-                if connection_details is not None and isinstance(connection_details, dict):
-                    connection_details['host'] = host
-                    connection_details['user'] = user
-                    connection_details['password'] = password
-                    connection_details['database'] = db
-                return mysql.connector.connect(host=host, user=user, password=password, database=db)
-            except:
-                print("MySQL connection failed! Retyring %d.." % i)
-                if i == 2:
-                    print(traceback.format_exc())
-                    print("MySQL connection failed 3 times. Giving up..")
-                    raise
-
-    @staticmethod
-    def mlMysqlConnection(env, connection_details=None):
-        if env == 'prod':
-            host = "ml-db-master.nykaa-internal.com"
-            password = 'fjxcneXnq2gptsTs'
-        elif env in ['non_prod', 'preprod', 'qa']:
-            host = 'nka-preprod-ml.cjmplqztt198.ap-southeast-1.rds.amazonaws.com'
-            password = 'JKaPHGB4JWXM'
-        else:
-            raise Exception('Unknow env')
-        user = 'ml'
-        db = 'nykaa_ml'
-        for i in [0, 1, 2]:
-            try:
-                if connection_details is not None and isinstance(connection_details, dict):
-                    connection_details['host'] = host
-                    connection_details['user'] = user
-                    connection_details['password'] = password
-                    connection_details['database'] = db
-                return mysql.connector.connect(host=host, user=user, password=password, database=db)
-            except:
-                print("MySQL connection failed! Retyring %d.." % i)
-                if i == 2:
-                    print(traceback.format_exc())
-                    print("MySQL connection failed 3 times. Giving up..")
-                    raise
-
-    @staticmethod
-    def esConn(env):
-        if env == 'prod':
-            ES_ENDPOINT = 'vpc-prod-api-vzcc4i4e4zk2w4z45mqkisjo4u.ap-southeast-1.es.amazonaws.com'
-        elif env in ['non_prod', 'preprod']:
-            ES_ENDPOINT = 'search-preprod-api-ub7noqs5xxaerxm6vhv5yjuc7u.ap-southeast-1.es.amazonaws.com'
-        elif env == 'qa':
-            ES_ENDPOINT = 'search-qa-api-fvmcnxoaknewsdvt6gxgdtmodq.ap-southeast-1.es.amazonaws.com'
-        else:
-            raise Exception('Unknown env')
-        print(ES_ENDPOINT)
-        es = Elasticsearch(['http://%s:80' % ES_ENDPOINT])
-        return es
-
-    @staticmethod
-    def scrollESForResults(env):
-        es_conn = DiscUtils.esConn(env)
-        ES_BATCH_SIZE = 10000
-        scroll_id = None
-        luxe_products = []
-        product_2_mrp = {}
-        child_2_parent = {}
-        primary_categories = {}
-        brand_facets = {}
-        sku_2_product_id = {}
-        product_2_image = {}
-        product_in_stock = {}
-
-        while True:
-            if not scroll_id:
-                query = { 
-                    "size": ES_BATCH_SIZE,
-                    "query": { "match_all": {} },
-                    "_source": ["product_id", "is_luxe", "mrp", "parent_id", "primary_categories", "brand_facet", "sku", "media", "in_stock"]
-                }
-                response = es_conn.search(index='livecore', body=query, scroll='15m')
-            else:
-                response = es_conn.scroll(scroll_id=scroll_id, scroll='15m')
-
-            if not response['hits']['hits']:
-                break
-
-            scroll_id = response['_scroll_id']
-            luxe_products += [int(p['_source']['product_id']) for p in response['hits']['hits'] if p["_source"]["is_luxe"]]
-            product_2_mrp.update({int(p["_source"]["product_id"]): p["_source"]["mrp"] for p in response["hits"]["hits"]})
-            child_2_parent.update({int(p["_source"]["product_id"]): int(p["_source"]["parent_id"]) for p in response["hits"]["hits"]})
-            primary_categories.update({int(p["_source"]["product_id"]): p["_source"]["primary_categories"] for p in response["hits"]["hits"]})
-            brand_facets.update({int(p["_source"]["product_id"]): p["_source"].get("brand_facet") for p in response["hits"]["hits"] if p["_source"].get("brand_facet")})
-            sku_2_product_id.update({p["_source"]["sku"]: int(p["_source"]["product_id"]) for p in response["hits"]["hits"]})
-            product_2_image.update({int(p["_source"]["product_id"]): p['_source']['media'] for p in response['hits']['hits'] if p['_source'].get('media')})
-            product_in_stock.update({int(p['_source']['product_id']): p['_source']['in_stock'] for p in response['hits']['hits'] if p['_source'].get('in_stock')})
-
-        return {'luxe_products': luxe_products, 'product_2_mrp': product_2_mrp, 'child_2_parent': child_2_parent, 'primary_categories': primary_categories, 'brand_facets': brand_facets, 'sku_2_product_id': sku_2_product_id, 'product_2_image': product_2_image, 'product_in_stock': product_in_stock}
-
-
-    @staticmethod
-    def redshiftConnection(env):
-        if env == 'prod':
-            host = 'dwhcluster.cy0qwrxs0juz.ap-southeast-1.redshift.amazonaws.com'
-        elif env in ['non_prod', 'preprod', 'qa']:
-            host = 'nka-preprod-dwhcluster.c742iibw9j1g.ap-southeast-1.redshift.amazonaws.com'
-        else:
-            raise Exception('Unknown env')
-        port = 5439
-        username = 'dwh_redshift_ro'
-        password = 'GSrjC7hYPC9V'
-        dbname = 'datawarehouse'
-        con = psycopg2.connect(dbname=dbname, host=host, port=port, user=username, password=password)
-        return con
-
-    @staticmethod
-    def fetchResultsInBatch(connection, query, batch_size):
-        rows= []
-        with closing(connection.cursor()) as cursor:
-            cursor.execute(query)
-            while True:
-                batch_empty = True
-                for row in cursor.fetchmany(batch_size):
-                    batch_empty = False
-                    rows.append(row)
-                if batch_empty:
-                    break
-        return rows
-
-
+CAV_APP_DATA_PATH = 'cav/data/app/'
+CAV_WEB_DATA_PATH = 'cav/data/web/'
 
 def prepare_data(files, desktop):
     schema = StructType([
@@ -210,7 +68,7 @@ def prepare_data(files, desktop):
     print("Rows count: " + str(df.count()))
 
     print('Scrolling ES for results')
-    results = DiscUtils.scrollESForResults(env)
+    results = ESUtils.scrollESForResults()
     print('Scrolling ES done')
     child_2_parent = results['child_2_parent']
 
@@ -226,53 +84,60 @@ def prepare_data(files, desktop):
     print('Data preparation done, returning dataframe')
     return df, results
 
-def compute_cav(env, platform, files, desktop):
+def compute_cav(platform, files, desktop):
     df, results = prepare_data(files, desktop)
 
     print("Self joining the dataframe: Computing all the non product to product pairs")
-    merged_df = df.withColumnRenamed('product_id', 'product_id_x').join(df.withColumnRenamed('product_id', 'product_id_y'), on="session_id", how="inner")
+    df = df.withColumnRenamed('product_id', 'product_id_x').join(df.withColumnRenamed('product_id', 'product_id_y'), on="session_id", how="inner")
 
-    print("Product Pairs count: " + str(merged_df.count()))
+    print("Product Pairs count: " + str(df.count()))
 
     print("Filtering out duplicate pairs")
-    merged_df = merged_df[merged_df.product_id_x < merged_df.product_id_y]
-    print("Product Pairs count: " + str(merged_df.count()))
+    df = df[df.product_id_x < df.product_id_y]
+    print("Product Pairs count: " + str(df.count()))
 
     print("Computing sessions for product pairs")
-    merged_df = merged_df.groupBy(['product_id_x', 'product_id_y']).agg({'session_id': 'count'})
-    print("Product pairs count: " + str(merged_df.count()))
+    df = df.groupBy(['product_id_x', 'product_id_y']).agg({'session_id': 'count'})
+    print("Product pairs count: " + str(df.count()))
 
-    final_df = merged_df.withColumnRenamed("count(session_id)", 'sessions_intersection')
-
-    del df
+    df = df.withColumnRenamed("count(session_id)", 'similarity')
 
     print("Filtering out all the product pairs with a threshold of atleast 2 sessions")
-    final_df = final_df[final_df['sessions_intersection'] >= 2]
-    print("Product Pairs count: " + str(final_df.count()))
+    df = df[df['similarity'] >= 2]
+    print("Product Pairs count: " + str(df.count()))
 
-    simple_similar_products_dict = defaultdict(lambda: [])
+    luxe_products_dict = {p:True for p in results['luxe_products']}
 
-    simple_similar_products_mrp_cons_dict = defaultdict(lambda: [])
+    def is_luxe(product_id):
+        return luxe_products_dict.get(product_id, False)
 
-    luxe_dict = {p: True for p in results['luxe_products']}
+    is_luxe_udf = udf(is_luxe, BooleanType())
+    print('Is Luxe')
+    df = df.withColumn("is_luxe_x", is_luxe_udf(df['product_id_x']))
+    df = df.withColumn("is_luxe_y", is_luxe_udf(df['product_id_y']))
 
     product_2_mrp = results['product_2_mrp']
-    product_in_stock = results['product_in_stock']
+    #product_in_stock = results['product_in_stock']
 
-    for row in final_df.collect():
-        if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_y'], False))  or not luxe_dict.get(row['product_id_x'], False):
-        #if not (luxe_dict.get(row['product_id_x'], False) ^ luxe_dict.get(row['product_id_y'], False)):
-            simple_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
-        if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_y'], False))  or not luxe_dict.get(row['product_id_y'], False):
-            simple_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
+    df = df.withColumnRenamed('product_id_x', 'product').withColumnRenamed('product_id_y', 'recommendation').withColumnRenamed('is_luxe_x', 'product_luxe').withColumnRenamed('is_luxe_y', 'reco_luxe').select(['product', 'recommendation', 'similarity', 'product_luxe', 'reco_luxe']).union(df.withColumnRenamed('product_id_y', 'product').withColumnRenamed('product_id_x', 'recommendation').withColumnRenamed('is_luxe_y', 'product_luxe').withColumnRenamed('is_luxe_x', 'reco_luxe').select(['product', 'recommendation', 'similarity', 'product_luxe', 'reco_luxe'])).select(['product', 'recommendation', 'similarity', 'product_luxe', 'reco_luxe']).filter(((col('product_luxe') & col('reco_luxe')) | (col('product_luxe') == False))).withColumn('rank', func.dense_rank().over(Window.partitionBy('product').orderBy(desc('similarity')))).filter(col('rank') < 100)
+    df = df.groupby(['product']).agg(func.collect_list(func.struct('recommendation', 'similarity')).alias('recommendation_struct_list'))
+    sort_udf = udf(lambda l: [ele[0] for ele in sorted(l, key=lambda e: -e[1])], ArrayType(IntegerType()))
+    df = df.select("product", sort_udf("recommendation_struct_list").alias("recommendations"))
 
-            if product_2_mrp.get(row['product_id_x']) and product_2_mrp.get(row['product_id_y']):
-                product_x_mrp = product_2_mrp[row['product_id_x']]
-                product_y_mrp = product_2_mrp[row['product_id_y']]
-                if ((product_x_mrp - product_y_mrp)/product_x_mrp) <= 0.1 and product_in_stock.get(row['product_id_y'], False):
-                    simple_similar_products_mrp_cons_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
-                if ((product_y_mrp - product_x_mrp)/product_y_mrp) <= 0.1 and product_in_stock.get(row['product_id_x'], False):
-                    simple_similar_products_mrp_cons_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
+    #for row in final_df.collect():
+    #    if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_y'], False))  or not luxe_dict.get(row['product_id_x'], False):
+    #    #if not (luxe_dict.get(row['product_id_x'], False) ^ luxe_dict.get(row['product_id_y'], False)):
+    #        simple_similar_products_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
+    #    if (luxe_dict.get(row['product_id_x'], False) and luxe_dict.get(row['product_id_y'], False))  or not luxe_dict.get(row['product_id_y'], False):
+    #        simple_similar_products_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
+
+    #        if product_2_mrp.get(row['product_id_x']) and product_2_mrp.get(row['product_id_y']):
+    #            product_x_mrp = product_2_mrp[row['product_id_x']]
+    #            product_y_mrp = product_2_mrp[row['product_id_y']]
+    #            if ((product_x_mrp - product_y_mrp)/product_x_mrp) <= 0.1 and product_in_stock.get(row['product_id_y'], False):
+    #                simple_similar_products_mrp_cons_dict[row['product_id_x']].append((row['product_id_y'], row['sessions_intersection']))
+    #            if ((product_y_mrp - product_x_mrp)/product_y_mrp) <= 0.1 and product_in_stock.get(row['product_id_x'], False):
+    #                simple_similar_products_mrp_cons_dict[row['product_id_y']].append((row['product_id_x'], row['sessions_intersection']))
 
     parent_2_children = defaultdict(lambda: [])
     for child, parent in results['child_2_parent'].items():
@@ -283,84 +148,131 @@ def compute_cav(env, platform, files, desktop):
 
     rows = []
     product_ids_updated = []
-    for product_id in simple_similar_products_dict:
-        product_ids_updated.append(product_id)
-        simple_similar_products = list(map(lambda e: int(e[0]), sorted(simple_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
+    for row in df.collect():
+        product_ids_updated.append(row['product'])
         if desktop:
-            rows.append((platform, product_id, 'product', 'viewed', 'coccurence_simple_desktop', json.dumps(simple_similar_products)))
+            rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple_desktop', json.dumps(row['recommendations'])))
         else:
-            rows.append((platform, product_id, 'product', 'viewed', 'coccurence_simple', json.dumps(simple_similar_products)))
-        variants = parent_2_children.get(product_id, [])
+            rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple', json.dumps(row['recommendations'])))
+        variants = parent_2_children.get(row['product'], [])
         for variant in variants:
             product_ids_updated.append(variant)
             if desktop:
-                rows.append((platform, variant, 'product', 'viewed', 'coccurence_simple_desktop', str(simple_similar_products)))
+                rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple_desktop', json.dumps(row['recommendations'])))
             else:
-                rows.append((platform, variant, 'product', 'viewed', 'coccurence_simple', str(simple_similar_products)))
+                rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple', json.dumps(row['recommendations'])))
+
+    #for product_id in simple_similar_products_dict:
+    #    product_ids_updated.append(product_id)
+    #    simple_similar_products = list(map(lambda e: int(e[0]), sorted(simple_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
+    #    if desktop:
+    #        rows.append((platform, product_id, 'product', 'viewed', 'coccurence_simple_desktop', json.dumps(simple_similar_products)))
+    #    else:
+    #        rows.append((platform, product_id, 'product', 'viewed', 'coccurence_simple', json.dumps(simple_similar_products)))
+    #    variants = parent_2_children.get(product_id, [])
+    #    for variant in variants:
+    #        product_ids_updated.append(variant)
+    #        if desktop:
+    #            rows.append((platform, variant, 'product', 'viewed', 'coccurence_simple_desktop', str(simple_similar_products)))
+    #        else:
+    #            rows.append((platform, variant, 'product', 'viewed', 'coccurence_simple', str(simple_similar_products)))
 
     print('Adding recommendations for %d products with algo=coccurence_simple in DB' % len(set(product_ids_updated)))
 
-    product_ids_updated = []
-    for product_id in simple_similar_products_mrp_cons_dict:
-        product_ids_updated.append(product_id)
-        _simple_similar_products = list(map(lambda e: int(e[0]), sorted(simple_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        simple_similar_products = list(map(lambda e: e[0], sorted(simple_similar_products_mrp_cons_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        simple_similar_products = simple_similar_products[:2] + [p for p in _simple_similar_products if p not in simple_similar_products[:2]]
-        if desktop:
-            rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
-        else:
-            rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
-        variants = parent_2_children.get(product_id, [])
-        for variant in variants:
-            product_ids_updated.append(variant)
-            if desktop:
-                rows.append((platform, variant, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
-            else:
-                rows.append((platform, variant, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
+    #product_ids_updated = []
+    #for product_id in simple_similar_products_mrp_cons_dict:
+    #    product_ids_updated.append(product_id)
+    #    _simple_similar_products = list(map(lambda e: int(e[0]), sorted(simple_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
+    #    simple_similar_products = list(map(lambda e: e[0], sorted(simple_similar_products_mrp_cons_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
+    #    simple_similar_products = simple_similar_products[:2] + [p for p in _simple_similar_products if p not in simple_similar_products[:2]]
+    #    if desktop:
+    #        rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
+    #    else:
+    #        rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
+    #    variants = parent_2_children.get(product_id, [])
+    #    for variant in variants:
+    #        product_ids_updated.append(variant)
+    #        if desktop:
+    #            rows.append((platform, variant, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
+    #        else:
+    #            rows.append((platform, variant, 'product', 'viewed', 'premium_cs_2', str(simple_similar_products)))
 
-    print('Adding recommendations for %d products with algo=premium_cs in DB' % len(set(product_ids_updated)))
+    #print('Adding recommendations for %d products with algo=premium_cs in DB' % len(set(product_ids_updated)))
 
-    product_ids_updated = []
-    for product_id in simple_similar_products_mrp_cons_dict:
-        product_ids_updated.append(product_id)
-        _simple_similar_products = list(map(lambda e: int(e[0]), sorted(simple_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        simple_similar_products = list(map(lambda e: e[0], sorted(simple_similar_products_mrp_cons_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
-        simple_similar_products = simple_similar_products[:4] + [p for p in _simple_similar_products if p not in simple_similar_products[:4]]
-        if desktop:
-            rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
-        else:
-            rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
-        variants = parent_2_children.get(product_id, [])
-        for variant in variants:
-            product_ids_updated.append(variant)
-            if desktop:
-                rows.append((platform, variant, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
-            else:
-                rows.append((platform, variant, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
+    #product_ids_updated = []
+    #for product_id in simple_similar_products_mrp_cons_dict:
+    #    product_ids_updated.append(product_id)
+    #    _simple_similar_products = list(map(lambda e: int(e[0]), sorted(simple_similar_products_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
+    #    simple_similar_products = list(map(lambda e: e[0], sorted(simple_similar_products_mrp_cons_dict[product_id], key=lambda e: e[1], reverse=True)[:50]))
+    #    simple_similar_products = simple_similar_products[:4] + [p for p in _simple_similar_products if p not in simple_similar_products[:4]]
+    #    if desktop:
+    #        rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
+    #    else:
+    #        rows.append((platform, product_id, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
+    #    variants = parent_2_children.get(product_id, [])
+    #    for variant in variants:
+    #        product_ids_updated.append(variant)
+    #        if desktop:
+    #            rows.append((platform, variant, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
+    #        else:
+    #            rows.append((platform, variant, 'product', 'viewed', 'premium_cs_4', str(simple_similar_products)))
 
-    print('Adding recommendations for %d products with algo=premium_cs in DB' % len(set(product_ids_updated)))
+    #print('Adding recommendations for %d products with algo=premium_cs in DB' % len(set(product_ids_updated)))
 
-    RecommendationsUtils.add_recommendations_in_mysql(DiscUtils.mysqlConnection(env), 'recommendations_v2', rows)
+    MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mysqlConnection(), 'recommendations_v2', rows)
+    MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
+    #RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(), 'recommendations_v2', rows)
+
+def cav_sync_data():
+    ftp = FTP('52.220.4.21')
+    ftp.login('omniture', 'C9PEy2H8TEC2')
+    ftp.set_pasv(True)
+
+    cav_app_files, cav_web_files = ['cav_app_agg.zip'], ['cav_web_agg20181101-20190418.zip']
+    #cav_app_files, cav_web_files = ['Report_app_agg_10_11_10_05.zip'], ['Report_cav_web_10_11_10_05.zip']
+
+    def fill_cav_files(f):
+        if f.startswith('cav_app_daily'):
+            cav_app_files.append(f)
+        if f.startswith('cav_web_daily'):
+            cav_web_files.append(f)
+
+    ftp.retrlines('NLST', fill_cav_files)
+    cav_app_csvs = list(map(lambda f: f.replace('zip', 'csv'), cav_app_files))
+    cav_web_csvs = list(map(lambda f: f.replace('zip', 'csv'), cav_web_files))
+
+    s3_cav_app_csvs = S3Utils.ls_file_paths(env_details['bucket_name'], CAV_APP_DATA_PATH)
+    s3_cav_web_csvs = S3Utils.ls_file_paths(env_details['bucket_name'], CAV_WEB_DATA_PATH)
+
+    s3_cav_app_csvs = [s[s.rfind("/") + 1:] for s in s3_cav_app_csvs]
+    s3_cav_web_csvs = [s[s.rfind("/") + 1:] for s in s3_cav_web_csvs]
+    app_csvs_needed_to_be_pushed = list(set(cav_app_csvs) - set(s3_cav_app_csvs))
+    web_csvs_needed_to_be_pushed = list(set(cav_web_csvs) - set(s3_cav_web_csvs))
+
+    S3Utils.transfer_ftp_2_s3(ftp, list(map(lambda f: f.replace('csv', 'zip'), app_csvs_needed_to_be_pushed)), env_details['bucket_name'], CAV_APP_DATA_PATH)
+    S3Utils.transfer_ftp_2_s3(ftp, list(map(lambda f: f.replace('csv', 'zip'), web_csvs_needed_to_be_pushed)), env_details['bucket_name'], CAV_WEB_DATA_PATH)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for CAV script')
     parser.add_argument('--desktop', action='store_true')
-    parser.add_argument('--files', nargs='+')
-    parser.add_argument('--env', required=True)
+    #parser.add_argument('--files', nargs='+')
     parser.add_argument('--platform', required=True, choices=['nykaa','men'])
 
     argv = vars(parser.parse_args())
-    files = argv['files']
+    #files = argv['files']
     desktop = argv.get('desktop')
-    env = argv.get('env')
     platform = argv.get('platform')
-
-    s3 = boto3.client('s3')
-
-    spark = SparkSession.builder.appName("CAV").getOrCreate()
-    sc = spark.sparkContext
 
     print("Printing Configurations:")
     print(sc.getConf().getAll())
 
-    compute_cav(env, platform, files, desktop)
+    cav_sync_data()
+
+    if desktop:
+        data_path = CAV_APP_DATA_PATH
+    else:
+        data_path = CAV_WEB_DATA_PATH
+
+    files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
+
+    compute_cav(platform, files, desktop)
