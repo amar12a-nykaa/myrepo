@@ -12,7 +12,7 @@ env_details = RecoUtils.get_env_details()
 
 class MysqlRedshiftUtils:
 
-    def mysqlConnection(env, connection_details=None):
+    def mysqlConnection(connection_details=None):
         if env_details['env'] == 'prod':
             host = "dbmaster.ciel4c1bqlwh.ap-southeast-1.rds.amazonaws.com"
             password = 'Cheaj92pDHtDq8hU'

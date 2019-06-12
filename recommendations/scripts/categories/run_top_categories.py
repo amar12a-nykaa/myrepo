@@ -23,7 +23,7 @@ if __name__ == '__main__':
             'HadoopJarStep': {
                 'Jar': 'command-runner.jar',
                 'Args': [
-                    'spark-submit', '/home/hadoop/%s' % Constants.GEN_TOP_CATEGORIES_SCRIPT, '--env', env_details['env'], '--bucket-name', env_details['bucket_name'] 
+                    'spark-submit', '/home/hadoop/%s' % Constants.GEN_TOP_CATEGORIES_SCRIPT 
                 ] + command_line_arguments
             }
         }
