@@ -9,7 +9,9 @@ from nltk.stem import PorterStemmer
 from datetime import date,datetime,timedelta
 
 sys.path.append("/var/www/pds_api")
-from pas.v2.utils import Utils as PasUtils, EntityUtils
+from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import EntityUtils
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from dateutils import enumerate_dates

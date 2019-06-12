@@ -174,6 +174,7 @@ def index_guides(collection, active, inactive, swap, filename):
 
     guides = process_guides(filename)
     filters = get_filters()
+    #guides = guides.astype({'filter_id': int})
     guides = guides.astype({'filter_id': str})
     guides = pd.merge(guides, filters, on=['filter_name', 'filter_id'])
     guides['filter_name'] = guides['filter_name'].apply(lambda x: x + '_range' if x in ['price', 'discount'] else x)
