@@ -34,13 +34,14 @@ class ESUtils:
         sku_2_product_id = {}
         product_2_title = {}
         product_2_image = {}
+        product_in_stock = {}
 
         while True:
             if not scroll_id:
                 query = { 
                     "size": ES_BATCH_SIZE,
                     "query": { "match_all": {} },
-                    "_source": ["product_id", "is_luxe", "mrp", "parent_id", "primary_categories", "brand_facet", "sku", "media", "title_text_split"]
+                    "_source": ["product_id", "is_luxe", "mrp", "parent_id", "primary_categories", "brand_facet", "sku", "media", "title_text_split", "in_stock"]
                 }
                 response = es_conn.search(index='livecore', body=query, scroll='15m')
             else:
@@ -58,5 +59,6 @@ class ESUtils:
             sku_2_product_id.update({p["_source"]["sku"]: int(p["_source"]["product_id"]) for p in response["hits"]["hits"] if p["_source"].get("sku")})
             product_2_image.update({int(p["_source"]["product_id"]): p['_source']['media'] for p in response['hits']['hits'] if p['_source'].get('media')})
             product_2_title.update({int(p["_source"]["product_id"]): p['_source']['title_text_split'] for p in response['hits']['hits']})
+            product_in_stock.update({int(p["_source"]["product_id"]): p['_source']['in_stock'] for p in response['hits']['hits']})
 
-        return {'luxe_products': luxe_products, 'product_2_mrp': product_2_mrp, 'child_2_parent': child_2_parent, 'primary_categories': primary_categories, 'brand_facets': brand_facets, 'sku_2_product_id': sku_2_product_id, 'product_2_image': product_2_image, 'product_2_title': product_2_title}
+        return {'luxe_products': luxe_products, 'product_2_mrp': product_2_mrp, 'child_2_parent': child_2_parent, 'primary_categories': primary_categories, 'brand_facets': brand_facets, 'sku_2_product_id': sku_2_product_id, 'product_2_image': product_2_image, 'product_2_title': product_2_title, 'product_in_stock': product_in_stock}

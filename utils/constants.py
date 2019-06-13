@@ -12,6 +12,8 @@ GEN_TOP_CATEGORIES_SCRIPT = 'nykaa_scripts/recommendations/scripts/categories/ge
 
 GEN_U2P_SCRIPT = 'nykaa_scripts/recommendations/scripts/user_2_products/bought_recommendations/generate_combined_coccurence_direct.py'
 
+GEN_CAV_SCRIPT = 'nykaa_scripts/recommendations/scripts/product_2_products/cav/coccurence/cav_coccurence.py'
+
 BOOTSTRAP_FILE = 'nykaa_scripts/recommendations/scripts/common/bootstrap.sh'
 
 SMALL_INSTANCE = {

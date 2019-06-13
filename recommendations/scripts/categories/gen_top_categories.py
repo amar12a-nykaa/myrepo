@@ -142,6 +142,8 @@ def generate_top_categories_for_user(platform, start_datetime, end_datetime, top
     #rows = [('lsi', row['customer_id'], row['sorted_cats']) for row in df.collect()]
     print("Writing the categories recommendations " + str(datetime.now()))
     print("Total number of customers to be updated: %d" % len(rows))
+    print("Few users getting updated are listed below")
+    print([row['customer_id'] for row in rows[:10]])
     CategoriesUtils.add_categories_in_ups(rows)
     print("Done Writing the categories recommendations " + str(datetime.now()))
 
