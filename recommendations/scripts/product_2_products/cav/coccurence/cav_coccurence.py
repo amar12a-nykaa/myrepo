@@ -254,6 +254,7 @@ def cav_sync_data():
     S3Utils.transfer_ftp_2_s3(ftp, list(map(lambda f: f.replace('csv', 'zip'), app_csvs_needed_to_be_pushed)), env_details['bucket_name'], CAV_APP_DATA_PATH)
     S3Utils.transfer_ftp_2_s3(ftp, list(map(lambda f: f.replace('csv', 'zip'), web_csvs_needed_to_be_pushed)), env_details['bucket_name'], CAV_WEB_DATA_PATH)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for CAV script')
     parser.add_argument('--desktop', action='store_true')

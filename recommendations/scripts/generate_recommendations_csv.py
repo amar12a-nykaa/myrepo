@@ -8,14 +8,12 @@ import psutil
 import argparse
 import operator
 import csv
-sys.path.append("/var/www/pds_api")
-from pas.v2.utils import Utils as PasUtils
 sys.path.append("/var/www/discovery_api")
-from disc.v2.utils import Utils as DiscUtils
+from disc.v2.utils import Utils as Utils
 
-pasdb = DiscUtils.mysqlConnection('w')
+pasdb = Utils.mysqlConnection('w')
 cursor = pasdb.cursor()
-es_conn = DiscUtils.esConn()
+es_conn = Utils.esConn()
 
 def getFBTs(product_id):
     query = "SELECT * FROM frequently_bought where product_id=%s" % product_id

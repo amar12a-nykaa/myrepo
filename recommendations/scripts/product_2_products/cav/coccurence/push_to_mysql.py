@@ -6,10 +6,10 @@ import json
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/var/www/discovery_api")
-from disc.v2.utils import Utils as DiscUtils
+from disc.v2.utils import Utils as Utils
 import boto3
 
-pasdb = DiscUtils.mysqlConnection()
+pasdb = Utils.mysqlConnection()
 cursor = pasdb.cursor()
 
 if __name__ == "__main__":
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     store_in_mysql(rows)
 
-    nykaadb = DiscUtils.nykaaMysqlConnection()
+    nykaadb = Utils.nykaaMysqlConnection()
     nykaa_cursor = nykaadb.cursor()
 
     def extract_data(query): 
