@@ -18,6 +18,7 @@ import argparse
 from elasticsearch import helpers, Elasticsearch
 from ftplib import FTP
 import zipfile
+from datetime import datetime
 
 sys.path.append('/home/ubuntu/nykaa_scripts/utils')
 sys.path.append('/home/hadoop/nykaa_scripts/utils')
@@ -228,7 +229,8 @@ def cav_sync_data():
     ftp.login('omniture', 'C9PEy2H8TEC2')
     ftp.set_pasv(True)
 
-    cav_app_files, cav_web_files = ['cav_app_agg.zip'], ['cav_web_agg20181101-20190418.zip']
+    cav_app_files, cav_web_files = [], []
+    #cav_app_files, cav_web_files = ['cav_app_agg.zip'], ['cav_web_agg20181101-20190418.zip']
     #cav_app_files, cav_web_files = ['Report_app_agg_10_11_10_05.zip'], ['Report_cav_web_10_11_10_05.zip']
 
     def fill_cav_files(f):
@@ -269,10 +271,14 @@ if __name__ == "__main__":
     cav_sync_data()
 
     if desktop:
-        data_path = CAV_APP_DATA_PATH
-    else:
         data_path = CAV_WEB_DATA_PATH
+    else:
+        data_path = CAV_APP_DATA_PATH
 
     files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
+    print('Filtering out last 3 months data')
+    files = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 90 , files))
+    print("Using files")
+    print(files)
 
     compute_cav(platform, files, desktop)
