@@ -43,6 +43,7 @@ PUNISH_FACTOR_NEW=0.7
 BOOST_FACTOR_NEW=1.1
 PRODUCT_PUNISH_FACTOR_NEW = 0.5
 COLD_START_DECAY_FACTOR_NEW = 0.99
+BRAND_PROMOTION_SCORE = 99.25
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
@@ -352,7 +353,7 @@ def applyBoost(df):
       row['popularity_new'] = row['popularity_new'] * PRODUCT_PUNISH_FACTOR_NEW
     return row
   # temp_df = temp_df.apply(punish_products_by_id, axis=1)
-  temp_df.drop(['product_id', 'sku_type', 'brand_code', 'mrp', 'l3_id'], axis=1, inplace=True)
+  temp_df.drop(['product_id', 'sku_type', 'mrp', 'l3_id'], axis=1, inplace=True)
   temp_df = temp_df.astype({'id': str})
 
   return temp_df
@@ -383,27 +384,36 @@ def handleColdStart(df):
     category_popularity = {}
     for i in range(90,100):
       category_popularity[i] = product_data.groupby('l3_id').agg({'popularity': percentile(i), 'popularity_new': percentile(i)}).reset_index()
+      new_name = 'popularity_'+ str(i)
+      category_popularity[i].rename(columns={'popularity': new_name, 'product_id' : 'id'}, inplace=True)
 
   category_popularities = get_category_popularities(product_data)
-  print(category_popularities[90].columns)
-  
-  result = pd.merge(temp_df, product_popularity, left_on='id', right_on='product_id')
-  result = pd.merge(result, product_popularity_boosted, on='product_id')
+  result = temp_df
+  for i in range(90, 100):
+    result = pd.merge(result, category_popularities[i], left_on='id', right_on='product_id')
 
   query = """select product_id, sku_created, brand_code from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
   product_creation = pd.read_sql(query, con=redshift_conn)
   redshift_conn.close()
 
+  brand_popularity.rename(columns={'brand_id' : 'brand_code'}, inplace=True)
   result = pd.merge(result, product_creation, on='product_id')
+  result = pd.merge(result, brand_popularity, on='brand_code')
+
+  def normalize_90_to_99(a):
+    return ((a - min(a) / (max(a) - min(a))) * 9) + 90
+
+  result['brand_popularity'] = normalize_90_to_99(result['brand_popularity'])
 
   def update_popularity(row):
     date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['sku_created']).astype(datetime.datetime))).days
     if date_diff > 0:
-        med_popularity = row['median_popularity']
-        med_popularity_new = row['median_popularity_new']
+        percentile_value = row['brand_popularity']
+        med_popularity = row[percentile_value]
+        med_popularity_new = row[percentile_value]
         if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
-          med_popularity = row['popularity_boosted']
-          med_popularity_new = row['popularity_new_boosted']
+          med_popularity = BRAND_PROMOTION_SCORE
+          med_popularity_new = BRAND_PROMOTION_SCORE
         row['calculated_popularity'] = row['popularity'] + med_popularity*(COLD_START_DECAY_FACTOR ** date_diff)
         row['calculated_popularity_new'] = row['popularity_new'] + med_popularity_new*(COLD_START_DECAY_FACTOR_NEW ** date_diff)
     else:
