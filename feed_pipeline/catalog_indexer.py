@@ -947,9 +947,9 @@ class CatalogIndexer:
                     print("product_id: %s " % doc['product_id'])
 
                 for key, value in CatalogIndexer.final_replace_dict.items():
-                    if key in doc.get("title_brand_category", "").lower():
-                        doc['title_brand_category'] = doc['title_brand_category'].lower().replace(key, value)
-
+                    pattern = '\\b' + key + '\\b'
+                    doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'])
+                    
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet', 'benefits_facet', 'skin_tone_facet', 'spf_facet',
                         'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet']:
                     try:
