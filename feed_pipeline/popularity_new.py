@@ -52,7 +52,7 @@ PRODUCT_PUNISH_LIST = []
 def get_brand_popularity():
   print('get brand popularity')
 
-  query = """select brand_id,brand,brand_popularity from brands"""
+  query = """select brand_id, brand_popularity from brands"""
   mysql_conn = PasUtils.mysqlConnection()
   data = pd.read_sql(query, con=mysql_conn)
   mysql_conn.close()
