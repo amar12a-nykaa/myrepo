@@ -381,28 +381,29 @@ def handleColdStart(df):
       return _percentile
 
   def get_category_popularities(product_data,product_category_mapping):
-    category_popularity = {}
     for i in range(90,100):
-      category_popularity[i] = product_data.groupby('l3_id').agg({'popularity': percentile(i), 'popularity_new': percentile(i)}).reset_index()
+      category_popularity = product_data.groupby('l3_id').agg({'popularity': percentile(i), 'popularity_new': percentile(i)}).reset_index()
       popularity = 'popularity_'+ str(i)
       popularity_new = 'popularity_new_'+ str(i)
-      category_popularity[i] = pd.merge(product_category_mapping, category_popularity[i], on='l3_id')
-      category_popularity[i] = category_popularity[i].groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
-      category_popularity[i].rename(columns={'popularity': popularity,'popularity_new':popularity_new, 'product_id' : 'id'}, inplace=True)
+      category_popularity = pd.merge(product_category_mapping, category_popularity, on='l3_id')
+      category_popularity = category_popularity.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
+      category_popularity.rename(columns={'popularity': popularity,'popularity_new':popularity_new, 'product_id' : 'id'}, inplace=True)
       if i==90:
-        df = category_popularity[i]
+        df = category_popularity
       else:
-        df = pd.merge(df,category_popularity[i], on='id')
+        df = pd.merge(df,category_popularity, on='id')
+    #df columns - id, popularity_90,popularity_new_90 ..till 99
     return df
 
   category_popularities = get_category_popularities(product_data,product_category_mapping)
-  result = pd.merge(temp_df, category_popularities, left_on='id')
+  result = pd.merge(temp_df, category_popularities, on='id')
 
   query = """select product_id, sku_created, brand_code from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
   product_creation = pd.read_sql(query, con=redshift_conn)
   redshift_conn.close()
 
-  brand_popularity.rename(columns={'brand_id' : 'brand_code', 'product_id' : 'id'}, inplace=True)
+  brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
+  product_creation.rename(columns={'product_id': 'id'}, inplace=True)
   result = pd.merge(result, product_creation, on='id')
   result = pd.merge(result, brand_popularity, on='brand_code')
 
