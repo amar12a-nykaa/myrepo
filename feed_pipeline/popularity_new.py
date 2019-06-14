@@ -419,8 +419,8 @@ def handleColdStart(df):
         med_popularity = row['popularity_'+str(percentile_value)]
         med_popularity_new = row['popularity_new_'+str(percentile_value)]
         if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
-          med_popularity = BRAND_PROMOTION_SCORE
-          med_popularity_new = BRAND_PROMOTION_SCORE
+          med_popularity = row['popularity_99']
+          med_popularity_new = row['popularity_new_99']
         row['calculated_popularity'] = row['popularity'] + med_popularity*(COLD_START_DECAY_FACTOR ** date_diff)
         row['calculated_popularity_new'] = row['popularity_new'] + med_popularity_new*(COLD_START_DECAY_FACTOR_NEW ** date_diff)
     else:
