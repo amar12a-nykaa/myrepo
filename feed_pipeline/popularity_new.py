@@ -380,24 +380,30 @@ def handleColdStart(df):
           return numpy.percentile(x, n)
       return _percentile
 
-  def get_category_popularities(product_data):
+  def get_category_popularities(product_data,product_category_mapping):
     category_popularity = {}
     for i in range(90,100):
       category_popularity[i] = product_data.groupby('l3_id').agg({'popularity': percentile(i), 'popularity_new': percentile(i)}).reset_index()
-      new_name = 'popularity_'+ str(i)
-      category_popularity[i].rename(columns={'popularity': new_name, 'product_id' : 'id'}, inplace=True)
+      popularity = 'popularity_'+ str(i)
+      popularity_new = 'popularity_new_'+ str(i)
+      category_popularity[i] = pd.merge(product_category_mapping, category_popularity[i], on='l3_id')
+      category_popularity[i] = category_popularity[i].groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
+      category_popularity[i].rename(columns={'popularity': popularity,'popularity_new':popularity_new, 'product_id' : 'id'}, inplace=True)
+      if i==90:
+        df = category_popularity[i]
+      else:
+        df = pd.merge(df,category_popularity[i], on='id')
+    return df
 
-  category_popularities = get_category_popularities(product_data)
-  result = temp_df
-  for i in range(90, 100):
-    result = pd.merge(result, category_popularities[i], left_on='id', right_on='product_id')
+  category_popularities = get_category_popularities(product_data,product_category_mapping)
+  result = pd.merge(temp_df, category_popularities, left_on='id')
 
   query = """select product_id, sku_created, brand_code from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
   product_creation = pd.read_sql(query, con=redshift_conn)
   redshift_conn.close()
 
-  brand_popularity.rename(columns={'brand_id' : 'brand_code'}, inplace=True)
-  result = pd.merge(result, product_creation, on='product_id')
+  brand_popularity.rename(columns={'brand_id' : 'brand_code', 'product_id' : 'id'}, inplace=True)
+  result = pd.merge(result, product_creation, on='id')
   result = pd.merge(result, brand_popularity, on='brand_code')
 
   def normalize_90_to_99(a):
@@ -409,8 +415,8 @@ def handleColdStart(df):
     date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['sku_created']).astype(datetime.datetime))).days
     if date_diff > 0:
         percentile_value = row['brand_popularity']
-        med_popularity = row[percentile_value]
-        med_popularity_new = row[percentile_value]
+        med_popularity = row['popularity_'+str(percentile_value)]
+        med_popularity_new = row['popularity_new_'+str(percentile_value)]
         if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
           med_popularity = BRAND_PROMOTION_SCORE
           med_popularity_new = BRAND_PROMOTION_SCORE
