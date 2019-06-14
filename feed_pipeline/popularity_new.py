@@ -48,6 +48,15 @@ BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 PRODUCT_PUNISH_LIST = []
     
+def get_brand_popularity():
+  print('get brand popularity')
+
+  query = """select brand_id,brand,brand_popularity from brands"""
+  mysql_conn = PasUtils.mysqlConnection()
+  data = pd.read_sql(query, con=mysql_conn)
+  mysql_conn.close()
+  print(data.head(5))
+  return data
 
 def get_product_validity():
   print('get product validity')
@@ -369,17 +378,14 @@ def handleColdStart(df):
       def _percentile(x):
           return numpy.percentile(x, n)
       return _percentile
-  category_popularity = product_data.groupby('l3_id').agg({'popularity': percentile(95), 'popularity_new': percentile(95)}).reset_index()
-  category_popularity_boosted = product_data.groupby('l3_id').agg({'popularity': percentile(99), 'popularity_new': percentile(99)}).reset_index()
 
-  product_data = pd.merge(product_category_mapping, category_popularity, on='l3_id')
-  product_popularity = product_data.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
-  product_popularity.rename(columns={'popularity': 'median_popularity', 'popularity_new': 'median_popularity_new'}, inplace=True)
+  def get_category_popularities(product_data):
+    category_popularity = {}
+    for i in range(90,100):
+      category_popularity[i] = product_data.groupby('l3_id').agg({'popularity': percentile(i), 'popularity_new': percentile(i)}).reset_index()
 
-  product_data_boosted = pd.merge(product_category_mapping, category_popularity_boosted, on='l3_id')
-  product_popularity_boosted = product_data_boosted.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
-  product_popularity_boosted.rename(columns={'popularity': 'popularity_boosted', 'popularity_new': 'popularity_new_boosted'},
-                            inplace=True)
+  category_popularities = get_category_popularities(product_data)
+  print(category_popularities[90].columns)
   
   result = pd.merge(temp_df, product_popularity, left_on='id', right_on='product_id')
   result = pd.merge(result, product_popularity_boosted, on='product_id')
@@ -421,6 +427,7 @@ def handleColdStart(df):
 
 child_parent_map = create_child_parent_map()
 product_validity = get_product_validity()
+brand_popularity = get_brand_popularity()
 
 if __name__ == '__main__':
   print("popularity start: %s" % arrow.now())
