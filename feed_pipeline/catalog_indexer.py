@@ -948,7 +948,7 @@ class CatalogIndexer:
 
                 for key, value in CatalogIndexer.final_replace_dict.items():
                     pattern = '\\b' + key + '\\b'
-                    doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'])
+                    doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'].lower())
                     
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet', 'benefits_facet', 'skin_tone_facet', 'spf_facet',
                         'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet']:
