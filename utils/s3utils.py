@@ -37,8 +37,12 @@ class S3Utils:
     def transfer_ftp_2_s3(ftp, fnames, bucket_name, s3_dir):
         for fname in fnames:
             csv_fname = fname.replace('zip', 'csv')
-            tmp_zip_file = '/tmp/' + fname
-            tmp_csv_file = '/tmp/' + csv_fname
+            if env_details['is_emr']:
+                tmp_folder = '/home/hadoop/'
+            else:
+                tmp_folder = '/tmp/'
+            tmp_zip_file = tmp_folder + fname
+            tmp_csv_file = tmp_folder + csv_fname
             try:
                 with open(tmp_zip_file, 'wb') as f:
                     res = ftp.retrbinary('RETR %s' % fname, f.write)
@@ -46,7 +50,7 @@ class S3Utils:
                         print('Downloaded of file %s is not complete.' % fname)
                     print(tmp_zip_file)
                 zip_ref = zipfile.ZipFile(tmp_zip_file, 'r')
-                zip_ref.extractall('/tmp')
+                zip_ref.extractall(tmp_folder)
                 S3Utils.multi_part_upload_with_s3(bucket_name, s3_dir + csv_fname, tmp_csv_file)
                 os.remove(tmp_zip_file)
                 os.remove(tmp_csv_file)

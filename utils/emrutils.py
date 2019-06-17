@@ -64,6 +64,7 @@ class EMRUtils:
                         'Value': 'EMR'
                     }
                 ],
+                EbsRootVolumeSize=100,
                 BootstrapActions=[
                     {
                         'Name': 'Bootstrap downloads',
