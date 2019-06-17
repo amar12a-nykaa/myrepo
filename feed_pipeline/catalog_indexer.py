@@ -222,6 +222,8 @@ class CatalogIndexer:
         "thirstymud": "thirstymud thirsty mud",
         "gravitymud": "gravitymud gravity mud",
         "youthmud": "youthmud youth mud",
+        "waxing": "waxing wax",
+        "wax": "wax waxing"
     }
 
     yesterday = datetime.now() - timedelta(days=1)
@@ -948,7 +950,8 @@ class CatalogIndexer:
                     if key in doc.get("title_brand_category", "").lower():
                         doc['title_brand_category'] = doc['title_brand_category'].lower().replace(key, value)
 
-                for facet in ['color_facet', 'finish_facet', 'formulation_facet']:
+                for facet in ['color_facet', 'finish_facet', 'formulation_facet', 'benefits_facet', 'skin_tone_facet', 'spf_facet',
+                        'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet']:
                     try:
                         doc['title_brand_category'] += " " + " ".join([x['name'] for x in doc[facet]]) 
                     except:

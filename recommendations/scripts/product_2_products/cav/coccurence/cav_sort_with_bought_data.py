@@ -28,7 +28,7 @@ def get_bought_sorted_df(datetime):
     global child_2_parent 
     print("Using orders data from %s" % str(datetime))
     orders_query = "SELECT order_id, product_id, mrp FROM sales_flat_order_item WHERE order_id <> 0 AND mrp > 1 and product_type='simple' and created_at >= '%s'; " % datetime
-    rows = DiscUtils.fetchResultsInBatch(DiscUtils.nykaaMysqlConnection(), orders_query, 10000)
+    rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), orders_query, 10000)
     print("Total rows extracted: %d" % len(rows))
     df = pd.DataFrame(rows)
     df.head()
@@ -38,9 +38,9 @@ def get_bought_sorted_df(datetime):
 
     child_product_relation_query = "select child_id, parent_id from catalog_product_relation"
 
-    rows = DiscUtils.fetchResultsInBatch(DiscUtils.nykaaMysqlConnection(), child_product_relation_query, 50000)
+    rows = Utils.fetchResultsInBatch(Utils.nykaaMysqlConnection(), child_product_relation_query, 50000)
     child_2_parent = {row[0]: row[1] for row in rows}
-    common_results = DiscUtils.scrollESForResults()
+    common_results = Utils.scrollESForResults()
     child_2_parent.update(common_results['child_2_parent'])
 
     df_parented = parallelize_dataframe(df, convert_2_parent_product, 40, 16)
@@ -56,7 +56,7 @@ def rank_by_bought_data(source_algo, algo, datetime, limit=None):
         query = "SELECT entity_id, recommended_products_json FROM `recommendations_v2` WHERE entity_type='product' and recommendation_type='viewed' and algo='%s' LIMIT %d" % (source_algo, limit)
     else:
         query = "SELECT entity_id, recommended_products_json FROM `recommendations_v2` WHERE entity_type='product' and recommendation_type='viewed' and algo='%s'" % source_algo
-    mysql_conn = DiscUtils.mysqlConnection('w')
+    mysql_conn = Utils.mysqlConnection('w')
     cursor = mysql_conn.cursor()
     cursor.execute(query)
     CHUNK_SIZE = 10
@@ -91,7 +91,7 @@ def rank_by_bought_data(source_algo, algo, datetime, limit=None):
                 print(new_recommendations)
             rows.append((str(product_id), 'product', 'viewed', algo, json.dumps(new_recommendations)))
         
-    RecommendationsUtils.add_recommendations_in_mysql(DiscUtils.mysqlConnection('w'), 'recommendations_v2', rows)
+    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection('w'), 'recommendations_v2', rows)
 
 
 if __name__ == '__main__':
