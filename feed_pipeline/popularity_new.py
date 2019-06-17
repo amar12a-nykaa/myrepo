@@ -387,30 +387,30 @@ def handleColdStart(df):
       popularity_new = 'popularity_new_'+ str(i)
       category_popularity = pd.merge(product_category_mapping, category_popularity, on='l3_id')
       category_popularity = category_popularity.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
-      category_popularity.rename(columns={'popularity': popularity,'popularity_new':popularity_new, 'product_id' : 'id'}, inplace=True)
+      category_popularity.rename(columns={'popularity': popularity,'popularity_new':popularity_new}, inplace=True)
       if i==90:
         df = category_popularity
       else:
-        df = pd.merge(df,category_popularity, on='id')
+        df = pd.merge(df,category_popularity, on='product_id')
     #df columns - id, popularity_90,popularity_new_90 ..till 99
     return df
 
   category_popularities = get_category_popularities(product_data,product_category_mapping)
-  result = pd.merge(temp_df, category_popularities, on='id')
+  result = pd.merge(temp_df, category_popularities, left_on='id', right_on='product_id')
 
   query = """select product_id, sku_created, brand_code from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
   product_creation = pd.read_sql(query, con=redshift_conn)
   redshift_conn.close()
 
   brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
-  product_creation.rename(columns={'product_id': 'id'}, inplace=True)
-  result = pd.merge(result, product_creation, on='id')
+  result = pd.merge(result, product_creation, on='product_id')
   result = pd.merge(result, brand_popularity, on='brand_code')
 
   def normalize_90_to_99(a):
     return ((a - min(a) / (max(a) - min(a))) * 9) + 90
 
   result['brand_popularity'] = normalize_90_to_99(result['brand_popularity'])
+  result = result.loc[result['sku_created'].notnull()]
 
   def update_popularity(row):
     date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['sku_created']).astype(datetime.datetime))).days
@@ -433,8 +433,7 @@ def handleColdStart(df):
   result = result.apply(update_popularity, axis=1)
 
   result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new']]
-  final_df = pd.merge(df.astype({'id': int}), result.astype({'product_id': int}), left_on='id',
-                      right_on='product_id', how='left')
+  final_df = pd.merge(df.astype({'id': int}),  result.astype({'product_id': int}), left_on='id', right_on='product_id', how='left')
   final_df['popularity'] = numpy.where(final_df.calculated_popularity.notnull(), final_df.calculated_popularity, final_df.popularity)
   final_df['popularity_new'] = numpy.where(final_df.calculated_popularity_new.notnull(), final_df.calculated_popularity_new, final_df.popularity_new)
   final_df.drop(['calculated_popularity', 'calculated_popularity_new', 'product_id'], axis=1, inplace=True)
