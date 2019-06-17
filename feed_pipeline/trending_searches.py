@@ -19,8 +19,8 @@ from dateutils import enumerate_dates
 
 porter = PorterStemmer()
 RESULT_SIZE = 5
-date_2days_before = (date.today() - timedelta(days=2)).strftime('%d-%m-%Y')
-date_today = date.today().strftime('%d-%m-%Y')
+date_2days_before = (date.today() - timedelta(days=2)).strftime('%Y-%m-%d')
+date_today = date.today().strftime('%Y-%m-%d')
 
 def word_clean(word):
     word = str(word).lower()
@@ -212,7 +212,6 @@ def insert_trending_searches(data):
         PasUtils.mysql_write("create table trending_searches(type VARCHAR(64),url VARCHAR(255),q VARCHAR(255),date VARCHAR(64))",
                           connection=mysql_conn)
     PasUtils.mysql_write("delete from trending_searches where date<=%s" % date_2days_before , connection=mysql_conn)
-    date_today = datetime.today().strftime('%d-%m-%Y')
     for word in data:
         ls = word.split()
         word = " ".join(ls)
