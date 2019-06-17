@@ -56,7 +56,7 @@
         },
         "stop_custom": {
           "type": "stop",
-          "stopwords": ["product", "products", "&"]
+          "stopwords": ["product", "products", "&", "best", "cheap"]
         },
         "synonym_indextime": {
           "type" : "synonym",
