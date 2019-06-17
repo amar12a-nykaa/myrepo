@@ -28,6 +28,7 @@ from sparkutils import SparkUtils
 from mysqlredshiftutils import MysqlRedshiftUtils
 from esutils import ESUtils
 from s3utils import S3Utils
+from ftputils import FTPUtils
 
 spark = SparkUtils.get_spark_instance('CAV')
 sc = spark.sparkContext
@@ -38,6 +39,7 @@ env_details = RecoUtils.get_env_details()
 
 CAV_APP_DATA_PATH = 'cav/data/app/'
 CAV_WEB_DATA_PATH = 'cav/data/web/'
+CAV_AGG_DATA_PATH = 'cav/data/agg/'
 
 def prepare_data(files, desktop):
     schema = StructType([
@@ -85,7 +87,7 @@ def prepare_data(files, desktop):
     print('Data preparation done, returning dataframe')
     return df, results
 
-def compute_cav(platform, files, desktop):
+def compute_cav(platform, files, desktop, algo_name):
     df, results = prepare_data(files, desktop)
 
     print("Self joining the dataframe: Computing all the non product to product pairs")
@@ -154,14 +156,14 @@ def compute_cav(platform, files, desktop):
         if desktop:
             rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple_desktop', json.dumps(row['recommendations'])))
         else:
-            rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple', json.dumps(row['recommendations'])))
+            rows.append((platform, row['product'], 'product', 'viewed', algo_name, json.dumps(row['recommendations'])))
         variants = parent_2_children.get(row['product'], [])
         for variant in variants:
             product_ids_updated.append(variant)
             if desktop:
                 rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple_desktop', json.dumps(row['recommendations'])))
             else:
-                rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple', json.dumps(row['recommendations'])))
+                rows.append((platform, row['product'], 'product', 'viewed', algo_name, json.dumps(row['recommendations'])))
 
     #for product_id in simple_similar_products_dict:
     #    product_ids_updated.append(product_id)
@@ -220,15 +222,12 @@ def compute_cav(platform, files, desktop):
 
     #print('Adding recommendations for %d products with algo=premium_cs in DB' % len(set(product_ids_updated)))
 
-    MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mysqlConnection(), 'recommendations_v2', rows)
+    #MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mysqlConnection(), 'recommendations_v2', rows)
     MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
     #RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(), 'recommendations_v2', rows)
 
 def cav_sync_data():
-    ftp = FTP('52.220.4.21')
-    ftp.login('omniture', 'C9PEy2H8TEC2')
-    ftp.set_pasv(True)
-
+    ftp = FTPUtils.get_handler()
     cav_app_files, cav_web_files = [], []
     #cav_app_files, cav_web_files = ['cav_app_agg.zip'], ['cav_web_agg20181101-20190418.zip']
     #cav_app_files, cav_web_files = ['Report_app_agg_10_11_10_05.zip'], ['Report_cav_web_10_11_10_05.zip']
@@ -258,6 +257,8 @@ def cav_sync_data():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for CAV script')
     parser.add_argument('--desktop', action='store_true')
+    parser.add_argument('--data-file')
+    parser.add_argument('--algo', default='coccurence_simple')
     #parser.add_argument('--files', nargs='+')
     parser.add_argument('--platform', required=True, choices=['nykaa','men'])
 
@@ -265,21 +266,28 @@ if __name__ == "__main__":
     #files = argv['files']
     desktop = argv.get('desktop')
     platform = argv.get('platform')
+    algo_name = argv.get('algo')
 
     print("Printing Configurations:")
     print(sc.getConf().getAll())
 
-    cav_sync_data()
-
-    if desktop:
-        data_path = CAV_WEB_DATA_PATH
+    if argv.get('data_file'):
+        data_file = argv.get('data_file')
+        ftp = FTPUtils.get_handler()
+        S3Utils.transfer_ftp_2_s3(ftp, [data_file], env_details['bucket_name'], CAV_AGG_DATA_PATH)
+        files = ['s3://%s/%s%s' % (env_details['bucket_name'], CAV_AGG_DATA_PATH, data_file.replace('zip', 'csv'))]
     else:
-        data_path = CAV_APP_DATA_PATH
+        cav_sync_data()
 
-    files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
-    print('Filtering out last 3 months data')
-    files = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 90 , files))
+        if desktop:
+            data_path = CAV_WEB_DATA_PATH
+        else:
+            data_path = CAV_APP_DATA_PATH
+
+        files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
+        print('Filtering out last 3 months data')
+        files = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 90 , files))
     print("Using files")
     print(files)
 
-    compute_cav(platform, files, desktop)
+    compute_cav(platform, files, desktop, algo_name)
