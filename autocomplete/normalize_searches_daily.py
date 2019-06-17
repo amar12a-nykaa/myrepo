@@ -207,7 +207,7 @@ def normalize_search_terms():
         if ps.stem(query) in cats_brands_stemmed:
             a.drop(i, inplace=True)
     
-    a['popularity'] = 100 * normalize(a['popularity'])
+    a['popularity'] = 50 * normalize(a['popularity'])
     a = a.sort_values(by='popularity')
     for i, row in a.iterrows():
         query = row['id'].lower()
