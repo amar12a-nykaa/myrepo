@@ -64,8 +64,7 @@ def get_category_details():
               where ( l1_id not in (77,194,214,7287,3048)
                 and lower(l2_name) not like '%shop by%'
                 and l3_id not in (4036,3746,3745,3819)
-                  or l2_id in (566,7288))
-);"""
+                  or l2_id in (566,7288));"""
   results = PasUtils.fetchResults(nykaa_redshift_connection, query)
   for row in results:
     _id = str(row['l3_id'])
