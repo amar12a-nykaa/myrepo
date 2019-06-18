@@ -36,7 +36,9 @@ from nltk.stem import PorterStemmer
 from nltk.tokenize import sent_tokenize, word_tokenize
 ps = PorterStemmer()
 
-DAILY_THRESHOLD = 3
+DAILY_THRESHOLD_FREQ = 3
+DAILY_THRESHOLD_CTR = 0
+DECAY = 1
 
 client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
@@ -136,9 +138,10 @@ def normalize_search_terms():
         # TODO need to set count sum to count
 
         for term in search_terms_daily.aggregate([
-            {"$match": {"date": {"$gte": startdate, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
-            {"$project": {"term": { "$toLower": "$term"}, "date":"$date", "count": "$internal_search_term_conversion_instance"}},
-            {"$group": {"_id": "$term", "count": {"$sum": "$count"}}}, 
+            {"$match": {"date": {"$gte": startdate, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD_FREQ},
+                        "click_interaction_instance":{"$gte": DAILY_THRESHOLD_CTR}}},
+            {"$project": {"term": { "$toLower": "$term"}, "date":"$date", "count": "$internal_search_term_conversion_instance", "click_interaction_instance":"$click_interaction_instance"}},
+            {"$group": {"_id": "$term", "count": {"$sum": "$count"}, "click_interaction_instance": {"$sum": "$click_interaction_instance"}}},
             {"$sort":{ "count": -1}},
         ], allowDiskUse=True):
             term['id'] = term.pop("_id")
@@ -152,7 +155,7 @@ def normalize_search_terms():
         df = pd.DataFrame(bucket_results) 
         df['norm_count'] = normalize(df['count'])
 
-        df['popularity'] = (len(date_buckets) - bucket_id)*df['norm_count']
+        df['popularity'] = DECAY*(len(date_buckets) - bucket_id)*df['norm_count']
         dfs.append(df.loc[:, ['id', 'popularity']].set_index('id'))
 
     final_df = pd.DataFrame([])
