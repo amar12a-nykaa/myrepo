@@ -240,7 +240,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
                 d['click_interaction_instance'] = d.pop("Click Interaction Instance (Instance of evar78)")
 
             is_data_good = True
-            checkList = ['internal_search_term_conversion_instance', 'cart_additions']
+            checkList = ['internal_search_term_conversion_instance']
             if platform == 'app':
                 checkList.append('click_interaction_instance')
             for k in checkList:
@@ -269,7 +269,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
                 print("Error in processing: %s" % d)
                 continue
             filt = {"date": date, "term": d['term'], "platform": platform}
-            update = {k: v for k, v in d.items() if k in ['cart_additions', 'internal_search_term_conversion',
+            update = {k: v for k, v in d.items() if k in ['internal_search_term_conversion',
                                                           'internal_search_term_conversion_instance', 'click_interaction_instance', 'date', 'term']}
 
             if update['internal_search_term_conversion_instance'] < DAILY_COUNT_THRESHOLD \
