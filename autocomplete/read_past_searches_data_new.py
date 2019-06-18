@@ -223,8 +223,11 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
 
             # required_keys = set(['views', 'product_id', 'cart_additions', 'orders'])
             # print("available:keys: %s" % d.keys())
-            required_keys = set(['Date', 'Internal Search Term (Conversion) (evar6)',
+            required_keys = set(['Date', 'Internal Search Term (Conversion) (evar6)', 'Internal Search Term (Conversion) Instance (Instance of evar6)'])
+            if platform == 'app':
+                required_keys = set(['Date', 'Internal Search Term (Conversion) (evar6)',
                                  'Internal Search Term (Conversion) Instance (Instance of evar6)', 'Click Interaction Instance (Instance of evar78)'])
+
             missing_keys = required_keys - set(list(d.keys()))
             if missing_keys:
                 print("Missing Keys: %s" % missing_keys)
@@ -233,10 +236,14 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
             d['internal_search_term_conversion'] = d.pop("Internal Search Term (Conversion) (evar6)")
             d['internal_search_term_conversion_instance'] = d.pop(
                 "Internal Search Term (Conversion) Instance (Instance of evar6)")
-            d['click_interaction_instance'] = d.pop("Click Interaction Instance (Instance of evar78)")
+            if platform == 'app':
+                d['click_interaction_instance'] = d.pop("Click Interaction Instance (Instance of evar78)")
 
             is_data_good = True
-            for k in ['internal_search_term_conversion_instance', 'cart_additions', 'click_interaction_instance']:
+            checkList = ['internal_search_term_conversion_instance', 'cart_additions']
+            if platform == 'app':
+                checkList.append('click_interaction_instance')
+            for k in checkList:
                 try:
                     if not d[k]:
                         d[k] = 0
@@ -265,7 +272,8 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
             update = {k: v for k, v in d.items() if k in ['cart_additions', 'internal_search_term_conversion',
                                                           'internal_search_term_conversion_instance', 'click_interaction_instance', 'date', 'term']}
 
-            if update['internal_search_term_conversion_instance'] < DAILY_COUNT_THRESHOLD and update['click_interaction_instance'] <= DAILY_CTR_THRESHOLD:
+            if update['internal_search_term_conversion_instance'] < DAILY_COUNT_THRESHOLD \
+                    or (platform == 'app' and update['click_interaction_instance'] <= DAILY_CTR_THRESHOLD):
                 continue
 
             formatted_term = storable_term = format_term(update['term']).strip()
