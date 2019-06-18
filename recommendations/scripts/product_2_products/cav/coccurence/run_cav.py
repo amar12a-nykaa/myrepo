@@ -1,5 +1,3 @@
-# Usage
-#  python gen_top_categories.py --gen-top-cats --prepare-model --gen-user-categories --platform nykaa --start-datetime "2018-11-01 00:00:00" -n 20
 import boto3
 import json
 import traceback
@@ -13,17 +11,16 @@ from emrutils import EMRUtils
 
 if __name__ == '__main__':
     command_line_arguments = sys.argv[1:]
-    config = '%s/%s' % (Constants.HOME_DIR, Constants.SMALL_EMR_CONFIG)
-    #config = '%s/%s' % (Constants.HOME_DIR, Constants.BIG_EMR_CONFIG)
+    config = '%s/%s' % (Constants.HOME_DIR, Constants.BIG_EMR_CONFIG)
     env_details = RecoUtils.get_env_details()
     steps = [
         {
-            'Name': 'Generating Top categories',
+            'Name': 'CAV',
             'ActionOnFailure': 'TERMINATE_CLUSTER',
             'HadoopJarStep': {
                 'Jar': 'command-runner.jar',
                 'Args': [
-                    'spark-submit', '/home/hadoop/%s' % Constants.GEN_TOP_CATEGORIES_SCRIPT 
+                    'spark-submit', '/home/hadoop/%s' % Constants.GEN_CAV_SCRIPT
                 ] + command_line_arguments
             }
         }
@@ -34,5 +31,5 @@ if __name__ == '__main__':
             dict(Constants.BIG_CORE_INSTANCE, **{'InstanceCount': 1})
         ]
     }
-    #EMRUtils.launch_spark_emr('Gen Top Categories', config, [], steps, dict(Constants.BIG_INSTANCE_SAMPLE, **instance_groups))
-    EMRUtils.launch_spark_emr('Gen top Categories', config, [], steps, dict(Constants.SMALL_INSTANCE, **{'MasterInstanceType': 'm5.12xlarge'}))
+    EMRUtils.launch_spark_emr('CAV', config, [], steps, dict(Constants.BIG_INSTANCE_SAMPLE, **instance_groups))
+

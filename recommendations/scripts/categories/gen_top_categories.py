@@ -125,7 +125,7 @@ def generate_category_corpus(categories):
 #    sorted_cats = list(map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[customer_2_cat_corpus_dict['1006620']]]), key=lambda e: -e[1])))
 #    embed()
 
-def generate_top_categories_for_user(env, platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count):
+def generate_top_categories_for_user(platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count):
     df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, None, None, start_datetime) 
     df = df.select(['customer_id', 'order_id', 'l3_category', 'order_date']).distinct().withColumn('rank', func.dense_rank().over(Window.partitionBy('customer_id').orderBy(desc('order_date')))).filter(col('rank') <= orders_count)
     customer_2_last_order_categories = {row['customer_id']: row['categories'] for row in df.filter(col('rank') == 1).select(['customer_id', 'l3_category']).distinct().groupBy(['customer_id']).agg(func.collect_list('l3_category').alias('categories')).collect()}
@@ -142,6 +142,8 @@ def generate_top_categories_for_user(env, platform, start_datetime, end_datetime
     #rows = [('lsi', row['customer_id'], row['sorted_cats']) for row in df.collect()]
     print("Writing the categories recommendations " + str(datetime.now()))
     print("Total number of customers to be updated: %d" % len(rows))
+    print("Few users getting updated are listed below")
+    print([row['customer_id'] for row in rows[:10]])
     CategoriesUtils.add_categories_in_ups(rows)
     print("Done Writing the categories recommendations " + str(datetime.now()))
 
@@ -193,7 +195,7 @@ if __name__ == '__main__':
         print('Loading LSI Model')
         lsi_model = load_model(env_details['bucket_name'], CATEGORIES_LSI_MODEL_DIR)
         print('Generate top categories for user')
-        generate_top_categories_for_user(platform, env_details['bucket_name'], start_datetime, end_datetime, top_categories, lsi_model, orders_count)
+        generate_top_categories_for_user(platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count)
     #generate_top_categories_for_user(env, platform, n, prepare_model, start_datetime, end_datetime)
     #top_categories_df = generate_top_categories(env, platform, n, start_datetime, end_datetime)
     #top_categories_df.show(n, False)
