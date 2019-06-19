@@ -375,6 +375,9 @@ class CatalogIndexer:
                     if pas.get('backorders') is not None:
                         doc['backorders'] = pas.get('backorders') == True
 
+                    if pas.get('jit') is not None:
+                        doc['jit'] = pas.get('jit') == True
+
                     if pas.get('disabled') is not None:
                         doc['disabled'] = pas.get('disabled')
 
