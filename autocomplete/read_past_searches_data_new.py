@@ -223,9 +223,9 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
 
             # required_keys = set(['views', 'product_id', 'cart_additions', 'orders'])
             # print("available:keys: %s" % d.keys())
-            required_keys = set(['Date', 'Internal Search Term (Conversion) (evar6)', 'Internal Search Term (Conversion) Instance (Instance of evar6)'])
+            required_keys = set(['date', 'Internal Search Term (Conversion) (evar6)', 'Internal Search Term (Conversion) Instance (Instance of evar6)'])
             if platform == 'app':
-                required_keys = set(['Date', 'Internal Search Term (Conversion) (evar6)',
+                required_keys = set(['date', 'Internal Search Term (Conversion) (evar6)',
                                  'Internal Search Term (Conversion) Instance (Instance of evar6)', 'Click Interaction Instance (Instance of evar78)'])
 
             missing_keys = required_keys - set(list(d.keys()))
