@@ -37,8 +37,8 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 ps = PorterStemmer()
 
 DAILY_THRESHOLD_FREQ = 3
-DAILY_THRESHOLD_CTR = 0
-DECAY = 1
+DAILY_THRESHOLD_CTR = 1
+POPULARITY_DECAY_FACTOR = 1
 
 client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
@@ -124,7 +124,7 @@ def normalize(a):
 
 def normalize_search_terms():
 
-    date_buckets = [(0, 60), (61, 120), (121, 180)]
+    date_buckets = [(0,15),(16,30),(31,45),(46,60),(61,75),(76,90),(91,105),(106,120),(121,135),(136,150),(151,165),(165,180)]
     dfs = []
 
     bucket_results = []
@@ -152,10 +152,11 @@ def normalize_search_terms():
             continue
         
         print("Computing popularity")
-        df = pd.DataFrame(bucket_results) 
+        df = pd.DataFrame(bucket_results)
+        df['ctr'] = float(df['count'])*100/df['click_interaction_instance']
         df['norm_count'] = normalize(df['count'])
 
-        df['popularity'] = DECAY*(len(date_buckets) - bucket_id)*df['norm_count']
+        df['popularity'] = POPULARITY_DECAY_FACTOR*(len(date_buckets) - bucket_id)*normalize(df['ctr']*df['click_interaction_instance']) #(len(date_buckets) - bucket_id)*df['norm_count']
         dfs.append(df.loc[:, ['id', 'popularity']].set_index('id'))
 
     final_df = pd.DataFrame([])
