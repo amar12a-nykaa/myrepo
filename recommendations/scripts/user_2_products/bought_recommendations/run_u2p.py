@@ -28,7 +28,7 @@ if __name__ == '__main__':
     instance_groups = {
         'InstanceGroups': [
             Constants.BIG_MASTER_INSTANCE,
-            dict(Constants.BIG_CORE_INSTANCE, **{'InstanceCount': 3})
+            dict(Constants.BIG_CORE_INSTANCE, **{'InstanceCount': 1})
         ]
     }
     EMRUtils.launch_spark_emr('U2P', config, [], steps, dict(Constants.BIG_INSTANCE_SAMPLE, **instance_groups))
