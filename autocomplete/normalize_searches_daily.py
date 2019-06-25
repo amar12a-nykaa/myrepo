@@ -38,7 +38,7 @@ ps = PorterStemmer()
 
 DAILY_THRESHOLD_FREQ = 3
 DAILY_THRESHOLD_CTR = 1
-POPULARITY_DECAY_FACTOR = 1
+POPULARITY_DECAY_FACTOR = 0.5
 
 client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
@@ -155,8 +155,9 @@ def normalize_search_terms():
         df = pd.DataFrame(bucket_results)
         df['ctr'] = (df['count'])*100.0/df['click_interaction_instance']
         df['norm_count'] = normalize(df['count'])
+        multiplication_factor = POPULARITY_DECAY_FACTOR ** (bucket_id + 1)
 
-        df['popularity'] = POPULARITY_DECAY_FACTOR*(len(date_buckets) - bucket_id)*normalize(df['ctr']*df['click_interaction_instance']) #(len(date_buckets) - bucket_id)*df['norm_count']
+        df['popularity'] = multiplication_factor * normalize(df['ctr']*df['click_interaction_instance'])
         dfs.append(df.loc[:, ['id', 'popularity']].set_index('id'))
 
     final_df = pd.DataFrame([])
