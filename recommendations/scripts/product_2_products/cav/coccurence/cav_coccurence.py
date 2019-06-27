@@ -234,31 +234,6 @@ def compute_cav(platform, files, desktop, algo_name):
     MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
     #RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(), 'recommendations_v2', rows)
 
-def cav_sync_data():
-    ftp = FTPUtils.get_handler()
-    cav_app_files, cav_web_files = [], []
-
-    def fill_cav_files(f):
-        if f.startswith('cav_app_daily'):
-            cav_app_files.append(f)
-        if f.startswith('cav_web_daily'):
-            cav_web_files.append(f)
-
-    ftp.retrlines('NLST', fill_cav_files)
-    cav_app_csvs = list(map(lambda f: f.replace('zip', 'csv'), cav_app_files))
-    cav_web_csvs = list(map(lambda f: f.replace('zip', 'csv'), cav_web_files))
-
-    s3_cav_app_csvs = S3Utils.ls_file_paths(env_details['bucket_name'], CAV_APP_DATA_PATH)
-    s3_cav_web_csvs = S3Utils.ls_file_paths(env_details['bucket_name'], CAV_WEB_DATA_PATH)
-
-    s3_cav_app_csvs = [s[s.rfind("/") + 1:] for s in s3_cav_app_csvs]
-    s3_cav_web_csvs = [s[s.rfind("/") + 1:] for s in s3_cav_web_csvs]
-    app_csvs_needed_to_be_pushed = list(set(cav_app_csvs) - set(s3_cav_app_csvs))
-    web_csvs_needed_to_be_pushed = list(set(cav_web_csvs) - set(s3_cav_web_csvs))
-
-    S3Utils.transfer_ftp_2_s3(ftp, list(map(lambda f: f.replace('csv', 'zip'), app_csvs_needed_to_be_pushed)), env_details['bucket_name'], CAV_APP_DATA_PATH)
-    S3Utils.transfer_ftp_2_s3(ftp, list(map(lambda f: f.replace('csv', 'zip'), web_csvs_needed_to_be_pushed)), env_details['bucket_name'], CAV_WEB_DATA_PATH)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for CAV script')
