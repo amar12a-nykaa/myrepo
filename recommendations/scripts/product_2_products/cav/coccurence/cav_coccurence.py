@@ -41,6 +41,9 @@ CAV_APP_DATA_PATH = 'cav/data/app/'
 CAV_WEB_DATA_PATH = 'cav/data/web/'
 CAV_AGG_DATA_PATH = 'cav/data/agg/'
 
+DAILY_SYNC_FILE_APP_PREFIX = 'cav_app_daily'
+DAILY_SYNC_FILE_WEB_PREFIX = 'cav_web_daily'
+
 def prepare_data(files, desktop):
     schema = StructType([
         StructField("Date", StringType(), True),
@@ -234,8 +237,6 @@ def compute_cav(platform, files, desktop, algo_name):
 def cav_sync_data():
     ftp = FTPUtils.get_handler()
     cav_app_files, cav_web_files = [], []
-    #cav_app_files, cav_web_files = ['cav_app_agg.zip'], ['cav_web_agg20181101-20190418.zip']
-    #cav_app_files, cav_web_files = ['Report_app_agg_10_11_10_05.zip'], ['Report_cav_web_10_11_10_05.zip']
 
     def fill_cav_files(f):
         if f.startswith('cav_app_daily'):
@@ -265,7 +266,7 @@ if __name__ == "__main__":
     parser.add_argument('--data-file')
     parser.add_argument('--algo', default='coccurence_simple')
     #parser.add_argument('--files', nargs='+')
-    parser.add_argument('--platform', required=True, choices=['nykaa','men'])
+    parser.add_argument('--platform', default='nykaa', choices=['nykaa','men'])
 
     argv = vars(parser.parse_args())
     #files = argv['files']
@@ -282,11 +283,11 @@ if __name__ == "__main__":
         S3Utils.transfer_ftp_2_s3(ftp, [data_file], env_details['bucket_name'], CAV_AGG_DATA_PATH)
         files = ['s3://%s/%s%s' % (env_details['bucket_name'], CAV_AGG_DATA_PATH, data_file.replace('zip', 'csv'))]
     else:
-        cav_sync_data()
-
         if desktop:
+            FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_WEB_PREFIX, env_details['bucket_name'], CAV_WEB_DATA_PATH)
             data_path = CAV_WEB_DATA_PATH
         else:
+            FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_APP_PREFIX, env_details['bucket_name'], CAV_APP_DATA_PATH)
             data_path = CAV_APP_DATA_PATH
 
         files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
