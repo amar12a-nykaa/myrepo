@@ -63,9 +63,9 @@ class CategoriesUtils:
         put_items = []
         for user_obj in get_response['Responses']['user_profile_service']:
             if user_obj.get('categories'):
-                user_obj['categories'].update(rows[int(user_obj['user_id'])])
+                user_obj['categories'].update(rows[user_obj['user_id']])
             else:
-                user_obj['categories'] = rows[int(user_obj['user_id'])]
+                user_obj['categories'] = rows[user_obj['user_id']]
             put_items.append({'PutRequest': {'Item': user_obj}})
         for i in range(0, len(put_items), 25):
             CategoriesUtils.dynamodb.batch_write_item(RequestItems={'user_profile_service': put_items[i:i+25]})
