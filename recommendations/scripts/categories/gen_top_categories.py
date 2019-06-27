@@ -174,7 +174,7 @@ def prepare_views_ca_dataframe(files):
     print("Total Number of rows now: %d" % df.count())
 
     print("Filtering out junk data")
-    df = df.filter((col('cart_additions') <= 2) & (col('views') <= 5))
+    df = df.filter((col('cart_additions') <= 5) & (col('views') <= 5))
     print("Total Number of rows now: %d" % df.count())
 
     print('Scrolling ES for results')
