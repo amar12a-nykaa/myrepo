@@ -3,7 +3,7 @@ import sys
 import psycopg2
 import traceback
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType, BooleanType, ArrayType
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType, BooleanType, ArrayType, DateType
 from pyspark.sql.functions import concat, col, lit, udf, isnan, desc
 import pyspark.sql.functions as func
 from pyspark.sql.window import Window
@@ -18,7 +18,7 @@ import argparse
 from elasticsearch import helpers, Elasticsearch
 from ftplib import FTP
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta, date
 
 sys.path.append('/home/ubuntu/nykaa_scripts/utils')
 sys.path.append('/home/hadoop/nykaa_scripts/utils')
@@ -54,6 +54,11 @@ def prepare_data(files, desktop):
     for i in range(1, len(files)):
         df = df.union(spark.read.load(files[i], header=True, format='csv', schema=schema))
     df = df.cache()
+
+    df = df.filter(df['Date'].isNotNull())
+    df = df.withColumn("Date", udf(lambda d: datetime.strptime(d, '%B %d, %Y'), DateType())(col('Date')))
+    df = df.filter(((date.today() - timedelta(days=90)) <= col('Date')))
+
     print("Rows count: " + str(df.count()))
 
     print('Cleaning out null or empty Visitor_ID and Visit Number')
