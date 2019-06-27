@@ -58,8 +58,15 @@ class S3Utils:
                 print(traceback.format_exc())
                 print("Problem with file: %s" % fname)
 
-    def upload_dir(local_directory, bucket_name, destination):
+    def upload_dir(local_directory, bucket_name, destination, ignore_path_substring=[]):
         for root, dirs, files in os.walk(local_directory):
+            ignore = False
+            for substring in ignore_path_substring:
+                if substring in root:
+                    ignore = True
+                    break
+            if ignore:
+                continue
             for filename in files:
                 print('Uploading file: %s' % filename)
                 local_path = os.path.join(root, filename)

@@ -3,7 +3,7 @@ import sys
 import psycopg2
 import traceback
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType, BooleanType, ArrayType
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType, BooleanType, ArrayType, DateType
 from pyspark.sql.functions import concat, col, lit, udf, isnan, desc
 import pyspark.sql.functions as func
 from pyspark.sql.window import Window
@@ -18,7 +18,7 @@ import argparse
 from elasticsearch import helpers, Elasticsearch
 from ftplib import FTP
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta, date
 
 sys.path.append('/home/ubuntu/nykaa_scripts/utils')
 sys.path.append('/home/hadoop/nykaa_scripts/utils')
@@ -41,6 +41,9 @@ CAV_APP_DATA_PATH = 'cav/data/app/'
 CAV_WEB_DATA_PATH = 'cav/data/web/'
 CAV_AGG_DATA_PATH = 'cav/data/agg/'
 
+DAILY_SYNC_FILE_APP_PREFIX = 'cav_app_daily'
+DAILY_SYNC_FILE_WEB_PREFIX = 'cav_web_daily'
+
 def prepare_data(files, desktop):
     schema = StructType([
         StructField("Date", StringType(), True),
@@ -54,6 +57,11 @@ def prepare_data(files, desktop):
     for i in range(1, len(files)):
         df = df.union(spark.read.load(files[i], header=True, format='csv', schema=schema))
     df = df.cache()
+
+    df = df.filter(df['Date'].isNotNull())
+    df = df.withColumn("Date", udf(lambda d: datetime.strptime(d, '%B %d, %Y'), DateType())(col('Date')))
+    df = df.filter(((date.today() - timedelta(days=90)) <= col('Date')))
+
     print("Rows count: " + str(df.count()))
 
     print('Cleaning out null or empty Visitor_ID and Visit Number')
@@ -226,33 +234,6 @@ def compute_cav(platform, files, desktop, algo_name):
     MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
     #RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(), 'recommendations_v2', rows)
 
-def cav_sync_data():
-    ftp = FTPUtils.get_handler()
-    cav_app_files, cav_web_files = [], []
-    #cav_app_files, cav_web_files = ['cav_app_agg.zip'], ['cav_web_agg20181101-20190418.zip']
-    #cav_app_files, cav_web_files = ['Report_app_agg_10_11_10_05.zip'], ['Report_cav_web_10_11_10_05.zip']
-
-    def fill_cav_files(f):
-        if f.startswith('cav_app_daily'):
-            cav_app_files.append(f)
-        if f.startswith('cav_web_daily'):
-            cav_web_files.append(f)
-
-    ftp.retrlines('NLST', fill_cav_files)
-    cav_app_csvs = list(map(lambda f: f.replace('zip', 'csv'), cav_app_files))
-    cav_web_csvs = list(map(lambda f: f.replace('zip', 'csv'), cav_web_files))
-
-    s3_cav_app_csvs = S3Utils.ls_file_paths(env_details['bucket_name'], CAV_APP_DATA_PATH)
-    s3_cav_web_csvs = S3Utils.ls_file_paths(env_details['bucket_name'], CAV_WEB_DATA_PATH)
-
-    s3_cav_app_csvs = [s[s.rfind("/") + 1:] for s in s3_cav_app_csvs]
-    s3_cav_web_csvs = [s[s.rfind("/") + 1:] for s in s3_cav_web_csvs]
-    app_csvs_needed_to_be_pushed = list(set(cav_app_csvs) - set(s3_cav_app_csvs))
-    web_csvs_needed_to_be_pushed = list(set(cav_web_csvs) - set(s3_cav_web_csvs))
-
-    S3Utils.transfer_ftp_2_s3(ftp, list(map(lambda f: f.replace('csv', 'zip'), app_csvs_needed_to_be_pushed)), env_details['bucket_name'], CAV_APP_DATA_PATH)
-    S3Utils.transfer_ftp_2_s3(ftp, list(map(lambda f: f.replace('csv', 'zip'), web_csvs_needed_to_be_pushed)), env_details['bucket_name'], CAV_WEB_DATA_PATH)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for CAV script')
@@ -260,7 +241,7 @@ if __name__ == "__main__":
     parser.add_argument('--data-file')
     parser.add_argument('--algo', default='coccurence_simple')
     #parser.add_argument('--files', nargs='+')
-    parser.add_argument('--platform', required=True, choices=['nykaa','men'])
+    parser.add_argument('--platform', default='nykaa', choices=['nykaa','men'])
 
     argv = vars(parser.parse_args())
     #files = argv['files']
@@ -277,11 +258,11 @@ if __name__ == "__main__":
         S3Utils.transfer_ftp_2_s3(ftp, [data_file], env_details['bucket_name'], CAV_AGG_DATA_PATH)
         files = ['s3://%s/%s%s' % (env_details['bucket_name'], CAV_AGG_DATA_PATH, data_file.replace('zip', 'csv'))]
     else:
-        cav_sync_data()
-
         if desktop:
+            FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_WEB_PREFIX, env_details['bucket_name'], CAV_WEB_DATA_PATH)
             data_path = CAV_WEB_DATA_PATH
         else:
+            FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_APP_PREFIX, env_details['bucket_name'], CAV_APP_DATA_PATH)
             data_path = CAV_APP_DATA_PATH
 
         files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
