@@ -153,7 +153,8 @@ def normalize_search_terms():
         
         print("Computing popularity")
         df = pd.DataFrame(bucket_results)
-        df['ctr'] = (df['count'])*100.0/df['click_interaction_instance']
+        df['click_interaction_instance'] = df['click_interaction_instance'].fillna(0)
+        df['ctr'] = (df['click_interaction_instance'])*100.0/df['count']
         df['norm_count'] = normalize(df['count'])
         multiplication_factor = POPULARITY_DECAY_FACTOR ** (bucket_id + 1)
         df['popularity'] = df['ctr']*df['click_interaction_instance']
