@@ -117,9 +117,9 @@ def read_file_by_date(date, platform, dryrun=False, limit=0, product_id=None, de
             filename = '/nykaa/adminftp/search_terms_website_%s.zip' % date.strftime("%Y%m%d")
 
     elif platform == 'app':
-        filename = '/nykaa/adminftp/click_ist_app_daily_%s.csv' % date.strftime("%Y%m%d")
+        filename = '/nykaa/adminftp/click_ist_app_daily%s.csv' % date.strftime("%Y%m%d")
         if not os.path.exists(filename):
-            filename = '/nykaa/adminftp/click_ist_app_daily_%s.zip' % date.strftime("%Y%m%d")
+            filename = '/nykaa/adminftp/click_ist_app_daily%s.zip' % date.strftime("%Y%m%d")
 
     print(filename)
     return read_file(filename, platform, dryrun, limit=limit, product_id=product_id, debug=debug)
