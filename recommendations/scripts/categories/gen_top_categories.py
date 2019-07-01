@@ -152,7 +152,7 @@ def generate_top_categories_for_user(platform, start_datetime, end_datetime, top
 def prepare_views_ca_dataframe(files):
     schema = StructType([
         StructField("Date", StringType(), True),
-        StructField("Customer ID (evar23)", IntegerType(), True),
+        StructField("Customer ID (evar23)", StringType(), True),
         StructField("Products", IntegerType(), True),
         StructField("Product Views", IntegerType(), True),
         StructField("Cart Additions", IntegerType(), True)])
