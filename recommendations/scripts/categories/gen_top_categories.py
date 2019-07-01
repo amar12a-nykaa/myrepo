@@ -242,7 +242,11 @@ def generate_top_categories_from_views(top_categories, lsi_model, days=None, lim
     #df = df.select(['customer_id', 'vec']).rdd.map(lambda row: (row['customer_id'], [[category_count['l3_category'], category_count['weight']] for category_count in row['vec']])).toDF(['customer_id', 'vec'])
 
     # Preparing customer_2_last_order_categories
-    orders_df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, None, None, None, customer_ids_need_update) 
+    if len(customer_ids_need_update) <= 5000:
+        orders_df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, None, None, None, customer_ids_need_update) 
+    else:
+        orders_df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, None, None, None, []) 
+
     orders_df = orders_df.select(['customer_id', 'order_id', 'l3_category', 'order_date']).distinct().withColumn('rank', func.dense_rank().over(Window.partitionBy('customer_id').orderBy(desc('order_date')))).filter(col('rank') <= 1)
     customer_2_last_order_categories = {int(row['customer_id']): row['categories'] for row in orders_df.select(['customer_id', 'l3_category']).distinct().groupBy(['customer_id']).agg(func.collect_list('l3_category').alias('categories')).collect()}
 
