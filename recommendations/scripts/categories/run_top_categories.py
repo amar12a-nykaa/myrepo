@@ -34,5 +34,5 @@ if __name__ == '__main__':
             dict(Constants.BIG_CORE_INSTANCE, **{'InstanceCount': 1})
         ]
     }
-    #EMRUtils.launch_spark_emr('Gen Top Categories', config, [], steps, dict(Constants.BIG_INSTANCE_SAMPLE, **instance_groups))
-    EMRUtils.launch_spark_emr('Gen top Categories', config, [], steps, dict(Constants.SMALL_INSTANCE, **{'MasterInstanceType': 'm5.12xlarge'}))
+    EMRUtils.launch_spark_emr('Gen Top Categories', config, [], steps, dict(Constants.BIG_INSTANCE_SAMPLE, **instance_groups))
+    #EMRUtils.launch_spark_emr('Gen top Categories', config, [], steps, dict(Constants.SMALL_INSTANCE, **{'MasterInstanceType': 'm5.12xlarge'}))
