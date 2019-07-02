@@ -970,6 +970,13 @@ class CatalogIndexer:
                 
                 if doc.get('type', '') == 'bundle':
                     doc['title_brand_category'] += " " + "combo"
+
+                doc['visible_after_color_filter_i'] = 1
+                if doc.get('color_facet', '') and doc.get('size_facet', ''):
+                    if doc.get('type', '') != 'configurable':
+                        doc['visible_after_color_filter_i'] = 0
+                elif doc.get('type', '') != 'simple':
+                    doc['visible_after_color_filter_i'] = 0
                 
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
