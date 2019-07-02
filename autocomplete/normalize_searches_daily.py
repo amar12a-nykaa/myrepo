@@ -198,7 +198,7 @@ def normalize_search_terms():
     #brand_index = normalize_array("select brand as term from nykaa.brands where brand like 'l%'")
     #category_index = normalize_array("select name as term from nykaa.l3_categories")
     search_terms_normalized.remove({})
-    cats_stemmed = set([ps.stem(x['name']) for x in PAsUtils.mysql_read("select name from l3_categories ")])
+    cats_stemmed = set([ps.stem(x['name']) for x in PasUtils.mysql_read("select name from l3_categories ")])
     brands_stemmed = set([ps.stem(x['brand']) for x in PasUtils.mysql_read("select brand from brands")])
     cats_brands_stemmed = cats_stemmed | brands_stemmed
 
@@ -207,7 +207,7 @@ def normalize_search_terms():
         if ps.stem(query) in cats_brands_stemmed:
             a.drop(i, inplace=True)
     
-    a['popularity'] = 100 * normalize(a['popularity'])
+    a['popularity'] = 50 * normalize(a['popularity'])
     a = a.sort_values(by='popularity')
     for i, row in a.iterrows():
         query = row['id'].lower()

@@ -9,7 +9,7 @@ import subprocess
 from ftplib import FTP
 import csv
 sys.path.append('/var/www/pds_api/')
-from pas.v2.utils import StoreDbUtils
+from pas.v2.utils import Utils as PasUtils 
 
 hostname = socket.gethostname()
 my_name = os.path.basename(__file__)
@@ -40,7 +40,7 @@ def _save_data_into_db(cursor, data_chunk):
 
 def save_data_into_db(data):
     RECORD_GROUP_SIZE = 100
-    mysql_conn = StoreDbUtils.mysqlConnection(mode='w')
+    mysql_conn = PasUtils.mysqlConnection(mode='w')
     cursor = mysql_conn.cursor()
     for i in range(0, len(data), RECORD_GROUP_SIZE):
         _save_data_into_db(cursor, data[i:i + RECORD_GROUP_SIZE])

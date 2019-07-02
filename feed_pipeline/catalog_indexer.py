@@ -222,6 +222,8 @@ class CatalogIndexer:
         "thirstymud": "thirstymud thirsty mud",
         "gravitymud": "gravitymud gravity mud",
         "youthmud": "youthmud youth mud",
+        "waxing": "waxing wax",
+        "wax": "wax waxing"
     }
 
     yesterday = datetime.now() - timedelta(days=1)
@@ -372,6 +374,9 @@ class CatalogIndexer:
 
                     if pas.get('backorders') is not None:
                         doc['backorders'] = pas.get('backorders') == True
+
+                    if pas.get('jit_eretail') is not None:
+                        doc['jit_eretail'] = pas.get('jit_eretail') == True
 
                     if pas.get('disabled') is not None:
                         doc['disabled'] = pas.get('disabled')
@@ -945,10 +950,11 @@ class CatalogIndexer:
                     print("product_id: %s " % doc['product_id'])
 
                 for key, value in CatalogIndexer.final_replace_dict.items():
-                    if key in doc.get("title_brand_category", "").lower():
-                        doc['title_brand_category'] = doc['title_brand_category'].lower().replace(key, value)
-
-                for facet in ['color_facet', 'finish_facet', 'formulation_facet']:
+                    pattern = '\\b' + key + '\\b'
+                    doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'].lower())
+                    
+                for facet in ['color_facet', 'finish_facet', 'formulation_facet', 'benefits_facet', 'skin_tone_facet', 'spf_facet',
+                        'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet']:
                     try:
                         doc['title_brand_category'] += " " + " ".join([x['name'] for x in doc[facet]]) 
                     except:
@@ -964,6 +970,13 @@ class CatalogIndexer:
                 
                 if doc.get('type', '') == 'bundle':
                     doc['title_brand_category'] += " " + "combo"
+
+                doc['visible_after_color_filter_i'] = 1
+                if doc.get('color_facet', '') and doc.get('size_facet', ''):
+                    if doc.get('type', '') != 'configurable':
+                        doc['visible_after_color_filter_i'] = 0
+                elif doc.get('type', '') != 'simple':
+                    doc['visible_after_color_filter_i'] = 0
                 
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)

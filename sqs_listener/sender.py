@@ -9,6 +9,14 @@ from IPython import embed
 
 import boto3
 
+import argparse 
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-p", "--filepath", help='path to csv file', required=True)
+argv = vars(parser.parse_args())
+file_path = argv['filepath']
+
 # Create SQS client
 sqs = boto3.client('sqs')
 
@@ -20,7 +28,8 @@ queue_url = "https://sqs.ap-southeast-1.amazonaws.com/911609873560/preprod-disco
 chunks = []
 chunk = []
 products = [] 
-with open(  os.path.join(os.path.dirname(__file__), 'sqs_10k.csv')) as f:
+#with open(  os.path.join(os.path.dirname(__file__), 'sqs_10k_2.csv')) as f:
+with open(file_path) as f:
     lines = f.readlines()
 products = [json.loads(line.strip()) for line in lines]
     
@@ -57,4 +66,4 @@ for chunk in chunks:
 	MessageDeduplicationId = str(time.time())
     )
 
-
+print("Done")

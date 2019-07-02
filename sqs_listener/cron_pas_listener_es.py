@@ -24,6 +24,30 @@ total = 0
 CHUNK_SIZE = 200
 
 
+def getCurrentDateTime():
+    current_datetime = datetime.utcnow()
+    from_zone = tz.gettz("UTC")
+    to_zone = tz.gettz("Asia/Kolkata")
+    current_datetime = current_datetime.replace(tzinfo=from_zone)
+    current_datetime = current_datetime.astimezone(to_zone)
+    return current_datetime
+
+
+def getCount():
+    return int(subprocess.check_output(
+        "ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
+        shell=True).strip())
+
+
+if getCount() >= 2:
+    print("getCount(): %r" % getCount())
+    print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
+    print(str(
+        subprocess.check_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
+                                shell=True)))
+    exit()
+
+
 def synchronized(func):
     func.__lock__ = threading.Lock()
 
@@ -63,11 +87,11 @@ class ThreadManager:
 
     def stop_workers(self):
         for _ in range(NUMBER_OF_THREADS):
-            print("Adding None to queue")
+            print("Main Thread: Adding None to queue")
             self.q.put(None)
 
     def join(self):
-        print("Waiting for threads to finish .. ")
+        print("Main Thread: Waiting for threads to finish .. ")
         for thread in self.threads:
             thread.join()
 
@@ -101,13 +125,6 @@ class WorkerThread(threading.Thread):
                 continue
 
 
-def getCurrentDateTime():
-    current_datetime = datetime.utcnow()
-    from_zone = tz.gettz("UTC")
-    to_zone = tz.gettz("Asia/Kolkata")
-    current_datetime = current_datetime.replace(tzinfo=from_zone)
-    current_datetime = current_datetime.astimezone(to_zone)
-    return current_datetime
 
 
 print("=" * 30 + " %s ======= " % getCurrentDateTime())
@@ -157,7 +174,7 @@ class SQSConsumer:
                     self.sqs.delete_message(QueueUrl=DISCOVERY_SQS_ENDPOINT, ReceiptHandle=receipt_handle)
             else:
                 is_sqs_empty = True
-                print("SQS is empty!")
+                print("Main Thread: SQS is empty!")
 
             if len(update_docs) >= ES_BULK_UPLOAD_BATCH_SIZE or (len(update_docs) >= 1 and is_sqs_empty):
                 print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
@@ -168,10 +185,10 @@ class SQSConsumer:
         self.thread_manager.stop_workers()
         self.thread_manager.join()
 
-        print("All threads finished")
+        print("Main Thread: All threads finished")
         time_taken = time.time() - startts
         speed = round(num_products_processed / time_taken * 1.0)
-        print("Number of products processed: %s @ %s products/sec" % (num_products_processed, speed))
+        print("Main Thread: Number of products processed: %s @ %s products/sec" % (num_products_processed, speed))
 
     @classmethod
     def upload_one_chunk(cls, chunk, threadname):
@@ -180,9 +197,10 @@ class SQSConsumer:
         """
         try:
             update_docs = chunk
-            print(chunk)
+            #print(chunk)
             print(threadname + ": Sending %s docs to bulk upload" % len(update_docs))
-            DiscUtils.updateESCatalog(update_docs, refresh=True)
+            response = DiscUtils.updateESCatalog(update_docs, refresh=True, raise_on_error=False)
+            print("response: ", response)
             print(threadname + ": Done with one batch of bulk upload")
         except elasticsearch.helpers.BulkIndexError as e:
             missing_skus = []
