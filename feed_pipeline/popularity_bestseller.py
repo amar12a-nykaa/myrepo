@@ -56,7 +56,7 @@ def calculate_bestseller_category(order_data):
       print(ctr.summary)
     row = dict(row)
     try:
-      bestseller_data.update({"_id": row['product_id']}, {"type": "category"}, upsert=True)
+      bestseller_data.update({"_id": row['product_id']}, {"type": "category", "key": row['l3_id']}, upsert=True)
     except:
       print("[ERROR] bestseller_data.update error %s " %row['product_id'])
       raise
@@ -78,7 +78,7 @@ def calculate_bestseller_brand(order_data):
       print(ctr.summary)
     row = dict(row)
     try:
-      bestseller_data.update({"_id": row['product_id']}, {"type": "brand"}, upsert=True)
+      bestseller_data.update({"_id": row['product_id']}, {"type": "brand", "key": row['brand_code']}, upsert=True)
     except:
       print("[ERROR] bestseller_data.update error %s " % row['product_id'])
       raise
