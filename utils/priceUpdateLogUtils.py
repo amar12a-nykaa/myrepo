@@ -5,7 +5,7 @@ class PriceUpdateLogUtils:
 
     @classmethod
     def logBulkChangeViaProductScheduleUpdate(cls, batch_Id, event_type, schedule_start, schedule_end,  total_rows):
-        query_meta = """insert into sku_update_log(batch_id, event_type,schedule_start,schedule_end) values({batch_id},{event_type},{schedule_start},{schedule_end})""".format(
+        query_meta = """insert into sku_update_log(batch_id, event_type,schedule_start,schedule_end) values('{batch_id}','{event_type}','{schedule_start}','{schedule_end}')""".format(
             batch_id=batch_Id,
             event_type=event_type,
             schedule_start=schedule_start,
@@ -26,9 +26,8 @@ class PriceUpdateLogUtils:
             cursor = mysql_conn.cursor()
             cursor.executemany(query, totalrows)
             cursor.close()
-            if commit is True:
-                mysql_conn.commit()
-                mysql_conn.close()
+            mysql_conn.commit()
+            mysql_conn.close()
 
     @classmethod
     def _updateToDB(cls, query):
