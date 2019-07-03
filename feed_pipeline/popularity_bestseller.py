@@ -94,7 +94,8 @@ if __name__ == '__main__':
   order_data = pd.merge(order_data, product_validity, how='left', on=['product_id'])
   order_data.valid = order_data.valid.fillna(1)
   order_data.orders = order_data.apply(lambda x: 0 if not x['valid'] else x['orders'], axis=1)
-  
+
+  bestseller_data.remove({})
   
   calculate_bestseller_category(order_data)
   calculate_bestseller_brand(order_data)
