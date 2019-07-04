@@ -978,7 +978,9 @@ class CatalogIndexer:
                         doc['visible_after_color_filter_i'] = 0
                 elif doc.get('type', '') != 'simple':
                     doc['visible_after_color_filter_i'] = 0
-                doc['is_bestseller_i'] = 1 if doc['product_id'] in bestsellers else 0
+                doc['custom_tags'] = []
+                if doc['product_id'] in bestsellers:
+                    doc['custom_tags'].append('BESTSELLER')
                 
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
