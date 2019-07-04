@@ -94,7 +94,7 @@ def calculate_bestseller_brand(order_data):
     try:
       bestseller_data.update({"_id": row['product_id']}, {"type": "brand", "key": row['brand_code']}, upsert=True)
       if row['parent_id'] != row['product_id']:
-        bestseller_data.update({"_id": row['parent_id']}, {"type": "category", "key": row['l3_id']}, upsert=True)
+        bestseller_data.update({"_id": row['parent_id']}, {"type": "brand", "key": row['brand_code']}, upsert=True)
     except:
       print("[ERROR] bestseller_data.update error %s " % row['product_id'])
       raise
