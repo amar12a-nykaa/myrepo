@@ -18,6 +18,10 @@ client = MongoUtils.getClient()
 bestseller_data = client['search']['bestseller_data']
 order_table = client['search']['order_data']
 
+NO_OF_BRANDS_TO_CONSIDER = 100
+NO_OF_PRODUCTS_FROM_EACH_BRAND = 2
+NO_OF_PRODUCTS_FROM_EACH_CATEGORY = 5
+
 #_id:product_id, type:[brand,category]
 
 def get_order_data(startdate, enddate):
@@ -48,7 +52,7 @@ def calculate_bestseller_category(order_data):
   product_category_mapping = product_category_mapping.astype({'product_id': str})
   
   df = pd.merge(order_data, product_category_mapping, how='inner', on=['product_id'])
-  df = df.sort_values('orders', ascending=False).groupby('l3_id').head(5)
+  df = df.sort_values('orders', ascending=False).groupby('l3_id').head(NO_OF_PRODUCTS_FROM_EACH_CATEGORY)
   ctr = LoopCounter(name='Writing popularity to db', total=len(df.index))
   for i, row in df.iterrows():
     ctr += 1
@@ -68,9 +72,16 @@ def calculate_bestseller_brand(order_data):
   brand_data = pd.read_sql(query, con=redshift_conn)
   redshift_conn.close()
   brand_data = brand_data.astype({'product_id': str})
+
+  query = """select brands_v1 as brand_code, brand_popularity from brands order by brand_popularity desc limit %s"""%(NO_OF_BRANDS_TO_CONSIDER)
+  mysql_conn = PasUtils.mysqlConnection()
+  brand_popularity = pd.read_sql(query, con=mysql_conn)
+  mysql_conn.close()
+  
+  brand_data = pd.merge(brand_data, brand_popularity, on='brand_code')
   
   df = pd.merge(order_data, brand_data, how='inner', on=['product_id'])
-  df = df.sort_values('orders', ascending=False).groupby('brand_code').head(2)
+  df = df.sort_values('orders', ascending=False).groupby('brand_code').head(NO_OF_PRODUCTS_FROM_EACH_BRAND)
   ctr = LoopCounter(name='Writing popularity to db', total=len(df.index))
   for i, row in df.iterrows():
     ctr += 1
