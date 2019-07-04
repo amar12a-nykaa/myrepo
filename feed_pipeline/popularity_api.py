@@ -12,7 +12,7 @@ from disc.v2.utils import Utils as DiscUtils
 
 client = MongoUtils.getClient()
 popularity_table = client['search']['popularity']
-bestseller_data = client['search']['bestseller_data ']
+bestseller_data = client['search']['bestseller_data']
 
 def get_popularity_for_id(product_id, parent_id=None):
   res = list(popularity_table.find({"_id": product_id}))
