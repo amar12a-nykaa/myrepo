@@ -407,7 +407,7 @@ def handleColdStart(df):
   result = pd.merge(result, brand_popularity, on='brand_code')
 
   def normalize_90_to_99(a):
-    return ((a - min(a) / (max(a) - min(a))) * 9) + 90
+    return round(((a - min(a))/(max(a) - min(a)))*9) + 90
 
   result['brand_popularity'] = normalize_90_to_99(result['brand_popularity'])
   result = result.loc[result['sku_created'].notnull()]
@@ -416,8 +416,8 @@ def handleColdStart(df):
     date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['sku_created']).astype(datetime.datetime))).days
     if date_diff > 0:
         percentile_value = row['brand_popularity']
-        med_popularity = row['popularity_'+str(percentile_value)]
-        med_popularity_new = row['popularity_new_'+str(percentile_value)]
+        med_popularity = row['popularity_'+str(int(percentile_value))]
+        med_popularity_new = row['popularity_new_'+str(int(percentile_value))]
         if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
           med_popularity = row['popularity_99']
           med_popularity_new = row['popularity_new_99']
