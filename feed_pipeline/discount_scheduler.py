@@ -14,7 +14,6 @@ import subprocess
 import queue
 import threading
 import traceback
-import dateutil.parser
 import json
 sys.path.append("/home/ubuntu/nykaa_scripts/")
 from utils.priceUpdateLogUtils import PriceUpdateLogUtils
@@ -132,10 +131,8 @@ class ScheduledPriceUpdater:
 
         total_count = incrementGlobalCounter(len(update_docs))
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
-
-        schedule_start = dateutil.parser.parse(schedule_start, dayfirst=True)
-        schedule_end = dateutil.parser.parse(schedule_end, dayfirst=True)
-        PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", schedule_start, schedule_end,totalProductsToLog)
+        if totalProductsToLog:
+            PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", schedule_start, schedule_end,totalProductsToLog)
 
     def update():
         # Current time
@@ -219,10 +216,9 @@ class ScheduledPriceUpdater:
             print(traceback.format_exc())
 
         print("\n[%s] Total %s products updated." % (getCurrentDateTime(), product_updated_count))
-        schedule_start = dateutil.parser.parse(last_datetime, dayfirst=True)
-        schedule_end = dateutil.parser.parse(current_datetime, dayfirst=True)
-        PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", schedule_start,
-                                                                  schedule_end, totalBundlesToLog)
+        if totalBundlesToLog:
+            PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", last_datetime,
+                                                                      current_datetime, totalBundlesToLog)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
