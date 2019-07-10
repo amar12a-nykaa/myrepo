@@ -60,11 +60,12 @@ def get_category_details():
 
   #Category id - name mapping
   nykaa_redshift_connection = PasUtils.redshiftConnection()
-  query = """select  distinct l3_id, l3_name as primary_l3 from product_category_mapping
-              where ( l1_id not in (77,194,214,7287,3048)
+  query = """select distinct l3_id, l3_name as primary_l3 from product_category_mapping
+              where ( l1_id not in (77,194,9564,7287,3048)
                 and lower(l2_name) not like '%shop by%'
-                and l3_id not in (4036,3746,3745,3819)
-                  or l2_id in (566,7288));"""
+                and l3_id not in (4036,3746,3745,3819,6620,6621)
+                  or l2_id in (9614, 1286));"""
+
   results = PasUtils.fetchResults(nykaa_redshift_connection, query)
   for row in results:
     _id = str(row['l3_id'])
