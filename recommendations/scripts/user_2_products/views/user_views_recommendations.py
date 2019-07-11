@@ -85,7 +85,7 @@ def generate_products_corpus(product_ids):
 def prepare_views_ca_dataframe(files):
     schema = StructType([
         StructField("Date", StringType(), True),
-        StructField("Customer ID (evar23)", IntegerType(), True),
+        StructField("Customer ID (evar23)", StringType(), True),
         StructField("Products", IntegerType(), True),
         StructField("Product Views", IntegerType(), True),
         StructField("Cart Additions", IntegerType(), True)])
@@ -114,6 +114,14 @@ def prepare_views_ca_dataframe(files):
     results = ESUtils.scrollESForResults()
     print('Scrolling ES done')
 
+    child_2_parent = results['child_2_parent']
+    def convert_to_parent(product_id):
+        return child_2_parent.get(product_id, product_id)
+
+    convert_to_parent_udf = udf(convert_to_parent, IntegerType())
+    print('Converting product_id to parent')
+    df = df.withColumn("product_id", convert_to_parent_udf(df['product_id']))
+
     product_2_l3_category = {product_id: json.loads(categories[0])['l3']['id'] for product_id, categories in results['primary_categories'].items()}
     results['product_2_l3_category'] = product_2_l3_category
     l3_udf = udf(lambda product_id: product_2_l3_category.get(product_id), StringType())
@@ -138,8 +146,8 @@ def generate_recommendations(all_products, lsi_model, days=None, limit=None):
     csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 30 , csvs_path))
     print(csvs_path)
     #update_csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")) >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24)).date() , csvs_path))
-    df, results = prepare_views_ca_dataframe(csvs_path)
-    customer_ids_need_update = [] 
+    df, results = DataUtils.prepare_views_ca_dataframe(spark, csvs_path, VIEWS_CA_S3_PREFIX, '/data/u2p/views/data/', True)
+    customer_ids_need_update = []
     if days:
         customer_ids_need_update = df.filter(col('date') >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24*days)).date()).select(["customer_id"]).distinct().rdd.flatMap(lambda x: x).collect()
         if limit:
@@ -148,7 +156,7 @@ def generate_recommendations(all_products, lsi_model, days=None, limit=None):
         print("Total number of customer_id=%d" % len(customer_ids_need_update))
         df = df.filter(col('customer_id').isin(customer_ids_need_update))
         print("Total Number of rows now: %d" % df.count())
-        
+ 
 
     # TODO need to take into account the timezone offset
     def calculate_weight(row_date, views, cart_additions):
@@ -206,7 +214,7 @@ if __name__ == '__main__':
     parser.add_argument('--days', type=int)
     parser.add_argument('--limit', type=int)
     parser.add_argument('--platform', default='nykaa', choices=['nykaa','men'])
-    
+ 
     argv = vars(parser.parse_args())
     do_prepare_model = argv.get('prepare_model')
     gen_user_recommendations = argv.get('gen_user_recommendations')
