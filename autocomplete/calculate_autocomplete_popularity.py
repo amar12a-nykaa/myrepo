@@ -81,6 +81,28 @@ def get_category_data():
   return category_data
 
 
+def get_brand_data():
+  brand_info = {}
+  nykaa_replica_db_conn = PasUtils.nykaaMysqlConnection(force_production=True)
+  query = """select distinct name, id, url, brands_v1
+              FROM(
+                 SELECT nkb.name AS name, nkb.brand_id AS id, cur.request_path AS url, ci.brand_id AS brands_v1
+                 FROM nk_brands nkb
+                 INNER JOIN nykaalive1.core_url_rewrite cur ON nkb.brand_id=cur.category_id
+                 INNER JOIN nykaalive1.category_information ci ON cur.category_id=ci.cat_id
+                 WHERE cur.product_id IS NULL
+              )A"""
+  results = PasUtils.fetchResults(nykaa_replica_db_conn, query)
+  for brand in results:
+    brand_name = brand['name'].replace("’", "'")
+    brand_name = strip_accents(brand_name)
+    if brand_name is not None:
+      brand_upper = brand_name.strip()
+      brand_info[brand['id']] = {'brand_url': brand['url'], 'brands_v1': brand['brands_v1'], 'brand_name': brand_upper}
+  nykaa_replica_db_conn.close()
+  return brand_info
+
+
 def get_popularity_data_from_es(valid_category_list):
   global base_aggregation
   query = {
@@ -275,6 +297,8 @@ def process_brand(brand_data):
 
 
 def process_brand_category(brand_category_data):
+  global category_info
+  global brand_info
   data = {}
   data['brand_id'] = []
   data['category_id'] = []
@@ -295,30 +319,40 @@ def process_brand_category(brand_category_data):
   for tag in VALID_CATALOG_TAGS:
     brand_category_popularity[tag] = 100 * normalize(brand_category_popularity[tag])
   brand_category_popularity.to_csv('brand_category_popularity.csv', index=False)
+
+  mysql_conn = PasUtils.mysqlConnection('w')
+  cursor = mysql_conn.cursor()
+  if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category'"):
+    PasUtils.mysql_write("""create table brand_category(brand varchar(30), brand_id varchar(32), category_id varchar(32),
+                            category_name varchar(32), popularity float, popularity_men float, popularity_pro float, popularity_luxe float)""")
+  PasUtils.mysql_write("delete from brand_category", connection=mysql_conn)
+  
+  query = """REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity, popularity_men, popularity_pro, popularity_luxe)
+              VALUES ('%s', '%s', '%s', '%s', %s, %s, %s, %s)"""
+  brand_category_popularity = pd.merge(brand_category_popularity, category_info, on='category_id')
+  ctr = LoopCounter(name='Writing category popularity to db', total=len(brand_category_popularity.index))
+  for id, row in brand_category_popularity.iterrows():
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
+    
+    row = dict(row)
+    if row['brand_id'] not in brand_info:
+      continue
+    values = (brand_info[row['brand_id']]['brand_name'], row['category_name'], row['category_name'], row['nykaa'],
+              row['men'], row['pro'], row['luxe'])
+    cursor.execute(query, values)
+    mysql_conn.commit()
+
+  cursor.close()
+  mysql_conn.close()
+  
   return brand_category_popularity
   
 
 def db_insert_brand(brand_popularity, top_category):
   global category_info
-  
-  brand_info = {}
-  nykaa_replica_db_conn = PasUtils.nykaaMysqlConnection(force_production=True)
-  query = """select distinct name, id, url, brands_v1
-            FROM(
-               SELECT nkb.name AS name, nkb.brand_id AS id, cur.request_path AS url, ci.brand_id AS brands_v1
-               FROM nk_brands nkb
-               INNER JOIN nykaalive1.core_url_rewrite cur ON nkb.brand_id=cur.category_id
-               INNER JOIN nykaalive1.category_information ci ON cur.category_id=ci.cat_id
-               WHERE cur.product_id IS NULL
-            )A"""
-  results = PasUtils.fetchResults(nykaa_replica_db_conn, query)
-  for brand in results:
-    brand_name = brand['name'].replace("’", "'")
-    brand_name = strip_accents(brand_name)
-    if brand_name is not None:
-      brand_upper = brand_name.strip()
-      brand_info[brand['id']] = {'brand_url': brand['url'], 'brands_v1': brand['brands_v1'], 'brand_name': brand_upper}
-  nykaa_replica_db_conn.close()
+  global brand_info
   
   top_category_brand = {}
   top_category = pd.merge(top_category, category_info, on='category_id')
@@ -368,6 +402,7 @@ def calculate_popularity_autocomplete():
   
 
 category_info = get_category_data()
+brand_info = get_brand_data()
 if __name__ == "__main__":
   # create_category_info()
   calculate_popularity_autocomplete()
