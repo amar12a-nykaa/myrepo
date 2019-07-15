@@ -125,7 +125,7 @@ def process_category(category_data):
   for category in category_data:
     popularity_data = {'category_id': category.get('key', 0)}
     for bucket in category.get('tags', {}).get('buckets', []):
-      popularity_data[bucket.get('key')] = bucket.get('popularity_sum', 0)
+      popularity_data[bucket.get('key')] = bucket.get('popularity_sum', {}).get('value', 0)
     
     data['category_id'].append(popularity_data.get('category_id'))
     for tag in VALID_CATALOG_TAGS:
@@ -145,7 +145,7 @@ def process_brand(brand_data):
   for brand in brand_data:
     popularity_data = {'brand_id': brand.get('key', 0)}
     for bucket in brand.get('tags', {}).get('buckets', []):
-      popularity_data[bucket.get('key')] = bucket.get('popularity_sum', 0)
+      popularity_data[bucket.get('key')] = bucket.get('popularity_sum', {}).get('value', 0)
     
     data['brand_id'].append(popularity_data.get('brand_id'))
     for tag in VALID_CATALOG_TAGS:
@@ -167,7 +167,7 @@ def process_brand_category(brand_category_data):
     for brand in category.get('brands', {}).get('buckets', []):
       popularity_data = {'category_id': category.get('key', 0), 'brand_id': brand.get('key', 0)}
       for bucket in brand.get('tags', {}).get('buckets', []):
-        popularity_data[bucket.get('key')] = bucket.get('popularity_sum', 0)
+        popularity_data[bucket.get('key')] = bucket.get('popularity_sum', {}).get('value', 0)
       data['category_id'].append(popularity_data.get('category_id'))
       data['brand_id'].append(popularity_data.get('brand_id'))
       for tag in VALID_CATALOG_TAGS:
