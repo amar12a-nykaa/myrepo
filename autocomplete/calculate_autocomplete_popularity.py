@@ -1,12 +1,30 @@
 import sys
 import pandas as pd
+import json
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
+from loopcounter import LoopCounter
 
 VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro']
+BLACKLISTED_FACETS = ['old_brand_facet', ]
+POPULARITY_THRESHOLD = 0.1
+base_aggregation = {
+    "tags": {
+      "terms": {
+        "field": "catalog_tag.keyword",
+        "include": VALID_CATALOG_TAGS,
+        "size": 10
+      },
+      "aggs": {
+        "popularity_sum": {
+          "sum": {"field": "popularity"}
+        }
+      }
+    }
+  }
 
 def create_category_info():
   print("retrieving data")
@@ -63,20 +81,7 @@ def get_category_data():
 
 
 def get_popularity_data_from_es(valid_category_list):
-  base_aggregation = {
-    "tags": {
-      "terms": {
-        "field": "catalog_tag.keyword",
-        "include": VALID_CATALOG_TAGS,
-        "size": 10
-      },
-      "aggs": {
-        "popularity_sum": {
-          "sum": {"field": "popularity"}
-        }
-      }
-    }
-  }
+  global base_aggregation
   query = {
     "size": 0,
     "aggs": {
@@ -117,9 +122,88 @@ def get_popularity_data_from_es(valid_category_list):
   results = es.search(index='livecore', body=query, request_timeout=120)
   aggregation = results["aggregations"]
   return aggregation["category_data"]["buckets"], aggregation["brand_data"]["buckets"], aggregation["brand_category_data"]["buckets"]
-  
 
+
+def getAggQueryResult(valid_category_list, facet1, facet2):
+  global base_aggregation
+  key1 = facet1 + ".keyword"
+  key2 = facet2 + ".keyword"
+
+  query = {
+    "aggs": {
+      "categories": {
+        "terms": {
+          "field": "category_ids.keyword",
+          "include": valid_category_list,
+          "size": 200
+        },
+        "aggs": {
+          facet1: {"terms": {"field": key1, "size": 100}, "aggs": base_aggregation},
+          facet2: {"terms": {"field": key2, "size": 100}, "aggs": base_aggregation}
+        }
+      }
+    },
+    "size": 0
+  }
+  es = EsUtils.get_connection()
+  results = es.search(index='livecore', body=query, request_timeout=120)
+  return results['aggregations']['categories']['buckets']
+
+
+def getFacetPopularityArray(results, data):
+  is_good_facet = False
+  for catbucket in results:
+    facet_names = [x for x in catbucket.keys() if '_facet' in x]
+    for facet_name in facet_names:
+      if facet_name in ['color_facet']:
+        is_good_facet = True
+
+      facet = catbucket[facet_name]
+      for facet_bucket in facet['buckets']:
+        facet_bucket['key'] = json.loads(facet_bucket['key'])
+        coverage_percentage = facet_bucket['doc_count'] / catbucket['doc_count'] * 100
+        if 5 < coverage_percentage < 95:
+          is_good_facet = True
+        name = facet_bucket['key']['name'].lower()
+        popularity_data = {}
+        for bucket in facet_bucket.get('tags', {}).get('buckets', []):
+          popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
+        
+        if is_good_facet:
+          data['category_id'].append(catbucket['key'])
+          data['facet_name'].append(facet_name)
+          data['facet_val'].append(name)
+          for tag in VALID_CATALOG_TAGS:
+            data[tag].append(popularity_data.get(tag, 0))
+  return data
+
+
+def get_category_facet_popularity(valid_category_list):
+  data = {}
+  data['category_id'] = []
+  data['facet_name'] = []
+  data['facet_val'] = []
+  for tag in VALID_CATALOG_TAGS:
+    data[tag] = []
+
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "benefits_facet", "color_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "concern_facet", "coverage_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "finish_facet", "formulation_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "gender_facet", "hair_type_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "filter_size_facet", "speciality_search_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "filter_product_facet", "usage_period_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "spf_facet", "preference_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "skin_tone_facet", "skin_type_facet"), data)
+  
+  facet_popularity = pd.DataFrame.from_dict(data)
+  for tag in VALID_CATALOG_TAGS:
+    facet_popularity[tag] = 100 * normalize(facet_popularity[tag])
+  facet_popularity.to_csv('facet_pop.csv', index=False)
+  return facet_popularity
+  
+  
 def process_category(category_data):
+  global category_info
   data = {}
   data['category_id'] = []
   for tag in VALID_CATALOG_TAGS:
@@ -197,7 +281,8 @@ def calculate_popularity_autocomplete():
   category_popularity = process_category(category_data)
   brand_popularity = process_brand(brand_data)
   brand_category_popularity = process_brand_category(brand_category_data)
-  
+  category_facet_popularity = get_category_facet_popularity(valid_category_list)
+
   
   
 
