@@ -69,6 +69,11 @@ if recent_missing_dates_raw or recent_missing_dates_preprocess or recent_missing
   cmd="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity.py --popularity -n0 -y " 
   print(cmd)
   os.system(cmd)
+  
+  #add bestsellers data in mongo
+  cmd="/usr/bin/python /nykaa/scripts/feed_pipeline/popularity_bestseller.py"
+  print(cmd)
+  os.system(cmd)
 else:
   print("Everything is up to date. Doing nothing.")
 
