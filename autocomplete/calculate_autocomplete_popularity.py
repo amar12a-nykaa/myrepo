@@ -223,6 +223,30 @@ def process_category(category_data):
     category_popularity[tag] = 100 * normalize(category_popularity[tag]) + 100
     category_popularity[tag] = category_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
   category_popularity.to_csv('category_pop.csv', index=False)
+
+  mysql_conn = PasUtils.mysqlConnection('w')
+  cursor = mysql_conn.cursor()
+  PasUtils.mysql_write("delete from l3_categories", connection=mysql_conn)
+  query = """REPLACE INTO l3_categories(id, name, url, category_popularity, popularity_men, popularity_pro, popularity_luxe)
+                  VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+  
+  data = pd.merge(category_popularity, category_info, on='category_id')
+  ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
+  for id, row in data.iterrows():
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
+
+    row = dict(row)
+    values = (row['category_id'], row['category_name'], row['category_url'], row['nykaa'], row['men'], row['pro'], row['luxe'])
+    cursor.execute(query, values)
+    mysql_conn.commit()
+
+  cursor.close()
+  mysql_conn.close()
+
+  PasUtils.mysql_write(
+    "create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%';")
   return category_popularity
 
 
