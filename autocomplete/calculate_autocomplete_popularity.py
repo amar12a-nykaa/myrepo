@@ -181,10 +181,12 @@ def process_brand_category(brand_category_data):
 def calculate_popularity_autocomplete():
   global category_info
   valid_category_list = list(category_info.category_id.values)
+  valid_category_list = [int(id) for id in valid_category_list]
   category_data, brand_data, brand_category_data = get_popularity_data_from_es(valid_category_list)
   category_popularity = process_category(category_data)
   brand_popularity = process_brand(brand_data)
   brand_category_popularity = process_brand_category(brand_category_data)
+  
   
   
 
