@@ -1,6 +1,5 @@
 import sys
 import pandas as pd
-from pandas.io import sql
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
@@ -138,6 +137,7 @@ def process_category(category_data):
   category_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
     category_popularity[tag] = 100 * normalize(category_popularity[tag]) + 100
+    category_popularity[tag] = category_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
   category_popularity.to_csv('category_pop.csv', index=False)
   return category_popularity
 
@@ -160,6 +160,7 @@ def process_brand(brand_data):
   brand_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
     brand_popularity[tag] = 200 * normalize(brand_popularity[tag]) + 100
+    brand_popularity[tag] = brand_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
   brand_popularity.to_csv('brand_pop.csv', index=False)
   return brand_popularity
 
