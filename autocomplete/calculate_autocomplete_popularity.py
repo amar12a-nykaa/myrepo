@@ -27,37 +27,6 @@ base_aggregation = {
     }
   }
 
-def create_category_info():
-  print("retrieving data")
-  magento_db = PasUtils.nykaaMysqlConnection()
-  category_data = pd.read_sql("select category_id, parent_id, name, depth, catalog_tag from nk_categories", con=magento_db)
-  print("retrieved")
-  product_l1 = category_data.loc[category_data['depth'] == 0]
-  product_l2 = category_data.loc[category_data['depth'] == 1]
-  product_l3 = category_data.loc[category_data['depth'] == 2]
-  product_l4 = category_data.loc[category_data['depth'] == 3]
-
-  product_l1.rename(columns={'category_id': 'l1_id', 'parent_id': 'l1_parent_id', 'name': 'l1_name', 'catalog_tag': 'l1_catalog_tag'}, inplace=True)
-  product_l2.rename(columns={'category_id': 'l2_id', 'parent_id': 'l2_parent_id', 'name': 'l2_name', 'catalog_tag': 'l2_catalog_tag'}, inplace=True)
-  product_l3.rename(columns={'category_id': 'l3_id', 'parent_id': 'l3_parent_id', 'name': 'l3_name', 'catalog_tag': 'l3_catalog_tag'}, inplace=True)
-  product_l4.rename(columns={'category_id': 'l4_id', 'parent_id': 'l4_parent_id', 'name': 'l4_name', 'catalog_tag': 'l4_catalog_tag'}, inplace=True)
-  print("merging")
-  df = pd.merge(product_l1, product_l2, how='left', left_on=['l1_id'],right_on=['l2_parent_id'])
-  df = pd.merge(df, product_l3, how='left', left_on=['l2_id'], right_on=['l3_parent_id'])
-  df = pd.merge(df, product_l4, how='left', left_on=['l3_id'], right_on=['l4_parent_id'])
-  print(df)
-  # df = df[['l1_name', 'l2_name', 'l3_name', 'l4_name', 'l1_id', 'l2_id', 'l3_id', 'l4_id', 'catalog_tag']]
-  df.l1_id = df.l1_id.fillna(0)
-  df.l2_id = df.l2_id.fillna(0)
-  df.l3_id = df.l3_id.fillna(0)
-  df.l4_id = df.l4_id.fillna(0)
-
-  df = df.astype({'l2_id': int, 'l3_id': int, 'l4_id': int})
-  print("writing")
-  df.to_csv('category_mapping.csv', index=False)
-  magento_db.close()
-  return
-  
 
 def normalize(a):
   return (a-min(a))/(max(a)-min(a))
@@ -201,7 +170,7 @@ def getFacetPopularityArray(results, data):
   return data
 
 
-def get_category_facet_popularity(valid_category_list):
+def process_category_facet_popularity(valid_category_list):
   global category_info
   
   data = {}
@@ -421,13 +390,11 @@ def calculate_popularity_autocomplete():
   brand_category_popularity = process_brand_category(brand_category_data)
   top_category = brand_category_popularity.sort_values('nykaa', ascending=False).groupby('brand_id').head(5)
   db_insert_brand(brand_popularity, top_category)
-  category_facet_popularity = get_category_facet_popularity(valid_category_list)
-
-  
+  process_category_facet_popularity(valid_category_list)
+  return
   
 
 category_info = get_category_data()
 brand_info = get_brand_data()
 if __name__ == "__main__":
-  # create_category_info()
   calculate_popularity_autocomplete()
