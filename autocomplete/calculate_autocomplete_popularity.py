@@ -7,6 +7,7 @@ from pas.v2.utils import Utils as PasUtils
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
 from loopcounter import LoopCounter
+from idutils import strip_accents
 
 VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro']
 BLACKLISTED_FACETS = ['old_brand_facet', ]
@@ -297,6 +298,60 @@ def process_brand_category(brand_category_data):
   return brand_category_popularity
   
 
+def db_insert_brand(brand_popularity, top_category):
+  global category_info
+  
+  brand_info = {}
+  nykaa_replica_db_conn = PasUtils.nykaaMysqlConnection(force_production=True)
+  query = """select distinct name, id, url, brands_v1
+            FROM(
+               SELECT nkb.name AS name, nkb.brand_id AS id, cur.request_path AS url, ci.brand_id AS brands_v1
+               FROM nk_brands nkb
+               INNER JOIN nykaalive1.core_url_rewrite cur ON nkb.brand_id=cur.category_id
+               INNER JOIN nykaalive1.category_information ci ON cur.category_id=ci.cat_id
+               WHERE cur.product_id IS NULL
+            )A"""
+  results = PasUtils.fetchResults(nykaa_replica_db_conn, query)
+  for brand in results:
+    brand_name = brand['name'].replace("’", "'")
+    brand_name = strip_accents(brand_name)
+    if brand_name is not None:
+      brand_upper = brand_name.strip()
+      brand_info[brand['id']] = {'brand_url': brand['url'], 'brands_v1': brand['brands_v1'], 'brand_name': brand_upper}
+  nykaa_replica_db_conn.close()
+  
+  top_category_brand = {}
+  top_category = pd.merge(top_category, category_info, on='category_id')
+  for id, row in top_category.iterrows():
+    row= dict(row)
+    if row['brand_id'] not in top_category_brand:
+      top_category_brand[row['brand_id']] = []
+    if row['brand_id'] not in brand_info:
+      continue
+    url = brand_info[row['brand_id']]['brand_url'] + "?cat=%s" % row['category_id']
+    top_category_brand[row['brand_id']].append({"category": row['category_name'], "category_id": row['category_id'], "category_url": url})
+
+  mysql_conn = PasUtils.mysqlConnection('w')
+  cursor = mysql_conn.cursor()
+  PasUtils.mysql_write("delete from brands", connection=mysql_conn)
+  query = """REPLACE INTO brands (brand, brand_id, brands_v1, brand_popularity, popularity_men, popularity_pro, popularity_luxe,
+              top_categories, brand_url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+  ctr = LoopCounter(name='Writing brand popularity to db', total=len(brand_popularity.index))
+  for id, row in brand_popularity.iterrows():
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
+  
+    row = dict(row)
+    if row['brand_id'] not in brand_info:
+      print("Skipping brand %s" % row['brand_id'])
+      continue
+    values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], brand_info[row['brand_id']]['brands_v1'], row["nykaa"],
+              row["men"], row["pro"], row["luxe"], json.dumps(top_category_brand[row['brand_id']]), brand_info[row['brand_id']]['brand_url'])
+    cursor.execute(query, values)
+    mysql_conn.commit()
+    
+  
 def calculate_popularity_autocomplete():
   global category_info
   valid_category_list = list(category_info.category_id.values)
@@ -305,6 +360,8 @@ def calculate_popularity_autocomplete():
   category_popularity = process_category(category_data)
   brand_popularity = process_brand(brand_data)
   brand_category_popularity = process_brand_category(brand_category_data)
+  top_category = brand_category_popularity.sort_values('nykaa', ascending=False).groupby('brand_id').head(5)
+  db_insert_brand(brand_popularity, top_category)
   category_facet_popularity = get_category_facet_popularity(valid_category_list)
 
   
