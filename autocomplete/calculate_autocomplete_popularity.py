@@ -40,7 +40,11 @@ def create_category_info():
   magento_db.close()
   return
   
-  
+
+def normalize(a):
+  return (a-min(a))/(max(a)-min(a))
+
+
 def get_category_data():
   query = """select distinct l3_id as category_id, l3_name as category_name from product_category_mapping
               where ( l1_id not in (77,194,9564,7287,3048)
@@ -125,13 +129,15 @@ def process_category(category_data):
   for category in category_data:
     popularity_data = {'category_id': category.get('key', 0)}
     for bucket in category.get('tags', {}).get('buckets', []):
-      popularity_data[bucket.get('key')] = bucket.get('popularity_sum', {}).get('value', 0)
+      popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
     
     data['category_id'].append(popularity_data.get('category_id'))
     for tag in VALID_CATALOG_TAGS:
       data[tag].append(popularity_data.get(tag, 0))
   
   category_popularity = pd.DataFrame.from_dict(data)
+  for tag in VALID_CATALOG_TAGS:
+    category_popularity[tag] = 100 * normalize(category_popularity[tag]) + 100
   category_popularity.to_csv('category_pop.csv', index=False)
   return category_popularity
 
@@ -145,13 +151,15 @@ def process_brand(brand_data):
   for brand in brand_data:
     popularity_data = {'brand_id': brand.get('key', 0)}
     for bucket in brand.get('tags', {}).get('buckets', []):
-      popularity_data[bucket.get('key')] = bucket.get('popularity_sum', {}).get('value', 0)
+      popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
     
     data['brand_id'].append(popularity_data.get('brand_id'))
     for tag in VALID_CATALOG_TAGS:
       data[tag].append(popularity_data.get(tag, 0))
   
   brand_popularity = pd.DataFrame.from_dict(data)
+  for tag in VALID_CATALOG_TAGS:
+    brand_popularity[tag] = 200 * normalize(brand_popularity[tag]) + 100
   brand_popularity.to_csv('brand_pop.csv', index=False)
   return brand_popularity
 
@@ -167,13 +175,15 @@ def process_brand_category(brand_category_data):
     for brand in category.get('brands', {}).get('buckets', []):
       popularity_data = {'category_id': category.get('key', 0), 'brand_id': brand.get('key', 0)}
       for bucket in brand.get('tags', {}).get('buckets', []):
-        popularity_data[bucket.get('key')] = bucket.get('popularity_sum', {}).get('value', 0)
+        popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
       data['category_id'].append(popularity_data.get('category_id'))
       data['brand_id'].append(popularity_data.get('brand_id'))
       for tag in VALID_CATALOG_TAGS:
         data[tag].append(popularity_data.get(tag, 0))
   
   brand_category_popularity = pd.DataFrame.from_dict(data)
+  for tag in VALID_CATALOG_TAGS:
+    brand_category_popularity[tag] = 100 * normalize(brand_category_popularity[tag])
   brand_category_popularity.to_csv('brand_category_popularity.csv', index=False)
   return brand_category_popularity
   
