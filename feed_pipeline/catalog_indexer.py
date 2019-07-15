@@ -29,7 +29,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 from pipelineUtils import PipelineUtils
-from popularity_api import get_popularity_for_id, validate_popularity_data_health
+from popularity_api import get_popularity_for_id, validate_popularity_data_health, get_bestseller_products
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
@@ -488,6 +488,7 @@ class CatalogIndexer:
         pws_fetch_products = []
         size_filter_flag = 0
         csvfile = open(cls.filepath, 'a')
+        bestsellers = get_bestseller_products()
         # index_start = timeit.default_timer()
         for index, row in enumerate(records):
             try:
@@ -977,6 +978,9 @@ class CatalogIndexer:
                         doc['visible_after_color_filter_i'] = 0
                 elif doc.get('type', '') != 'simple':
                     doc['visible_after_color_filter_i'] = 0
+                doc['custom_tags'] = []
+                if doc['product_id'] in bestsellers:
+                    doc['custom_tags'].append('BESTSELLER')
                 
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)

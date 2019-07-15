@@ -12,6 +12,7 @@ from disc.v2.utils import Utils as DiscUtils
 
 client = MongoUtils.getClient()
 popularity_table = client['search']['popularity']
+bestseller_data = client['search']['bestseller_data']
 
 def get_popularity_for_id(product_id, parent_id=None):
   res = list(popularity_table.find({"_id": product_id}))
@@ -34,6 +35,14 @@ def get_popularity_for_id(product_id, parent_id=None):
   #   ret[product_id] = parent_obj
 
   return ret
+
+def get_bestseller_products():
+  product_list = list(bestseller_data.find({},{"_id": 1}))
+  res = []
+  for obj in product_list:
+    res.append(obj.get('_id'))
+  return res
+
 
 def validate_popularity_data_health():
   count = popularity_table.count()
