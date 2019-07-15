@@ -202,6 +202,8 @@ def getFacetPopularityArray(results, data):
 
 
 def get_category_facet_popularity(valid_category_list):
+  global category_info
+  
   data = {}
   data['category_id'] = []
   data['facet_name'] = []
@@ -222,6 +224,30 @@ def get_category_facet_popularity(valid_category_list):
   for tag in VALID_CATALOG_TAGS:
     facet_popularity[tag] = 100 * normalize(facet_popularity[tag])
   facet_popularity.to_csv('facet_pop.csv', index=False)
+
+  mysql_conn = PasUtils.mysqlConnection('w')
+  cursor = mysql_conn.cursor()
+  if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category_facets'"):
+    PasUtils.mysql_write("""create table brand_category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32),
+                                category_name varchar(32), facet varchar(20), popularity float, popularity_men float, popularity_pro float, popularity_luxe float)""")
+  PasUtils.mysql_write("delete from brand_category_facets", connection=mysql_conn)
+
+  query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, popularity_men,
+                popularity_pro, popularity_luxe) VALUES ('%s', '%s', '%s', '%s', %s, %s, %s, %s) """
+  data = pd.merge(facet_popularity, category_info, on='category_id')
+  ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
+  for id, row in data.iterrows():
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
+  
+    row = dict(row)
+    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row['nykaa'], row['men'], row['pro'], row['luxe'])
+    cursor.execute(query, values)
+    mysql_conn.commit()
+
+  cursor.close()
+  mysql_conn.close()
   return facet_popularity
   
   
@@ -268,10 +294,9 @@ def process_category(category_data):
   cursor.close()
   mysql_conn.close()
 
-  PasUtils.mysql_write(
-    "create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%';")
-  return category_popularity
-
+  PasUtils.mysql_write("""create or replace view l3_categories_clean as select * from l3_categories
+                              where url not like '%luxe%' and url not like '%shop-by-concern%';""")
+  return
 
 def process_brand(brand_data):
   data = {}
@@ -391,7 +416,7 @@ def calculate_popularity_autocomplete():
   valid_category_list = list(category_info.category_id.values)
   valid_category_list = [int(id) for id in valid_category_list]
   category_data, brand_data, brand_category_data = get_popularity_data_from_es(valid_category_list)
-  category_popularity = process_category(category_data)
+  process_category(category_data)
   brand_popularity = process_brand(brand_data)
   brand_category_popularity = process_brand_category(brand_category_data)
   top_category = brand_category_popularity.sort_values('nykaa', ascending=False).groupby('brand_id').head(5)
