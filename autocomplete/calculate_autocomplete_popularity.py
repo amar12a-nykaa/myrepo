@@ -69,7 +69,7 @@ def get_brand_data():
     brand_name = strip_accents(brand_name)
     if brand_name is not None:
       brand_upper = brand_name.strip()
-      brand_info[brand['id']] = {'brand_url': brand['url'], 'brands_v1': brand['brands_v1'], 'brand_name': brand_upper}
+      brand_info[str(brand['id'])] = {'brand_url': brand['url'], 'brands_v1': brand['brands_v1'], 'brand_name': brand_upper}
   nykaa_replica_db_conn.close()
   return brand_info
 
