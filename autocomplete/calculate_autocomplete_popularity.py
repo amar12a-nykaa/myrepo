@@ -118,6 +118,108 @@ def get_popularity_data_from_es(valid_category_list):
   return aggregation["category_data"]["buckets"], aggregation["brand_data"]["buckets"], aggregation["brand_category_data"]["buckets"]
 
 
+def process_category_facet_popularity(valid_category_list):
+  global category_info
+  
+  data = {}
+  data['category_id'] = []
+  data['facet_name'] = []
+  data['facet_val'] = []
+  for tag in VALID_CATALOG_TAGS:
+    data[tag] = []
+  
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "benefits_facet", "color_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "concern_facet", "coverage_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "finish_facet", "formulation_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "gender_facet", "hair_type_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "filter_size_facet", "speciality_search_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "filter_product_facet", "usage_period_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "spf_facet", "preference_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "skin_tone_facet", "skin_type_facet"), data)
+  
+  facet_popularity = pd.DataFrame.from_dict(data)
+  for tag in VALID_CATALOG_TAGS:
+    facet_popularity[tag] = 100 * normalize(facet_popularity[tag])
+  facet_popularity.to_csv('facet_pop.csv', index=False)
+  
+  print("writing facet popularity to db")
+  mysql_conn = PasUtils.mysqlConnection('w')
+  cursor = mysql_conn.cursor()
+  if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category_facets'"):
+    PasUtils.mysql_write("""create table brand_category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32),
+                                category_name varchar(32), facet varchar(20), popularity float, popularity_men float, popularity_pro float, popularity_luxe float)""")
+  PasUtils.mysql_write("delete from brand_category_facets", connection=mysql_conn)
+  
+  query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, popularity_men,
+                popularity_pro, popularity_luxe) VALUES ('%s', '%s', '%s', '%s', %s, %s, %s, %s) """
+  data = pd.merge(facet_popularity, category_info, on='category_id')
+  print(data)
+  ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
+  for id, row in data.iterrows():
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
+    
+    row = dict(row)
+    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row['nykaa'], row['men'], row['pro'], row['luxe'])
+    cursor.execute(query, values)
+    mysql_conn.commit()
+  
+  cursor.close()
+  mysql_conn.close()
+  return facet_popularity
+
+
+def process_category(category_data):
+  global category_info
+  data = {}
+  data['category_id'] = []
+  for tag in VALID_CATALOG_TAGS:
+    data[tag] = []
+  
+  for category in category_data:
+    popularity_data = {'category_id': category.get('key', 0)}
+    for bucket in category.get('tags', {}).get('buckets', []):
+      popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
+    
+    data['category_id'].append(popularity_data.get('category_id'))
+    for tag in VALID_CATALOG_TAGS:
+      data[tag].append(popularity_data.get(tag, 0))
+  
+  category_popularity = pd.DataFrame.from_dict(data)
+  for tag in VALID_CATALOG_TAGS:
+    category_popularity[tag] = 100 * normalize(category_popularity[tag]) + 100
+    category_popularity[tag] = category_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
+  category_popularity.to_csv('category_pop.csv', index=False)
+  
+  print("inserting category data in db")
+  mysql_conn = PasUtils.mysqlConnection('w')
+  cursor = mysql_conn.cursor()
+  PasUtils.mysql_write("delete from l3_categories", connection=mysql_conn)
+  query = """REPLACE INTO l3_categories(id, name, url, category_popularity, popularity_men, popularity_pro, popularity_luxe)
+                  VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+  
+  data = pd.merge(category_popularity, category_info, on='category_id')
+  print(data)
+  ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
+  for id, row in data.iterrows():
+    ctr += 1
+    if ctr.should_print():
+      print(ctr.summary)
+    
+    row = dict(row)
+    values = (row['category_id'], row['category_name'], row['category_url'], row['nykaa'], row['men'], row['pro'], row['luxe'])
+    cursor.execute(query, values)
+    mysql_conn.commit()
+  
+  cursor.close()
+  mysql_conn.close()
+  
+  PasUtils.mysql_write("""create or replace view l3_categories_clean as select * from l3_categories
+                              where url not like '%luxe%' and url not like '%shop-by-concern%';""")
+  return
+
+
 def getAggQueryResult(valid_category_list, facet1, facet2):
   global base_aggregation
   key1 = facet1 + ".keyword"
@@ -171,107 +273,6 @@ def getFacetPopularityArray(results, data):
             data[tag].append(popularity_data.get(tag, 0))
   return data
 
-
-def process_category_facet_popularity(valid_category_list):
-  global category_info
-  
-  data = {}
-  data['category_id'] = []
-  data['facet_name'] = []
-  data['facet_val'] = []
-  for tag in VALID_CATALOG_TAGS:
-    data[tag] = []
-
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "benefits_facet", "color_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "concern_facet", "coverage_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "finish_facet", "formulation_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "gender_facet", "hair_type_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "filter_size_facet", "speciality_search_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "filter_product_facet", "usage_period_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "spf_facet", "preference_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "skin_tone_facet", "skin_type_facet"), data)
-  
-  facet_popularity = pd.DataFrame.from_dict(data)
-  for tag in VALID_CATALOG_TAGS:
-    facet_popularity[tag] = 100 * normalize(facet_popularity[tag])
-  facet_popularity.to_csv('facet_pop.csv', index=False)
-
-  print("writing facet popularity to db")
-  mysql_conn = PasUtils.mysqlConnection('w')
-  cursor = mysql_conn.cursor()
-  if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category_facets'"):
-    PasUtils.mysql_write("""create table brand_category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32),
-                                category_name varchar(32), facet varchar(20), popularity float, popularity_men float, popularity_pro float, popularity_luxe float)""")
-  PasUtils.mysql_write("delete from brand_category_facets", connection=mysql_conn)
-
-  query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, popularity_men,
-                popularity_pro, popularity_luxe) VALUES ('%s', '%s', '%s', '%s', %s, %s, %s, %s) """
-  data = pd.merge(facet_popularity, category_info, on='category_id')
-  print(data)
-  ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
-  for id, row in data.iterrows():
-    ctr += 1
-    if ctr.should_print():
-      print(ctr.summary)
-  
-    row = dict(row)
-    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row['nykaa'], row['men'], row['pro'], row['luxe'])
-    cursor.execute(query, values)
-    mysql_conn.commit()
-
-  cursor.close()
-  mysql_conn.close()
-  return facet_popularity
-  
-  
-def process_category(category_data):
-  global category_info
-  data = {}
-  data['category_id'] = []
-  for tag in VALID_CATALOG_TAGS:
-    data[tag] = []
-  
-  for category in category_data:
-    popularity_data = {'category_id': category.get('key', 0)}
-    for bucket in category.get('tags', {}).get('buckets', []):
-      popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
-    
-    data['category_id'].append(popularity_data.get('category_id'))
-    for tag in VALID_CATALOG_TAGS:
-      data[tag].append(popularity_data.get(tag, 0))
-  
-  category_popularity = pd.DataFrame.from_dict(data)
-  for tag in VALID_CATALOG_TAGS:
-    category_popularity[tag] = 100 * normalize(category_popularity[tag]) + 100
-    category_popularity[tag] = category_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
-  category_popularity.to_csv('category_pop.csv', index=False)
-  
-  print("inserting category data in db")
-  mysql_conn = PasUtils.mysqlConnection('w')
-  cursor = mysql_conn.cursor()
-  PasUtils.mysql_write("delete from l3_categories", connection=mysql_conn)
-  query = """REPLACE INTO l3_categories(id, name, url, category_popularity, popularity_men, popularity_pro, popularity_luxe)
-                  VALUES (%s, %s, %s, %s, %s, %s, %s)"""
-  
-  data = pd.merge(category_popularity, category_info, on='category_id')
-  print(data)
-  ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
-  for id, row in data.iterrows():
-    ctr += 1
-    if ctr.should_print():
-      print(ctr.summary)
-
-    row = dict(row)
-    values = (row['category_id'], row['category_name'], row['category_url'], row['nykaa'], row['men'], row['pro'], row['luxe'])
-    cursor.execute(query, values)
-    mysql_conn.commit()
-
-  cursor.close()
-  mysql_conn.close()
-
-  PasUtils.mysql_write("""create or replace view l3_categories_clean as select * from l3_categories
-                              where url not like '%luxe%' and url not like '%shop-by-concern%';""")
-  return
 
 def process_brand(brand_data):
   data = {}
