@@ -330,7 +330,7 @@ def process_brand_category(brand_category_data):
   PasUtils.mysql_write("delete from brand_category", connection=mysql_conn)
   
   query = """REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity, popularity_men, popularity_pro, popularity_luxe)
-              VALUES ('%s', '%s', '%s', '%s', %s, %s, %s, %s)"""
+              VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
   brand_category_popularity = pd.merge(brand_category_popularity, category_info, on='category_id')
   print(brand_category_popularity)
   ctr = LoopCounter(name='Writing brand category popularity to db', total=len(brand_category_popularity.index))
@@ -343,7 +343,7 @@ def process_brand_category(brand_category_data):
     if row['brand_id'] not in brand_info:
       print("brand %s not found in brand_info"%row['brand_id'])
       continue
-    values = (brand_info[row['brand_id']]['brand_name'], row['category_name'], row['category_name'], row['nykaa'],
+    values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], row['category_id'], row['category_name'], row['nykaa'],
               row['men'], row['pro'], row['luxe'])
     cursor.execute(query, values)
     mysql_conn.commit()
