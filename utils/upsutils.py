@@ -38,5 +38,5 @@ class UPSUtils:
     def add_recommendations_in_ups(rows):
         rows_chunks = [rows[i:i+100] for i in range(0, len(rows), 100)]
         for chunk in rows_chunks:
-            UPSUtils._add_recommendations_in_ups({row['customer_id']: row['value'] for row in chunk})
+            UPSUtils._add_recommendations_in_ups({str(row['customer_id']): row['value'] for row in chunk})
 

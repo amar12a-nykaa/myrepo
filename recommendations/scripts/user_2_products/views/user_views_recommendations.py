@@ -35,6 +35,7 @@ from mysqlredshiftutils import MysqlRedshiftUtils
 from sparkutils import SparkUtils
 from ftputils import FTPUtils
 from esutils import ESUtils
+from upsutils import UPSUtils
 
 spark = SparkUtils.get_spark_instance('Gen User Views Recommendations')
 
@@ -141,7 +142,8 @@ def prepare_views_ca_dataframe(files):
     return df, results
 
 def generate_recommendations(all_products, lsi_model, days=None, limit=None):
-    FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, ['Interaction_one_time_20190501-20190620.zip'])
+    #FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, ['Interaction_one_time_20190501-20190620.zip'])
+    FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, [])
     csvs_path = S3Utils.ls_file_paths(env_details['bucket_name'], VIEWS_CA_S3_PREFIX, True)
     csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 30 , csvs_path))
     print(csvs_path)
@@ -197,12 +199,14 @@ def generate_recommendations(all_products, lsi_model, days=None, limit=None):
     norm_model = models.NormModel()
     sorted_products_rdd = views_rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=row['vec'], sorted_products=list(filter(lambda x: (not product_2_l3_category.get(x) ) or product_2_l3_category[x] not in customer_2_last_month_purchase_categories.get(row['customer_id'], []), map(lambda ele: idx_2_product_id[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(row['vec'])]]), key=lambda e: -e[1]))))[:200])) 
     #sorted_cats_udf = udf(lambda customer_id, user_cat_doc: list(filter(lambda x: x not in customer_2_last_order_categories[customer_id], map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(user_cat_doc)]]), key=lambda e: -e[1])))) + customer_2_last_order_categories[customer_id], ArrayType(IntegerType()))
-    rows = [(platform, row['customer_id'], 'user', 'bought', 'views_lsi_model', json.dumps(row['sorted_products'])) for row in sorted_products_rdd.collect()]
+    #rows = [(platform, row['customer_id'], 'user', 'bought', 'views_lsi_model', json.dumps(row['sorted_products'])) for row in sorted_products_rdd.collect()]
+    rows = [{'customer_id': row['customer_id'], 'value': {'views_lsi_model': row['sorted_products']}} for row in sorted_products_rdd.collect()]
     print("Writing the user recommendations " + str(datetime.now()))
     print("Total number of customers to be updated: %d" % len(rows))
     print("Few users getting updated are listed below")
-    print([row[1] for row in rows[:10]])
-    MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
+    print([row['customer_id'] for row in rows[:10]])
+    #MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
+    UPSUtils.add_recommendations_in_ups(rows)
     print("Done Writing the user recommendations " + str(datetime.now()))
 
 if __name__ == '__main__':
