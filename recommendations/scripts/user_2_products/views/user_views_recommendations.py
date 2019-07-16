@@ -35,6 +35,7 @@ from mysqlredshiftutils import MysqlRedshiftUtils
 from sparkutils import SparkUtils
 from ftputils import FTPUtils
 from esutils import ESUtils
+from upsutils import UPSUtils
 
 spark = SparkUtils.get_spark_instance('Gen User Views Recommendations')
 
@@ -85,7 +86,7 @@ def generate_products_corpus(product_ids):
 def prepare_views_ca_dataframe(files):
     schema = StructType([
         StructField("Date", StringType(), True),
-        StructField("Customer ID (evar23)", IntegerType(), True),
+        StructField("Customer ID (evar23)", StringType(), True),
         StructField("Products", IntegerType(), True),
         StructField("Product Views", IntegerType(), True),
         StructField("Cart Additions", IntegerType(), True)])
@@ -114,6 +115,14 @@ def prepare_views_ca_dataframe(files):
     results = ESUtils.scrollESForResults()
     print('Scrolling ES done')
 
+    child_2_parent = results['child_2_parent']
+    def convert_to_parent(product_id):
+        return child_2_parent.get(product_id, product_id)
+
+    convert_to_parent_udf = udf(convert_to_parent, IntegerType())
+    print('Converting product_id to parent')
+    df = df.withColumn("product_id", convert_to_parent_udf(df['product_id']))
+
     product_2_l3_category = {product_id: json.loads(categories[0])['l3']['id'] for product_id, categories in results['primary_categories'].items()}
     results['product_2_l3_category'] = product_2_l3_category
     l3_udf = udf(lambda product_id: product_2_l3_category.get(product_id), StringType())
@@ -133,13 +142,14 @@ def prepare_views_ca_dataframe(files):
     return df, results
 
 def generate_recommendations(all_products, lsi_model, days=None, limit=None):
-    FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, ['Interaction_one_time_20190501-20190620.zip'])
+    #FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, ['Interaction_one_time_20190501-20190620.zip'])
+    FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, [])
     csvs_path = S3Utils.ls_file_paths(env_details['bucket_name'], VIEWS_CA_S3_PREFIX, True)
     csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 30 , csvs_path))
     print(csvs_path)
     #update_csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")) >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24)).date() , csvs_path))
-    df, results = prepare_views_ca_dataframe(csvs_path)
-    customer_ids_need_update = [] 
+    df, results = DataUtils.prepare_views_ca_dataframe(spark, csvs_path, VIEWS_CA_S3_PREFIX, '/data/u2p/views/data/', True)
+    customer_ids_need_update = []
     if days:
         customer_ids_need_update = df.filter(col('date') >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24*days)).date()).select(["customer_id"]).distinct().rdd.flatMap(lambda x: x).collect()
         if limit:
@@ -148,7 +158,7 @@ def generate_recommendations(all_products, lsi_model, days=None, limit=None):
         print("Total number of customer_id=%d" % len(customer_ids_need_update))
         df = df.filter(col('customer_id').isin(customer_ids_need_update))
         print("Total Number of rows now: %d" % df.count())
-        
+ 
 
     # TODO need to take into account the timezone offset
     def calculate_weight(row_date, views, cart_additions):
@@ -189,12 +199,14 @@ def generate_recommendations(all_products, lsi_model, days=None, limit=None):
     norm_model = models.NormModel()
     sorted_products_rdd = views_rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=row['vec'], sorted_products=list(filter(lambda x: (not product_2_l3_category.get(x) ) or product_2_l3_category[x] not in customer_2_last_month_purchase_categories.get(row['customer_id'], []), map(lambda ele: idx_2_product_id[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(row['vec'])]]), key=lambda e: -e[1]))))[:200])) 
     #sorted_cats_udf = udf(lambda customer_id, user_cat_doc: list(filter(lambda x: x not in customer_2_last_order_categories[customer_id], map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(user_cat_doc)]]), key=lambda e: -e[1])))) + customer_2_last_order_categories[customer_id], ArrayType(IntegerType()))
-    rows = [(platform, row['customer_id'], 'user', 'bought', 'views_lsi_model', json.dumps(row['sorted_products'])) for row in sorted_products_rdd.collect()]
+    #rows = [(platform, row['customer_id'], 'user', 'bought', 'views_lsi_model', json.dumps(row['sorted_products'])) for row in sorted_products_rdd.collect()]
+    rows = [{'customer_id': row['customer_id'], 'value': {'views_lsi_model': row['sorted_products']}} for row in sorted_products_rdd.collect()]
     print("Writing the user recommendations " + str(datetime.now()))
     print("Total number of customers to be updated: %d" % len(rows))
     print("Few users getting updated are listed below")
-    print([row[1] for row in rows[:10]])
-    MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
+    print([row['customer_id'] for row in rows[:10]])
+    #MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
+    UPSUtils.add_recommendations_in_ups(rows)
     print("Done Writing the user recommendations " + str(datetime.now()))
 
 if __name__ == '__main__':
@@ -206,7 +218,7 @@ if __name__ == '__main__':
     parser.add_argument('--days', type=int)
     parser.add_argument('--limit', type=int)
     parser.add_argument('--platform', default='nykaa', choices=['nykaa','men'])
-    
+ 
     argv = vars(parser.parse_args())
     do_prepare_model = argv.get('prepare_model')
     gen_user_recommendations = argv.get('gen_user_recommendations')
