@@ -47,6 +47,7 @@ def get_category_data():
   category_url_info = pd.read_sql(query, con=nykaa_replica_db_conn)
   
   category_data = pd.merge(valid_categories, category_url_info, on="category_id")
+  category_data = category_data.astype({'category_id': str})
   category_data.to_csv('category_data.csv', index=False)
   return category_data
 
