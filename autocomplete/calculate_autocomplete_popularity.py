@@ -29,6 +29,8 @@ base_aggregation = {
 
 
 def normalize(a):
+  if max(a) == 0:
+    return a
   return (a-min(a))/(max(a)-min(a))
 
 
