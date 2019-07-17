@@ -153,7 +153,7 @@ def process_category_facet_popularity(valid_category_list):
   PasUtils.mysql_write("delete from brand_category_facets", connection=mysql_conn)
   
   query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, popularity_men,
-                popularity_pro, popularity_luxe) VALUES ('%s', '%s', '%s', '%s', %s, %s, %s, %s) """
+                popularity_pro, popularity_luxe) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) """
   data = pd.merge(facet_popularity, category_info, on='category_id')
   print(data)
   ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
@@ -361,7 +361,6 @@ def db_insert_brand(brand_popularity, top_category):
   global brand_info
   
   top_category_brand = {}
-  top_category = pd.merge(top_category, category_info, on='category_id')
   for id, row in top_category.iterrows():
     row= dict(row)
     if row['brand_id'] not in brand_info:
@@ -388,7 +387,7 @@ def db_insert_brand(brand_popularity, top_category):
       print("Skipping brand %s" % row['brand_id'])
       continue
     values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], brand_info[row['brand_id']]['brands_v1'], row["nykaa"],
-              row["men"], row["pro"], row["luxe"], json.dumps(top_category_brand[row['brand_id']]), brand_info[row['brand_id']]['brand_url'])
+              row["men"], row["pro"], row["luxe"], json.dumps(top_category_brand.get(row['brand_id'], [])), brand_info[row['brand_id']]['brand_url'])
     cursor.execute(query, values)
     mysql_conn.commit()
 
