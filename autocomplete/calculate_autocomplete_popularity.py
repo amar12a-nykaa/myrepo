@@ -47,6 +47,7 @@ def get_category_data():
                 WHERE product_id IS NULL AND category_id IS NOT NULL"""
   nykaa_replica_db_conn = PasUtils.nykaaMysqlConnection()
   category_url_info = pd.read_sql(query, con=nykaa_replica_db_conn)
+  category_url_info = category_url_info.drop_duplicates(subset=['category_id'], keep='first', inplace=False)
   
   category_data = pd.merge(valid_categories, category_url_info, on="category_id")
   category_data = category_data.astype({'category_id': str})
