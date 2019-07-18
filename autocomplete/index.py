@@ -64,10 +64,10 @@ PasUtils.mysql_write("create or replace view l3_categories_clean as select * fro
 brandLandingMap = {"herm" : "/hermes?ptype=lst&id=7917"}
 
 def add_store_popularity(doc, row):
+  row = json.loads(row.get('store_popularity', {}))
   for store in STORE_LIST:
     key = "weight_" + store
-    value = "popularity_" + store
-    data = row.get(value, 0)
+    data = row.get(store, 0)
     if data > 0:
       doc.update({"is_"+store: True})
     else:
@@ -271,7 +271,7 @@ def index_brands(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT brand_id, brand, brand_popularity, popularity_men, popularity_pro, popularity_luxe, brand_url, brand_men_url FROM brands ORDER BY brand_popularity DESC"
+  query = "SELECT brand_id, brand, brand_popularity, store_popularity, brand_url, brand_men_url FROM brands ORDER BY brand_popularity DESC"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Indexing - ' + searchengine)
   for row in results:
@@ -325,7 +325,7 @@ def index_categories(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, popularity_men, popularity_pro, popularity_luxe FROM l3_categories_clean order by name, category_popularity desc"
+  query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, store_popularity FROM l3_categories_clean order by name, category_popularity desc"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   # prev_cat = None
@@ -375,7 +375,7 @@ def index_brands_categories(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT brand_id, brand, category_name, category_id, popularity, popularity_men, popularity_pro, popularity_luxe FROM brand_category"
+  query = "SELECT brand_id, brand, category_name, category_id, popularity, store_popularity FROM brand_category"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
   for row in results:
@@ -401,7 +401,7 @@ def index_category_facets(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT category_name, category_id, facet_val, popularity, popularity_men, popularity_pro, popularity_luxe FROM category_facets"
+  query = "SELECT category_name, category_id, facet_val, popularity, store_popularity FROM category_facets"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Facet Indexing - ' + searchengine)
   for row in results:
@@ -528,10 +528,11 @@ def index_products(collection, searchengine):
         continue
       count['value'] += 1
       productList.append(unique_id)
+      store_popularity = {}
       for store in STORE_LIST:
         if store in product['catalog_tag']:
-          key = 'popularity_' + store
-          row[key] = row['popularity']
+          store_popularity[store] = row['popularity']
+      row['store_popularity'] = json.dumps(store_popularity)
       
       doc = {
           "_id": unique_id,

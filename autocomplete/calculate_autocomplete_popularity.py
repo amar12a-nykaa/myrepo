@@ -34,6 +34,13 @@ def normalize(a):
   return (a-min(a))/(max(a)-min(a))
 
 
+def get_store_popularity_str(row):
+  data = {}
+  for tag in VALID_CATALOG_TAGS:
+    data[tag] = row.get(tag, 0)
+  return json.dumps(data)
+
+
 def get_category_data():
   query = """select distinct l3_id as category_id, l3_name as category_name from product_category_mapping
               where ( l1_id not in (77,194,9564,7287,3048)
@@ -150,11 +157,10 @@ def process_category_facet_popularity(valid_category_list):
   cursor = mysql_conn.cursor()
   if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category_facets'"):
     PasUtils.mysql_write("""create table brand_category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32),
-                                category_name varchar(32), facet varchar(20), popularity float, popularity_men float, popularity_pro float, popularity_luxe float)""")
+                                category_name varchar(32), facet varchar(20), popularity float, store_popularity varchar(255))""")
   PasUtils.mysql_write("delete from brand_category_facets", connection=mysql_conn)
   
-  query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, popularity_men,
-                popularity_pro, popularity_luxe) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) """
+  query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, store_popularity) VALUES (%s, %s, %s, %s, %s, %s) """
   data = pd.merge(facet_popularity, category_info, on='category_id')
   print(data)
   ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
@@ -164,7 +170,7 @@ def process_category_facet_popularity(valid_category_list):
       print(ctr.summary)
     
     row = dict(row)
-    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row['nykaa'], row['men'], row['pro'], row['luxe'])
+    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row['nykaa'], get_store_popularity_str(row))
     cursor.execute(query, values)
     mysql_conn.commit()
   
@@ -199,8 +205,8 @@ def process_category(category_data):
   mysql_conn = PasUtils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
   PasUtils.mysql_write("delete from l3_categories", connection=mysql_conn)
-  query = """REPLACE INTO l3_categories(id, name, url, category_popularity, popularity_men, popularity_pro, popularity_luxe)
-                  VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+  query = """REPLACE INTO l3_categories(id, name, url, category_popularity, store_popularity)
+                  VALUES (%s, %s, %s, %s, %s)"""
   
   data = pd.merge(category_popularity, category_info, on='category_id')
   print(data)
@@ -211,7 +217,7 @@ def process_category(category_data):
       print(ctr.summary)
     
     row = dict(row)
-    values = (row['category_id'], row['category_name'], row['category_url'], row['nykaa'], row['men'], row['pro'], row['luxe'])
+    values = (row['category_id'], row['category_name'], row['category_url'], row['nykaa'], get_store_popularity_str(row))
     cursor.execute(query, values)
     mysql_conn.commit()
   
@@ -329,11 +335,11 @@ def process_brand_category(brand_category_data):
   cursor = mysql_conn.cursor()
   if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category'"):
     PasUtils.mysql_write("""create table brand_category(brand varchar(30), brand_id varchar(32), category_id varchar(32),
-                            category_name varchar(32), popularity float, popularity_men float, popularity_pro float, popularity_luxe float)""")
+                            category_name varchar(32), popularity float, store_popularity varchar(255))""")
   PasUtils.mysql_write("delete from brand_category", connection=mysql_conn)
   
-  query = """REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity, popularity_men, popularity_pro, popularity_luxe)
-              VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+  query = """REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity, store_popularity)
+              VALUES (%s, %s, %s, %s, %s, %s)"""
   brand_category_popularity = pd.merge(brand_category_popularity, category_info, on='category_id')
   print(brand_category_popularity)
   ctr = LoopCounter(name='Writing brand category popularity to db', total=len(brand_category_popularity.index))
@@ -346,8 +352,7 @@ def process_brand_category(brand_category_data):
     if row['brand_id'] not in brand_info:
       print("brand %s not found in brand_info"%row['brand_id'])
       continue
-    values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], row['category_id'], row['category_name'], row['nykaa'],
-              row['men'], row['pro'], row['luxe'])
+    values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], row['category_id'], row['category_name'], row['nykaa'], get_store_popularity_str(row))
     cursor.execute(query, values)
     mysql_conn.commit()
 
@@ -375,8 +380,8 @@ def db_insert_brand(brand_popularity, top_category):
   mysql_conn = PasUtils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
   PasUtils.mysql_write("delete from brands", connection=mysql_conn)
-  query = """REPLACE INTO brands (brand, brand_id, brands_v1, brand_popularity, popularity_men, popularity_pro, popularity_luxe,
-              top_categories, brand_url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+  query = """REPLACE INTO brands (brand, brand_id, brands_v1, brand_popularity, store_popularity,
+              top_categories, brand_url) VALUES (%s, %s, %s, %s, %s, %s, %s)"""
   ctr = LoopCounter(name='Writing brand popularity to db', total=len(brand_popularity.index))
   for id, row in brand_popularity.iterrows():
     ctr += 1
@@ -387,8 +392,9 @@ def db_insert_brand(brand_popularity, top_category):
     if row['brand_id'] not in brand_info:
       print("Skipping brand %s" % row['brand_id'])
       continue
+    
     values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], brand_info[row['brand_id']]['brands_v1'], row["nykaa"],
-              row["men"], row["pro"], row["luxe"], json.dumps(top_category_brand.get(row['brand_id'], [])), brand_info[row['brand_id']]['brand_url'])
+              get_store_popularity_str(row), json.dumps(top_category_brand.get(row['brand_id'], [])), brand_info[row['brand_id']]['brand_url'])
     cursor.execute(query, values)
     mysql_conn.commit()
 
