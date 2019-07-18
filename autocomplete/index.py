@@ -48,6 +48,7 @@ top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = DiscUtils.esConn()
 
+STORE_LIST = ['men', 'pro', 'luxe']
 GLOBAL_FAST_INDEXING = False
 
 MIN_COUNTS = {
@@ -61,6 +62,13 @@ MIN_COUNTS = {
 PasUtils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
 brandLandingMap = {"herm" : "/hermes?ptype=lst&id=7917"}
+
+def add_store_popularity(doc, row):
+  for store in STORE_LIST:
+    key = "weight_" + store
+    value = "popularity_" + store
+    doc.update({key: row.get(value, 0)})
+  return doc
 
 def get_feedback_data(entity):
     search_term = entity.lower()
@@ -258,7 +266,7 @@ def index_brands(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT brand_id, brand, brand_popularity, brand_popularity_men, brand_url, brand_men_url FROM brands ORDER BY brand_popularity DESC"
+  query = "SELECT brand_id, brand, brand_popularity, popularity_men, popularity_pro, popularity_luxe, brand_url, brand_men_url FROM brands ORDER BY brand_popularity DESC"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Indexing - ' + searchengine)
   for row in results:
@@ -266,24 +274,24 @@ def index_brands(collection, searchengine):
     if ctr.should_print():
       print(ctr.summary)
     is_men = False
-    if row['brand_popularity_men'] > 0:
+    if row['popularity_men'] > 0:
       is_men = True
 
     id = createId(row['brand'])
     url = row['brand_url']
     if id in brandLandingMap.keys():
         url = brandLandingMap[id]
-    docs.append({"_id": createId(row['brand']), 
-        "entity": row['brand'], 
+    doc = {"_id": createId(row['brand']),
+        "entity": row['brand'],
         "weight": row['brand_popularity'],
-        "weight_men" : row['brand_popularity_men'],
         "type": "brand",
         "data": json.dumps({"url": url, "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
         "id": row['brand_id'],
         "is_men" : is_men,
         "source": "brand"
-      
-      })
+    }
+    doc = add_store_popularity(doc, row)
+    docs.append(doc)
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
       docs = []
@@ -298,13 +306,13 @@ def index_categories(collection, searchengine):
     url = "/search/result/?q=" + variant.replace(" ", "+")
     men_url = "/search/result/?q=" + variant.replace(" ", "+")
     is_men = False
-    if row['category_popularity_men'] > 0:
+    id = "category_" + str(row['category_id']) + "_" + variant
+    if row['popularity_men'] > 0:
       is_men = True
     doc = {
-      "_id": createId(variant),
+      "_id": createId(id),
       "entity": variant,
       "weight": row['category_popularity'],
-      "weight_men": row['category_popularity_men'],
       "type": "category",
       "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url": category_url,
                           "men_url": men_url, "category_men_url": category_men_url}),
@@ -312,23 +320,24 @@ def index_categories(collection, searchengine):
       "is_men": is_men,
       "source": "category"
     }
+    doc = add_store_popularity(doc, row)
     return doc
 
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, category_popularity_men FROM l3_categories_clean order by name, category_popularity desc"
+  query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, popularity_men, popularity_pro, popularity_luxe FROM l3_categories_clean order by name, category_popularity desc"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing - ' + searchengine)
-  prev_cat = None
+  # prev_cat = None
   for row in results:
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
 
-    if prev_cat == row['category_name']:
-      continue
-    prev_cat = row['category_name']
+    # if prev_cat == row['category_name']:
+    #   continue
+    # prev_cat = row['category_name']
 
     variants = getVariants(row['category_id'])
     if variants:
@@ -336,7 +345,7 @@ def index_categories(collection, searchengine):
         categoryDoc = getCategoryDoc(row, variant)
         docs.append(categoryDoc)
     else:
-      categoryDoc = getCategoryDoc(row, prev_cat)
+      categoryDoc = getCategoryDoc(row, row['category_name'])
       docs.append(categoryDoc)
 
     if len(docs) >= 100:
@@ -354,10 +363,10 @@ def index_brands_categories(collection, searchengine):
 
     url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
     men_url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
-    doc = {"_id": createId(row['brand'] + "_" + variant),
+    id = row['brand'] + "_" + variant + "_" + str(row['category_id'])
+    doc = {"_id": createId(id),
                  "entity": row['brand'] + " " + variant,
                  "weight": row['popularity'],
-                 "weight_men": row['popularity_men'],
                  "type": "brand_category",
                  "data": json.dumps({"url": url, "type": "brand_category", "men_url": men_url}),
                  "brand_id": row['brand_id'],
@@ -366,12 +375,13 @@ def index_brands_categories(collection, searchengine):
                  "is_men": is_men,
                  "source": "brand_category"
                  }
+    doc = add_store_popularity(doc, row)
     return doc
 
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT brand_id, brand, category_name, category_id, popularity, popularity_men FROM brand_category"
+  query = "SELECT brand_id, brand, category_name, category_id, popularity, popularity_men, popularity_pro, popularity_luxe FROM brand_category"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
   for row in results:
@@ -397,7 +407,7 @@ def index_category_facets(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT category_name, category_id, facet_val, popularity, popularity_men FROM category_facets"
+  query = "SELECT category_name, category_id, facet_val, popularity, popularity_men, popularity_pro, popularity_luxe FROM category_facets"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Facet Indexing - ' + searchengine)
   for row in results:
@@ -411,17 +421,19 @@ def index_category_facets(collection, searchengine):
 
     url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
     men_url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
-    docs.append({"_id": createId(row['facet_val'] +"_"+row['category_name']), 
-        "entity": row['facet_val'] + " " + row['category_name'],  
+    id = row['facet_val'] + "_" + row['category_name'] + "_" + str(row['category_id'])
+    doc = {"_id": createId(id),
+        "entity": row['facet_val'] + " " + row['category_name'],
         "weight": row['popularity'],
-        "weight_men" : row['popularity_men'],
         "type": "category_facet",
         "data": json.dumps({"url": url, "type": "category_facet", "men_url" : men_url}),
         "category_id": row['category_id'],
         "category_name": row['category_name'],
         "is_men" : is_men,
         "source": "category_facet"
-      })
+      }
+    doc = add_store_popularity(doc, row)
+    docs.append(doc)
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
       docs = []
@@ -522,7 +534,6 @@ def index_products(collection, searchengine):
       is_men = False
       if 'men' in product['catalog_tag']:
         men_url = url.replace(".nykaa.com", ".nykaaman.com")
-        weight_men = row['popularity']
         is_men = True
       data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": id, "men_url": men_url})
       unique_id = createId(product['title'])
@@ -530,17 +541,23 @@ def index_products(collection, searchengine):
         continue
       count['value'] += 1
       productList.append(unique_id)
-      docs.append({
+      for store in STORE_LIST:
+        if store in product['catalog_tag']:
+          key = 'popularity_' + store
+          row[key] = row['popularity']
+      
+      doc = {
           "_id": unique_id,
-          "entity": product['title'], 
+          "entity": product['title'],
           "weight": row['popularity'],
-          "weight_men": weight_men,
           "type": _type,
           "data": data,
           "id": id,
           "is_men": is_men,
           "source": "product"
-        })
+        }
+      doc = add_store_popularity(doc, row)
+      docs.append(doc)
       productList.append(unique_id)
       if len(docs) >= 100:
         index_docs(searchengine, docs, collection)
