@@ -67,7 +67,12 @@ def add_store_popularity(doc, row):
   for store in STORE_LIST:
     key = "weight_" + store
     value = "popularity_" + store
-    doc.update({key: row.get(value, 0)})
+    data = row.get(value, 0)
+    if data > 0:
+      doc.update({"is_"+store: True})
+    else:
+      doc.update({"is_" + store: False})
+    doc.update({key: data})
   return doc
 
 def get_feedback_data(entity):
@@ -273,9 +278,7 @@ def index_brands(collection, searchengine):
     ctr += 1 
     if ctr.should_print():
       print(ctr.summary)
-    is_men = False
-    if row['popularity_men'] > 0:
-      is_men = True
+    
 
     id = createId(row['brand'])
     url = row['brand_url']
@@ -287,7 +290,6 @@ def index_brands(collection, searchengine):
         "type": "brand",
         "data": json.dumps({"url": url, "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
         "id": row['brand_id'],
-        "is_men" : is_men,
         "source": "brand"
     }
     doc = add_store_popularity(doc, row)
@@ -305,10 +307,8 @@ def index_categories(collection, searchengine):
     category_men_url = row['men_url']
     url = "/search/result/?q=" + variant.replace(" ", "+")
     men_url = "/search/result/?q=" + variant.replace(" ", "+")
-    is_men = False
     id = "category_" + str(row['category_id']) + "_" + variant
-    if row['popularity_men'] > 0:
-      is_men = True
+    
     doc = {
       "_id": createId(id),
       "entity": variant,
@@ -317,7 +317,6 @@ def index_categories(collection, searchengine):
       "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url": category_url,
                           "men_url": men_url, "category_men_url": category_men_url}),
       "id": row['category_id'],
-      "is_men": is_men,
       "source": "category"
     }
     doc = add_store_popularity(doc, row)
@@ -357,10 +356,6 @@ def index_categories(collection, searchengine):
 def index_brands_categories(collection, searchengine):
 
   def getBrandCategoryDoc(row, variant):
-    is_men = False
-    if row['popularity_men'] > 0:
-      is_men = True
-
     url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
     men_url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
     id = row['brand'] + "_" + variant + "_" + str(row['category_id'])
@@ -372,7 +367,6 @@ def index_brands_categories(collection, searchengine):
                  "brand_id": row['brand_id'],
                  "category_id": row['category_id'],
                  "category_name": variant,
-                 "is_men": is_men,
                  "source": "brand_category"
                  }
     doc = add_store_popularity(doc, row)
@@ -415,9 +409,6 @@ def index_category_facets(collection, searchengine):
     if ctr.should_print():
       print(ctr.summary)
 
-    is_men = False
-    if row['popularity_men'] > 0:
-      is_men = True
 
     url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
     men_url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
@@ -429,7 +420,6 @@ def index_category_facets(collection, searchengine):
         "data": json.dumps({"url": url, "type": "category_facet", "men_url" : men_url}),
         "category_id": row['category_id'],
         "category_name": row['category_name'],
-        "is_men" : is_men,
         "source": "category_facet"
       }
     doc = add_store_popularity(doc, row)
@@ -530,11 +520,8 @@ def index_products(collection, searchengine):
       image = product['image']
       image_base = product['image_base']
       men_url = None
-      weight_men = 0
-      is_men = False
       if 'men' in product['catalog_tag']:
         men_url = url.replace(".nykaa.com", ".nykaaman.com")
-        is_men = True
       data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": id, "men_url": men_url})
       unique_id = createId(product['title'])
       if unique_id in productList:
@@ -553,7 +540,6 @@ def index_products(collection, searchengine):
           "type": _type,
           "data": data,
           "id": id,
-          "is_men": is_men,
           "source": "product"
         }
       doc = add_store_popularity(doc, row)
