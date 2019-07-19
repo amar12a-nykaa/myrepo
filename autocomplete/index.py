@@ -64,7 +64,10 @@ PasUtils.mysql_write("create or replace view l3_categories_clean as select * fro
 brandLandingMap = {"herm" : "/hermes?ptype=lst&id=7917"}
 
 def add_store_popularity(doc, row):
-  row = json.loads(row.get('store_popularity', {}))
+  store_popularity = row.get('store_popularity', "{}")
+  if not store_popularity:
+    store_popularity = "{}"
+  row = json.loads(store_popularity)
   for store in STORE_LIST:
     key = "weight_" + store
     data = row.get(store, 0)
