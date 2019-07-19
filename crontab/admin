@@ -8,6 +8,8 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 0 0 * * * root /usr/bin/rsync -avzhe ssh /nykaa/adminftp/ ubuntu@52.77.36.71:/nykaa/adminftp
 0 0 * * * root /usr/bin/rsync -avzhe ssh /nykaa/adminftp/ ubuntu@13.228.118.41:/nykaa/adminftp
+0 0 * * * root /usr/bin/rsync -avzhe ssh /nykaa/adminftp/ ubuntu@13.234.248.179:/nykaa/adminftp
+0 0 * * * root /usr/bin/rsync -avzhe ssh /nykaa/adminftp/ ubuntu@13.234.223.178:/nykaa/adminftp
 0 0 * * * root /usr/bin/rsync -avzhe ssh /nykaa/adminftp/ ubuntu@qa-api.nyk00-int.network:/nykaa/adminftp
 
 #0 0 * * * root /usr/bin/python /nykaa/scripts/feed_pipeline/cron_runner.py
