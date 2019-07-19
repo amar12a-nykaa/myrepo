@@ -1,439 +1,439 @@
 keyword,filter_name,filter_value,freq
-lipstick,brand,596,"16,271"
-lipstick,finish,10881,"15,040"
-lipstick,brand,604,"14,889"
-maybelline new york,category,249,"12,181"
-lakme,category,249,"12,131"
-lipstick,color,25802,"11,361"
-lipstick,brand,1937,"10,662"
-nykaa cosmetics,category,249,"10,540"
-lipstick,color,15514,"9,722"
-lipstick,brand,3899,"9,507"
-shampoo,preference,10843,"8,179"
-lipstick,brand,595,"7,967"
-lipstick,brand,642,"7,649"
-maybelline new york,category,263,"7,381"
-shampoo,preference,10851,"7,352"
-lakme,category,263,"7,279"
-nykaa cosmetics,category,263,"6,930"
-maybelline new york,category,240,"6,864"
-shampoo,concern,10725,"6,593"
-eyeliner,color,10801,"6,574"
-lipstick,brand,2534,"6,570"
-lipstick,color,25190,"6,543"
-nail polish,color,25802,"6,328"
-lipstick,color,15515,"6,159"
-lipstick,color,25188,"5,810"
-nail polish,brand,1937,"5,715"
-bags,category,2324,"5,551"
-bags,category,2321,"5,399"
-nail polish,brand,604,"5,008"
-shampoo,hair_type,11078,"5,001"
-lakme,category,240,"4,892"
-nykaa cosmetics,category,5079,"4,846"
-nykaa cosmetics,category,255,"4,794"
-nail polish,finish,10881,"4,744"
-lipstick,brand,2347,"4,649"
-lakme,category,5079,"4,529"
-maybelline new york,category,5079,"4,479"
-lipstick,brand,669,"4,452"
-shampoo,star_rating,4,"4,441"
-maybelline new york,category,687,"4,394"
-lipstick,price,0-499,"4,367"
-colorbar,category,249,"4,354"
-eyeliner,formulation,15987,"4,346"
-nail polish,brand,642,"4,319"
-nail polish,brand,596,"4,190"
-maybelline new york,category,228,"4,159"
-maybelline new york,category,241,"4,086"
-eyeliner,brand,596,"4,066"
-bags,category,2323,"4,056"
-lipstick,brand,4985,"3,997"
-lipstick,finish,20425,"3,953"
-lipstick,brand,834,"3,896"
-biotique,category,316,"3,883"
-shampoo,concern,10755,"3,867"
-lipstick,brand,4130,"3,848"
-maybelline new york,category,242,"3,813"
-eyeliner,brand,604,"3,785"
-shampoo,concern,10747,"3,741"
-nail polish,color,15514,"3,709"
-lipstick,star_rating,4,"3,618"
-face wash,skin_type,10779,"3,604"
-shampoo,brand,1251,"3,599"
-eyeliner,formulation,10822,"3,552"
-lipstick,formulation,10804,"3,495"
-lipstick,brand,589,"3,451"
-shampoo,concern,10756,"3,379"
-the face shop,category,8401,"3,349"
-biotique,category,8394,"3,313"
-biotique,category,8379,"3,307"
-nail polish,brand,834,"3,305"
-shampoo,concern,10751,"3,296"
-lipstick,formulation,10822,"3,273"
-m.a.c,category,249,"3,234"
-bags,category,1480,"3,194"
-eye shadow,brand,596,"3,165"
-nykaa cosmetics,category,240,"3,122"
-shampoo,preference,10845,"3,118"
-face wash,concern,10777,"3,101"
-eyeliner,color,13750,"3,076"
-maybelline new york,category,231,"3,066"
-shampoo,hair_type,11071,"3,061"
-lakme,category,228,"2,943"
-shampoo,brand,595,"2,928"
-shampoo,hair_type,11077,"2,904"
-jewellery,category,4364,"2,898"
-maybelline new york,category,255,"2,850"
-eyeliner,finish,10881,"2,804"
-foundation,coverage,10874,"2,804"
-maybelline new york,category,234,"2,749"
-lipstick,brand,670,"2,746"
-eye shadow,brand,2130,"2,741"
-colorbar,category,255,"2,720"
-maybelline new york,category,254,"2,713"
-face wash,skin_type,10782,"2,704"
-kajal,color,10801,"2,704"
-faces,category,249,"2,675"
-huda beauty,category,249,"2,663"
-lakme,category,687,"2,662"
-nykaa cosmetics,category,242,"2,652"
-liquid lipstick,brand,596,"2,593"
-bags,category,1481,"2,574"
-lakme,category,231,"2,570"
-eyeliner,preference,10838,"2,568"
-maybelline new york,category,250,"2,563"
-maybelline new york,category,235,"2,545"
-liquid lipstick,finish,10881,"2,515"
-bags,category,1471,"2,509"
-lakme,category,250,"2,509"
-foundation,brand,596,"2,501"
-nail polish,brand,589,"2,474"
-bags,brand,9232,"2,460"
-shampoo,preference,10857,"2,455"
-lipstick,brand,1821,"2,449"
-shampoo,preference,10853,"2,440"
-lipstick,brand,6346,"2,438"
-shampoo,brand,607,"2,431"
-nykaa cosmetics,category,250,"2,421"
-bags,brand,8932,"2,412"
-twenty dresses,category,9106,"2,405"
-nail polish,color,13750,"2,371"
-maybelline new york,category,237,"2,365"
-liquid lipstick,brand,604,"2,364"
-nykaa cosmetics,category,687,"2,361"
-the body shop,category,8394,"2,355"
-lakme,category,255,"2,342"
-foundation,skin_type,10779,"2,341"
-shampoo,preference,12175,"2,316"
-lipstick,color,13529,"2,307"
-eyeliner,brand,595,"2,302"
-shampoo,hair_type,11074,"2,284"
-l'oreal paris,category,316,"2,263"
-the body shop,category,970,"2,247"
-face wash,star_rating,4,"2,246"
-the body shop,category,316,"2,226"
-maybelline new york,category,233,"2,205"
-shampoo,brand,6532,"2,198"
-lipstick,brand,5540,"2,195"
-lakme,category,242,"2,189"
-lipstick,finish,10883,"2,176"
-facewash,skin_type,10779,"2,173"
-shampoo,concern,10714,"2,154"
-the face shop,category,8394,"2,149"
-lipstick,finish,10880,"2,148"
-eye shadow,brand,3899,"2,143"
-nykaa cosmetics,category,228,"2,143"
-kajal,brand,596,"2,126"
-innisfree,category,8380,"2,123"
-biotique,category,319,"2,117"
-lip balm,brand,596,"2,116"
-shampoo,preference,10868,"2,114"
-face wash,skin_type,10781,"2,106"
-eye shadow,brand,2347,"2,099"
-shampoo,brand,923,"2,093"
-colorbar,category,263,"2,092"
-lipstick,brand,997,"2,091"
-nail polish,color,13915,"2,089"
-nail polish,brand,669,"2,085"
-foundation,brand,604,"2,070"
-the body shop,category,8379,"2,054"
-huda beauty,category,263,"2,051"
-lip balm,brand,943,"2,042"
-moisturizer,category,8394,"2,040"
-makeup revolution,category,242,"2,029"
-lipstick,brand,2298,"2,026"
-lipstick,category,249,"2,024"
-nykaa naturals,category,8401,"2,007"
-eyeliner,category,240,"1,998"
-l'oreal paris,category,249,"1,985"
-khadi natural,category,316,"1,978"
-shampoo,brand,998,"1,966"
-twenty dresses,category,9123,"1,964"
-foundation,brand,3899,"1,961"
-lip balm,star_rating,4,"1,951"
-nail polish,brand,595,"1,947"
-shampoo,concern,91637,"1,944"
-eyeliner,brand,3899,"1,934"
-eyeliner,star_rating,4,"1,925"
-eye shadow,finish,10881,"1,922"
-eye shadow,price,0-499,"1,910"
-night cream,skin_type,10779,"1,902"
-moisturizers,category,8394,"1,893"
-biotique,category,8400,"1,891"
-innisfree,category,8394,"1,885"
-eyeliner,brand,642,"1,882"
-sugar,category,249,"1,877"
-the face shop,category,8380,"1,849"
-lakme,category,251,"1,840"
-face wash,skin_type,10778,"1,837"
-maybelline new york,category,251,"1,837"
-shampoo,hair_type,11079,"1,830"
-shampoo,brand,621,"1,827"
-face sunscreen,skin_type,10779,"1,826"
-eyeliner,formulation,10824,"1,818"
-lakme,category,253,"1,817"
-sugar,category,263,"1,812"
-liquid lipstick,color,25802,"1,809"
-lipstick,brand,1544,"1,808"
-shampoo,preference,10861,"1,804"
-foundation,skin_tone,10887,"1,798"
-kajal,brand,604,"1,784"
-lakme,category,8394,"1,779"
-biotique,category,8381,"1,769"
-lipstick,coverage,10874,"1,767"
-lipstick,brand,5108,"1,766"
-sheet masks,brand,4290,"1,763"
-shampoo,category,316,"1,754"
-colorbar,category,5079,"1,752"
-the body shop,category,962,"1,749"
-nail polish,finish,10883,"1,748"
-face wash,concern,10771,"1,743"
-facewash,concern,10777,"1,739"
-lipstick,color,10789,"1,735"
-lakme,category,234,"1,719"
-colorbar,category,240,"1,717"
-biotique,category,8392,"1,711"
-eyeliner,brand,1937,"1,711"
-shampoo,brand,943,"1,711"
-liquid lipstick,color,15514,"1,708"
-nail polish,brand,2534,"1,708"
-face moisturizer,skin_type,10779,"1,696"
-kajal,star_rating,4,"1,695"
-shampoo,brand,609,"1,694"
-shampoo,concern,10750,"1,692"
-nykaa cosmetics,category,237,"1,688"
-nykaa cosmetics,category,254,"1,675"
-lipstick,formulation,10828,"1,674"
-face wash,concern,10753,"1,669"
-foundation,brand,595,"1,668"
-the body shop,category,368,"1,659"
-lipstick,finish,20426,"1,653"
-nail polish,color,11882,"1,646"
-nykaa cosmetics,category,234,"1,639"
-lakme,category,235,"1,637"
-lakme,category,233,"1,632"
-the face shop,category,8379,"1,631"
-shampoo,concern,10764,"1,626"
-lipstick,color,16777,"1,624"
-lakme,category,254,"1,622"
-face wash,preference,10851,"1,618"
-shampoo,concern,10732,"1,609"
-liquid lipstick,brand,2534,"1,605"
-nail polish,color,25192,"1,600"
-foundation,skin_type,10782,"1,598"
-bags,brand,5822,"1,590"
-faces,category,5079,"1,585"
-nail polish,color,10801,"1,584"
-mascara,brand,596,"1,583"
-lipstick,brand,6882,"1,571"
-moisturizer,skin_type,10779,"1,557"
-eye shadow,brand,595,"1,554"
-maybelline new york,category,245,"1,552"
-eye shadow,brand,5540,"1,551"
-face sunscreen,spf,10870,"1,549"
-facewash,star_rating,4,"1,543"
-shampoo,preference,64746,"1,543"
-foundation,skin_type,10781,"1,542"
-nykaa cosmetics,category,235,"1,538"
-lipstick,brand,943,"1,532"
-nail polish,finish,20428,"1,531"
-biotique,category,8380,"1,529"
-nail polish,brand,652,"1,521"
-biotique,skin_type,10779,"1,519"
-maybelline new york,category,4140,"1,518"
-shampoo,brand,1693,"1,515"
-face wash,brand,943,"1,513"
-eyeliner,formulation,10813,"1,508"
-face wash,concern,10737,"1,508"
-lipstick,brand,3814,"1,506"
-nail polish,color,25190,"1,505"
-clovia,category,3067,"1,490"
-jewellery,category,4365,"1,486"
-concealer,brand,596,"1,480"
-eye shadow,brand,604,"1,478"
-face wash,brand,923,"1,478"
-nail polish,color,25191,"1,472"
-nail polish,color,25740,"1,467"
-shampoo,brand,615,"1,462"
-face moisturizer,skin_type,10782,"1,461"
-night cream,skin_type,10782,"1,461"
-compact,brand,604,"1,457"
-lakme,category,232,"1,456"
-nail polish,color,10789,"1,454"
-face wash,concern,10770,"1,453"
-nyx professional makeup,category,242,"1,439"
-l'oreal paris,category,319,"1,434"
-maybelline new york,finish,10881,"1,432"
-faces,category,263,"1,429"
-liquid lipstick,brand,1937,"1,424"
-facewash,skin_type,10782,"1,421"
-nykaa cosmetics,category,257,"1,419"
-compact,brand,596,"1,408"
-m.a.c,category,228,"1,402"
-foundation,star_rating,4,"1,399"
-shampoo,hair_type,91639,"1,399"
-nail polish,color,25188,"1,392"
-lakme,category,241,"1,389"
-liquid lipstick,brand,595,"1,379"
-face primer,skin_type,10779,"1,378"
-sunscreen,spf,10870,"1,370"
-kajal,color,13750,"1,368"
-eye shadow,star_rating,4,"1,360"
-nykaa cosmetics,category,231,"1,347"
-maybelline new york,category,232,"1,345"
-liquid lipstick,brand,3899,"1,343"
-biotique,category,8429,"1,337"
-shampoo,concern,10728,"1,336"
-nail polish,color,16775,"1,332"
-shampoo,preference,10858,"1,328"
-eyeliner,color,15515,"1,327"
-nail polish,price,0-499,"1,327"
-maybelline new york,color,25802,"1,326"
-kajal,brand,595,"1,320"
-moisturizers,skin_type,10779,"1,315"
-kajal,brand,3899,"1,310"
-liquid lipstick,brand,2347,"1,310"
-lip gloss,finish,10883,"1,307"
-night cream,concern,10753,"1,306"
-maybelline new york,category,229,"1,303"
-maybelline new york,category,3745,"1,299"
-nail polish,color,15515,"1,298"
-kajal,brand,1937,"1,294"
-nail polish,finish,20429,"1,285"
-nykaa cosmetics,category,245,"1,284"
-eyeliner,color,13915,"1,283"
-eye shadow,brand,4985,"1,281"
-eye shadow,color,10789,"1,280"
-zivame,category,3067,"1,276"
-m.a.c,category,263,"1,253"
-liquid lipstick,brand,4985,"1,251"
-eyeliner,benefits,10890,"1,249"
-nyx professional makeup,category,249,"1,246"
-highlighters,price,0-499,"1,241"
-hair oil,concern,10725,"1,239"
-eye shadow,brand,642,"1,237"
-nail polish,star_rating,4,"1,237"
-the body shop,category,8426,"1,237"
-shampoo,brand,753,"1,228"
-bags,brand,5947,"1,227"
-facial kits,brand,670,"1,227"
-face primer,brand,596,"1,226"
-biotique,category,8397,"1,221"
-eyeliner,brand,2347,"1,219"
-shampoo,concern,91638,"1,219"
-sheet masks,brand,3901,"1,217"
-biotique,category,320,"1,216"
-sunscreen,skin_type,10779,"1,216"
-mascara,star_rating,4,"1,215"
-shampoo,preference,10869,"1,215"
-biotique,category,2040,"1,214"
-innisfree,category,8397,"1,204"
-the face shop,category,8397,"1,203"
-eyeliner,brand,669,"1,201"
-nail polish,color,13529,"1,199"
-face wash,concern,10750,"1,198"
-nail polish,category,255,"1,196"
-toner,skin_type,10779,"1,195"
-shampoo,brand,594,"1,191"
-the body shop,category,319,"1,189"
-straighteners,brand,1066,"1,186"
-hair serum,star_rating,4,"1,183"
-innisfree,category,8400,"1,174"
-innisfree,category,8392,"1,164"
-biotique,category,8395,"1,163"
-shampoo,preference,10847,"1,162"
-bags,category,1484,"1,161"
-l'oreal paris,category,240,"1,161"
-nykaa cosmetics,category,233,"1,160"
-the body shop,category,8392,"1,158"
-liquid lipstick,color,25190,"1,155"
-eye shadow,brand,1937,"1,153"
-the face shop,category,8392,"1,148"
-highlighters,brand,596,"1,146"
-hair serum,brand,595,"1,145"
-innisfree,category,8401,"1,145"
-nykaa cosmetics,category,4140,"1,145"
-the face shop,category,8400,"1,140"
-the body shop,category,8420,"1,136"
-lipstick,brand,201,"1,134"
-hair color,brand,595,"1,130"
-lip balm,brand,645,"1,130"
-l'oreal paris,category,263,"1,129"
-kajal,color,15515,"1,126"
-eye shadow,brand,4130,"1,117"
-night cream,star_rating,4,"1,117"
-hair serum,brand,1251,"1,115"
-nykaa cosmetics,price,0-499,"1,115"
-lip gloss,color,25740,"1,112"
-nykaa cosmetics,finish,10881,"1,107"
-shampoo,hair_type,11073,"1,106"
-shampoo,brand,665,"1,104"
-foundation,finish,10880,"1,103"
-lakme,finish,10881,"1,098"
-facewash,skin_type,10781,"1,093"
-twenty dresses,category,9107,"1,093"
-wet n wild,category,249,"1,092"
-face moisturizer,category,8394,"1,091"
-lipstick,color,69968,"1,090"
-shampoo,brand,1451,"1,081"
-conditioner,preference,10851,"1,080"
-biotique,category,8409,"1,079"
-nail polish,brand,670,"1,075"
-lip balm,brand,923,"1,074"
-nail polish,finish,10884,"1,074"
-nail polish,color,13370,"1,071"
-sugar,category,5079,"1,071"
-shampoo,brand,2454,"1,067"
-huda beauty,category,242,"1,066"
-lakme,category,245,"1,063"
-handbags,brand,8932,"1,060"
-clovia,category,3060,"1,057"
-conditioner,hair_type,11078,"1,057"
-shampoo,concern,10737,"1,057"
-lipstick,brand,1804,"1,052"
-foundation,brand,4130,"1,047"
-liquid lipstick,price,0-499,"1,047"
-maybelline new york,price,0-499,"1,044"
-handbags,brand,9232,"1,038"
-khadi natural,category,319,"1,035"
-faces,category,240,"1,032"
-face primer,star_rating,4,"1,026"
-nykaa cosmetics,category,232,"1,024"
-night cream,concern,10770,"1,020"
-concealer,brand,3899,"1,019"
-facial kits,brand,600,"1,018"
-eyeliner,brand,4130,"1,016"
-zivame,category,3060,"1,016"
-concealer,price,0-499,"1,013"
-miss claire,category,242,"1,013"
-lip gloss,color,25802,"1,011"
-hair color,color,15515,"1,008"
-foundation,skin_tone,10886,"1,004"
-eye shadow,brand,6346,"1,003"
-nail polish,brand,599,"1,003"
-nykaa cosmetics,category,241,"1,003"
-shampoo,brand,2682,"1,003"
+lipstick,brand,596,16271
+lipstick,finish,10881,15040
+lipstick,brand,604,14889
+maybelline new york,category,249,12181
+lakme,category,249,12131
+lipstick,color,25802,11361
+lipstick,brand,1937,10662
+nykaa cosmetics,category,249,10540
+lipstick,color,15514,9722
+lipstick,brand,3899,9507
+shampoo,preference,10843,8179
+lipstick,brand,595,7967
+lipstick,brand,642,7649
+maybelline new york,category,263,7381
+shampoo,preference,10851,7352
+lakme,category,263,7279
+nykaa cosmetics,category,263,6930
+maybelline new york,category,240,6864
+shampoo,concern,10725,6593
+eyeliner,color,10801,6574
+lipstick,brand,2534,6570
+lipstick,color,25190,6543
+nail polish,color,25802,6328
+lipstick,color,15515,6159
+lipstick,color,25188,5810
+nail polish,brand,1937,5715
+bags,category,2324,5551
+bags,category,2321,5399
+nail polish,brand,604,5008
+shampoo,hair_type,11078,5001
+lakme,category,240,4892
+nykaa cosmetics,category,5079,4846
+nykaa cosmetics,category,255,4794
+nail polish,finish,10881,4744
+lipstick,brand,2347,4649
+lakme,category,5079,4529
+maybelline new york,category,5079,4479
+lipstick,brand,669,4452
+shampoo,star_rating,4,4441
+maybelline new york,category,687,4394
+lipstick,price,0-499,4367
+colorbar,category,249,4354
+eyeliner,formulation,15987,4346
+nail polish,brand,642,4319
+nail polish,brand,596,4190
+maybelline new york,category,228,4159
+maybelline new york,category,241,4086
+eyeliner,brand,596,4066
+bags,category,2323,4056
+lipstick,brand,4985,3997
+lipstick,finish,20425,3953
+lipstick,brand,834,3896
+biotique,category,316,3883
+shampoo,concern,10755,3867
+lipstick,brand,4130,3848
+maybelline new york,category,242,3813
+eyeliner,brand,604,3785
+shampoo,concern,10747,3741
+nail polish,color,15514,3709
+lipstick,star_rating,4,3618
+face wash,skin_type,10779,3604
+shampoo,brand,1251,3599
+eyeliner,formulation,10822,3552
+lipstick,formulation,10804,3495
+lipstick,brand,589,3451
+shampoo,concern,10756,3379
+the face shop,category,8401,3349
+biotique,category,8394,3313
+biotique,category,8379,3307
+nail polish,brand,834,3305
+shampoo,concern,10751,3296
+lipstick,formulation,10822,3273
+m.a.c,category,249,3234
+bags,category,1480,3194
+eye shadow,brand,596,3165
+nykaa cosmetics,category,240,3122
+shampoo,preference,10845,3118
+face wash,concern,10777,3101
+eyeliner,color,13750,3076
+maybelline new york,category,231,3066
+shampoo,hair_type,11071,3061
+lakme,category,228,2943
+shampoo,brand,595,2928
+shampoo,hair_type,11077,2904
+jewellery,category,4364,2898
+maybelline new york,category,255,2850
+eyeliner,finish,10881,2804
+foundation,coverage,10874,2804
+maybelline new york,category,234,2749
+lipstick,brand,670,2746
+eye shadow,brand,2130,2741
+colorbar,category,255,2720
+maybelline new york,category,254,2713
+face wash,skin_type,10782,2704
+kajal,color,10801,2704
+faces,category,249,2675
+huda beauty,category,249,2663
+lakme,category,687,2662
+nykaa cosmetics,category,242,2652
+liquid lipstick,brand,596,2593
+bags,category,1481,2574
+lakme,category,231,2570
+eyeliner,preference,10838,2568
+maybelline new york,category,250,2563
+maybelline new york,category,235,2545
+liquid lipstick,finish,10881,2515
+bags,category,1471,2509
+lakme,category,250,2509
+foundation,brand,596,2501
+nail polish,brand,589,2474
+bags,brand,9232,2460
+shampoo,preference,10857,2455
+lipstick,brand,1821,2449
+shampoo,preference,10853,2440
+lipstick,brand,6346,2438
+shampoo,brand,607,2431
+nykaa cosmetics,category,250,2421
+bags,brand,8932,2412
+twenty dresses,category,9106,2405
+nail polish,color,13750,2371
+maybelline new york,category,237,2365
+liquid lipstick,brand,604,2364
+nykaa cosmetics,category,687,2361
+the body shop,category,8394,2355
+lakme,category,255,2342
+foundation,skin_type,10779,2341
+shampoo,preference,12175,2316
+lipstick,color,13529,2307
+eyeliner,brand,595,2302
+shampoo,hair_type,11074,2284
+l'oreal paris,category,316,2263
+the body shop,category,970,2247
+face wash,star_rating,4,2246
+the body shop,category,316,2226
+maybelline new york,category,233,2205
+shampoo,brand,6532,2198
+lipstick,brand,5540,2195
+lakme,category,242,2189
+lipstick,finish,10883,2176
+facewash,skin_type,10779,2173
+shampoo,concern,10714,2154
+the face shop,category,8394,2149
+lipstick,finish,10880,2148
+eye shadow,brand,3899,2143
+nykaa cosmetics,category,228,2143
+kajal,brand,596,2126
+innisfree,category,8380,2123
+biotique,category,319,2117
+lip balm,brand,596,2116
+shampoo,preference,10868,2114
+face wash,skin_type,10781,2106
+eye shadow,brand,2347,2099
+shampoo,brand,923,2093
+colorbar,category,263,2092
+lipstick,brand,997,2091
+nail polish,color,13915,2089
+nail polish,brand,669,2085
+foundation,brand,604,2070
+the body shop,category,8379,2054
+huda beauty,category,263,2051
+lip balm,brand,943,2042
+moisturizer,category,8394,2040
+makeup revolution,category,242,2029
+lipstick,brand,2298,2026
+lipstick,category,249,2024
+nykaa naturals,category,8401,2007
+eyeliner,category,240,1998
+l'oreal paris,category,249,1985
+khadi natural,category,316,1978
+shampoo,brand,998,1966
+twenty dresses,category,9123,1964
+foundation,brand,3899,1961
+lip balm,star_rating,4,1951
+nail polish,brand,595,1947
+shampoo,concern,91637,1944
+eyeliner,brand,3899,1934
+eyeliner,star_rating,4,1925
+eye shadow,finish,10881,1922
+eye shadow,price,0-499,1910
+night cream,skin_type,10779,1902
+moisturizers,category,8394,1893
+biotique,category,8400,1891
+innisfree,category,8394,1885
+eyeliner,brand,642,1882
+sugar,category,249,1877
+the face shop,category,8380,1849
+lakme,category,251,1840
+face wash,skin_type,10778,1837
+maybelline new york,category,251,1837
+shampoo,hair_type,11079,1830
+shampoo,brand,621,1827
+face sunscreen,skin_type,10779,1826
+eyeliner,formulation,10824,1818
+lakme,category,253,1817
+sugar,category,263,1812
+liquid lipstick,color,25802,1809
+lipstick,brand,1544,1808
+shampoo,preference,10861,1804
+foundation,skin_tone,10887,1798
+kajal,brand,604,1784
+lakme,category,8394,1779
+biotique,category,8381,1769
+lipstick,coverage,10874,1767
+lipstick,brand,5108,1766
+sheet masks,brand,4290,1763
+shampoo,category,316,1754
+colorbar,category,5079,1752
+the body shop,category,962,1749
+nail polish,finish,10883,1748
+face wash,concern,10771,1743
+facewash,concern,10777,1739
+lipstick,color,10789,1735
+lakme,category,234,1719
+colorbar,category,240,1717
+biotique,category,8392,1711
+eyeliner,brand,1937,1711
+shampoo,brand,943,1711
+liquid lipstick,color,15514,1708
+nail polish,brand,2534,1708
+face moisturizer,skin_type,10779,1696
+kajal,star_rating,4,1695
+shampoo,brand,609,1694
+shampoo,concern,10750,1692
+nykaa cosmetics,category,237,1688
+nykaa cosmetics,category,254,1675
+lipstick,formulation,10828,1674
+face wash,concern,10753,1669
+foundation,brand,595,1668
+the body shop,category,368,1659
+lipstick,finish,20426,1653
+nail polish,color,11882,1646
+nykaa cosmetics,category,234,1639
+lakme,category,235,1637
+lakme,category,233,1632
+the face shop,category,8379,1631
+shampoo,concern,10764,1626
+lipstick,color,16777,1624
+lakme,category,254,1622
+face wash,preference,10851,1618
+shampoo,concern,10732,1609
+liquid lipstick,brand,2534,1605
+nail polish,color,25192,1600
+foundation,skin_type,10782,1598
+bags,brand,5822,1590
+faces,category,5079,1585
+nail polish,color,10801,1584
+mascara,brand,596,1583
+lipstick,brand,6882,1571
+moisturizer,skin_type,10779,1557
+eye shadow,brand,595,1554
+maybelline new york,category,245,1552
+eye shadow,brand,5540,1551
+face sunscreen,spf,10870,1549
+facewash,star_rating,4,1543
+shampoo,preference,64746,1543
+foundation,skin_type,10781,1542
+nykaa cosmetics,category,235,1538
+lipstick,brand,943,1532
+nail polish,finish,20428,1531
+biotique,category,8380,1529
+nail polish,brand,652,1521
+biotique,skin_type,10779,1519
+maybelline new york,category,4140,1518
+shampoo,brand,1693,1515
+face wash,brand,943,1513
+eyeliner,formulation,10813,1508
+face wash,concern,10737,1508
+lipstick,brand,3814,1506
+nail polish,color,25190,1505
+clovia,category,3067,1490
+jewellery,category,4365,1486
+concealer,brand,596,1480
+eye shadow,brand,604,1478
+face wash,brand,923,1478
+nail polish,color,25191,1472
+nail polish,color,25740,1467
+shampoo,brand,615,1462
+face moisturizer,skin_type,10782,1461
+night cream,skin_type,10782,1461
+compact,brand,604,1457
+lakme,category,232,1456
+nail polish,color,10789,1454
+face wash,concern,10770,1453
+nyx professional makeup,category,242,1439
+l'oreal paris,category,319,1434
+maybelline new york,finish,10881,1432
+faces,category,263,1429
+liquid lipstick,brand,1937,1424
+facewash,skin_type,10782,1421
+nykaa cosmetics,category,257,1419
+compact,brand,596,1408
+m.a.c,category,228,1402
+foundation,star_rating,4,1399
+shampoo,hair_type,91639,1399
+nail polish,color,25188,1392
+lakme,category,241,1389
+liquid lipstick,brand,595,1379
+face primer,skin_type,10779,1378
+sunscreen,spf,10870,1370
+kajal,color,13750,1368
+eye shadow,star_rating,4,1360
+nykaa cosmetics,category,231,1347
+maybelline new york,category,232,1345
+liquid lipstick,brand,3899,1343
+biotique,category,8429,1337
+shampoo,concern,10728,1336
+nail polish,color,16775,1332
+shampoo,preference,10858,1328
+eyeliner,color,15515,1327
+nail polish,price,0-499,1327
+maybelline new york,color,25802,1326
+kajal,brand,595,1320
+moisturizers,skin_type,10779,1315
+kajal,brand,3899,1310
+liquid lipstick,brand,2347,1310
+lip gloss,finish,10883,1307
+night cream,concern,10753,1306
+maybelline new york,category,229,1303
+maybelline new york,category,3745,1299
+nail polish,color,15515,1298
+kajal,brand,1937,1294
+nail polish,finish,20429,1285
+nykaa cosmetics,category,245,1284
+eyeliner,color,13915,1283
+eye shadow,brand,4985,1281
+eye shadow,color,10789,1280
+zivame,category,3067,1276
+m.a.c,category,263,1253
+liquid lipstick,brand,4985,1251
+eyeliner,benefits,10890,1249
+nyx professional makeup,category,249,1246
+highlighters,price,0-499,1241
+hair oil,concern,10725,1239
+eye shadow,brand,642,1237
+nail polish,star_rating,4,1237
+the body shop,category,8426,1237
+shampoo,brand,753,1228
+bags,brand,5947,1227
+facial kits,brand,670,1227
+face primer,brand,596,1226
+biotique,category,8397,1221
+eyeliner,brand,2347,1219
+shampoo,concern,91638,1219
+sheet masks,brand,3901,1217
+biotique,category,320,1216
+sunscreen,skin_type,10779,1216
+mascara,star_rating,4,1215
+shampoo,preference,10869,1215
+biotique,category,2040,1214
+innisfree,category,8397,1204
+the face shop,category,8397,1203
+eyeliner,brand,669,1201
+nail polish,color,13529,1199
+face wash,concern,10750,1198
+nail polish,category,255,1196
+toner,skin_type,10779,1195
+shampoo,brand,594,1191
+the body shop,category,319,1189
+straighteners,brand,1066,1186
+hair serum,star_rating,4,1183
+innisfree,category,8400,1174
+innisfree,category,8392,1164
+biotique,category,8395,1163
+shampoo,preference,10847,1162
+bags,category,1484,1161
+l'oreal paris,category,240,1161
+nykaa cosmetics,category,233,1160
+the body shop,category,8392,1158
+liquid lipstick,color,25190,1155
+eye shadow,brand,1937,1153
+the face shop,category,8392,1148
+highlighters,brand,596,1146
+hair serum,brand,595,1145
+innisfree,category,8401,1145
+nykaa cosmetics,category,4140,1145
+the face shop,category,8400,1140
+the body shop,category,8420,1136
+lipstick,brand,201,1134
+hair color,brand,595,1130
+lip balm,brand,645,1130
+l'oreal paris,category,263,1129
+kajal,color,15515,1126
+eye shadow,brand,4130,1117
+night cream,star_rating,4,1117
+hair serum,brand,1251,1115
+nykaa cosmetics,price,0-499,1115
+lip gloss,color,25740,1112
+nykaa cosmetics,finish,10881,1107
+shampoo,hair_type,11073,1106
+shampoo,brand,665,1104
+foundation,finish,10880,1103
+lakme,finish,10881,1098
+facewash,skin_type,10781,1093
+twenty dresses,category,9107,1093
+wet n wild,category,249,1092
+face moisturizer,category,8394,1091
+lipstick,color,69968,1090
+shampoo,brand,1451,1081
+conditioner,preference,10851,1080
+biotique,category,8409,1079
+nail polish,brand,670,1075
+lip balm,brand,923,1074
+nail polish,finish,10884,1074
+nail polish,color,13370,1071
+sugar,category,5079,1071
+shampoo,brand,2454,1067
+huda beauty,category,242,1066
+lakme,category,245,1063
+handbags,brand,8932,1060
+clovia,category,3060,1057
+conditioner,hair_type,11078,1057
+shampoo,concern,10737,1057
+lipstick,brand,1804,1052
+foundation,brand,4130,1047
+liquid lipstick,price,0-499,1047
+maybelline new york,price,0-499,1044
+handbags,brand,9232,1038
+khadi natural,category,319,1035
+faces,category,240,1032
+face primer,star_rating,4,1026
+nykaa cosmetics,category,232,1024
+night cream,concern,10770,1020
+concealer,brand,3899,1019
+facial kits,brand,600,1018
+eyeliner,brand,4130,1016
+zivame,category,3060,1016
+concealer,price,0-499,1013
+miss claire,category,242,1013
+lip gloss,color,25802,1011
+hair color,color,15515,1008
+foundation,skin_tone,10886,1004
+eye shadow,brand,6346,1003
+nail polish,brand,599,1003
+nykaa cosmetics,category,241,1003
+shampoo,brand,2682,1003
 toner,preference,10869,999
 moisturizer,skin_type,10782,996
 shampoo,preference,16003,995
