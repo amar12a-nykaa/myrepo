@@ -13,7 +13,7 @@ from elasticsearch import helpers, Elasticsearch
 from datetime import datetime, timedelta
 
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType, ArrayType
 from pyspark.sql.functions import udf, col, desc
 import pyspark.sql.functions as func
 from pyspark.sql.window import Window
@@ -24,6 +24,7 @@ from recoutils import RecoUtils
 from datautils import DataUtils
 from mysqlredshiftutils import MysqlRedshiftUtils
 from sparkutils import SparkUtils
+from upsutils import UPSUtils
 
 #sys.path.append("/var/www/pds_api/")
 #from pas.v2.utils import Utils, RecommendationsUtils
@@ -192,15 +193,21 @@ def compute_recommendations(algo, platform, computation_start_datetime, p2p_star
     c2r_df = c2p_df.join(df, on='product', how='inner').groupBy(['customer_id', 'recommendation']).agg({'similarity': 'avg'}).withColumnRenamed('avg(similarity)', 'similarity').withColumn('rank', func.dense_rank().over(Window.partitionBy('customer_id').orderBy(desc('similarity')))).filter(col('rank') <= 100)
     c2r_df = c2r_df.groupBy("customer_id").agg(func.collect_list(func.struct('recommendation', 'similarity')).alias('recommendation_struct_list'))
     customer_2_products = {row['customer_id']: row['products'] for row in c2p_df.groupBy(['customer_id']).agg(func.collect_list('product').alias('products')).collect()}
-    sort_udf = udf(lambda customer_id, l: [ele[0] for ele in sorted(l, key=lambda e: -e[1]) if ele[0] not in customer_2_products[customer_id]])
+    sort_udf = udf(lambda customer_id, l: [ele[0] for ele in sorted(l, key=lambda e: -e[1]) if ele[0] not in customer_2_products[customer_id]], ArrayType(IntegerType()))
     c2r_df = c2r_df.select("customer_id", sort_udf("customer_id", "recommendation_struct_list").alias("recommendations"))
 
-    rows = []
-    for row in c2r_df.collect():
-        rows.append((platform, row['customer_id'], 'user', 'bought', algo, str(row['recommendations'])))
+    #rows = []
+    #for row in c2r_df.collect():
+    #    rows.append((platform, row['customer_id'], 'user', 'bought', algo, str(row['recommendations'])))
 
-    print('Total number of customers: %d' % len(rows))
-    MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
+    rows = [{'customer_id': row['customer_id'], 'value': {algo: row['recommendations']}} for row in c2r_df.collect()]
+    print("Writing the user recommendations " + str(datetime.now()))
+    print("Total number of customers to be updated: %d" % len(rows))
+    print("Few users getting updated are listed below")
+    print([row['customer_id'] for row in rows[:10]])
+    UPSUtils.add_recommendations_in_ups(rows)
+    print("Done Writing the user recommendations " + str(datetime.now()))
+    #MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
 
 
 if __name__ == '__main__':

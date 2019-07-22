@@ -8,6 +8,7 @@ import sys
 import time
 import threading
 import traceback
+import urllib
 
 import arrow
 import editdistance
@@ -240,7 +241,7 @@ def index_search_queries(collection, searchengine):
       if(query != corrected_query):
         is_corrected = True
       _type = 'search_query'
-      url = "/search/result/?q=" + corrected_query.replace(" ", "+")
+      url = "/search/result/?" + str(urllib.parse.urlencode({'q': corrected_query}))
       data = json.dumps({"type": _type, "url": url, "corrected_query" : corrected_query})
       entity = query 
       cnt_search += 1 
@@ -308,9 +309,10 @@ def index_categories(collection, searchengine):
   def getCategoryDoc(row, variant):
     category_url = row['url']
     category_men_url = row['men_url']
-    url = "/search/result/?q=" + variant.replace(" ", "+")
-    men_url = "/search/result/?q=" + variant.replace(" ", "+")
     id = "category_" + str(row['category_id']) + "_" + variant
+    
+    url = "/search/result/?" + str(urllib.parse.urlencode({'q': variant}))
+    men_url = "/search/result/?" + str(urllib.parse.urlencode({'q': variant}))
     
     doc = {
       "_id": createId(id),
@@ -359,19 +361,20 @@ def index_categories(collection, searchengine):
 def index_brands_categories(collection, searchengine):
 
   def getBrandCategoryDoc(row, variant):
-    url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
-    men_url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
+    brand_category = row['brand'] + " " + variant
+    url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
+    men_url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
     id = row['brand'] + "_" + variant + "_" + str(row['category_id'])
     doc = {"_id": createId(id),
-                 "entity": row['brand'] + " " + variant,
-                 "weight": row['popularity'],
-                 "type": "brand_category",
-                 "data": json.dumps({"url": url, "type": "brand_category", "men_url": men_url}),
-                 "brand_id": row['brand_id'],
-                 "category_id": row['category_id'],
-                 "category_name": variant,
-                 "source": "brand_category"
-                 }
+           "entity": row['brand'] + " " + variant,
+           "weight": row['popularity'],
+           "type": "brand_category",
+           "data": json.dumps({"url": url, "type": "brand_category", "men_url": men_url}),
+           "brand_id": row['brand_id'],
+           "category_id": row['category_id'],
+           "category_name": variant,
+           "source": "brand_category"
+           }
     doc = add_store_popularity(doc, row)
     return doc
 
@@ -412,9 +415,9 @@ def index_category_facets(collection, searchengine):
     if ctr.should_print():
       print(ctr.summary)
 
-
-    url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
-    men_url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
+    category_facet = row['facet_val'] + " " + row['category_name']
+    url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': category_facet}))
+    men_url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': category_facet}))
     id = row['facet_val'] + "_" + row['category_name'] + "_" + str(row['category_id'])
     doc = {"_id": createId(id),
         "entity": row['facet_val'] + " " + row['category_name'],
