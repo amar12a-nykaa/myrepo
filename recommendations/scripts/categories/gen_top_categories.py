@@ -199,7 +199,7 @@ def prepare_views_ca_dataframe(files):
     return df
 
 def generate_top_categories_from_views(top_categories, lsi_model, days=None, limit=None):
-    FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, ['Interaction_one_time_20190501-20190620.zip'])
+    FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, [])
     csvs_path = S3Utils.ls_file_paths(env_details['bucket_name'], VIEWS_CA_S3_PREFIX, True)
     csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 31 , csvs_path))
     print(csvs_path)
