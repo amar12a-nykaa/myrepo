@@ -8,7 +8,7 @@ from loopcounter import LoopCounter
 from mongoutils import MongoUtils
 
 
-sys.path.append('/nykaa/api')
+sys.path.append('/var/www/pds_api')
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
@@ -41,7 +41,8 @@ def read_data(start_date, end_date):
                 sum(product_unitprice) as revenue,
                 sum(orderdetail_qty) as units
               from fact_order_detail_new
-              where orderdetail_dt_created between '%s' and '%s' and product_id is not null
+              where orderdetail_dt_created between '%s' and '%s' and product_id is not null and
+              lower(orderdetail_status) not in ('closed', 'cancelled')
               group by 1,2,3 """%(start_date, end_date)
   redshift_conn = PasUtils.redshiftConnection()
   cur = redshift_conn.cursor()

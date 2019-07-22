@@ -20,7 +20,7 @@ if __name__ == '__main__':
             'HadoopJarStep': {
                 'Jar': 'command-runner.jar',
                 'Args': [
-                    'spark-submit', '/home/hadoop/%s' % Constants.GEN_U2P_SCRIPT
+                    'spark-submit', '/home/hadoop/%s' % Constants.GEN_U2P_VIEWS_SCRIPT
                 ] + command_line_arguments
             }
         }
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     instance_groups = {
         'InstanceGroups': [
             Constants.BIG_MASTER_INSTANCE,
-            dict(Constants.BIG_CORE_INSTANCE, **{'InstanceCount': 1})
+            dict(Constants.BIG_CORE_INSTANCE, **{'InstanceCount': 3})
         ]
     }
     EMRUtils.launch_spark_emr('U2P', config, [], steps, dict(Constants.BIG_INSTANCE_SAMPLE, **instance_groups))
