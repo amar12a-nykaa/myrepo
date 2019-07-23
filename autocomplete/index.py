@@ -241,6 +241,7 @@ def index_search_queries(collection, searchengine):
         "weight": row['popularity'],
         "type": _type,
         "data": data,
+        "ctr_flag":row['ctr_flag'],
         "source": "search_query"
       })
 

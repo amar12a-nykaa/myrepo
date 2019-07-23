@@ -166,7 +166,7 @@ def normalize_search_terms():
         final_df = pd.concat(dfs)
         final_df = final_df.groupby('id').agg({'ctr': 'mean', 'popularity': 'sum'})
         final_df.popularity = final_df.popularity.fillna(0)
-        final_df = final_df[final_df.ctr >= 15]
+        final_df['ctr_flag'] = [True if x>=15 else False for x in final_df['ctr']]
 
         # final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
         # final_df.drop(['popularity'], axis=1, inplace=True)
@@ -226,9 +226,12 @@ def normalize_search_terms():
         try:
             suggested_query = getQuerySuggestion(query_id, query, algo)
             requests.append(UpdateOne({"_id":  query_id},
-                                      {"$set": {"query": row['id'].lower(), 'popularity': row['popularity'], "suggested_query": suggested_query.lower()}}, upsert=True))
+                                      {"$set": {"query": row['id'].lower(), 'ctr_flag': row['ctr_flag'],
+                                                'popularity': row['popularity'],
+                                                "suggested_query": suggested_query.lower()}}, upsert=True))
             corrections.append(UpdateOne({"_id":  query_id},
-                                      {"$set": {"query": row['id'].lower(), "suggested_query": suggested_query.lower(), "algo": algo}}, upsert=True))
+                                         {"$set": {"query": row['id'].lower(), "ctr_flag": row['ctr_flag'],
+                                                   "suggested_query": suggested_query.lower(), "algo": algo}},upsert=True))
         except:
             print(traceback.format_exc())
             print(row)
