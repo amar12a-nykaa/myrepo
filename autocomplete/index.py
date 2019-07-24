@@ -241,7 +241,7 @@ def index_search_queries(collection, searchengine):
         "weight": row['popularity'],
         "type": _type,
         "data": data,
-        "ctr_flag":row['ctr_flag'],
+        "is_visible": row['ctr_flag'],
         "source": "search_query"
       })
 
@@ -282,6 +282,7 @@ def index_brands(collection, searchengine):
         "type": "brand",
         "data": json.dumps({"url": url, "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
         "id": row['brand_id'],
+        "is_visible": True,
         "is_men" : is_men,
         "source": "brand"
       
@@ -312,6 +313,7 @@ def index_categories(collection, searchengine):
                           "men_url": men_url, "category_men_url": category_men_url}),
       "id": row['category_id'],
       "is_men": is_men,
+      "is_visible": True,
       "source": "category"
     }
     return doc
@@ -366,6 +368,7 @@ def index_brands_categories(collection, searchengine):
                  "category_id": row['category_id'],
                  "category_name": variant,
                  "is_men": is_men,
+                 "is_visible": True,
                  "source": "brand_category"
                  }
     return doc
@@ -423,6 +426,7 @@ def index_category_facets(collection, searchengine):
         "category_id": row['category_id'],
         "category_name": row['category_name'],
         "is_men" : is_men,
+        "is_visible": True,
         "source": "category_facet"
       })
     if len(docs) >= 100:
@@ -542,6 +546,7 @@ def index_products(collection, searchengine):
           "data": data,
           "id": id,
           "is_men": is_men,
+          "is_visible": True,
           "source": "product"
         })
       productList.append(unique_id)
