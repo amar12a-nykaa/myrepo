@@ -6,6 +6,7 @@ import time
 import boto3
 import os
 import sys
+import glob
 import psycopg2
 import sys
 from collections import defaultdict
@@ -15,9 +16,9 @@ import mysql.connector
 from elasticsearch import helpers, Elasticsearch
 from IPython import embed
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType, ArrayType
 from pyspark.sql.functions import udf, col, desc
 import pyspark.sql.functions as func
@@ -32,16 +33,10 @@ from recoutils import RecoUtils
 from datautils import DataUtils
 from mysqlredshiftutils import MysqlRedshiftUtils
 from sparkutils import SparkUtils
+from ftputils import FTPUtils
+from esutils import ESUtils
 
 spark = SparkUtils.get_spark_instance('Gen Top Categories')
-#spark = SparkSession.builder.appName("Gen Top Categories").getOrCreate()
-#spark = SparkSession.builder \
-#            .master("local[6]") \
-#            .appName("TOP 50 CATS") \
-#            .config("spark.executor.memory", "4G") \
-#            .config("spark.storage.memoryFraction", 0.4) \
-#            .config("spark.driver.memory", "26G") \
-#            .getOrCreate()
 
 sc = spark.sparkContext
 print(sc.getConf().getAll())
@@ -55,13 +50,35 @@ TOP_CATEGORIES_JSON = 'categories_page/top_categories.json'
 CATEGORY_2_NAME_JSON = 'categories_page/category_2_name.json'
 CATEGORIES_LSI_MODEL_DIR = 'categories_page/models'
 
+DAILY_SYNC_FILE_PREFIX= 'Nykaa_CustomerInteractions_'
+VIEWS_CA_S3_PREFIX = 'categories_page/data/'
+
 class CategoriesUtils:
 
+    dynamodb = boto3.resource('dynamodb')
+
+    def _add_categories_in_ups(rows):
+        keys = [{'user_id': '%s' % customer_id} for customer_id in rows.keys()]
+        get_response = CategoriesUtils.dynamodb.batch_get_item(RequestItems={'user_profile_service': {'Keys': keys}})
+        put_items = []
+        for user_obj in get_response['Responses']['user_profile_service']:
+            if user_obj.get('categories'):
+                user_obj['categories'].update(rows[user_obj['user_id']])
+            else:
+                user_obj['categories'] = rows[user_obj['user_id']]
+            put_items.append({'PutRequest': {'Item': user_obj}})
+        for i in range(0, len(put_items), 25):
+            CategoriesUtils.dynamodb.batch_write_item(RequestItems={'user_profile_service': put_items[i:i+25]})
+
     def add_categories_in_ups(rows):
-        dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('user_profile_service')
-        for i, row in enumerate(rows):
-            table.update_item(Key={'user_id': '%s' % row['customer_id']}, UpdateExpression='SET categories = :val', ExpressionAttributeValues={':val': row['value']})
+        rows_chunks = [rows[i:i+100] for i in range(0, len(rows), 100)]
+        for chunk in rows_chunks:
+            CategoriesUtils._add_categories_in_ups({row['customer_id']: row['value'] for row in chunk})
+
+#    def add_categories_in_ups(rows):
+#        table = dynamodb.Table('user_profile_service')
+#        for i, row in enumerate(rows):
+#            table.update_item(Key={'user_id': '%s' % row['customer_id']}, UpdateExpression='SET categories = :val', ExpressionAttributeValues={':val': row['value']})
 
 def _generate_top_categories(df, es_scroll_results, bucket_name):
     l3_cat_2_name = {cat_obj['id']: cat_obj['name'] for l in es_scroll_results['primary_categories'].values() for ele in l for cat_type, cat_obj in json.loads(ele).items() if cat_type == 'l3'}
@@ -110,21 +127,6 @@ def load_model(bucket_name, s3_path):
 def generate_category_corpus(categories):
     return [[[category, 1]] for category in categories]
 
-#def generate_top_categories_for_user(env, platform, n, start_datetime, end_datetime):
-#    df, results = prepare_dataframe(env, platform, start_datetime, end_datetime) 
-#    top_categories_df = _generate_top_categories(df, results)
-#    top_categories = top_categories_df.select(['l3_category']).limit(n).rdd.flatMap(lambda x: x).collect()
-#    print('Top Categories')
-#    print(top_categories)
-#    customer_2_cat_corpus_dict = generate_customer_cat_corpus(df)
-#    path = make_and_save_model(list(customer_2_cat_corpus_dict.values()))
-#    lsi_model = load_model(path)
-#    corpus_lsi = lsi_model[generate_category_corpus(top_categories)]
-#    idx_2_cat = {key: cat for key, cat in enumerate(top_categories)}
-#    index = similarities.MatrixSimilarity(corpus_lsi)
-#    sorted_cats = list(map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[customer_2_cat_corpus_dict['1006620']]]), key=lambda e: -e[1])))
-#    embed()
-
 def generate_top_categories_for_user(platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count):
     df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, None, None, start_datetime) 
     df = df.select(['customer_id', 'order_id', 'l3_category', 'order_date']).distinct().withColumn('rank', func.dense_rank().over(Window.partitionBy('customer_id').orderBy(desc('order_date')))).filter(col('rank') <= orders_count)
@@ -147,17 +149,135 @@ def generate_top_categories_for_user(platform, start_datetime, end_datetime, top
     CategoriesUtils.add_categories_in_ups(rows)
     print("Done Writing the categories recommendations " + str(datetime.now()))
 
+def prepare_views_ca_dataframe(files):
+    schema = StructType([
+        StructField("Date", StringType(), True),
+        StructField("Customer ID (evar23)", StringType(), True),
+        StructField("Products", IntegerType(), True),
+        StructField("Product Views", IntegerType(), True),
+        StructField("Cart Additions", IntegerType(), True)])
+
+    if not env_details['is_emr']:
+        S3Utils.download_dir(VIEWS_CA_S3_PREFIX, VIEWS_CA_S3_PREFIX, '/data/categories_page/data/', env_details['bucket_name'])
+        files = [f for f in glob.glob('~/categories_page/data/' + "**/*.csv", recursive=True)]
+
+    print("Using files: " + str(files))
+    df = spark.read.load(files[0], header=True, format='csv', schema=schema)
+    for i in range(1, len(files)):
+        df = df.union(spark.read.load(files[i], header=True, format='csv', schema=schema))
+
+    df = df.withColumnRenamed("Date", "date").withColumnRenamed("Customer ID (evar23)", "customer_id").withColumnRenamed("Products", "product_id").withColumnRenamed("Product Views", "views").withColumnRenamed("Cart Additions", "cart_additions")
+
+    print("Total Number of rows: %d" % df.count())
+    print("Dropping nulls")
+    df = df.dropna()
+    print("Total Number of rows now: %d" % df.count())
+
+    print("Filtering out junk data")
+    df = df.filter((col('cart_additions') <= 5) & (col('views') <= 5))
+    print("Total Number of rows now: %d" % df.count())
+
+    print('Scrolling ES for results')
+    results = ESUtils.scrollESForResults()
+    print('Scrolling ES done')
+
+    product_2_l3_category = {product_id: json.loads(categories[0])['l3']['id'] for product_id, categories in results['primary_categories'].items()}
+    l3_udf = udf(lambda product_id: product_2_l3_category.get(product_id), StringType())
+    df = df.withColumn('l3_category', l3_udf('product_id'))
+    df = df.filter(col('l3_category') != 'LEVEL')
+    df = df.withColumn('l3_category', col('l3_category').cast('int'))
+
+    print("Dropping nulls after l3 category addition for products")
+    df = df.dropna()
+    print("Total Number of rows now: %d" % df.count())
+
+    df = df.withColumn("date", udf(lambda d: datetime.strptime(d, '%B %d, %Y'), DateType())(col('date')))
+
+    print("Dropping nulls after changing the type of date")
+    df = df.dropna()
+    print("Total Number of rows now: %d" % df.count())
+    return df
+
+def generate_top_categories_from_views(top_categories, lsi_model, days=None, limit=None):
+    FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, [])
+    csvs_path = S3Utils.ls_file_paths(env_details['bucket_name'], VIEWS_CA_S3_PREFIX, True)
+    csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 31 , csvs_path))
+    print(csvs_path)
+    #update_csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")) >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24)).date() , csvs_path))
+    df = prepare_views_ca_dataframe(csvs_path)
+    customer_ids_need_update = [] 
+    if days:
+        customer_ids_need_update = df.filter(col('date') >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24*days)).date()).select(["customer_id"]).distinct().rdd.flatMap(lambda x: x).collect()
+        if limit:
+            customer_ids_need_update = customer_ids_need_update[:limit]
+        print("Only taking customer_ids which need to be updated")
+        print("Total number of customer_id=%d" % len(customer_ids_need_update))
+        df = df.filter(col('customer_id').isin(customer_ids_need_update))
+        print("Total Number of rows now: %d" % df.count())
+        
+
+    # TODO need to take the offset of timezone
+    def calculate_weight(row_date, views, cart_additions):
+        weight = views*0.5 + cart_additions*0.5
+        #row_date = datetime.strptime(row_date, '%Y-%m-%d').date()
+        today = date.today()
+        if (today - row_date).days <= 7:
+            return 2*weight
+        elif (today - row_date).days <= 14:
+            return 1.5*weight
+        else:
+            return weight
+
+    print("Dropping duplicates on date, customer_id, product_id")
+    df = df.dropDuplicates(subset=['date', 'customer_id', 'product_id'])
+    print("Total Number of rows now: %d" % df.count())
+
+    #TODO need to add code for cleaning the data such as views and cart additions are more than 100 etc, need to remove duplicates 
+    df = df.withColumn('weight', udf(calculate_weight, FloatType())(col('date'), col('views'), col('cart_additions')))
+    df = df.filter(col('weight') != 0.0)
+    df = df.groupBy(['customer_id', 'l3_category']).agg(func.sum(col('weight')).alias('weight'))
+    df = df.groupBy(['customer_id']).agg(func.collect_list(func.struct('l3_category', 'weight')).alias('vec'))
+
+    views_rdd = df.select(['customer_id', 'vec']).rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=[[category_count['l3_category'], category_count['weight']] for category_count in row['vec']]))
+    #df = df.select(['customer_id', 'vec']).rdd.map(lambda row: (row['customer_id'], [[category_count['l3_category'], category_count['weight']] for category_count in row['vec']])).toDF(['customer_id', 'vec'])
+
+    # Preparing customer_2_last_order_categories
+    if len(customer_ids_need_update) <= 5000:
+        orders_df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, None, None, None, customer_ids_need_update) 
+    else:
+        orders_df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, None, None, None, []) 
+
+    orders_df = orders_df.select(['customer_id', 'order_id', 'l3_category', 'order_date']).distinct().withColumn('rank', func.dense_rank().over(Window.partitionBy('customer_id').orderBy(desc('order_date')))).filter(col('rank') <= 1)
+    customer_2_last_order_categories = {int(row['customer_id']): row['categories'] for row in orders_df.select(['customer_id', 'l3_category']).distinct().groupBy(['customer_id']).agg(func.collect_list('l3_category').alias('categories')).collect()}
+
+
+    idx_2_cat = {key: cat for key, cat in enumerate(top_categories)}
+    top_cats_corpus_lsi = lsi_model[generate_category_corpus(top_categories)]
+    index = similarities.MatrixSimilarity(top_cats_corpus_lsi)
+    norm_model = models.NormModel()
+    sorted_cats_rdd = views_rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=row['vec'], sorted_cats=list(filter(lambda x: x not in customer_2_last_order_categories.get(row['customer_id'], []), map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(row['vec'])]]), key=lambda e: -e[1])))) + customer_2_last_order_categories.get(row['customer_id'], [])))
+    #sorted_cats_udf = udf(lambda customer_id, user_cat_doc: list(filter(lambda x: x not in customer_2_last_order_categories[customer_id], map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(user_cat_doc)]]), key=lambda e: -e[1])))) + customer_2_last_order_categories[customer_id], ArrayType(IntegerType()))
+    rows = [{'customer_id': row['customer_id'], 'value': {'lsi_views': row['sorted_cats']}} for row in sorted_cats_rdd.collect()]
+    print("Writing the categories recommendations " + str(datetime.now()))
+    print("Total number of customers to be updated: %d" % len(rows))
+    print("Few users getting updated are listed below")
+    print([row['customer_id'] for row in rows[:10]])
+    CategoriesUtils.add_categories_in_ups(rows)
+    print("Done Writing the categories recommendations " + str(datetime.now()))
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gen-top-cats', action='store_true')
     parser.add_argument('--prepare-model', action='store_true')
     parser.add_argument('--gen-user-categories', action='store_true')
+    parser.add_argument('--views', action='store_true')
     parser.add_argument('--start-datetime')
     parser.add_argument('--end-datetime')
     parser.add_argument('--use-months', type=int, default=6)
     parser.add_argument('--hours', type=int)
     parser.add_argument('--days', type=int)
     parser.add_argument('--orders-count', type=int, default=10)
+    parser.add_argument('--limit', type=int)
     parser.add_argument('--platform', default='nykaa', choices=['nykaa','men'])
     parser.add_argument('-n', '--n', default=20, type=int)
     
@@ -165,6 +285,7 @@ if __name__ == '__main__':
     do_gen_top_cats = argv.get('gen_top_cats')
     do_prepare_model = argv.get('prepare_model')
     gen_user_categories = argv.get('gen_user_categories')
+    views = argv.get('views')
     start_datetime = argv.get('start_datetime')
     if not start_datetime and (argv.get('hours') or argv.get('days')):
         start_datetime = datetime.now()
@@ -177,9 +298,12 @@ if __name__ == '__main__':
     platform = argv.get('platform')
     n = argv.get('n')
     orders_count = argv.get('orders_count')
+    limit = argv.get('limit')
 
     env_details = RecoUtils.get_env_details()
     computation_start_datetime = datetime.now() - timedelta(days=use_months*30)
+
+
     if do_gen_top_cats | do_prepare_model:
         df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, str(computation_start_datetime), None, None) 
         if do_gen_top_cats:
@@ -195,7 +319,8 @@ if __name__ == '__main__':
         print('Loading LSI Model')
         lsi_model = load_model(env_details['bucket_name'], CATEGORIES_LSI_MODEL_DIR)
         print('Generate top categories for user')
-        generate_top_categories_for_user(platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count)
-    #generate_top_categories_for_user(env, platform, n, prepare_model, start_datetime, end_datetime)
-    #top_categories_df = generate_top_categories(env, platform, n, start_datetime, end_datetime)
-    #top_categories_df.show(n, False)
+        #generate_top_categories_for_user(platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count)
+        if views:
+            generate_top_categories_from_views(top_categories, lsi_model, days=argv.get('days'), limit=limit)
+        else:
+            generate_top_categories_for_user(platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count)

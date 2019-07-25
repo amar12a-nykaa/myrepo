@@ -38,7 +38,7 @@ class EMRUtils:
     def launch_spark_emr(name, config, before_steps, after_steps, instances = Constants.SMALL_INSTANCE):
         env_details = RecoUtils.get_env_details()
         print(env_details)
-        S3Utils.upload_dir(Constants.HOME_DIR, env_details['bucket_name'], 'nykaa_scripts')
+        S3Utils.upload_dir(Constants.HOME_DIR, env_details['bucket_name'], 'nykaa_scripts', ['.git'])
         with open(config) as f:
             configurations = json.load(f)
         try:
@@ -64,6 +64,7 @@ class EMRUtils:
                         'Value': 'EMR'
                     }
                 ],
+                EbsRootVolumeSize=100,
                 BootstrapActions=[
                     {
                         'Name': 'Bootstrap downloads',

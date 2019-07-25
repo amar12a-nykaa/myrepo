@@ -37,8 +37,12 @@ class S3Utils:
     def transfer_ftp_2_s3(ftp, fnames, bucket_name, s3_dir):
         for fname in fnames:
             csv_fname = fname.replace('zip', 'csv')
-            tmp_zip_file = '/tmp/' + fname
-            tmp_csv_file = '/tmp/' + csv_fname
+            if env_details['is_emr']:
+                tmp_folder = '/home/hadoop/'
+            else:
+                tmp_folder = '/tmp/'
+            tmp_zip_file = tmp_folder + fname
+            tmp_csv_file = tmp_folder + csv_fname
             try:
                 with open(tmp_zip_file, 'wb') as f:
                     res = ftp.retrbinary('RETR %s' % fname, f.write)
@@ -46,7 +50,7 @@ class S3Utils:
                         print('Downloaded of file %s is not complete.' % fname)
                     print(tmp_zip_file)
                 zip_ref = zipfile.ZipFile(tmp_zip_file, 'r')
-                zip_ref.extractall('/tmp')
+                zip_ref.extractall(tmp_folder)
                 S3Utils.multi_part_upload_with_s3(bucket_name, s3_dir + csv_fname, tmp_csv_file)
                 os.remove(tmp_zip_file)
                 os.remove(tmp_csv_file)
@@ -54,8 +58,15 @@ class S3Utils:
                 print(traceback.format_exc())
                 print("Problem with file: %s" % fname)
 
-    def upload_dir(local_directory, bucket_name, destination):
+    def upload_dir(local_directory, bucket_name, destination, ignore_path_substring=[]):
         for root, dirs, files in os.walk(local_directory):
+            ignore = False
+            for substring in ignore_path_substring:
+                if substring in root:
+                    ignore = True
+                    break
+            if ignore:
+                continue
             for filename in files:
                 print('Uploading file: %s' % filename)
                 local_path = os.path.join(root, filename)

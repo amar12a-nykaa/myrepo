@@ -3,7 +3,7 @@ import sys
 import psycopg2
 import traceback
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType, BooleanType, ArrayType
+from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType, BooleanType, ArrayType, DateType
 from pyspark.sql.functions import concat, col, lit, udf, isnan, desc
 import pyspark.sql.functions as func
 from pyspark.sql.window import Window
@@ -18,7 +18,7 @@ import argparse
 from elasticsearch import helpers, Elasticsearch
 from ftplib import FTP
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta, date
 
 sys.path.append('/home/ubuntu/nykaa_scripts/utils')
 sys.path.append('/home/hadoop/nykaa_scripts/utils')
@@ -28,6 +28,7 @@ from sparkutils import SparkUtils
 from mysqlredshiftutils import MysqlRedshiftUtils
 from esutils import ESUtils
 from s3utils import S3Utils
+from ftputils import FTPUtils
 
 spark = SparkUtils.get_spark_instance('CAV')
 sc = spark.sparkContext
@@ -38,6 +39,10 @@ env_details = RecoUtils.get_env_details()
 
 CAV_APP_DATA_PATH = 'cav/data/app/'
 CAV_WEB_DATA_PATH = 'cav/data/web/'
+CAV_AGG_DATA_PATH = 'cav/data/agg/'
+
+DAILY_SYNC_FILE_APP_PREFIX = 'cav_app_daily'
+DAILY_SYNC_FILE_WEB_PREFIX = 'cav_web_daily'
 
 def prepare_data(files, desktop):
     schema = StructType([
@@ -52,6 +57,11 @@ def prepare_data(files, desktop):
     for i in range(1, len(files)):
         df = df.union(spark.read.load(files[i], header=True, format='csv', schema=schema))
     df = df.cache()
+
+    df = df.filter(df['Date'].isNotNull())
+    df = df.withColumn("Date", udf(lambda d: datetime.strptime(d, '%B %d, %Y'), DateType())(col('Date')))
+    df = df.filter(((date.today() - timedelta(days=90)) <= col('Date')))
+
     print("Rows count: " + str(df.count()))
 
     print('Cleaning out null or empty Visitor_ID and Visit Number')
@@ -85,7 +95,7 @@ def prepare_data(files, desktop):
     print('Data preparation done, returning dataframe')
     return df, results
 
-def compute_cav(platform, files, desktop):
+def compute_cav(platform, files, desktop, algo_name):
     df, results = prepare_data(files, desktop)
 
     print("Self joining the dataframe: Computing all the non product to product pairs")
@@ -154,14 +164,14 @@ def compute_cav(platform, files, desktop):
         if desktop:
             rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple_desktop', json.dumps(row['recommendations'])))
         else:
-            rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple', json.dumps(row['recommendations'])))
+            rows.append((platform, row['product'], 'product', 'viewed', algo_name, json.dumps(row['recommendations'])))
         variants = parent_2_children.get(row['product'], [])
         for variant in variants:
             product_ids_updated.append(variant)
             if desktop:
                 rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple_desktop', json.dumps(row['recommendations'])))
             else:
-                rows.append((platform, row['product'], 'product', 'viewed', 'coccurence_simple', json.dumps(row['recommendations'])))
+                rows.append((platform, row['product'], 'product', 'viewed', algo_name, json.dumps(row['recommendations'])))
 
     #for product_id in simple_similar_products_dict:
     #    product_ids_updated.append(product_id)
@@ -220,66 +230,45 @@ def compute_cav(platform, files, desktop):
 
     #print('Adding recommendations for %d products with algo=premium_cs in DB' % len(set(product_ids_updated)))
 
-    MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mysqlConnection(), 'recommendations_v2', rows)
+    #MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mysqlConnection(), 'recommendations_v2', rows)
     MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
     #RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(), 'recommendations_v2', rows)
-
-def cav_sync_data():
-    ftp = FTP('52.220.4.21')
-    ftp.login('omniture', 'C9PEy2H8TEC2')
-    ftp.set_pasv(True)
-
-    cav_app_files, cav_web_files = [], []
-    #cav_app_files, cav_web_files = ['cav_app_agg.zip'], ['cav_web_agg20181101-20190418.zip']
-    #cav_app_files, cav_web_files = ['Report_app_agg_10_11_10_05.zip'], ['Report_cav_web_10_11_10_05.zip']
-
-    def fill_cav_files(f):
-        if f.startswith('cav_app_daily'):
-            cav_app_files.append(f)
-        if f.startswith('cav_web_daily'):
-            cav_web_files.append(f)
-
-    ftp.retrlines('NLST', fill_cav_files)
-    cav_app_csvs = list(map(lambda f: f.replace('zip', 'csv'), cav_app_files))
-    cav_web_csvs = list(map(lambda f: f.replace('zip', 'csv'), cav_web_files))
-
-    s3_cav_app_csvs = S3Utils.ls_file_paths(env_details['bucket_name'], CAV_APP_DATA_PATH)
-    s3_cav_web_csvs = S3Utils.ls_file_paths(env_details['bucket_name'], CAV_WEB_DATA_PATH)
-
-    s3_cav_app_csvs = [s[s.rfind("/") + 1:] for s in s3_cav_app_csvs]
-    s3_cav_web_csvs = [s[s.rfind("/") + 1:] for s in s3_cav_web_csvs]
-    app_csvs_needed_to_be_pushed = list(set(cav_app_csvs) - set(s3_cav_app_csvs))
-    web_csvs_needed_to_be_pushed = list(set(cav_web_csvs) - set(s3_cav_web_csvs))
-
-    S3Utils.transfer_ftp_2_s3(ftp, list(map(lambda f: f.replace('csv', 'zip'), app_csvs_needed_to_be_pushed)), env_details['bucket_name'], CAV_APP_DATA_PATH)
-    S3Utils.transfer_ftp_2_s3(ftp, list(map(lambda f: f.replace('csv', 'zip'), web_csvs_needed_to_be_pushed)), env_details['bucket_name'], CAV_WEB_DATA_PATH)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for CAV script')
     parser.add_argument('--desktop', action='store_true')
+    parser.add_argument('--data-file')
+    parser.add_argument('--algo', default='coccurence_simple')
     #parser.add_argument('--files', nargs='+')
-    parser.add_argument('--platform', required=True, choices=['nykaa','men'])
+    parser.add_argument('--platform', default='nykaa', choices=['nykaa','men'])
 
     argv = vars(parser.parse_args())
     #files = argv['files']
     desktop = argv.get('desktop')
     platform = argv.get('platform')
+    algo_name = argv.get('algo')
 
     print("Printing Configurations:")
     print(sc.getConf().getAll())
 
-    cav_sync_data()
-
-    if desktop:
-        data_path = CAV_WEB_DATA_PATH
+    if argv.get('data_file'):
+        data_file = argv.get('data_file')
+        ftp = FTPUtils.get_handler()
+        S3Utils.transfer_ftp_2_s3(ftp, [data_file], env_details['bucket_name'], CAV_AGG_DATA_PATH)
+        files = ['s3://%s/%s%s' % (env_details['bucket_name'], CAV_AGG_DATA_PATH, data_file.replace('zip', 'csv'))]
     else:
-        data_path = CAV_APP_DATA_PATH
+        if desktop:
+            FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_WEB_PREFIX, env_details['bucket_name'], CAV_WEB_DATA_PATH)
+            data_path = CAV_WEB_DATA_PATH
+        else:
+            FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_APP_PREFIX, env_details['bucket_name'], CAV_APP_DATA_PATH)
+            data_path = CAV_APP_DATA_PATH
 
-    files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
-    print('Filtering out last 3 months data')
-    files = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 90 , files))
+        files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
+        print('Filtering out last 3 months data')
+        files = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 90 , files))
     print("Using files")
     print(files)
 
-    compute_cav(platform, files, desktop)
+    compute_cav(platform, files, desktop, algo_name)

@@ -8,6 +8,7 @@ import sys
 import time
 import threading
 import traceback
+import urllib
 
 import arrow
 import editdistance
@@ -56,7 +57,7 @@ MIN_COUNTS = {
   "category": 200,
   "brand_category": 10000,
   "search_query": 40000,
-  "category_facet": 300,
+  "category_facet": 200,
 }
 PasUtils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
 
@@ -224,7 +225,7 @@ def index_search_queries(collection, searchengine):
       if(query != corrected_query):
         is_corrected = True
       _type = 'search_query'
-      url = "/search/result/?q=" + corrected_query.replace(" ", "+")
+      url = "/search/result/?" + str(urllib.parse.urlencode({'q': corrected_query}))
       data = json.dumps({"type": _type, "url": url, "corrected_query" : corrected_query})
       entity = query 
       cnt_search += 1 
@@ -295,8 +296,8 @@ def index_categories(collection, searchengine):
   def getCategoryDoc(row, variant):
     category_url = row['url']
     category_men_url = row['men_url']
-    url = "/search/result/?q=" + variant.replace(" ", "+")
-    men_url = "/search/result/?q=" + variant.replace(" ", "+")
+    url = "/search/result/?" + str(urllib.parse.urlencode({'q': variant}))
+    men_url = "/search/result/?" + str(urllib.parse.urlencode({'q': variant}))
     is_men = False
     if row['category_popularity_men'] > 0:
       is_men = True
@@ -351,9 +352,9 @@ def index_brands_categories(collection, searchengine):
     is_men = False
     if row['popularity_men'] > 0:
       is_men = True
-
-    url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
-    men_url = "/search/result/?ptype=search&q=" + row['brand'] + " " + variant
+    brand_category = row['brand'] + " " + variant
+    url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
+    men_url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
     doc = {"_id": createId(row['brand'] + "_" + variant),
                  "entity": row['brand'] + " " + variant,
                  "weight": row['popularity'],
@@ -409,8 +410,9 @@ def index_category_facets(collection, searchengine):
     if row['popularity_men'] > 0:
       is_men = True
 
-    url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
-    men_url = "/search/result/?ptype=search&q=" + row['facet_val'] + " " + row['category_name']
+    category_facet = row['facet_val'] + " " + row['category_name']
+    url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': category_facet}))
+    men_url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': category_facet}))
     docs.append({"_id": createId(row['facet_val'] +"_"+row['category_name']), 
         "entity": row['facet_val'] + " " + row['category_name'],  
         "weight": row['popularity'],

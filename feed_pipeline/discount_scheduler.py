@@ -14,6 +14,10 @@ import subprocess
 import queue
 import threading
 import traceback
+import json
+sys.path.append("/home/ubuntu/nykaa_scripts/")
+from utils.priceUpdateLogUtils import PriceUpdateLogUtils
+import uuid
 
 total = 0
 CHUNK_SIZE = 200
@@ -36,15 +40,17 @@ def incrementGlobalCounter(increment):
     return total
 
 class Worker(threading.Thread):
-    def __init__(self, q):
+    def __init__(self, q,schedule_start,schedule_end):
         self.q = q
+        self.schedule_start = schedule_start
+        self.schedule_end = schedule_end
         super().__init__()
 
     def run(self):
         while True:
             try:
                 product_chunk = self.q.get(timeout=3)  # 3s timeout
-                ScheduledPriceUpdater.updateChunkPrice(product_chunk)
+                ScheduledPriceUpdater.updateChunkPrice(product_chunk,self.schedule_start,self.schedule_end)
             except queue.Empty:
                 return
             self.q.task_done()
@@ -83,17 +89,25 @@ class ScheduledPriceUpdater:
         for i in range(0, len(data_list), chunk_size):
             yield data_list[i:i + chunk_size]
 
-    def updateChunkPrice(product_chunk):
+    def updateChunkPrice(product_chunk,schedule_start,schedule_end):
         products = []
         sku_list = []
         psku_list = []
-
+        totalProductsToLog = []
+        batch_Id = uuid.uuid4().int
         for single_product in product_chunk:
             sku_list.append(single_product['sku'])
             psku_list.append(single_product['psku'])
             products.append({'sku': single_product['sku'], 'type': single_product['type']})
             if single_product['psku'] and single_product['psku'] != single_product['sku']:
                 products.append({'sku': single_product['psku'], 'type': 'configurable'})
+            totalProductsToLog.append(
+                (
+                    batch_Id,
+                    single_product['sku'],
+                    json.dumps({"scheduled_discount":single_product['scheduled_discount']})
+                )
+            )
 
         new_sku_list = list(set(sku_list) | set(psku_list))
         sku_string = "','".join(new_sku_list)
@@ -117,13 +131,16 @@ class ScheduledPriceUpdater:
 
         total_count = incrementGlobalCounter(len(update_docs))
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
-
+        if totalProductsToLog:
+            PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", schedule_start, schedule_end,totalProductsToLog)
 
     def update():
         # Current time
         q = queue.Queue(maxsize=0)
         current_datetime = getCurrentDateTime()
         last_datetime = current_datetime - timedelta(hours=1)
+        totalBundlesToLog = []
+        batch_Id = uuid.uuid4().int
         try:
             with open("last_update_time.txt", "r+") as f:
                 content = f.read()
@@ -143,7 +160,7 @@ class ScheduledPriceUpdater:
         product_type_condition = " AND type = %s"
         product_updated_count = 0
 
-        query = "SELECT sku, psku, type FROM products" + where_clause + product_type_condition
+        query = "SELECT sku, psku, type,scheduled_discount,schedule_start,schedule_end FROM products" + where_clause + product_type_condition
         print("[%s] " % getCurrentDateTime() + query % (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
         mysql_conn = PasUtils.mysqlConnection('r')
         results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
@@ -165,12 +182,12 @@ class ScheduledPriceUpdater:
             q.put_nowait(single_chunk)
 
         for _ in range(num_of_threads):
-            Worker(q).start()
+            Worker(q,last_datetime,current_datetime).start()
         q.join()
 
         # Code for bundle products
         products = []
-        query = "SELECT sku FROM bundles" + where_clause
+        query = "SELECT sku,scheduled_discount FROM bundles" + where_clause
         mysql_conn = PasUtils.mysqlConnection('r')
         results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime))
         mysql_conn.close()
@@ -179,6 +196,13 @@ class ScheduledPriceUpdater:
         for bundle in results:
             product_updated_count += 1
             products.append({'sku': bundle['sku'], 'type': 'bundle'})
+            totalBundlesToLog.append(
+                (
+                    batch_Id,
+                    bundle['sku'],
+                    json.dumps({"scheduled_discount": bundle['scheduled_discount']})
+                )
+            )
             if product_updated_count % 100 == 0:
                 print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
 
@@ -192,6 +216,9 @@ class ScheduledPriceUpdater:
             print(traceback.format_exc())
 
         print("\n[%s] Total %s products updated." % (getCurrentDateTime(), product_updated_count))
+        if totalBundlesToLog:
+            PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", last_datetime,
+                                                                      current_datetime, totalBundlesToLog)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
