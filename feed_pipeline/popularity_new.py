@@ -43,7 +43,7 @@ PUNISH_FACTOR_NEW=0.7
 BOOST_FACTOR_NEW=1.1
 PRODUCT_PUNISH_FACTOR_NEW = 0.5
 COLD_START_DECAY_FACTOR_NEW = 0.99
-BRAND_PROMOTION_SCORE = 99.25
+BRAND_PROMOTION_SCORE = .9925
 
 BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
@@ -417,14 +417,11 @@ def handleColdStart(df):
     if date_diff > 0:
         percentile_value = row['brand_popularity']
         if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
-          med_popularity = result[result['l3_id'] == row['l3_id']].popularity.quantile(.9925)
-          med_popularity_new = result[result['l3_id'] == row['l3_id']].popularity_new.quantile(.9925)
-        else:
-          med_popularity = result[result['l3_id'] == row['l3_id']].popularity.quantile(percentile_value)
-          med_popularity_new = result[result['l3_id'] == row['l3_id']].popularity_new.quantile(percentile_value)
-        
-        row['calculated_popularity'] = row['popularity'] + med_popularity*(COLD_START_DECAY_FACTOR ** date_diff)
-        row['calculated_popularity_new'] = row['popularity_new'] + med_popularity_new*(COLD_START_DECAY_FACTOR_NEW ** date_diff)
+          percentile_value = BRAND_PROMOTION_SCORE
+        med_popularity = result[result['l3_id'] == row['l3_id']].popularity.quantile(percentile_value)
+        med_popularity_new = result[result['l3_id'] == row['l3_id']].popularity_new.quantile(percentile_value)
+        row['calculated_popularity'] = row['popularity'] + med_popularity*(percentile_value ** date_diff)
+        row['calculated_popularity_new'] = row['popularity_new'] + med_popularity_new*(percentile_value ** date_diff)
     else:
         row['calculated_popularity'] = row['popularity']
         row['calculated_popularity_new'] = row['popularity_new']
