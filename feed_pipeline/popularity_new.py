@@ -374,29 +374,6 @@ def handleColdStart(df):
   product_category_mapping = pd.read_sql(query, con=redshift_conn)
 
   product_data = pd.merge(temp_df, product_category_mapping, left_on=['id'], right_on=['product_id'])
-
-  # def percentile(n):
-  #     def _percentile(x):
-  #         return numpy.percentile(x, n)
-  #     return _percentile
-
-  # def get_category_popularities(product_data,product_category_mapping):
-  #   for i in range(90,100):
-  #     category_popularity = product_data.groupby('l3_id').agg({'popularity': percentile(i), 'popularity_new': percentile(i)}).reset_index()
-  #     popularity = 'popularity_'+ str(i)
-  #     popularity_new = 'popularity_new_'+ str(i)
-  #     category_popularity = pd.merge(product_category_mapping, category_popularity, on='l3_id')
-  #     category_popularity = category_popularity.groupby('product_id').agg({'popularity': 'max', 'popularity_new': 'max'}).reset_index()
-  #     category_popularity.rename(columns={'popularity': popularity,'popularity_new':popularity_new}, inplace=True)
-  #     if i==90:
-  #       df = category_popularity
-  #     else:
-  #       df = pd.merge(df,category_popularity, on='product_id')
-  #   #df columns - id, popularity_90,popularity_new_90 ..till 99
-  #   return df
-  #
-  # category_popularities = get_category_popularities(product_data,product_category_mapping)
-  # result = pd.merge(temp_df, category_popularities, left_on='id', right_on='product_id')
   
   query = """select product_id, sku_created, brand_code from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
   product_creation = pd.read_sql(query, con=redshift_conn)
