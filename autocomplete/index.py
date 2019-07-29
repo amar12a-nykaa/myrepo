@@ -750,7 +750,7 @@ if __name__ == '__main__':
   group.add_argument("-p", "--product", action='store_true')
   group.add_argument("--brand-category", action='store_true')
   group.add_argument("--category-facet", action='store_true')
-  group.add_argument("--overrides", action='store_true')
+  group.add_argument("--custom_queries", action='store_true')
 
   parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
   parser.add_argument("--fast", action='store_true', help="Index a fraction of products and search queries to save on indexing time")
