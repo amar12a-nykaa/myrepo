@@ -435,17 +435,19 @@ def index_category_facets(collection, searchengine):
 def index_override_queries(collection, searchengine):
   docs = []
 
-  input_file = csv.DictReader(open("overrides.csv"))
+  input_file = csv.DictReader(open("autocomplete/overrides.csv"))
   for row in input_file:
     query = row['query']
-    _type = 'override'
+    _type = 'search_query'
     url = "/search/result/?" + str(urllib.parse.urlencode({'q': query}))
-    data = json.dumps({"type": _type, "url": url, "query": query})
+    data = json.dumps({"type": _type, "url": url, "corrected_query": query})
     docs.append({
       "_id": createId(query),
       "id": createId(query),
       "entity": query,
       "weight": row['popularity'],
+      "is_corrected": False,
+      "is_visible": True,
       "type": _type,
       "data": data,
       "source": "override"
