@@ -247,7 +247,7 @@ def index_search_queries(collection, searchengine):
       if len(docs) >= 100:
         index_docs(searchengine, docs, collection)
         docs = []
-  
+
   total_search_queries = search_terms_normalized_daily.count()
 
   print("cnt_product: %s" % cnt_product)
@@ -424,6 +424,32 @@ def index_category_facets(collection, searchengine):
         "is_men" : is_men,
         "source": "category_facet"
       })
+    if len(docs) >= 100:
+      index_docs(searchengine, docs, collection)
+      docs = []
+
+    #print(row['brand'], ctr.count)
+
+  index_docs(searchengine, docs, collection)
+
+def index_override_queries(collection, searchengine):
+  docs = []
+
+  input_file = csv.DictReader(open("overrides.csv"))
+  for row in input_file:
+    query = row['query']
+    _type = 'override'
+    url = "/search/result/?" + str(urllib.parse.urlencode({'q': query}))
+    data = json.dumps({"type": _type, "url": url, "query": query})
+    docs.append({
+      "_id": createId(query),
+      "id": createId(query),
+      "entity": query,
+      "weight": row['popularity'],
+      "type": _type,
+      "data": data,
+      "source": "override"
+    })
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
       docs = []
@@ -638,7 +664,7 @@ def fetch_product_by_ids(ids):
   return final_docs
 
 
-def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_all=False, force_run=False, allowed_min_docs=0 ):
+def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_override_queries_arg=False, index_all=False, force_run=False, allowed_min_docs=0 ):
     assert len([x for x in [collection, active, inactive] if x]) == 1, "Only one of the following should be true"
 
     if index_all:
@@ -649,6 +675,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_brands_arg= True
       index_brands_categories_arg= True
       index_category_facets_arg = True
+      index_override_queries_arg = True
 
     print(locals())
     assert engine == 'elasticsearch'
@@ -696,6 +723,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_parallel(['category_facets'], **kwargs)
       index_parallel(['products'], **kwargs)
       index_parallel(['categories', 'brands', 'brands_categories'], **kwargs)
+      index_parallel(['override_queries'], **kwargs)
     
 
       print('Done processing ',  engine)
@@ -722,6 +750,7 @@ if __name__ == '__main__':
   group.add_argument("-p", "--product", action='store_true')
   group.add_argument("--brand-category", action='store_true')
   group.add_argument("--category-facet", action='store_true')
+  group.add_argument("--overrides", action='store_true')
 
   parser.add_argument("--buildonly", action='store_true', help="Build Suggester")
   parser.add_argument("--fast", action='store_true', help="Index a fraction of products and search queries to save on indexing time")
@@ -739,10 +768,10 @@ if __name__ == '__main__':
 
   GLOBAL_FAST_INDEXING = argv['fast']
 
-  required_args = ['category', 'brand', 'search_query', 'product', 'brand_category', 'category_facet']
+  required_args = ['category', 'brand', 'search_query', 'product', 'brand_category', 'category_facet', 'overrides']
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
 
   startts = time.time()
-  index_engine(engine='elasticsearch', collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_all=index_all, force_run=argv['force'], allowed_min_docs=argv['allowed_min_docs'])
+  index_engine(engine='elasticsearch', collection=argv['collection'], active=argv['active'], inactive=argv['inactive'], swap=argv['swap'], index_products_arg=argv['product'], index_search_queries_arg=argv['search_query'], index_categories_arg=argv['category'], index_brands_arg=argv['brand'], index_brands_categories_arg=argv['brand_category'], index_category_facets_arg=argv['category_facet'],index_override_queries_arg=argv['overrides'],index_all=index_all, force_run=argv['force'], allowed_min_docs=argv['allowed_min_docs'])
   mins = round((time.time()-startts)/60, 2)
   print("Time taken: %s mins" % mins)
