@@ -306,9 +306,10 @@ def calculate_new_popularity():
       print(ctr.summary)
 
     row = dict(row)
+    row['last_calculated'] = timestamp
     id = row.get('id')
-    popularity_table.update({"_id": id}, {"$set": {'popularity': row['popularity']}})
-
+    popularity_table.update({"_id": id}, row, upsert=True)
+  popularity_table.remove({"last_calculated": {"$ne": timestamp}})
 
 def applyBoost(df):
   query = """select product_id, sku_type, brand_code, mrp, l3_id from dim_sku"""
