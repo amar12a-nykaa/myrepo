@@ -358,6 +358,31 @@ def applyBoost(df):
 
   return temp_df
 
+def get_product_creation():
+  required_field_list = [
+    "product_id",
+    "brand_ids",
+    "type",
+    "product_enable_time"
+  ]
+  querydsl={}
+  querydsl['source'] = required_field_list
+  querydsl['query'] = {}
+  must=[]
+  must_not=[]
+  today = datetime.datetime.combine(datetime.datetime.today(), datetime.time.min)
+  startdate = today - datetime.timedelta(days=30)
+  must_not.append({"term": {"type":"bundle"}})
+  must.append({"range":{
+            "product_enable_time":{
+              "gte": str(startdate)
+            }
+          }})
+  querydsl["query"]["bool"] = {"must": must, "must_not": must_not}
+  print (querydsl)
+
+  response = DiscUtils.makeESRequest(querydsl,index="livecore")
+  return response
 
 def handleColdStart(df):
   global child_parent_map
@@ -374,9 +399,8 @@ def handleColdStart(df):
   product_category_mapping = pd.read_sql(query, con=redshift_conn)
 
   product_data = pd.merge(temp_df, product_category_mapping, left_on=['id'], right_on=['product_id'])
-  
-  query = """select product_id, sku_created, brand_code from dim_sku where sku_type != 'bundle' and sku_created > dateadd(day,-60,current_date)"""
-  product_creation = pd.read_sql(query, con=redshift_conn)
+
+  product_creation = get_product_creation()
   redshift_conn.close()
 
   brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
@@ -417,7 +441,8 @@ def handleColdStart(df):
   final_df = final_df.astype({'id': str})
   return final_df
 
-
+print(get_product_creation())
+exit()
 child_parent_map = create_child_parent_map()
 product_validity = get_product_validity()
 brand_popularity = get_brand_popularity()
