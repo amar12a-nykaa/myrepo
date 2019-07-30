@@ -54,6 +54,8 @@ else:
 
 RECORD_GROUP_SIZE = 100
 APPLIANCE_MAIN_CATEGORY_ID = "1390"
+CM_TO_INCH_FACTOR = 0.3937
+INCH_TO_CM_FACTOR = 2.54
 
 conn = DiscUtils.mysqlConnection()
 
@@ -81,8 +83,6 @@ def getCurrentDateTime():
     current_datetime = current_datetime.replace(tzinfo=from_zone)
     current_datetime = current_datetime.astimezone(to_zone)
     return current_datetime
-
-
 
 class Worker(threading.Thread):
     def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
@@ -482,6 +482,41 @@ class CatalogIndexer:
         except Exception as ex:
             print({"msg": ex, "row": row})
 
+    def update_size_chart_attributes(doc):
+        size_chart_attributes = ['size_bust',
+                                 'size_hip',
+                                 'size_length',
+                                 'size_overbust',
+                                 'size_shoulder',
+                                 'size_underbust',
+                                 'size_waist']
+        if doc.get('size_unit') and doc.get('size_unit').lower() in ['cm', 'inch']:
+            size_unit = doc.pop('size_unit')
+            inch_size = {}
+            cm_size = {}
+            for attribute in size_chart_attributes:
+                if doc.get(attribute):
+                    value = doc.get(attribute).replace(' ', '')
+                    #removing size_ from attributes
+                    if size_unit == 'inch':
+                        inch_size[attribute] = value
+                        cm_size[attribute] = CatalogIndexer.unit_conversion(attribute_value=value, factor=INCH_TO_CM_FACTOR)
+                    elif size_unit == 'cm':
+                        cm_size[attribute] = value
+                        inch_size[attribute] = CatalogIndexer.unit_conversion(attribute_value=value, factor=CM_TO_INCH_FACTOR)
+            if cm_size:
+                doc['inch_size'] = inch_size
+                doc['cm_size'] = cm_size
+
+    def unit_conversion(attribute_value, factor):
+        value_array = attribute_value.split('-')
+        for key, value in enumerate(value_array):
+            if value.isdigit():
+                value_array[key] = str(round(float(value) * factor))
+
+        val = '-'.join(value_array).replace(' ', '')
+        return val
+
     def formatESDoc(doc):
         for key, value in doc.items():
             if isinstance(value, list) and value == ['']:
@@ -499,7 +534,9 @@ class CatalogIndexer:
                 CatalogIndexer.validate_catalog_feed_row(row)
                 doc = {}
                 CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
-                
+                doc['size_chart_enabled'] = doc.get('size_chart_enabled') == '1'
+                if doc['size_chart_enabled']:
+                    CatalogIndexer.update_size_chart_attributes(doc=doc)
                 doc['sku'] = row['sku']
                 if skus and doc['sku'] not in skus:
                     continue
