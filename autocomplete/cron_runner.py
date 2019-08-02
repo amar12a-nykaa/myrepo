@@ -3,7 +3,7 @@
 import os
 import sys
 import argparse
-from read_past_searches_data import read_file_by_date
+from read_past_searches_data_new import read_file_by_date
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from dateutils import enumerate_dates
