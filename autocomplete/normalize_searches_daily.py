@@ -36,7 +36,9 @@ from nltk.stem import PorterStemmer
 from nltk.tokenize import sent_tokenize, word_tokenize
 ps = PorterStemmer()
 
-DAILY_THRESHOLD = 3
+DAILY_THRESHOLD_FREQ = 3
+DAILY_THRESHOLD_CTR = 1
+POPULARITY_DECAY_FACTOR = 0.5
 
 client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
@@ -122,7 +124,7 @@ def normalize(a):
 
 def normalize_search_terms():
 
-    date_buckets = [(0, 60), (61, 120), (121, 180)]
+    date_buckets = [(0,15),(16,30),(31,45),(46,60),(61,75),(76,90),(91,105),(106,120),(121,135),(136,150),(151,165),(165,180)]
     dfs = []
 
     bucket_results = []
@@ -136,9 +138,10 @@ def normalize_search_terms():
         # TODO need to set count sum to count
 
         for term in search_terms_daily.aggregate([
-            {"$match": {"date": {"$gte": startdate, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
-            {"$project": {"term": { "$toLower": "$term"}, "date":"$date", "count": "$internal_search_term_conversion_instance"}},
-            {"$group": {"_id": "$term", "count": {"$sum": "$count"}}}, 
+            {"$match": {"date": {"$gte": startdate, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD_FREQ},
+                        "click_interaction_instance":{"$gte": DAILY_THRESHOLD_CTR}}},
+            {"$project": {"term": { "$toLower": "$term"}, "date":"$date", "count": "$internal_search_term_conversion_instance", "click_interaction_instance":"$click_interaction_instance"}},
+            {"$group": {"_id": "$term", "count": {"$sum": "$count"}, "click_interaction_instance": {"$sum": "$click_interaction_instance"}}},
             {"$sort":{ "count": -1}},
         ], allowDiskUse=True):
             term['id'] = term.pop("_id")
@@ -149,18 +152,21 @@ def normalize_search_terms():
             continue
         
         print("Computing popularity")
-        df = pd.DataFrame(bucket_results) 
+        df = pd.DataFrame(bucket_results)
+        df['click_interaction_instance'] = df['click_interaction_instance'].fillna(0)
+        df['ctr'] = ((df['click_interaction_instance'])*100.0)/df['count']
         df['norm_count'] = normalize(df['count'])
-
-        df['popularity'] = (len(date_buckets) - bucket_id)*df['norm_count']
-        dfs.append(df.loc[:, ['id', 'popularity']].set_index('id'))
+        multiplication_factor = POPULARITY_DECAY_FACTOR ** (bucket_id + 1)
+        df['popularity'] = df['ctr']*df['click_interaction_instance']
+        df['popularity'] = multiplication_factor * normalize(df['popularity'])
+        dfs.append(df.loc[:, ['id', 'popularity','ctr']].set_index(['id']))
 
     final_df = pd.DataFrame([])
     if dfs:
-        final_df = dfs[0]
-        for i in range(1, len(dfs)):
-            final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
+        final_df = pd.concat(dfs)
+        final_df = final_df.groupby('id').agg({'ctr': 'mean', 'popularity': 'sum'})
         final_df.popularity = final_df.popularity.fillna(0)
+        final_df['ctr_flag'] = [True if x>=15 else False for x in final_df['ctr']]
 
         # final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
         # final_df.drop(['popularity'], axis=1, inplace=True)
@@ -220,9 +226,12 @@ def normalize_search_terms():
         try:
             suggested_query = getQuerySuggestion(query_id, query, algo)
             requests.append(UpdateOne({"_id":  query_id},
-                                      {"$set": {"query": row['id'].lower(), 'popularity': row['popularity'], "suggested_query": suggested_query.lower()}}, upsert=True))
+                                      {"$set": {"query": row['id'].lower(), 'ctr_flag': row['ctr_flag'],
+                                                'popularity': row['popularity'],
+                                                "suggested_query": suggested_query.lower()}}, upsert=True))
             corrections.append(UpdateOne({"_id":  query_id},
-                                      {"$set": {"query": row['id'].lower(), "suggested_query": suggested_query.lower(), "algo": algo}}, upsert=True))
+                                         {"$set": {"query": row['id'].lower(), "ctr_flag": row['ctr_flag'],
+                                                   "suggested_query": suggested_query.lower(), "algo": algo}},upsert=True))
         except:
             print(traceback.format_exc())
             print(row)
