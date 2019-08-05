@@ -4,6 +4,7 @@ import csv
 import json
 from pprint import pprint
 import re
+import pandas as pd
 import sys
 import time
 import threading
@@ -201,6 +202,8 @@ def create_map_search_product():
 
 def index_search_queries(collection, searchengine):
   map_search_product = create_map_search_product()
+  df = pd.read_csv('low_ctr_queries.csv')
+  low_ctr_query_list = list(df['name'].values)
 
   docs = []
 
@@ -241,7 +244,7 @@ def index_search_queries(collection, searchengine):
         "weight": row['popularity'],
         "type": _type,
         "data": data,
-        "is_visible": row['ctr_flag'],
+        "is_visible": False if entity in low_ctr_query_list else True,
         "source": "search_query"
       })
 
