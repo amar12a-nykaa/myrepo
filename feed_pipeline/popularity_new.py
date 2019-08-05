@@ -361,12 +361,13 @@ def applyBoost(df):
 def get_product_creation():
   required_field_list = [
     "product_id",
+    "parent_id",
     "brand_ids",
     "type",
     "product_enable_time"
   ]
   querydsl={}
-  querydsl['source'] = required_field_list
+  querydsl['_source'] = required_field_list
   querydsl['query'] = {}
   must=[]
   must_not=[]
@@ -380,9 +381,18 @@ def get_product_creation():
           }})
   querydsl["query"]["bool"] = {"must": must, "must_not": must_not}
   print (querydsl)
+  response = DiscUtils.makeESRequest(querydsl, index="livecore")
+  hits = response['hits']['hits']
+  product_list = []
+  for product in hits:
+    if not product['_source'].get('brand_ids', 0):
+      continue
+    product['_source']['brand_code'] = product['_source'].pop('brand_ids')[0]
+    product_list.append(product['_source'])
+  df = pd.DataFrame(product_list)
+  print(len(df.index))
 
-  response = DiscUtils.makeESRequest(querydsl,index="livecore")
-  return response
+  return df
 
 def handleColdStart(df):
   global child_parent_map
@@ -397,14 +407,23 @@ def handleColdStart(df):
   query = """select product_id, l3_id from product_category_mapping"""
   redshift_conn = PasUtils.redshiftConnection()
   product_category_mapping = pd.read_sql(query, con=redshift_conn)
-
+  redshift_conn.close()
   product_data = pd.merge(temp_df, product_category_mapping, left_on=['id'], right_on=['product_id'])
 
   product_creation = get_product_creation()
-  redshift_conn.close()
+  product_creation = product_creation.astype({'product_id': int})
 
   brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
+  product_data.drop_duplicates(subset="product_id", keep="first", inplace=True)
   result = pd.merge(product_data, product_creation, on='product_id')
+  new_launched = product_creation[~product_creation.product_id.isin(result.product_id)]
+  # products with parent having omniture data, products without omniture parent
+  products_with_parent = pd.merge(df, new_launched, left_on='id', right_on='parent_id')
+  # print("products_with_parent",products_with_parent)
+  products_without_parent = new_launched[~new_launched.product_id.isin(products_with_parent.product_id)]
+  # print("products_without_parent", products_without_parent)
+  # print("result", result)
+
   result = pd.merge(result, brand_popularity, on='brand_code')
 
   def normalize_90_to_99(a):
@@ -441,8 +460,6 @@ def handleColdStart(df):
   final_df = final_df.astype({'id': str})
   return final_df
 
-print(get_product_creation())
-exit()
 child_parent_map = create_child_parent_map()
 product_validity = get_product_validity()
 brand_popularity = get_brand_popularity()
