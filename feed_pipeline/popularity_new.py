@@ -417,12 +417,27 @@ def handleColdStart(df):
   product_data.drop_duplicates(subset="product_id", keep="first", inplace=True)
   result = pd.merge(product_data, product_creation, on='product_id')
   new_launched = product_creation[~product_creation.product_id.isin(result.product_id)]
+
+  def calculate_child_popularity(data):
+    count = 0
+    for index, row in data.iterrows():
+      row['popularity'] = (0.9**count) * row['popularity']
+      row['popularity_new'] = (0.9 ** count) * row['popularity_new']
+      count += 1
+    return data
+
   # products with parent having omniture data, products without omniture parent
   products_with_parent = pd.merge(df, new_launched, left_on='id', right_on='parent_id')
-  # print("products_with_parent",products_with_parent)
   products_without_parent = new_launched[~new_launched.product_id.isin(products_with_parent.product_id)]
-  # print("products_without_parent", products_without_parent)
-  # print("result", result)
+
+  products_with_parent = products_with_parent.groupby('parent_id').apply(calculate_child_popularity)
+  products_without_parent['popularity'] = 0.0
+  products_without_parent['popularity_new'] = 0.0
+  products_without_parent = pd.merge(products_without_parent, product_category_mapping, on='product_id')
+  products_without_parent.drop_duplicates(subset='product_id', keep='first', inplace=True)
+
+  dfs = [result,products_with_parent, products_without_parent]
+  result = pd.concat(dfs)
 
   result = pd.merge(result, brand_popularity, on='brand_code')
 
@@ -430,10 +445,10 @@ def handleColdStart(df):
     return (((a - min(a))/(max(a) - min(a)))*9 + 90)/100
 
   result['brand_popularity'] = normalize_90_to_99(result['brand_popularity'])
-  result = result.loc[result['sku_created'].notnull()]
+  result = result.loc[result['product_enable_time'].notnull()]
 
   def update_popularity(row):
-    date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['sku_created']).astype(datetime.datetime))).days
+    date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['product_enable_time']).astype(datetime.datetime))).days
     if date_diff > 0:
         percentile_value = row['brand_popularity']
         if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
