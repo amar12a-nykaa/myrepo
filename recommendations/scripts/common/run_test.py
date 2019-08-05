@@ -13,4 +13,4 @@ if __name__ == '__main__':
     command_line_arguments = sys.argv[1:]
     config = '%s/%s' % (Constants.HOME_DIR, Constants.SMALL_EMR_CONFIG)
     env_details = RecoUtils.get_env_details()
-    EMRUtils.launch_spark_emr('TEST', config, [], [], Constants.SMALL_INSTANCE)
+    EMRUtils.launch_spark_emr('TEST', config, [], [], dict(Constants.SMALL_INSTANCE, **{'MasterInstanceType': 'm5.12xlarge', 'KeepJobFlowAliveWhenNoSteps': True}))
