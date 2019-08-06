@@ -433,7 +433,7 @@ def handleColdStart(df):
 
   result['brand_popularity'] = normalize_90_to_99(result['brand_popularity'])
   result = result.loc[result['product_enable_time'].notnull()]
-
+  result.fillna(0, inplace=True)
   def update_popularity(row):
     date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['product_enable_time']).astype(datetime.datetime))).days
     if date_diff > 0:
