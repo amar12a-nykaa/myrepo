@@ -202,7 +202,7 @@ def create_map_search_product():
 
 def index_search_queries(collection, searchengine):
   map_search_product = create_map_search_product()
-  df = pd.read_csv('low_ctr_queries.csv')
+  df = pd.read_csv('/nykaa/scripts/low_ctr_queries.csv')
   low_ctr_query_list = list(df['name'].values)
 
   docs = []
@@ -443,7 +443,7 @@ def index_category_facets(collection, searchengine):
 def index_custom_queries(collection, searchengine):
   docs = []
 
-  input_file = csv.DictReader(open("autocomplete/custom_queries.csv"))
+  input_file = csv.DictReader(open("/nykaa/scripts/autocomplete/custom_queries.csv"))
   for row in input_file:
     query = row['query']
     _type = 'search_query'
