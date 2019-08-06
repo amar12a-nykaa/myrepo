@@ -414,44 +414,47 @@ def handleColdStart(df):
 
   result = pd.merge(temp_df, product_creation, left_on='id', right_on='product_id', how='right')
   result.fillna(0, inplace=True)
-
-  def calculate_child_popularity(data):
-    count = 0
-    for index, row in data.iterrows():
-      row['popularity'] = (0.9 ** count) * row['popularity']
-      row['popularity_new'] = (0.9 ** count) * row['popularity_new']
-      count += 1
+  #remove child products if its parent is in the bucket
+  def remove_child_products(data):
+    if len(data.index) > 1 and data[data['parent_id'] == data['product_id']]:
+      return data[data['parent_id'] == data['product_id']]
     return data
 
-  result = result.groupby('parent_id').apply(calculate_child_popularity)
+  result = result.groupby('parent_id').apply(remove_child_products)
   result = pd.merge(result, product_category_mapping, on='product_id')
   brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
   result = pd.merge(result, brand_popularity, on='brand_code', how='left')
 
-  def normalize_90_to_99(a):
+  def normalize_brand_popularity(a):
     return (((a - min(a))/(max(a) - min(a)))*9 + 90)/100
 
-  result['brand_popularity'] = normalize_90_to_99(result['brand_popularity'])
+  result['brand_popularity'] = normalize_brand_popularity(result['brand_popularity'])
   result = result.loc[result['product_enable_time'].notnull()]
   result.fillna(0, inplace=True)
-  def update_popularity(row):
-    date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['product_enable_time']).astype(datetime.datetime))).days
-    if date_diff > 0:
-        percentile_value = row['brand_popularity']
-        if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
-          percentile_value = BRAND_PROMOTION_SCORE
-        med_popularity = result[result['l3_id'] == row['l3_id']].popularity.quantile(percentile_value)
-        med_popularity_new = result[result['l3_id'] == row['l3_id']].popularity_new.quantile(percentile_value)
-        row['calculated_popularity'] = row['popularity'] + med_popularity*(percentile_value ** date_diff)
-        row['calculated_popularity_new'] = row['popularity_new'] + med_popularity_new*(percentile_value ** date_diff)
-    else:
-        row['calculated_popularity'] = row['popularity']
-        row['calculated_popularity_new'] = row['popularity_new']
-    return row
+
+  def update_popularity(data):
+    count = 0
+    for index,row in data.iterrows():
+      if count==3:
+        break
+      date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['product_enable_time']).astype(datetime.datetime))).days
+      if date_diff > 0:
+          percentile_value = row['brand_popularity']
+          if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
+            percentile_value = BRAND_PROMOTION_SCORE
+          med_popularity = result[result['l3_id'] == row['l3_id']].popularity.quantile(percentile_value)
+          med_popularity_new = result[result['l3_id'] == row['l3_id']].popularity_new.quantile(percentile_value)
+          row['calculated_popularity'] = row['popularity'] + (0.9**count)*med_popularity*(percentile_value ** date_diff)
+          row['calculated_popularity_new'] = row['popularity_new'] + (0.9**count)*med_popularity_new*(percentile_value ** date_diff)
+      else:
+          row['calculated_popularity'] = row['popularity']
+          row['calculated_popularity_new'] = row['popularity_new']
+      count += 1
+    return data
 
   result['calculated_popularity'] = 0
   result['calculated_popularity_new'] = 0
-  result = result.apply(update_popularity, axis=1)
+  result = result.groupby('parent_id').apply(update_popularity)
 
   result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new']]
   result = result.groupby('product_id').agg({'calculated_popularity': 'max', 'calculated_popularity_new': 'max'}).reset_index()
