@@ -52,7 +52,7 @@ PRODUCT_PUNISH_LIST = []
 def get_brand_popularity():
   print('get brand popularity')
 
-  query = """select brands_v1 as brand_id, brand_popularity from brands"""
+  query = """select brand_id, brand_popularity from brands"""
   mysql_conn = PasUtils.mysqlConnection()
   data = pd.read_sql(query, con=mysql_conn)
   mysql_conn.close()
@@ -363,7 +363,6 @@ def get_product_creation():
     "product_id",
     "parent_id",
     "brand_ids",
-    "type",
     "product_enable_time"
   ]
   querydsl={}
@@ -376,19 +375,20 @@ def get_product_creation():
   must_not.append({"term": {"type":"bundle"}})
   must.append({"range":{
             "product_enable_time":{
-              "gte": str(startdate)
+              "gte": str(startdate),
+              "lte": str(today)
             }
           }})
   querydsl["query"]["bool"] = {"must": must, "must_not": must_not}
+  querydsl['size'] = 10000
   print (querydsl)
   response = DiscUtils.makeESRequest(querydsl, index="livecore")
   hits = response['hits']['hits']
   product_list = []
   for product in hits:
-    if not product['_source'].get('brand_ids', 0):
-      continue
-    product['_source']['brand_code'] = product['_source'].pop('brand_ids')[0]
-    product_list.append(product['_source'])
+    if product['_source'].get('brand_ids', 0):
+      product['_source']['brand_code'] = product['_source'].pop('brand_ids')[0]
+      product_list.append(product['_source'])
   df = pd.DataFrame(product_list)
   print(len(df.index))
 
@@ -399,10 +399,10 @@ def handleColdStart(df):
   temp_df = df[['id', 'popularity', 'popularity_new']]
   
   #remove config child product
-  temp_df = pd.merge(temp_df, child_parent_map, left_on='id', right_on='product_id', how='left')
-  temp_df = temp_df[temp_df['product_id'].isnull()]
-  temp_df = temp_df[['id', 'popularity', 'popularity_new']]
-  temp_df = temp_df.astype({'id': int, 'popularity': float, 'popularity_new': float})
+  # temp_df = pd.merge(temp_df, child_parent_map, left_on='id', right_on='product_id', how='left')
+  # temp_df = temp_df[temp_df['product_id'].isnull()]
+  # temp_df = temp_df[['id', 'popularity', 'popularity_new']]
+  # temp_df = temp_df.astype({'id': int, 'popularity': float, 'popularity_new': float})
 
   query = """select product_id, l3_id from product_category_mapping"""
   redshift_conn = PasUtils.redshiftConnection()
