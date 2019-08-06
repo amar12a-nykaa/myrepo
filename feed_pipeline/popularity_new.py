@@ -408,38 +408,25 @@ def handleColdStart(df):
   redshift_conn = PasUtils.redshiftConnection()
   product_category_mapping = pd.read_sql(query, con=redshift_conn)
   redshift_conn.close()
-  product_data = pd.merge(temp_df, product_category_mapping, left_on=['id'], right_on=['product_id'])
 
   product_creation = get_product_creation()
   product_creation = product_creation.astype({'product_id': int})
 
-  brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
-  product_data.drop_duplicates(subset="product_id", keep="first", inplace=True)
-  result = pd.merge(product_data, product_creation, on='product_id')
-  new_launched = product_creation[~product_creation.product_id.isin(result.product_id)]
+  result = pd.merge(temp_df, product_creation, left_on='id', right_on='product_id', how='right')
+  result.fillna(0, inplace=True)
 
   def calculate_child_popularity(data):
     count = 0
     for index, row in data.iterrows():
-      row['popularity'] = (0.9**count) * row['popularity']
+      row['popularity'] = (0.9 ** count) * row['popularity']
       row['popularity_new'] = (0.9 ** count) * row['popularity_new']
       count += 1
     return data
 
-  # products with parent having omniture data, products without omniture parent
-  products_with_parent = pd.merge(df, new_launched, left_on='id', right_on='parent_id')
-  products_without_parent = new_launched[~new_launched.product_id.isin(products_with_parent.product_id)]
-
-  products_with_parent = products_with_parent.groupby('parent_id').apply(calculate_child_popularity)
-  products_without_parent['popularity'] = 0.0
-  products_without_parent['popularity_new'] = 0.0
-  products_without_parent = pd.merge(products_without_parent, product_category_mapping, on='product_id')
-  products_without_parent.drop_duplicates(subset='product_id', keep='first', inplace=True)
-
-  dfs = [result,products_with_parent, products_without_parent]
-  result = pd.concat(dfs)
-
-  result = pd.merge(result, brand_popularity, on='brand_code')
+  result = result.groupby('parent_id').apply(calculate_child_popularity)
+  result = pd.merge(result, product_category_mapping, on='product_id')
+  brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
+  result = pd.merge(result, brand_popularity, on='brand_code', how='left')
 
   def normalize_90_to_99(a):
     return (((a - min(a))/(max(a) - min(a)))*9 + 90)/100
