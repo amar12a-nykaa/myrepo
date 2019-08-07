@@ -421,7 +421,7 @@ def handleColdStart(df):
       return data[data.parent_id == data.product_id]
     return data
 
-  result = result.groupby('parent_id').apply(remove_child_products)
+  result = result.groupby('parent_id', as_index=False).apply(remove_child_products)
   result = pd.merge(result, product_category_mapping, on='product_id')
   brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
   result = pd.merge(result, brand_popularity, on='brand_code', how='left')
@@ -458,7 +458,7 @@ def handleColdStart(df):
 
   result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new']]
   result = result.groupby('product_id').agg({'calculated_popularity': 'max', 'calculated_popularity_new': 'max'}).reset_index()
-  final_df = pd.merge(df.astype({'id': int}),  result.astype({'product_id': int}), left_on='id', right_on='product_id', how='left')
+  final_df = pd.merge(df.astype({'id': int}),  result.astype({'product_id': int}), left_on='id', right_on='product_id', how='outer')
   final_df['popularity'] = numpy.where(final_df.calculated_popularity.notnull(), final_df.calculated_popularity, final_df.popularity)
   final_df['popularity_new'] = numpy.where(final_df.calculated_popularity_new.notnull(), final_df.calculated_popularity_new, final_df.popularity_new)
   final_df.drop(['calculated_popularity', 'calculated_popularity_new', 'product_id'], axis=1, inplace=True)
