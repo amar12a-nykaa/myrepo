@@ -416,8 +416,9 @@ def handleColdStart(df):
   result.fillna(0, inplace=True)
   #remove child products if its parent is in the bucket
   def remove_child_products(data):
-    if len(data.index) > 1 and data[data['parent_id'] == data['product_id']]:
-      return data[data['parent_id'] == data['product_id']]
+    df = data[data.parent_id == data.product_id]
+    if len(data.index) > 1 and len(df.index) >= 1:
+      return data[data.parent_id == data.product_id]
     return data
 
   result = result.groupby('parent_id').apply(remove_child_products)
@@ -444,17 +445,16 @@ def handleColdStart(df):
             percentile_value = BRAND_PROMOTION_SCORE
           med_popularity = result[result['l3_id'] == row['l3_id']].popularity.quantile(percentile_value)
           med_popularity_new = result[result['l3_id'] == row['l3_id']].popularity_new.quantile(percentile_value)
-          row['calculated_popularity'] = row['popularity'] + (0.9**count)*med_popularity*(percentile_value ** date_diff)
-          row['calculated_popularity_new'] = row['popularity_new'] + (0.9**count)*med_popularity_new*(percentile_value ** date_diff)
-      else:
-          row['calculated_popularity'] = row['popularity']
-          row['calculated_popularity_new'] = row['popularity_new']
-      count += 1
+          calculated_popularity = row['popularity'] + (0.9**count)*med_popularity*(percentile_value ** date_diff)
+          calculated_popularity_new = row['popularity_new'] + (0.9**count)*med_popularity_new*(percentile_value ** date_diff)
+          data.at[index, 'calculated_popularity'] = calculated_popularity
+          data.at[index, 'calculated_popularity_new'] = calculated_popularity_new
+          count += 1
     return data
 
-  result['calculated_popularity'] = 0
-  result['calculated_popularity_new'] = 0
-  result = result.groupby('parent_id').apply(update_popularity)
+  result['calculated_popularity'] = result['popularity']
+  result['calculated_popularity_new'] = result['popularity_new']
+  result = result.groupby('parent_id', as_index=False).apply(update_popularity)
 
   result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new']]
   result = result.groupby('product_id').agg({'calculated_popularity': 'max', 'calculated_popularity_new': 'max'}).reset_index()
