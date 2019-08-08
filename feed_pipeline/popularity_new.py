@@ -397,12 +397,8 @@ def get_product_creation():
 def handleColdStart(df):
   global child_parent_map
   temp_df = df[['id', 'popularity', 'popularity_new']]
-  
-  #remove config child product
-  # temp_df = pd.merge(temp_df, child_parent_map, left_on='id', right_on='product_id', how='left')
-  # temp_df = temp_df[temp_df['product_id'].isnull()]
-  # temp_df = temp_df[['id', 'popularity', 'popularity_new']]
-  # temp_df = temp_df.astype({'id': int, 'popularity': float, 'popularity_new': float})
+
+  temp_df = temp_df.astype({'id': int, 'popularity': float, 'popularity_new': float})
 
   query = """select product_id, l3_id from product_category_mapping"""
   redshift_conn = PasUtils.redshiftConnection()
