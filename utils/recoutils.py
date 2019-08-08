@@ -30,5 +30,5 @@ class RecoUtils:
             return {'bucket_name': 'nykaa-recommendations-mumbai', 'key_name': 'nka-prod-emr-mumbai', 'subnet_id': 'subnet-0d32caca4d4ddc0fd', 'env': 'prod', 'is_emr': is_emr}
             #return {'bucket_name': 'nykaa-recommendations', 'key_name': 'nka-prod-emr', 'subnet_id': 'subnet-7c467d18', 'env': 'prod', 'is_emr': is_emr}
         else:
-            return {'bucket_name': 'nykaa-dev-recommendations-mumbai', 'key_name': 'nka-qa-emr', 'subnet_id': 'subnet-0ca77a0c5544c4b9d', 'env': 'non_prod', 'is_emr': is_emr}
+            return {'bucket_name': 'nykaa-dev-recommendations-mumbai', 'key_name': 'nka-preprod-emr-mumbai', 'subnet_id': 'subnet-0ca77a0c5544c4b9d', 'env': 'non_prod', 'is_emr': is_emr}
 
