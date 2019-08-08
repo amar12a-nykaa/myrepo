@@ -524,9 +524,9 @@ class CatalogIndexer:
                 doc['featured_in_titles'] = (row['featured_in_titles'] or "").split('|')
                 doc['featured_in_urls'] = (row['featured_in_urls'] or "").split('|')
                 doc['star_rating_count'] = int(row['rating'] or 0)
-                if row['rating_num'] and row['rating_percentage']:
+                if row['rating_num']:
                     doc['star_rating'] = row['rating_num']
-                    doc['star_rating_percentage'] = float(row['rating_percentage'] or 0)
+                    doc['star_rating_percentage'] = int(row['rating_num']*20)
                 doc['review_count'] = row['review_count'] or 0
                 doc['qna_count'] = row['qna_count'] or 0
                 if row['product_expiry']:
