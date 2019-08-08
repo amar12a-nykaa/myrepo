@@ -21,7 +21,8 @@ sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
 from index import index_engine
-from generate_brand_category_mapping import generate_brand_category_mapping
+# from generate_brand_category_mapping import generate_brand_category_mapping
+from calculate_autocomplete_popularity import calculate_popularity_autocomplete
 from normalize_searches_daily import normalize_search_terms
 
 AUTOCOMPLETE = 'autocomplete'
@@ -34,7 +35,7 @@ force_run = argv['force_run']
 script_start = timeit.default_timer()
 
 normalize_search_terms()
-generate_brand_category_mapping()
+calculate_popularity_autocomplete()
 insertFeedBackDataInMongo()
 
 indexes = EsUtils.get_active_inactive_indexes(AUTOCOMPLETE)
