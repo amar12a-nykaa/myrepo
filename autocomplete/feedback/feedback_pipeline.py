@@ -13,7 +13,7 @@ import argparse
 import re
 
 TYPED_QUERY_LENGTH_THRESHOLD = 3
-IMPRESSION_COUNT_THRESHOLD = 3
+IMPRESSION_COUNT_THRESHOLD = 10
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Argument parser for feedback script')
