@@ -49,6 +49,7 @@ class MysqlRedshiftUtils:
             password = 'JKaPHGB4JWXM'
         else:
             raise Exception('Unknow env')
+        print(host)
         user = 'ml'
         db = 'nykaa_ml'
         for i in [0, 1, 2]:
