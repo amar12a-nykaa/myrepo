@@ -6,7 +6,7 @@ from pymongo import MongoClient
 
 hostname = socket.gethostname()
 if hostname.startswith('admin') or hostname.startswith('api'):
-  MONGO_CLIENT = "172.30.3.5,172.30.2.45,172.30.2.154"
+  MONGO_CLIENT = "priceapi-mongo1.nykaa-internal.com,priceapi-mongo2.nykaa-internal.com,priceapi-mongo3.nykaa-internal.com"
 else:
   MONGO_CLIENT = "localhost"
 

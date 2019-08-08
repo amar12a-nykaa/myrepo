@@ -37,6 +37,7 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 ps = PorterStemmer()
 
 DAILY_THRESHOLD = 3
+POPULARITY_DECAY_FACTOR = 0.5
 
 client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
@@ -122,7 +123,7 @@ def normalize(a):
 
 def normalize_search_terms():
 
-    date_buckets = [(0, 60), (61, 120), (121, 180)]
+    date_buckets = [(0,15),(16,30),(31,45),(46,60),(61,75),(76,90),(91,105),(106,120),(121,135),(136,150),(151,165),(165,180)]
     dfs = []
 
     bucket_results = []
@@ -136,10 +137,10 @@ def normalize_search_terms():
         # TODO need to set count sum to count
 
         for term in search_terms_daily.aggregate([
-            {"$match": {"date": {"$gte": startdate, "$lte": enddate}, "internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
-            {"$project": {"term": { "$toLower": "$term"}, "date":"$date", "count": "$internal_search_term_conversion_instance"}},
-            {"$group": {"_id": "$term", "count": {"$sum": "$count"}}}, 
-            {"$sort":{ "count": -1}},
+            {"$match": {"date": {"$gte": startdate, "$lte": enddate},"internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
+            {"$project": {"term": {"$toLower": "$term"}, "date": "$date","count": "$internal_search_term_conversion_instance"}},
+            {"$group": {"_id": "$term", "count": {"$sum": "$count"}}},
+            {"$sort": {"count": -1}},
         ], allowDiskUse=True):
             term['id'] = term.pop("_id")
             bucket_results.append(term)
@@ -149,13 +150,12 @@ def normalize_search_terms():
             continue
         
         print("Computing popularity")
-        df = pd.DataFrame(bucket_results) 
+        df = pd.DataFrame(bucket_results)
         df['norm_count'] = normalize(df['count'])
+        multiplication_factor = POPULARITY_DECAY_FACTOR ** (bucket_id + 1)
+        df['popularity'] = multiplication_factor * (df['norm_count'])
+        dfs.append(df.loc[:, ['id', 'popularity']].set_index(['id']))
 
-        df['popularity'] = (len(date_buckets) - bucket_id)*df['norm_count']
-        dfs.append(df.loc[:, ['id', 'popularity']].set_index('id'))
-
-    final_df = pd.DataFrame([])
     if dfs:
         final_df = dfs[0]
         for i in range(1, len(dfs)):
@@ -222,7 +222,7 @@ def normalize_search_terms():
             requests.append(UpdateOne({"_id":  query_id},
                                       {"$set": {"query": row['id'].lower(), 'popularity': row['popularity'], "suggested_query": suggested_query.lower()}}, upsert=True))
             corrections.append(UpdateOne({"_id":  query_id},
-                                      {"$set": {"query": row['id'].lower(), "suggested_query": suggested_query.lower(), "algo": algo}}, upsert=True))
+                                         {"$set": {"query": row['id'].lower(),"suggested_query": suggested_query.lower(), "algo": algo}},upsert=True))
         except:
             print(traceback.format_exc())
             print(row)
