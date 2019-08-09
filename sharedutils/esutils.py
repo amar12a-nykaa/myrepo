@@ -67,6 +67,7 @@ class EsUtils:
     es_conn = DiscUtils.esConn()
     ES_BATCH_SIZE = 10000
     results = []
+    scroll_id = None
     while True:
       if not scroll_id:
         response = es_conn.search(index=index, body=query, scroll="2m")
@@ -76,7 +77,7 @@ class EsUtils:
       if not response["hits"]["hits"]:
         break
       scroll_id = response["_scroll_id"]
-      results.append(response['hits']['hits'])
+      results += (response['hits']['hits'])
 
     return results
 
