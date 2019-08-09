@@ -58,6 +58,11 @@ class EsUtils:
   def get_index_client():
     return elasticsearch.client.IndicesClient(DiscUtils.esConn())
 
+  def get_doc_count(index):
+    es = DiscUtils.esConn()
+    response = es.count(index=index)
+    return response.get('count',0)
+
   def get_index_from_alias(alias):
     response = {}
     es = DiscUtils.esConn()
