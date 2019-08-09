@@ -523,10 +523,10 @@ def validate_min_count(force_run, allowed_min_docs):
 
 def index_products(collection, searchengine):
 
+  DEBUG = True
+
   def flush_index_products(products_list):
     docs = []
-    cnt_product = 0
-    cnt_search = 0
     cnt_missing_keys = 0
     uniqueList = []
     for product in products_list:
@@ -581,57 +581,13 @@ def index_products(collection, searchengine):
     index_docs(searchengine, docs, collection)
 
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
-  docs_count = EsUtils.get_doc_count(index='livecore')
-  pages = docs_count/1000
-  for page in range(0,pages):
-    ctr += 1000
-    if ctr.should_print():
-      print(ctr.summary)
-    try:
-      products = fetch_products_from_es(size=1000,fromm=1000*page)
-      flush_index_products(products)
-    except Exception as e:
-      print(e)
-      pass
-
-
-
-def fetch_products_from_es(size, fromm):
-  DEBUG = False 
-  queries = []
-  query = {
-    "from": fromm,
-    "size": size,
-    "query": {
-      "bool":
-        {
-          "must":[
-            {"range": {
-              "price": {
-                "gte": 1
-              }
-            }},
-            {"term":{"pro_flag_i": 0}},
-            {"term":{"is_service": True}}
-          ],
-          "must_not": [
-            {"term":{"category_ids": "2413"}}
-          ],
-          "should": [
-            {"term":{"type": "simple"}},
-            {"term":{"type": "configurable"}}
-            ]
-        }
-      },
-    "_source":["product_id","popularity","title","score", "media", "product_url", "price", "type", "parent_id", "catalog_tag"]
-  }
-  response = DiscUtils.makeESRequest(query, 'livecore')
-  final_docs = {}
-  for docs in response['hits']['hits']:
+  results = fetch_products_from_es(size=10000)
+  final_docs = []
+  count=0
+  for docs in results:
     if docs:
       product_id = docs['_source']['product_id']
-      #assert len(docs) == 1, "More than 1 docs found for query %s" %product_id
-      
+
       doc = docs['_source']
 
       if DEBUG:
@@ -644,15 +600,57 @@ def fetch_products_from_es(size, fromm):
       try:
         image = json.loads(doc['media'][0])['url']
         image = re.sub("h-[0-9]*,w-[0-9]*,cm", "h-60,w-60,cm", image)
-        image_base = re.sub("\/tr[^\/]*", "",  image) 
+        image_base = re.sub("\/tr[^\/]*", "", image)
       except:
         print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
 
-      doc['image'] = image 
-      doc['image_base'] = image_base 
-      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'parent_id', 'catalog_tag', 'product_id']}
-      final_docs[doc['product_id']] = doc
-  return final_docs
+      doc['image'] = image
+      doc['image_base'] = image_base
+      doc = {k: v for k, v in doc.items() if
+             k in ['image', 'image_base', 'title', 'product_url', 'parent_id', 'catalog_tag', 'product_id']}
+      final_docs.append(doc)
+      count+=1
+      ctr += 1
+      if ctr.should_print()
+        print(ctr.summary)
+      if count%1000==0:
+        flush_index_products(final_docs)
+        final_docs = []
+
+  flush_index_products(final_docs)
+
+
+
+def fetch_products_from_es():
+  DEBUG = False
+  query = {
+    "size": 10000,
+    "query": {
+      "bool":
+        {
+          "must": [
+            {"range": {
+              "price": {
+                "gte": 1
+              }
+            }},
+            {"term": {"pro_flag_i": 0}},
+            {"term": {"is_service": True}}
+          ],
+          "must_not": [
+            {"term": {"category_ids": "2413"}}
+          ],
+          "should": [
+            {"term": {"type": "simple"}},
+            {"term": {"type": "configurable"}}
+          ]
+        }
+    },
+    "_source": ["product_id", "popularity", "title", "score", "media", "product_url", "price", "type",
+                "parent_id", "catalog_tag"]
+  }
+  results = EsUtils.scrollESForResults(index='livecore',query=query)
+  return results
 
 
 def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_custom_queries_arg=False, index_all=False, force_run=False, allowed_min_docs=0 ):
