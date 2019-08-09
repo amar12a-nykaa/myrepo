@@ -523,7 +523,7 @@ def validate_min_count(force_run, allowed_min_docs):
 
 def index_products(collection, searchengine):
 
-  DEBUG = True
+  DEBUG = False
 
   def flush_index_products(products_list):
     docs = []
@@ -586,33 +586,36 @@ def index_products(collection, searchengine):
   count=0
   for docs in results:
     if docs:
-      product_id = docs['_source']['product_id']
-
-      doc = docs['_source']
-
-      if DEBUG:
-        print(product_id)
-        print(doc['title'])
-        print("===========")
-
-      image = ""
-      image_base = ""
       try:
-        image = json.loads(doc['media'][0])['url']
-        image = re.sub("h-[0-9]*,w-[0-9]*,cm", "h-60,w-60,cm", image)
-        image_base = re.sub("\/tr[^\/]*", "", image)
-      except:
-        print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
+        product_id = docs['_source']['product_id']
 
-      doc['image'] = image
-      doc['image_base'] = image_base
-      doc = {k: v for k, v in doc.items() if
-             k in ['image', 'image_base', 'title', 'product_url', 'parent_id', 'catalog_tag', 'product_id']}
-      final_docs.append(doc)
-      count+=1
-      ctr += 1
-      if ctr.should_print()
-        print(ctr.summary)
+        doc = docs['_source']
+
+        if DEBUG:
+          print(product_id)
+          print(doc['title'])
+          print("===========")
+
+        image = ""
+        image_base = ""
+        try:
+          image = json.loads(doc['media'][0])['url']
+          image = re.sub("h-[0-9]*,w-[0-9]*,cm", "h-60,w-60,cm", image)
+          image_base = re.sub("\/tr[^\/]*", "", image)
+        except:
+          print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
+
+        doc['image'] = image
+        doc['image_base'] = image_base
+        doc = {k: v for k, v in doc.items() if
+               k in ['image', 'popularity','image_base', 'title', 'product_url', 'parent_id', 'catalog_tag', 'product_id']}
+        final_docs.append(doc)
+        count+=1
+        ctr += 1
+        if ctr.should_print():
+          print(ctr.summary)
+      except Exception as e:
+        print(e)
       if count%1000==0:
         flush_index_products(final_docs)
         final_docs = []
@@ -621,10 +624,9 @@ def index_products(collection, searchengine):
 
 
 
-def fetch_products_from_es():
-  DEBUG = False
+def fetch_products_from_es(size):
   query = {
-    "size": 10000,
+    "size": size,
     "query": {
       "bool":
         {
