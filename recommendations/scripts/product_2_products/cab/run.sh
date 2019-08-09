@@ -21,13 +21,13 @@ done
 
 if [ "$ENV" = 'prod' ];
 then
-    BUCKET_NAME='nykaa-recommendations'
-    KEY_NAME='nka-prod-emr'
-    SUBNET_ID='subnet-7c467d18'
+    BUCKET_NAME='nykaa-recommendations-mumbai'
+    KEY_NAME='nka-prod-emr-mumbai'
+    SUBNET_ID='subnet-0d32caca4d4ddc0fd'
 else
-    BUCKET_NAME='nykaa-dev-recommendations'
-    KEY_NAME='nka-qa-emr'
-    SUBNET_ID='subnet-6608c22f'
+    BUCKET_NAME='nykaa-dev-recommendations-mumbai'
+    KEY_NAME='nka-preprod-emr-mumbai'
+    SUBNET_ID='subnet-0ca77a0c5544c4b9d'
 fi
 
 echo "env=$ENV"
