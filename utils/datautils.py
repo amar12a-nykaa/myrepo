@@ -41,6 +41,8 @@ class DataUtils:
         df = spark.createDataFrame(rows, SparkUtils.ORDERS_SCHEMA)
         print('Total number of rows fetched: %d' % df.count())
         df.printSchema()
+        print("Drop null values")
+        df = df.dropna()
         print('Total number of rows extracted: %d' % df.count())
         print('Total number of products: %d' % df.select('product_id').distinct().count())
         print('Scrolling ES for results')
@@ -58,6 +60,7 @@ class DataUtils:
         print('Total number of rows extracted: %d' % df.count())
         print('Total number of products: %d' % df.select('product_id').distinct().count())
 
+        df = df.dropna()
         def convert_to_parent(product_id):
             return child_2_parent.get(product_id, product_id)
 
