@@ -91,7 +91,7 @@ class Utils:
     @staticmethod
     def esConn(env):
         if env == 'prod':
-            ES_ENDPOINT = 'vpc-prod-api-vzcc4i4e4zk2w4z45mqkisjo4u.ap-southeast-1.es.amazonaws.com'
+            ES_ENDPOINT = 'vpc-prod-priceapi-u22xdmuudgqkzoiiufyezkmrkq.ap-south-1.es.amazonaws.com'
         elif env in ['non_prod', 'preprod']:
             ES_ENDPOINT = 'vpc-preprod-priceapi-plwkmnbdhm6td5itzwxznsfn44.ap-south-1.es.amazonaws.com'
         elif env == 'qa':
