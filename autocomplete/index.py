@@ -636,8 +636,7 @@ def fetch_products_from_es(size):
                 "gte": 1
               }
             }},
-            {"term": {"pro_flag_i": 0}},
-            {"term": {"is_service": True}}
+            {"term": {"is_service": False}}
           ],
           "must_not": [
             {"term": {"category_ids": "2413"}}
