@@ -58,6 +58,25 @@ class EsUtils:
   def get_index_client():
     return elasticsearch.client.IndicesClient(DiscUtils.esConn())
 
+  def scrollESForProducts(index,query):
+    es_conn = DiscUtils.esConn()
+    ES_BATCH_SIZE = 10000
+    results = []
+    scroll_id = None
+    while True:
+      if not scroll_id:
+        response = es_conn.search(index=index, body=query, scroll="2m")
+      else:
+        response = es_conn.scroll(scroll_id=scroll_id, scroll="2m")
+
+      if not response["hits"]["hits"]:
+        break
+      scroll_id = response["_scroll_id"]
+      results += (response['hits']['hits'])
+
+    return results
+
+
   def get_index_from_alias(alias):
     response = {}
     es = DiscUtils.esConn()
