@@ -58,12 +58,7 @@ class EsUtils:
   def get_index_client():
     return elasticsearch.client.IndicesClient(DiscUtils.esConn())
 
-  def get_doc_count(index):
-    es = DiscUtils.esConn()
-    response = es.count(index=index)
-    return response.get('count',0)
-
-  def scrollESForResults(index,query):
+  def scrollESForProducts(index,query):
     es_conn = DiscUtils.esConn()
     ES_BATCH_SIZE = 10000
     results = []

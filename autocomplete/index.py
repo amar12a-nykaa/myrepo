@@ -650,7 +650,7 @@ def fetch_products_from_es(size):
     "_source": ["product_id", "popularity", "title", "score", "media", "product_url", "price", "type",
                 "parent_id", "catalog_tag"]
   }
-  results = EsUtils.scrollESForResults(index='livecore',query=query)
+  results = EsUtils.scrollESForProducts(index='livecore',query=query)
   return results
 
 
