@@ -37,8 +37,43 @@ def query_athena(params):
     )
     return response
 
+
+def pollForStatus(execution_id, max_execution=10):
+    state = 'RUNNING'
+    while (max_execution > 0 and state in ['RUNNING']):
+        max_execution = max_execution - 1
+        response = client.get_query_execution(QueryExecutionId=execution_id)
+        
+        if 'QueryExecution' in response and \
+            'Status' in response['QueryExecution'] and \
+            'State' in response['QueryExecution']['Status']:
+            state = response['QueryExecution']['Status']['State']
+            if state == 'FAILED':
+                print("query execution failed")
+                return False
+            elif state == 'SUCCEEDED':
+                s3_path = response['QueryExecution']['ResultConfiguration']['OutputLocation']
+                outputFile = re.findall('.*\/(.*)', s3_path)[0]
+                print("query execution successfull. File %s created" % outputFile)
+                return outputFile
+        time.sleep(6)
+    return False
+
+
+def renameS3File(source, destination):
+    s3 = pipeline.client('s3')
+    source = s3_file_location + '/' + source
+    destination = s3_file_location + '/' + destination
+    sourcePath = bucket_name + "/" + source
+    s3.copy_object(Bucket=bucket_name, CopySource=sourcePath, Key=destination)
+    s3.delete_object(Bucket=bucket_name, Key=source)
+    print('file renamed successfully')
+
+
 for date in dates_to_process:
     s3_file_location = 'dt=%s' % date.strftime("%Y%m%d")
+    params['path'] = s3_file_location
+    
     dateStr = date.strftime("%Y-%m-%d")
     query = """SELECT b.*,
                       a.click_freq
@@ -63,40 +98,20 @@ for date in dates_to_process:
                         AND a.clicked_term=b.visible_term
                 ORDER BY  4 desc, 3 desc
     """%(dateStr, dateStr)
-    params['path'] = s3_file_location
     params['query'] = query
 
     execution = query_athena(params)
     execution_id = execution['QueryExecutionId']
-    state = 'RUNNING'
-
-    max_execution = 20
-    terminated = False
-    outputFile = ""
-    while (max_execution > 0 and state in ['RUNNING']):
-        max_execution = max_execution - 1
-        response = client.get_query_execution(QueryExecutionId=execution_id)
-    
-        if 'QueryExecution' in response and \
-            'Status' in response['QueryExecution'] and \
-            'State' in response['QueryExecution']['Status']:
-            state = response['QueryExecution']['Status']['State']
-            if state == 'FAILED':
-                print("query execution failed")
-                terminated = True
-                break
-            elif state == 'SUCCEEDED':
-                s3_path = response['QueryExecution']['ResultConfiguration']['OutputLocation']
-                outputFile = re.findall('.*\/(.*)', s3_path)[0]
-                print("query execution successfull. File %s created"%outputFile)
-                terminated = True
-                break
-        time.sleep(6)
+    outputFile = pollForStatus(execution_id, max_execution=20)
     if outputFile:
-        s3 = pipeline.client('s3')
-        source = s3_file_location + '/' + outputFile
-        destination = s3_file_location + '/autocompleteFeedbackV2.csv'
-        sourcePath = bucket_name + "/" + source
-        s3.copy_object(Bucket=bucket_name, CopySource=sourcePath, Key=destination)
-        s3.delete_object(Bucket=bucket_name, Key=source)
-        print('file uploaded successfully')
+        renameS3File(outputFile, 'autocompleteFeedbackV2.csv')
+    
+    # sss_query = """TO-DO
+    # """
+    # params['query'] = sss_query
+    #
+    # execution = query_athena(params)
+    # execution_id = execution['QueryExecutionId']
+    # outputFile = pollForStatus(execution_id, max_execution=20)
+    # if outputFile:
+    #     renameS3File(outputFile, 'autocompleteSSScore.csv')
