@@ -2,7 +2,7 @@ import os
 import sys
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType
-from pyspark.sql.functions import length, sum, lower, col, udf, max, log
+from pyspark.sql.functions import length, sum, lower, col, udf, max, log, lit
 import math
 import boto3
 import arrow
@@ -35,11 +35,15 @@ if __name__ == "__main__":
     print(sc.getConf().getAll())
 
     schema = StructType([
-        StructField("Date", StringType(), True),
         StructField("typed_term", StringType(), True),
-        StructField("search_term", StringType(), True),
-        StructField("click_count", IntegerType(), True),
-        StructField("impression_count", IntegerType(), True),
+        StructField("visible_term", StringType(), True),
+        StructField("visible_freq", IntegerType(), True),
+        StructField("click_freq", IntegerType(), True)
+    ])
+    
+    sss_schema = StructType([
+        StructField("typed_term", StringType(), True),
+        StructField("visible_term", StringType(), True),
         StructField("steady_state_score", IntegerType(), True)
     ])
 
@@ -69,7 +73,7 @@ if __name__ == "__main__":
 
         print("Filtering out typed_query with length less than threshold")
         final_df = final_df.filter(length('typed_term') >= TYPED_QUERY_LENGTH_THRESHOLD)
-        final_df = final_df.withColumn('search_term', lower(col('search_term')))
+        final_df = final_df.withColumn('visible_term', lower(col('visible_term')))
         final_df = final_df.withColumn('typed_term', lower(col('typed_term')))
         if verbose:
             print("Rows count: " + str(final_df.count()))
@@ -80,25 +84,37 @@ if __name__ == "__main__":
         normalize_typed_term_udf = udf(normalize_data, StringType())
         final_df = final_df.withColumn("typed_term", normalize_typed_term_udf(final_df['typed_term']))
 
-        print("Taking distinct pair of typed_term and search_term")
-        final_df = final_df.groupBy(['typed_term', 'search_term']).agg(sum('click_count').alias('click_count'),
-                                                                       sum('impression_count').alias('impression_count'),
-                                                                       max('steady_state_score').alias('steady_state_score'))
+        print("Taking distinct pair of typed_term and visible_term")
+        final_df = final_df.groupBy(['typed_term', 'visible_term']).agg(sum('click_freq').alias('click_count'),
+                                                                       sum('visible_freq').alias('impression_count'))
         final_df = final_df.filter(final_df.impression_count > IMPRESSION_COUNT_THRESHOLD)
         if verbose:
             print("Rows count: " + str(final_df.count()))
-
+        
+        yesterday_date = arrow.now().replace(days=-1, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
+            tzinfo=None)
+        filename = 's3://nykaa-prod-feedback-autocomplete/dt=%s/autocompleteSSScore.csv' % yesterday_date.strftime("%Y%m%d")
+        try:
+            sss_data = spark.read.load(filename, header=True, format='csv', schema=sss_schema)
+            if sss_data.count() > 0:
+                final_df = final_df.join(sss_data, ['typed_term', 'visible_term'], how='left')
+            else:
+                final_df = final_df.withColumn('steady_state_score', lit(0))
+        except:
+            pass
+        final_df = final_df.na.fill(0)
+        
         final_df = final_df.withColumn('ctr', 1 - (final_df['click_count'] / final_df['impression_count']))
         final_df = final_df.withColumn('click_count', log(1 + final_df['click_count']))
         final_df = final_df.join(final_df.groupby('typed_term').agg(max('click_count').alias('max_click_count')), 'typed_term')
         final_df = final_df.withColumn('click_count', final_df['click_count'] / final_df['max_click_count'])
         
         final_dict = {}
-        final_df = final_df.sort("search_term")
+        final_df = final_df.sort("visible_term")
         current_term = ""
         for row in final_df.collect():
-            if row['search_term'] != current_term:
-                current_term = row['search_term']
+            if row['visible_term'] != current_term:
+                current_term = row['visible_term']
                 final_dict[current_term] = {}
             final_dict[current_term][row['typed_term']] = {'click': row['click_count'], 'ctr': row['ctr'], 'steady_score': row['steady_state_score']}
 
