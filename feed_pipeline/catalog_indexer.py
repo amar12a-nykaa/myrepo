@@ -516,6 +516,9 @@ class CatalogIndexer:
                 doc['parent_id'] = row['parent_id'] if doc['type'] == 'simple' and row['parent_id'] else row[
                     'product_id']
                 doc['title'] = (re.sub(r'\s+', ' ', row['name'])).strip()
+                if 'with' in doc['title'].lower():
+                  title = doc['title'].lower()
+                  doc['title_prefix'] = title.split('with',1)[0]
                 doc['title_text_split'] = row['name']
                 doc['description'] = row['description']
                 doc['tags'] = (row['tag'] or "").split('|')
