@@ -981,10 +981,10 @@ class CatalogIndexer:
                 doc['custom_tags'] = []
                 if doc['product_id'] in bestsellers:
                     doc['custom_tags'].append('BESTSELLER')
-                golive_time = row.get('product_enable_time', 0)
+                golive_time = doc.get('product_enable_time', 0)
                 today = dt.datetime.combine(dt.datetime.today(), dt.time.min)
                 startdate = today - dt.timedelta(days=30)
-                if golive_time and str(golive_time) >= str(startdate):
+                if golive_time and (str(golive_time) >= str(startdate)):
                     doc['custom_tags'].append('NEW')
                 
                 if search_engine == 'elasticsearch':
