@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType
-from pyspark.sql.functions import length, sum, lower, col, udf, max, log, lit
+from pyspark.sql.functions import length, sum, lower, col, udf, max, log, lit, pow
 from datetime import datetime, timedelta
 import boto3
 import json
@@ -98,6 +98,7 @@ if __name__ == "__main__":
         
         final_df = final_df.withColumn('ctr', 1 - (final_df['click_count'] / final_df['impression_count']))
         final_df = final_df.withColumn('click_count', log(1 + final_df['click_count']))
+        final_df = final_df.withColumn('click_count', pow(final_df['click_count'], 2))
         final_df = final_df.join(final_df.groupby('typed_term').agg(max('click_count').alias('max_click_count')), 'typed_term')
         final_df = final_df.withColumn('click_count', final_df['click_count'] / final_df['max_click_count'])
         
