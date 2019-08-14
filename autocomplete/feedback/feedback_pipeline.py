@@ -1,14 +1,9 @@
-import os
-import sys
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, FloatType
 from pyspark.sql.functions import length, sum, lower, col, udf, max, log, lit
-import math
+from datetime import datetime, timedelta
 import boto3
-import arrow
 import json
-import pandas
-from collections import defaultdict
 import argparse
 import re
 
@@ -49,9 +44,7 @@ if __name__ == "__main__":
 
     dfs = []
     for i in range(1, days):
-        i = -i
-        date = arrow.now().replace(days=i, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
-            tzinfo=None)
+        date = datetime.now() - timedelta(days=i)
         filename = 's3://nykaa-prod-feedback-autocomplete/dt=%s/autocompleteFeedbackV2.csv' % date.strftime("%Y%m%d")
         try:
             df = spark.read.load(filename, header=True, format='csv', schema=schema)
@@ -91,8 +84,7 @@ if __name__ == "__main__":
         if verbose:
             print("Rows count: " + str(final_df.count()))
         
-        yesterday_date = arrow.now().replace(days=-1, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
-            tzinfo=None)
+        yesterday_date = datetime.now() - timedelta(days=1)
         filename = 's3://nykaa-prod-feedback-autocomplete/dt=%s/autocompleteSSScore.csv' % yesterday_date.strftime("%Y%m%d")
         try:
             sss_data = spark.read.load(filename, header=True, format='csv', schema=sss_schema)
