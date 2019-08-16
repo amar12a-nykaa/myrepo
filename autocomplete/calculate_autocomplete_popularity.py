@@ -150,10 +150,10 @@ def process_category_facet_popularity(valid_category_list):
   print("writing facet popularity to db")
   mysql_conn = PasUtils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
-  if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category_facets'"):
-    PasUtils.mysql_write("""create table brand_category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32),
+  if not PasUtils.mysql_read("SHOW TABLES LIKE 'category_facets'"):
+    PasUtils.mysql_write("""create table category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32),
                                 category_name varchar(32), facet varchar(20), popularity float, store_popularity varchar(255))""")
-  PasUtils.mysql_write("delete from brand_category_facets", connection=mysql_conn)
+  PasUtils.mysql_write("delete from category_facets", connection=mysql_conn)
   
   query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, store_popularity) VALUES (%s, %s, %s, %s, %s, %s) """
   data = pd.merge(facet_popularity, category_info, on='category_id')
