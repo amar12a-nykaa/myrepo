@@ -10,6 +10,8 @@ from loopcounter import LoopCounter
 from idutils import strip_accents
 
 VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro']
+PRIVATE_LABEL_BRANDS = ['1937','7666','9127']
+BOOST_FACTOR = 1.1
 BLACKLISTED_FACETS = ['old_brand_facet', ]
 POPULARITY_THRESHOLD = 0.1
 base_aggregation = {
@@ -329,6 +331,14 @@ def process_brand_category(brand_category_data):
   for tag in VALID_CATALOG_TAGS:
     brand_category_popularity[tag] = 100 * normalize(brand_category_popularity[tag])
   brand_category_popularity.to_csv('brand_category_popularity.csv', index=False)
+  
+  # promote private label
+  def boost_brand(row):
+    if str(row['brand_id']) in PRIVATE_LABEL_BRANDS:
+      for tag in VALID_CATALOG_TAGS:
+        row[tag] = BOOST_FACTOR * row[tag]
+    return row
+  brand_category_popularity = brand_category_popularity.apply(boost_brand, axis=1)
   
   print("writing brand category popularity to db")
   mysql_conn = PasUtils.mysqlConnection('w')
