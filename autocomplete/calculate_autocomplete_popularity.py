@@ -145,6 +145,7 @@ def process_category_facet_popularity(valid_category_list):
   facet_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
     facet_popularity[tag] = (50 * normalize(facet_popularity[tag])) + 50
+    facet_popularity[tag] = facet_popularity[tag].apply(lambda x: x if x > 50.0 else 0)
   facet_popularity.to_csv('facet_pop.csv', index=False)
   
   print("writing facet popularity to db")
@@ -321,6 +322,7 @@ def process_brand_category(brand_category_data):
   brand_category_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
     brand_category_popularity[tag] = (50 * normalize(brand_category_popularity[tag])) + 50
+    brand_category_popularity[tag] = brand_category_popularity[tag].apply(lambda x: x if x > 50.0 else 0)
   brand_category_popularity.to_csv('brand_category_popularity.csv', index=False)
   
   # promote private label
