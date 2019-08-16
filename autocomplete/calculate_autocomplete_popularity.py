@@ -140,14 +140,7 @@ def process_category_facet_popularity(valid_category_list):
   for tag in VALID_CATALOG_TAGS:
     data[tag] = []
   
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "benefits_facet", "color_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "concern_facet", "coverage_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "finish_facet", "formulation_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "gender_facet", "hair_type_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "filter_size_facet", "speciality_search_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "filter_product_facet", "usage_period_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "spf_facet", "preference_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "skin_tone_facet", "skin_type_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "color_facet"), data)
   
   facet_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
@@ -231,10 +224,9 @@ def process_category(category_data):
   return
 
 
-def getAggQueryResult(valid_category_list, facet1, facet2):
+def getAggQueryResult(valid_category_list, facet1):
   global base_aggregation
   key1 = facet1 + ".keyword"
-  key2 = facet2 + ".keyword"
 
   query = {
     "aggs": {
@@ -245,8 +237,7 @@ def getAggQueryResult(valid_category_list, facet1, facet2):
           "size": 200
         },
         "aggs": {
-          facet1: {"terms": {"field": key1, "size": 100}, "aggs": base_aggregation},
-          facet2: {"terms": {"field": key2, "size": 100}, "aggs": base_aggregation}
+          facet1: {"terms": {"field": key1, "size": 100}, "aggs": base_aggregation}
         }
       }
     },
@@ -329,7 +320,7 @@ def process_brand_category(brand_category_data):
   
   brand_category_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
-    brand_category_popularity[tag] = 100 * normalize(brand_category_popularity[tag])
+    brand_category_popularity[tag] = (50 * normalize(brand_category_popularity[tag])) + 50
   brand_category_popularity.to_csv('brand_category_popularity.csv', index=False)
   
   # promote private label
