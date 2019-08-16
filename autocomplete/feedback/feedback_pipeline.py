@@ -93,6 +93,7 @@ if __name__ == "__main__":
             else:
                 final_df = final_df.withColumn('steady_state_score', lit(0))
         except:
+            final_df = final_df.withColumn('steady_state_score', lit(0))
             pass
         final_df = final_df.na.fill(0)
         
