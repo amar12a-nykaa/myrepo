@@ -24,6 +24,7 @@ WEIGHT_UNITS = 0
 WEIGHT_ORDERS = 40
 WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 50
+WEIGHT_ASP = 0
 POPULARITY_TOTAL_RATIO = 0
 POPULARITY_BUCKET_RATIO = 1
 PUNISH_FACTOR=0.7
@@ -34,9 +35,10 @@ COLD_START_DECAY_FACTOR = 0.99
 POPULARITY_DECAY_FACTOR_NEW = 0.5
 WEIGHT_VIEWS_NEW = 10
 WEIGHT_UNITS_NEW = 0
-WEIGHT_ORDERS_NEW = 40
+WEIGHT_ORDERS_NEW = 10
 WEIGHT_CART_ADDITIONS_NEW = 10
-WEIGHT_REVENUE_NEW = 50
+WEIGHT_REVENUE_NEW = 80
+WEIGHT_ASP_NEW = 40
 POPULARITY_TOTAL_RATIO_NEW = 0.1
 POPULARITY_BUCKET_RATIO_NEW = 0.9
 PUNISH_FACTOR_NEW=0.7
@@ -266,14 +268,15 @@ def calculate_new_popularity():
 
     multiplication_factor = POPULARITY_DECAY_FACTOR ** (bucket_id + 1)
     print("date_bucket: %s bucket_id: %s multiplication_factor: %s" %(str(date_bucket),bucket_id,multiplication_factor))
+    df['asp'] = df.apply(lambda y: (y['revenue']/y['units']) if y['units'] > 0 else 0, axis=1)
     df['popularity'] = multiplication_factor * normalize(
                         numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_ORDERS * df['orders'] + WEIGHT_UNITS * df['units'] +
-                          WEIGHT_CART_ADDITIONS * df['cart_additions'] + WEIGHT_REVENUE * df['revenue'])) * 100
+                          WEIGHT_CART_ADDITIONS * df['cart_additions'] + WEIGHT_REVENUE * df['revenue'] + WEIGHT_ASP * df['asp'])) * 100
 
     multiplication_factor_new = POPULARITY_DECAY_FACTOR_NEW ** (bucket_id + 1)
     df['popularity_new'] = multiplication_factor_new * normalize(
                             numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_ORDERS_NEW * df['orders'] + WEIGHT_UNITS_NEW * df['units'] +
-                              WEIGHT_CART_ADDITIONS_NEW * df['cart_additions'] + WEIGHT_REVENUE_NEW * df['revenue'])) * 100
+                              WEIGHT_CART_ADDITIONS_NEW * df['cart_additions'] + WEIGHT_REVENUE_NEW * df['revenue'] + WEIGHT_ASP_NEW * df['asp'])) * 100
 
     dfs.append(df.loc[:, ['id', 'popularity', 'popularity_new']].set_index('id'))
 
@@ -316,9 +319,10 @@ def calculate_new_popularity():
       print(ctr.summary)
 
     row = dict(row)
+    row['last_calculated'] = timestamp
     id = row.get('id')
-    popularity_table.update({"_id": id}, {"$set": {'popularity': row['popularity']}})
-
+    popularity_table.update({"_id": id}, row, upsert=True)
+  popularity_table.remove({"last_calculated": {"$ne": timestamp}})
 
 def applyBoost(df):
   query = """select product_id, sku_type, brand_code, mrp, l3_id from dim_sku"""
