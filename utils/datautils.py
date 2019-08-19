@@ -33,7 +33,8 @@ class DataUtils:
         if customer_ids:
             customer_orders_query += " AND fact_order_new.order_customerid IN (%s)" % ",".join([str(c) for c in customer_ids])
 
-        print(customer_orders_query)
+        if not customer_ids or len(customer_ids) <= 100:
+          print(customer_orders_query)
         print('Fetching Data from Redshift')
         rows = MysqlRedshiftUtils.fetchResultsInBatch(MysqlRedshiftUtils.redshiftConnection(), customer_orders_query, 10000)
         print('Data fetched')
