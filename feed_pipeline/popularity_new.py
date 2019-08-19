@@ -321,7 +321,7 @@ def calculate_new_popularity():
 
 
 def applyBoost(df):
-  query = """select product_id, sku_type, brand_code, mrp, l3_id from dim_sku"""
+  query = """select product_id, sku_type, brand_code, mrp, l3_id, kits_combo from dim_sku"""
   print(query)
   redshift_conn = PasUtils.redshiftConnection()
   product_attr = pd.read_sql(query, con=redshift_conn)
@@ -332,7 +332,7 @@ def applyBoost(df):
 
   #punish combo products
   def punish_combos(row):
-    if row['sku_type'] and str(row['sku_type']).lower() == 'bundle':
+    if (row['sku_type'] and str(row['sku_type']).lower() == 'bundle') or row['kits_combo']=='Yes':
       row['popularity'] = row['popularity'] * PUNISH_FACTOR
       row['popularity_new'] = row['popularity_new'] * PUNISH_FACTOR_NEW
     return row
@@ -361,7 +361,7 @@ def applyBoost(df):
 
 def handleColdStart(df):
   global child_parent_map
-  temp_df = df[['id', 'popularity', 'popularity_new']]
+  temp_df = df[['id', 'popularity', 'popularity_new', 'kits_combo']]
   
   #remove config child product
   temp_df = pd.merge(temp_df, child_parent_map, left_on='id', right_on='product_id', how='left')
@@ -391,7 +391,7 @@ def handleColdStart(df):
 
   def update_popularity(row):
     date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['sku_created']).astype(datetime.datetime))).days
-    if date_diff > 0:
+    if date_diff > 0 and row.get('kits_combo','No') == 'No':
         percentile_value = row['brand_popularity']
         if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
           percentile_value = BRAND_PROMOTION_SCORE
