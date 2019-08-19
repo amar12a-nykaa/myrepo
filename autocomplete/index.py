@@ -116,7 +116,7 @@ def create_map_search_product():
     map_search_product_not_found[prod['_id']] = ""
 
   es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']
-  limit = 50000
+  limit = 100000
   ctr = LoopCounter(name='create_map_search_product')
   for query in (p['query'] for p in search_terms_normalized_daily.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)])):
     if len(query)>50:
@@ -636,14 +636,12 @@ def fetch_products_from_es(size):
                 "gte": 1
               }
             }},
-            {"term": {"is_service": False}}
+            {"term": {"is_service": False}},
+            {"term": {"is_searchable_i": 1}}
           ],
           "must_not": [
-            {"term": {"category_ids": "2413"}}
-          ],
-          "should": [
-            {"term": {"type": "simple"}},
-            {"term": {"type": "configurable"}}
+            {"term": {"category_ids": "2413"}},
+            {"term": {"type": "bundle"}}
           ]
         }
     },
