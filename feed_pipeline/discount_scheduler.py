@@ -42,7 +42,7 @@ def incrementGlobalCounter(increment):
 def logPriceChangeEvent(update_docs,products):
   for doc in update_docs:
     for product in products:
-      if product["sku"] == doc["sku"]:
+      if product["sku"] == doc["sku"] and product["price"] != doc["price"]:
         data = {
               "timestamp": int(time.time()),
               "event": "price_changed",
