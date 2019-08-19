@@ -636,14 +636,12 @@ def fetch_products_from_es(size):
                 "gte": 1
               }
             }},
-            {"term": {"is_service": False}}
+            {"term": {"is_service": False}},
+            {"term": {"is_searchable_i": 1}}
           ],
           "must_not": [
-            {"term": {"category_ids": "2413"}}
-          ],
-          "should": [
-            {"term": {"type": "simple"}},
-            {"term": {"type": "configurable"}}
+            {"term": {"category_ids": "2413"}},
+            {"term": {"type": "bundle"}}
           ]
         }
     },
