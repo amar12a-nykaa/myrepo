@@ -116,7 +116,7 @@ def create_map_search_product():
     map_search_product_not_found[prod['_id']] = ""
 
   es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']
-  limit = 50000
+  limit = 100000
   ctr = LoopCounter(name='create_map_search_product')
   for query in (p['query'] for p in search_terms_normalized_daily.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)])):
     if len(query)>50:
@@ -523,28 +523,18 @@ def validate_min_count(force_run, allowed_min_docs):
 
 def index_products(collection, searchengine):
 
-  popularity = MongoUtils.getClient()['search']['popularity']
-  count = {'value': 0}
-    
-  def flush_index_products(rows, productList=[]):
+  DEBUG = False
+
+  def flush_index_products(products_list):
     docs = []
-    cnt_product = 0
-    cnt_search = 0
-    cnt_missing_keys = 0 
+    cnt_missing_keys = 0
+    uniqueList = []
+    for product in products_list:
+      id = product.get('product_id',0)
 
-    ids = [x['_id'] for x in rows]
-    if not ids:
-      return
-    products = fetch_product_by_ids(ids)
-    for row in rows:
-      id = row['_id']
-      #print(parent_id)
-      if not row['_id']:
+      if not id:
         continue
 
-      product = products.get(id)
-      if not product:
-        continue
       required_keys = set(["product_url", 'image', 'title', 'image_base'])
       missing_keys = required_keys - set(list(product.keys())) 
       if missing_keys:
@@ -564,121 +554,102 @@ def index_products(collection, searchengine):
         men_url = url.replace(".nykaa.com", ".nykaaman.com")
       data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": id, "men_url": men_url})
       unique_id = createId(product['title'])
-      if unique_id in productList:
+      if unique_id in uniqueList:
         continue
-      count['value'] += 1
-      productList.append(unique_id)
       store_popularity = {}
       for store in STORE_LIST:
         if store in product['catalog_tag']:
-          store_popularity[store] = row['popularity']
-      row['store_popularity'] = json.dumps(store_popularity)
+          store_popularity[store] = product['popularity']
+      product['store_popularity'] = json.dumps(store_popularity)
       
       doc = {
           "_id": unique_id,
           "entity": product['title'],
-          "weight": row['popularity'],
+          "weight": product['popularity'],
           "type": _type,
           "data": data,
           "id": id,
           "is_visible": True,
           "source": "product"
         }
-      doc = add_store_popularity(doc, row)
+      doc = add_store_popularity(doc, product)
       docs.append(doc)
-      productList.append(unique_id)
+      uniqueList.append(unique_id)
       if len(docs) >= 100:
         index_docs(searchengine, docs, collection)
         docs = []
     index_docs(searchengine, docs, collection)
 
-  #print("cnt_product: %s" % cnt_product)
-#  print("cnt_search: %s" % cnt_search)
-#  print("cnt_missing_keys: %s" % cnt_missing_keys)
-
-
-  rows_1k = []
-  rows_untested = {}
-  ids = []
-
   ctr = LoopCounter(name='Product Indexing - ' + searchengine)
-  limit = 150000 if not GLOBAL_FAST_INDEXING else 5000
-  productList = []
-  for row in popularity.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)]):# .limit(limit):
-    ctr += 1
-    if ctr.should_print():
-      print(ctr.summary)
-    rows_untested[row['_id']] = row
-    if len(rows_untested) >= 1000:
-      ids = list(rows_untested.keys())
-      for product in requests.get("http://"+ApiUtils.get_host()+"/apis/v2/product.listids?ids=%s" % ",".join(ids)).json()['result']['products']:
-        if product['price'] < 1 or product['pro_flag'] == 1 or product['is_service'] == True:
-          continue
-        rows_1k.append(rows_untested[product['product_id']])
-      flush_index_products(rows_1k, productList)
-      rows_1k = []
-      rows_untested = {}
-
-    if count['value'] >= limit:
-      break
-  flush_index_products(rows_1k, productList)
-    
-
-
-def fetch_product_by_ids(ids):
-  DEBUG = False 
-  queries = []
-  for id in ids:
-    query = {
-      "query": {
-        "bool": 
-          {
-            "must":[
-              {"term":{"product_id": id}}
-            ],
-            "must_not": [
-              {"term":{"category_ids": "2413"}}
-            ], 
-            "should": [
-              {"term":{"type": "simple"}},
-              {"term":{"type": "configurable"}}
-              ]
-          }
-        },
-      "_source":["product_id", "title","score", "media", "product_url", "price", "type", "parent_id", "catalog_tag"]
-    }
-    queries.append("{}")
-    queries.append(json.dumps(query))
-
-  product = {}
-  response = DiscUtils.makeESRequest(queries, 'livecore', msearch=True)
-  final_docs = {}
-  for docs in [x['hits']['hits'] for x in response['responses']]:
+  results = fetch_products_from_es(size=10000)
+  final_docs = []
+  count=0
+  for docs in results:
     if docs:
-      product_id = docs[0]['_source']['product_id']
-      assert len(docs) == 1, "More than 1 docs found for query %s" %product_id
-      
-      doc = docs[0]['_source']
-
-      if DEBUG:
-        print(product_id)
-        print(doc['title'])
-        print("===========")
-
-      image = ""
-      image_base = ""
       try:
-        image = json.loads(doc['media'][0])['url']
-        image = re.sub("h-[0-9]*,w-[0-9]*,cm", "h-60,w-60,cm", image)
-        image_base = re.sub("\/tr[^\/]*", "",  image) 
-      except:
-        print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
+        product_id = docs['_source']['product_id']
 
-      doc['image'] = image 
-      doc['image_base'] = image_base 
-      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'parent_id', 'catalog_tag', 'product_id']}
-      final_docs[doc['product_id']] = doc
-  return final_docs
+        doc = docs['_source']
+
+        if DEBUG:
+          print(product_id)
+          print(doc['title'])
+          print("===========")
+
+        image = ""
+        image_base = ""
+        try:
+          image = json.loads(doc['media'][0])['url']
+          image = re.sub("h-[0-9]*,w-[0-9]*,cm", "h-60,w-60,cm", image)
+          image_base = re.sub("\/tr[^\/]*", "", image)
+        except:
+          print("[ERROR] Could not index product because image is missing for product_id: %s" % doc['product_id'])
+
+        doc['image'] = image
+        doc['image_base'] = image_base
+        doc = {k: v for k, v in doc.items() if
+               k in ['image', 'popularity','image_base', 'title', 'product_url', 'parent_id', 'catalog_tag', 'product_id']}
+        final_docs.append(doc)
+        count+=1
+        ctr += 1
+        if ctr.should_print():
+          print(ctr.summary)
+      except Exception as e:
+        print(e)
+      if count%1000==0:
+        flush_index_products(final_docs)
+        final_docs = []
+
+  flush_index_products(final_docs)
+
+
+
+def fetch_products_from_es(size):
+  query = {
+    "size": size,
+    "query": {
+      "bool":
+        {
+          "must": [
+            {"range": {
+              "price": {
+                "gte": 1
+              }
+            }},
+            {"term": {"is_service": False}},
+            {"term": {"is_searchable_i": 1}}
+          ],
+          "must_not": [
+            {"term": {"category_ids": "2413"}},
+            {"term": {"type": "bundle"}}
+          ]
+        }
+    },
+    "_source": ["product_id", "popularity", "title", "score", "media", "product_url", "price", "type",
+                "parent_id", "catalog_tag"]
+  }
+  results = EsUtils.scrollESForProducts(index='livecore',query=query)
+  return results
 
 
 def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_custom_queries_arg=False, index_all=False, force_run=False, allowed_min_docs=0 ):

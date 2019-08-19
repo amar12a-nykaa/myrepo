@@ -554,6 +554,8 @@ if argv['preprocess']:
 
 if argv['popularity']:
   print("popularity start: %s" % arrow.now())
-  calculate_popularity()
+  # calculate_popularity()
+  calculate_new_popularity()
+  override_popularity()
   print("popularity end: %s" % arrow.now())
 

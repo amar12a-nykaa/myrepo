@@ -42,13 +42,14 @@ class MysqlRedshiftUtils:
 
     def mlMysqlConnection(connection_details=None):
         if env_details['env'] == 'prod':
-            host = "ml-db-master.nykaa-internal.com"
+            host = "ml-rds-master.mumbai-nyk.internal"
             password = 'fjxcneXnq2gptsTs'
         elif env_details['env'] in ['non_prod', 'preprod', 'qa']:
-            host = 'nka-preprod-ml.cjmplqztt198.ap-southeast-1.rds.amazonaws.com'
+            host = 'ml-master.preprod-mumbai-nyk.internal'
             password = 'JKaPHGB4JWXM'
         else:
             raise Exception('Unknow env')
+        print(host)
         user = 'ml'
         db = 'nykaa_ml'
         for i in [0, 1, 2]:
@@ -68,7 +69,7 @@ class MysqlRedshiftUtils:
 
     def redshiftConnection():
         if env_details['env'] == 'prod':
-            host = 'dwhcluster.cy0qwrxs0juz.ap-southeast-1.redshift.amazonaws.com'
+            host = 'prod-datawarehouse.nyk00-int.network'
         elif env_details['env'] in ['non_prod', 'preprod', 'qa']:
             host = 'nka-preprod-dwhcluster.c742iibw9j1g.ap-southeast-1.redshift.amazonaws.com'
         else:
