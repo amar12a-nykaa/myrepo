@@ -1022,16 +1022,6 @@ class CatalogIndexer:
                 
             CatalogIndexer.print_errors(errors)
 
-        #Write files to s3 Remove from machine
-        if hostname.startswith('admin'):
-          try:
-            cmd = "/usr/local/bin/aws s3 cp "+cls.filepath+" s3://nykaadp-feeds/product_metadata/"
-            out = subprocess.check_output(cmd , shell=True).strip()
-          except:
-            print("Error! Could not upload product_metadata to s3")
-        if os.path.exists(cls.filepath):
-          os.remove(cls.filepath)
-
     def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None):
         skus = skus or []
         skus = [x for x in skus if x]
@@ -1117,7 +1107,6 @@ class CatalogIndexer:
                    update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter).start()
         q.join()
         print("Index Catalog Finished!")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
