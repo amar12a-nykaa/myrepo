@@ -47,7 +47,7 @@ s3_client = boto3.client('s3')
 ORDER_SOURCE_NYKAA = ['Nykaa', 'Nykaa(Old)', 'NYKAA', 'CS-Manual']
 ORDER_SOURCE_NYKAAMEN = ['NykaaMen']
 
-U2P_LSI_MODEL_DIR = 'u2p/models'
+U2P_LSI_MODEL_DIR = 'u2p/models/lsi_views'
 
 DAILY_SYNC_FILE_PREFIX= 'Nykaa_CustomerInteractions_'
 VIEWS_CA_S3_PREFIX = 'u2p/data/'
@@ -59,9 +59,11 @@ def generate_customer_purchases_corpus(df):
     return df.select(['customer_id', 'product_freq']).rdd.map(lambda row: (row['customer_id'], [[product_count['product_id'], product_count['orders_count']] for product_count in row['product_freq']])).toDF(['customer_id', 'product_freq'])
     #return {row['customer_id']: row['l3_category_freq'] for row in customer_cat_corpus_rows}
 
-def make_and_save_model(bucket_name, corpus):
+def make_and_save_model(bucket_name, all_products, corpus):
     s3 = boto3.client('s3')
     with tempfile.TemporaryDirectory() as temp_dir:
+        with open(temp_dir + '/all_products.json', 'w+') as f:
+            json.dump(all_products, f)
         norm_model = models.NormModel()
         normalized_corpus = []
         print('Normalizing the corpus')
@@ -122,6 +124,7 @@ def prepare_views_ca_dataframe(files):
     convert_to_parent_udf = udf(convert_to_parent, IntegerType())
     print('Converting product_id to parent')
     df = df.withColumn("product_id", convert_to_parent_udf(df['product_id']))
+    print('Done Converting product_id to parent')
 
     product_2_l3_category = {product_id: json.loads(categories[0])['l3']['id'] for product_id, categories in results['primary_categories'].items()}
     results['product_2_l3_category'] = product_2_l3_category
@@ -152,8 +155,11 @@ def generate_recommendations(all_products, lsi_model, days=None, limit=None):
     customer_ids_need_update = []
     if days:
         customer_ids_need_update = df.filter(col('date') >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24*days)).date()).select(["customer_id"]).distinct().rdd.flatMap(lambda x: x).collect()
+        print("Total customers: %d" % len(customer_ids_need_update))
         if limit:
             customer_ids_need_update = customer_ids_need_update[:limit]
+            print("Limit: %d" % limit)
+            print(customer_ids_need_update)
         print("Only taking customer_ids which need to be updated")
         print("Total number of customer_id=%d" % len(customer_ids_need_update))
         df = df.filter(col('customer_id').isin(customer_ids_need_update))
@@ -182,18 +188,20 @@ def generate_recommendations(all_products, lsi_model, days=None, limit=None):
     df = df.groupBy(['customer_id', 'product_id']).agg(func.sum(col('weight')).alias('weight'))
     df = df.groupBy(['customer_id']).agg(func.collect_list(func.struct('product_id', 'weight')).alias('vec'))
 
+    print("Total number of customers to vector: %d" % df.count())
     views_rdd = df.select(['customer_id', 'vec']).rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=[[product_count['product_id'], product_count['weight']] for product_count in row['vec']]))
 
     # Preparing customer_2_last_order_categories
     start_datetime = (datetime.now() - timedelta(hours=24*30))
     orders_df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, start_datetime, None, None, customer_ids_need_update) 
     # TODO instead of just removing the products, we can give neg weightage to products purchased
-    customer_2_last_month_purchase_categories = {int(row['customer_id']): row['categories'] for row in orders_df.select(['customer_id', 'l3_category']).distinct().groupBy(['customer_id']).agg(func.collect_list('l3_category').alias('categories')).collect()}
+    customer_2_last_month_purchase_categories = {int(row['customer_id']): row['categories'] for row in orders_df.select(['customer_id', 'l3_category']).dropna().distinct().groupBy(['customer_id']).agg(func.collect_list('l3_category').alias('categories')).collect()}
     #customer_2_last_month_purchases = {int(row['customer_id']): row['products'] for row in orders_df.select(['customer_id', 'product_id']).distinct().groupBy(['customer_id']).agg(func.collect_list('product_id').alias('products')).collect()}
 
 
     product_2_l3_category = results['product_2_l3_category']
     idx_2_product_id = {key: product_id for key, product_id in enumerate(all_products)}
+    print("Total number of products: %d" % len(all_products))
     products_corpus_lsi = lsi_model[generate_products_corpus(all_products)]
     index = similarities.MatrixSimilarity(products_corpus_lsi)
     norm_model = models.NormModel()
@@ -235,13 +243,16 @@ if __name__ == '__main__':
     if do_prepare_model:
         df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, str(computation_start_datetime), None, None) 
         print('Total number of product_ids: %d' % df.select('product_id').distinct().count())
+        all_products = df.select(['product_id']).distinct().rdd.flatMap(lambda x: x).collect()
         customer_2_product_corpus_dict = {row['customer_id']: row['product_freq'] for row in generate_customer_purchases_corpus(df).collect()}
-        make_and_save_model(env_details['bucket_name'], list(customer_2_product_corpus_dict.values()))
+        make_and_save_model(env_details['bucket_name'], all_products, list(customer_2_product_corpus_dict.values()))
 
     if gen_user_recommendations:
         print('Loading LSI Model')
         lsi_model = load_model(env_details['bucket_name'], U2P_LSI_MODEL_DIR)
-        results = ESUtils.scrollESForResults()
-        all_products = list(set(results['sku_2_product_id'].values()))
+        s3_resource = boto3.resource('s3')
+        content_object = s3_resource.Object(env_details['bucket_name'], U2P_LSI_MODEL_DIR + '/all_products.json')
+        file_content = content_object.get()['Body'].read().decode('utf-8')
+        all_products = json.loads(file_content)
         print('Generate recommendations for user')
         generate_recommendations(all_products, lsi_model, days=argv.get('days'), limit=limit)

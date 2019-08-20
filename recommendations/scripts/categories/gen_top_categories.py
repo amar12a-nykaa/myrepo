@@ -35,6 +35,7 @@ from mysqlredshiftutils import MysqlRedshiftUtils
 from sparkutils import SparkUtils
 from ftputils import FTPUtils
 from esutils import ESUtils
+from upsutils import UPSUtils
 
 spark = SparkUtils.get_spark_instance('Gen Top Categories')
 
@@ -52,33 +53,6 @@ CATEGORIES_LSI_MODEL_DIR = 'categories_page/models'
 
 DAILY_SYNC_FILE_PREFIX= 'Nykaa_CustomerInteractions_'
 VIEWS_CA_S3_PREFIX = 'categories_page/data/'
-
-class CategoriesUtils:
-
-    dynamodb = boto3.resource('dynamodb')
-
-    def _add_categories_in_ups(rows):
-        keys = [{'user_id': '%s' % customer_id} for customer_id in rows.keys()]
-        get_response = CategoriesUtils.dynamodb.batch_get_item(RequestItems={'user_profile_service': {'Keys': keys}})
-        put_items = []
-        for user_obj in get_response['Responses']['user_profile_service']:
-            if user_obj.get('categories'):
-                user_obj['categories'].update(rows[user_obj['user_id']])
-            else:
-                user_obj['categories'] = rows[user_obj['user_id']]
-            put_items.append({'PutRequest': {'Item': user_obj}})
-        for i in range(0, len(put_items), 25):
-            CategoriesUtils.dynamodb.batch_write_item(RequestItems={'user_profile_service': put_items[i:i+25]})
-
-    def add_categories_in_ups(rows):
-        rows_chunks = [rows[i:i+100] for i in range(0, len(rows), 100)]
-        for chunk in rows_chunks:
-            CategoriesUtils._add_categories_in_ups({row['customer_id']: row['value'] for row in chunk})
-
-#    def add_categories_in_ups(rows):
-#        table = dynamodb.Table('user_profile_service')
-#        for i, row in enumerate(rows):
-#            table.update_item(Key={'user_id': '%s' % row['customer_id']}, UpdateExpression='SET categories = :val', ExpressionAttributeValues={':val': row['value']})
 
 def _generate_top_categories(df, es_scroll_results, bucket_name):
     l3_cat_2_name = {cat_obj['id']: cat_obj['name'] for l in es_scroll_results['primary_categories'].values() for ele in l for cat_type, cat_obj in json.loads(ele).items() if cat_type == 'l3'}
@@ -146,7 +120,8 @@ def generate_top_categories_for_user(platform, start_datetime, end_datetime, top
     print("Total number of customers to be updated: %d" % len(rows))
     print("Few users getting updated are listed below")
     print([row['customer_id'] for row in rows[:10]])
-    CategoriesUtils.add_categories_in_ups(rows)
+    #CategoriesUtils.add_categories_in_ups(rows)
+    UPSUtils.add_recommendations_in_ups('categories', rows)
     print("Done Writing the categories recommendations " + str(datetime.now()))
 
 def prepare_views_ca_dataframe(files):
@@ -262,7 +237,8 @@ def generate_top_categories_from_views(top_categories, lsi_model, days=None, lim
     print("Total number of customers to be updated: %d" % len(rows))
     print("Few users getting updated are listed below")
     print([row['customer_id'] for row in rows[:10]])
-    CategoriesUtils.add_categories_in_ups(rows)
+    #CategoriesUtils.add_categories_in_ups(rows)
+    UPSUtils.add_recommendations_in_ups('categories', rows)
     print("Done Writing the categories recommendations " + str(datetime.now()))
 
 if __name__ == '__main__':
