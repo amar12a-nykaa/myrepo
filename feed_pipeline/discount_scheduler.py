@@ -39,6 +39,20 @@ def incrementGlobalCounter(increment):
     total = curr
     return total
 
+def logPriceChangeEvent(update_docs,products):
+  for doc in update_docs:
+    for product in products:
+      if product["sku"] == doc["sku"] and product["price"] != doc["price"]:
+        data = {
+              "timestamp": int(time.time()),
+              "event": "price_changed",
+              "old_price": product['price'],
+              "new_price": doc["price"],
+              "sku": doc["sku"],
+              "product_type": product["type"]
+             }
+        PasUtils.logEvent(data)
+
 class Worker(threading.Thread):
     def __init__(self, q,schedule_start,schedule_end):
         self.q = q
@@ -98,7 +112,7 @@ class ScheduledPriceUpdater:
         for single_product in product_chunk:
             sku_list.append(single_product['sku'])
             psku_list.append(single_product['psku'])
-            products.append({'sku': single_product['sku'], 'type': single_product['type']})
+            products.append({'sku': single_product['sku'], 'type': single_product['type'],'price':single_product['sp']})
             if single_product['psku'] and single_product['psku'] != single_product['sku']:
                 products.append({'sku': single_product['psku'], 'type': 'configurable'})
             totalProductsToLog.append(
@@ -116,7 +130,7 @@ class ScheduledPriceUpdater:
         results = PasUtils.fetchResults(mysql_conn, query)
         mysql_conn.close()
         for res in results:
-            products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
+            products.append({'sku': res['bundle_sku'], 'type': 'bundle','price':res['sp']})
 
         products = [dict(t) for t in {tuple(d.items()) for d in products}]
         update_docs = []
@@ -124,6 +138,7 @@ class ScheduledPriceUpdater:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit = True)
             if update_docs:
                 DiscUtils.updateESCatalog(update_docs)
+                logPriceChangeEvent(update_docs,products)
                 for single_doc in update_docs:
                     print("sku : %s" % single_doc['sku'])
         except Exception as e:

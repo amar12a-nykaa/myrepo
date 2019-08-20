@@ -13,6 +13,7 @@ import pprint
 import queue
 import re
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -226,11 +227,9 @@ class CatalogIndexer:
         "wax": "wax waxing"
     }
 
-    yesterday = datetime.now() - timedelta(days=1)
-    foldername = yesterday.strftime('%Y%m%d')
-    folderpath = "/nykaa/product_metadata/dt="+foldername
+    folderpath = "/nykaa/product_metadata/"
 
-    filepath = folderpath +"/"+foldername+".csv"
+    filepath = folderpath +"data.csv"
 
     if os.path.exists(filepath):
       os.remove(filepath)
@@ -517,6 +516,9 @@ class CatalogIndexer:
                 doc['parent_id'] = row['parent_id'] if doc['type'] == 'simple' and row['parent_id'] else row[
                     'product_id']
                 doc['title'] = (re.sub(r'\s+', ' ', row['name'])).strip()
+                if 'with' in doc['title'].lower():
+                  title = doc['title'].lower()
+                  doc['title_prefix'] = title.split('with',1)[0]
                 doc['title_text_split'] = row['name']
                 doc['description'] = row['description']
                 doc['tags'] = (row['tag'] or "").split('|')
@@ -1019,6 +1021,16 @@ class CatalogIndexer:
                 # print("indexES time: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
                 
             CatalogIndexer.print_errors(errors)
+
+        #Write files to s3 Remove from machine
+        if hostname.startswith('admin'):
+          try:
+            cmd = "/usr/local/bin/aws s3 cp "+cls.filepath+" s3://nykaadp-feeds/product_metadata/"
+            out = subprocess.check_output(cmd , shell=True).strip()
+          except:
+            print("Error! Could not upload product_metadata to s3")
+        if os.path.exists(cls.filepath):
+          os.remove(cls.filepath)
 
     def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None):
         skus = skus or []
