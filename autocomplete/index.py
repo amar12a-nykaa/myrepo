@@ -50,7 +50,7 @@ top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = DiscUtils.esConn()
 
-STORE_LIST = ['men', 'pro', 'luxe']
+STORE_LIST = ['men', 'pro', 'luxe', 'nykaa']
 GLOBAL_FAST_INDEXING = False
 
 MIN_COUNTS = {
