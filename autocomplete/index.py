@@ -557,9 +557,13 @@ def index_products(collection, searchengine):
       if unique_id in uniqueList:
         continue
       store_popularity = {}
+      popularity_to_store = product['popularity']
+      if product['popularity'] == 0:
+        popularity_to_store = 0.0001
       for store in STORE_LIST:
         if store in product['catalog_tag']:
-          store_popularity[store] = product['popularity']
+          store_popularity[store] = popularity_to_store
+          
       product['store_popularity'] = json.dumps(store_popularity)
       
       doc = {
