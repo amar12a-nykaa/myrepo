@@ -470,7 +470,7 @@ def index_custom_queries(collection, searchengine):
     }
     store_popularity = {}
     for store in STORE_LIST:
-      store_popularity[store] = row.get(store,0)
+      store_popularity[store] = float(row.get(store,0))
     row['store_popularity'] = json.dumps(store_popularity)
     doc = add_store_popularity(doc, row)
     docs.append(doc)
