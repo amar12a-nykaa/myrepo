@@ -468,6 +468,10 @@ def index_custom_queries(collection, searchengine):
       "data": data,
       "source": "override"
     }
+    store_popularity = {}
+    for store in STORE_LIST:
+      store_popularity[store] = row.get(store,0)
+    row['store_popularity'] = json.dumps(store_popularity)
     doc = add_store_popularity(doc, row)
     docs.append(doc)
     if len(docs) >= 100:
