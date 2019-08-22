@@ -260,6 +260,8 @@ def index_search_queries(collection, searchengine):
         "weight": row['popularity'],
         "type": _type,
         "data": data,
+        "is_nykaa": True,
+        "weight_nykaa": row['popularity'],
         "is_visible": False if entity in low_ctr_query_list else True,
         "source": "search_query"
       })
@@ -455,17 +457,19 @@ def index_custom_queries(collection, searchengine):
     _type = 'search_query'
     url = "/search/result/?" + str(urllib.parse.urlencode({'q': query}))
     data = json.dumps({"type": _type, "url": url, "corrected_query": query})
-    docs.append({
+    doc = {
       "_id": createId(query),
       "id": createId(query),
       "entity": query,
-      "weight": row['popularity'],
+      "weight": row['nykaa'],
       "is_corrected": False,
       "is_visible": True,
       "type": _type,
       "data": data,
       "source": "override"
-    })
+    }
+    doc = add_store_popularity(doc, row)
+    docs.append(doc)
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
       docs = []
