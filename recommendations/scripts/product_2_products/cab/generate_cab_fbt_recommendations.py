@@ -177,8 +177,8 @@ class Utils:
         else:
             raise Exception('Unknown env')
         port = 5439
-        username = 'dwh_redshift_ro'
-        password = 'GSrjC7hYPC9V'
+        username = 'gludo'
+        password = 'G1uD0@Nyk@@'
         dbname = 'datawarehouse'
         con = psycopg2.connect(dbname=dbname, host=host, port=port, user=username, password=password)
         return con
