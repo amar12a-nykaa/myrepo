@@ -2,11 +2,11 @@ import requests
 import json
 import collections
 import pytz
+from datetime import date
 import datetime
 import sys
-
-sys.path.append('/var/www/pds_api/')
-from pas.v2.utils import Utils as PasUtils
+import boto3
+import os
 
 url = 'http://nyk-aggregator-api.nykaa.com/api/getRedisDump'
 
@@ -22,17 +22,20 @@ def get_redis_data_dump():
 
 
 def upload_redis_dump_to_s3(response):
-  tz = pytz.timezone('Asia/Kolkata')
-  local_date = datetime.datetime.now(tz=tz).strftime('%d-%m-%Y')
   mapping = response.get('response')
-  file_name = 'redis_dump_{}.json'.format(local_date)
 
-  with open(file_name, 'w') as f:
+  file_path = '/nykaa/adminftp/redis_dump.json'
+  with open(file_path, 'w') as f:
       json.dump(mapping, f)
-
   f.close()
-  PasUtils.upload_file_to_s3(file_name)
-  os.remove(file_name)
+
+  s3_file_location = 'dt=%s/redis_dump.json' % date.strftime("%Y%m%d")
+  pipeline = boto3.session.Session(profile_name='datapipeline')
+  s3 = pipeline.client('s3')
+  bucket_name = 'nykaa-prod-autocomplete-feedback'
+  s3.upload_file(file_path, bucket_name, s3_file_location)
+
+  os.remove(file_path)
 
 if __name__ == '__main__':
     response = get_redis_data_dump()
