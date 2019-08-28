@@ -34,7 +34,7 @@ if get_process_count() > 1:
 def _save_data_into_db(store_cursor, product_id_sku_dict, data_chunk):
     for row in data_chunk:
         product_id = product_id_sku_dict[row['SKUCODE']]
-        store_query = "INSERT INTO nykaa_retail_store_inventory_data (sku, product_id, store_code, inventory, store_update_time) VALUES(%s, %s, %s, %s) ON DUPLICATE KEY UPDATE inventory = VALUES(inventory), store_update_time=VALUES(store_update_time);"
+        store_query = "INSERT INTO nykaa_retail_store_inventory_data (sku, product_id, store_code, inventory, store_update_time) VALUES(%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE inventory = VALUES(inventory), store_update_time=VALUES(store_update_time);"
         store_cursor.execute(store_query, (row['SKUCODE'], product_id, row['LocCode'], row['SOH'], row['LastUpdatedOn']))
 
 def save_data_into_db(data):
