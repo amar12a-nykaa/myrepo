@@ -1,5 +1,7 @@
 from pas.v2.utils import Utils as PasUtils
 import traceback
+import json
+import time
 
 class PriceUpdateLogUtils:
 
@@ -38,3 +40,20 @@ class PriceUpdateLogUtils:
             cursor.close()
             mysql_conn.commit()
             mysql_conn.close()
+
+    @classmethod
+    def logBulkPriceChange(cls,priceChangeData):
+      data = ""
+      for sku,priceData in priceChangeData.items():
+        if 'new_price' in priceData and priceData['new_price']!=priceData['old_price']:
+          logData = {
+                    'timestamp': int(time.time()),
+                    'event': 'price_changed',
+                    'old_price': priceData['old_price'],
+                    'new_price': priceData['new_price'],
+                    'sku': sku,
+                    'type': priceData['type']
+                  }
+          data+=json.dumps(logData)
+          data+="\n"
+      PasUtils.logEvent(data)
