@@ -2,7 +2,7 @@ import requests
 import json
 import collections
 import pytz
-from datetime import date
+import arrow
 import datetime
 import sys
 import boto3
@@ -14,7 +14,7 @@ def get_redis_data_dump():
     global url
     response = requests.get(url,timeout=5)
     if (response.ok):
-        responseObject = json.loads(response.content, 'utf-8')
+        responseObject = json.loads(str(response.content, 'utf-8'))
         return responseObject
     else:
         response.raise_for_status()
@@ -28,7 +28,7 @@ def upload_redis_dump_to_s3(response):
   with open(file_path, 'w') as f:
       json.dump(mapping, f)
   f.close()
-
+  date = arrow.now().replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
   s3_file_location = 'dt=%s/redis_dump.json' % date.strftime("%Y%m%d")
   pipeline = boto3.session.Session(profile_name='datapipeline')
   s3 = pipeline.client('s3')
