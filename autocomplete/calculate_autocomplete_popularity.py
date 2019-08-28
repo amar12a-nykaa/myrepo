@@ -36,6 +36,13 @@ def normalize(a):
   return (a-min(a))/(max(a)-min(a))
 
 
+def check_base_popularity(row):
+  for tag in VALID_CATALOG_TAGS:
+    if not row["valid_"+tag]:
+      row[tag] = 0
+  return row
+  
+
 def get_store_popularity_str(row):
   data = {}
   for tag in VALID_CATALOG_TAGS:
@@ -45,7 +52,7 @@ def get_store_popularity_str(row):
 
 def get_category_data():
   query = """select distinct l3_id as category_id, l3_name as category_name from product_category_mapping
-              where ( l1_id not in (77,194,9564,7287,3048)
+              where ( l1_id not in (77,194,9564,7287,3048, 5926)
                 and lower(l2_name) not like '%shop by%'
                 and l3_id not in (4036,3746,3745,3819,6620,6621)
                   or l2_id in (9614, 1286))"""
@@ -180,6 +187,7 @@ def process_category(category_data):
   data['category_id'] = []
   for tag in VALID_CATALOG_TAGS:
     data[tag] = []
+    data["valid_"+tag] = []
   
   for category in category_data:
     popularity_data = {'category_id': category.get('key', 0)}
@@ -188,12 +196,17 @@ def process_category(category_data):
     
     data['category_id'].append(popularity_data.get('category_id'))
     for tag in VALID_CATALOG_TAGS:
-      data[tag].append(popularity_data.get(tag, 0))
-  
+      popularity = popularity_data.get(tag, -1)
+      if popularity < 0:
+        data[tag].append(0)
+        data["valid_"+tag].append(False)
+      else:
+        data[tag].append(popularity)
+        data["valid_" + tag].append(True)
   category_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
     category_popularity[tag] = 100 * normalize(category_popularity[tag]) + 100
-    category_popularity[tag] = category_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
+  category_popularity = category_popularity.apply(check_base_popularity, axis=1)
   category_popularity.to_csv('category_pop.csv', index=False)
   
   print("inserting category data in db")
@@ -281,6 +294,7 @@ def process_brand(brand_data):
   data['brand_id'] = []
   for tag in VALID_CATALOG_TAGS:
     data[tag] = []
+    data["valid_"+tag] = []
   
   for brand in brand_data:
     popularity_data = {'brand_id': brand.get('key', 0)}
@@ -289,12 +303,18 @@ def process_brand(brand_data):
     
     data['brand_id'].append(popularity_data.get('brand_id'))
     for tag in VALID_CATALOG_TAGS:
-      data[tag].append(popularity_data.get(tag, 0))
+      popularity = popularity_data.get(tag, -1)
+      if popularity < 0:
+        data[tag].append(0)
+        data["valid_" + tag].append(False)
+      else:
+        data[tag].append(popularity)
+        data["valid_" + tag].append(True)
   
   brand_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
     brand_popularity[tag] = 200 * normalize(brand_popularity[tag]) + 100
-    brand_popularity[tag] = brand_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
+  brand_popularity = brand_popularity.apply(check_base_popularity, axis=1)
   brand_popularity.to_csv('brand_pop.csv', index=False)
   return brand_popularity
 
