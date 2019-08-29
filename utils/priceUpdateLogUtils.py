@@ -44,9 +44,10 @@ class PriceUpdateLogUtils:
     @classmethod
     def logBulkPriceChange(cls,priceChangeData):
       data = ""
-      for sku,priceData in priceChangeData.items():
-        if 'new_price' in priceData and priceData['new_price']!=priceData['old_price']:
-          logData = {
+      try:
+        for sku,priceData in priceChangeData.items():
+          if 'new_price' in priceData and priceData['new_price']!=priceData['old_price']:
+            logData = {
                     'timestamp': int(time.time()),
                     'event': 'price_changed',
                     'old_price': priceData['old_price'],
@@ -54,6 +55,9 @@ class PriceUpdateLogUtils:
                     'sku': sku,
                     'type': priceData['type']
                   }
-          data+=json.dumps(logData)
-          data+="\n"
-      PasUtils.logEvent(data)
+            data+=json.dumps(logData)
+            data+="\n"
+        PasUtils.logEvent(data)
+      except Exception:
+        print("Logging Failed\n")
+        print(traceback.format_exc())
