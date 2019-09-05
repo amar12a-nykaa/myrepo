@@ -19,7 +19,7 @@ from popularity_api import get_popularity_for_id, validate_popularity_data_healt
 quantile_lower_limit = .25
 quantile_upper_limit = .75
 quantile_mid_limit = .50
-min_discount = 30
+min_discount = 25
 max_discount = 60
 DAILY_CATEGORY_LIMIT = 5
 DAILY_BRAND_LIMIT = 3
