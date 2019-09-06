@@ -298,7 +298,7 @@ def index_brands(collection, searchengine):
         "entity": row['brand'],
         "weight": row['brand_popularity'],
         "type": "brand",
-        "data": json.dumps({"url": url, "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
+        "data": json.dumps({"url": url, "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_url']}),
         "id": row['brand_id'],
         "is_visible": True,
         "source": "brand"
