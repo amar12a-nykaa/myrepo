@@ -52,6 +52,8 @@ def save_data_into_db(data):
         for row in chunk:
             skus.append(row['SKUCODE'])
         skus = tuple(skus)
+        if len(skus) == 1:
+            skus = '(' + skus[0] + ')'
         query = "SELECT sku,product_id FROM products WHERE sku in {}".format(skus)
         cursor.execute(query)
         product_id_sku_results = cursor.fetchall()
