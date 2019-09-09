@@ -224,7 +224,12 @@ class CatalogIndexer:
         "gravitymud": "gravitymud gravity mud",
         "youthmud": "youthmud youth mud",
         "waxing": "waxing wax",
-        "wax": "wax waxing"
+        "wax": "wax waxing",
+        "bags": "bags women women's ladies girls female girl",
+        "jewellery": "jewellery women women's ladies girls female girl",
+        "lingerie": "lingerie women women's ladies girls female girl",
+        "dresses": "dresses women women's ladies girls female girl",
+        "twenty dresses": "twenty dresses 20dresses 20"
     }
 
     folderpath = "/nykaa/product_metadata/"
