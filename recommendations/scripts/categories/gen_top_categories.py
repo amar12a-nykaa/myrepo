@@ -48,8 +48,10 @@ ORDER_SOURCE_NYKAA = ['Nykaa', 'Nykaa(Old)', 'NYKAA', 'CS-Manual']
 ORDER_SOURCE_NYKAAMEN = ['NykaaMen']
 
 CAT_PAGE_TOP_CATEGORIES_JSON = 'categories_page/top_categories.json'
+CAT_PAGE_TOP_CATEGORIES_CUSTOM_N_JSON = 'categories_page/top_categories_%d.json'
 CAT_PAGE_CATEGORY_2_NAME_JSON = 'categories_page/category_2_name.json'
 CAT_PAGE_CATEGORIES_LSI_MODEL_DIR = 'categories_page/models'
+CAT_PAGE_CATEGORIES_LSI_MODEL_CUSTOM_N_DIR = 'categories_page/models_%d'
 
 SEARCH_BAR_TOP_CATEGORIES_JSON = 'search_bar/categories/top_categories.json'
 SEARCH_BAR_CATEGORY_2_NAME_JSON = 'search_bar/categories/category_2_name.json'
@@ -177,7 +179,7 @@ def prepare_views_ca_dataframe(files):
     print("Total Number of rows now: %d" % df.count())
     return df
 
-def generate_top_categories_from_views(top_categories, lsi_model, days=None, limit=None):
+def generate_top_categories_from_views(top_categories, lsi_model, algo, days=None, limit=None):
     FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, [])
     csvs_path = S3Utils.ls_file_paths(env_details['bucket_name'], VIEWS_CA_S3_PREFIX, True)
     csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 31 , csvs_path))
@@ -236,11 +238,12 @@ def generate_top_categories_from_views(top_categories, lsi_model, days=None, lim
     norm_model = models.NormModel()
     sorted_cats_rdd = views_rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=row['vec'], sorted_cats=list(filter(lambda x: x not in customer_2_last_order_categories.get(row['customer_id'], []), map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(row['vec'])]]), key=lambda e: -e[1])))) + customer_2_last_order_categories.get(row['customer_id'], [])))
     #sorted_cats_udf = udf(lambda customer_id, user_cat_doc: list(filter(lambda x: x not in customer_2_last_order_categories[customer_id], map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(user_cat_doc)]]), key=lambda e: -e[1])))) + customer_2_last_order_categories[customer_id], ArrayType(IntegerType()))
-    rows = [{'customer_id': row['customer_id'], 'value': {'lsi_views': row['sorted_cats']}} for row in sorted_cats_rdd.collect()]
+    #rows = [{'customer_id': row['customer_id'], 'value': {'lsi_views': row['sorted_cats']}} for row in sorted_cats_rdd.collect()]
+    rows = [{'customer_id': row['customer_id'], 'value': {algo: row['sorted_cats']}} for row in sorted_cats_rdd.collect()]
     print("Writing the categories recommendations " + str(datetime.now()))
     print("Total number of customers to be updated: %d" % len(rows))
     print("Few users getting updated are listed below")
-    print([row['customer_id'] for row in rows[:10]])
+    print([row['customer_id'] for row in rows[:100]])
     #CategoriesUtils.add_categories_in_ups(rows)
     UPSUtils.add_recommendations_in_ups(ups_field_name, rows)
     print("Done Writing the categories recommendations " + str(datetime.now()))
@@ -286,15 +289,23 @@ if __name__ == '__main__':
     computation_start_datetime = datetime.now() - timedelta(days=use_months*30)
 
     if target_widget == 'categories':
-        top_categories_json = CAT_PAGE_TOP_CATEGORIES_JSON
+        if n == 20:
+            top_categories_json = CAT_PAGE_TOP_CATEGORIES_JSON
+            categories_lsi_model_dir = CAT_PAGE_CATEGORIES_LSI_MODEL_DIR
+            algo = "lsi_views"
+        else:
+            top_categories_json = CAT_PAGE_TOP_CATEGORIES_CUSTOM_N_JSON % n
+            categories_lsi_model_dir = CAT_PAGE_CATEGORIES_LSI_MODEL_CUSTOM_N_DIR % n
+            algo = "lsi_views_%d" % n
         category_2_name_json = CAT_PAGE_CATEGORY_2_NAME_JSON
-        categories_lsi_model_dir = CAT_PAGE_CATEGORIES_LSI_MODEL_DIR
+        #categories_lsi_model_dir = CAT_PAGE_CATEGORIES_LSI_MODEL_DIR
         ups_field_name = 'categories'
     elif target_widget == 'search_bar':
         top_categories_json = SEARCH_BAR_TOP_CATEGORIES_JSON
         category_2_name_json = SEARCH_BAR_CATEGORY_2_NAME_JSON
         categories_lsi_model_dir = SEARCH_BAR_CATEGORIES_LSI_MODEL_DIR
         ups_field_name = 'search_bar_categories'
+        algo = "lsi_views"
     else:
         raise Exception('unknown target widget')
 
@@ -321,6 +332,6 @@ if __name__ == '__main__':
         print('Generate top categories for user')
         #generate_top_categories_for_user(platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count)
         if views:
-            generate_top_categories_from_views(top_categories, lsi_model, days=argv.get('days'), limit=limit)
+            generate_top_categories_from_views(top_categories, lsi_model, algo, days=argv.get('days'), limit=limit)
         else:
             generate_top_categories_for_user(platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count)
