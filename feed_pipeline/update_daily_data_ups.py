@@ -36,17 +36,20 @@ for filename in files:
   attribute = attribute_name[0]
   with open("/home/ubuntu/nykaa_scripts/feed_pipeline/data/"+foldername+"/"+filename) as csv_file:
     for user in csv.DictReader(csv_file):
-      new_data = {}
-      for column in range(1,len(columns)):
-        new_data[columns[column]] = user[columns[column]]
-      user_data = table.get_item(Key={'user_id':user['customer_id']})
-      if 'Item' in user_data.keys() and attribute in user_data['Item'].keys():
-        privy_data = user_data['Item'][attribute]
-      else:
-        privy_data={}
-      for key in new_data.keys():
-        privy_data[key]=new_data[key]
-      if 'Item' in user_data.keys():
-        table.update_item(Key={'user_id':  user_data['Item']['user_id']},AttributeUpdates={attribute:{"Action": "PUT","Value":privy_data}})
-      else:
-        table.put_item(Item = {'user_id':  user['customer_id'],attribute:privy_data})
+      try:
+        new_data = {}
+        for column in range(1,len(columns)):
+          new_data[columns[column]] = user[columns[column]]
+        user_data = table.get_item(Key={'user_id':user['customer_id']})
+        if 'Item' in user_data.keys() and attribute in user_data['Item'].keys():
+          privy_data = user_data['Item'][attribute]
+        else:
+          privy_data={}
+        for key in new_data.keys():
+          privy_data[key]=new_data[key]
+        if 'Item' in user_data.keys():
+          table.update_item(Key={'user_id':  user_data['Item']['user_id']},AttributeUpdates={attribute:{"Action": "PUT","Value":privy_data}})
+        else:
+          table.put_item(Item = {'user_id':  user['customer_id'],attribute:privy_data})
+      except Exception as e:
+          print(e.message)
