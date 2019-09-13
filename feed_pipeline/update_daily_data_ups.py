@@ -6,6 +6,8 @@ import pandas as pd
 import subprocess
 sys.path.append('/var/www/pds_api/')
 from pas.v2.utils import Utils as PasUtils
+from nykaa.settings import UPS_S3_BUCKET
+
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 from disc.v2.utils import UserProfileServiceDynamoDb
@@ -15,7 +17,7 @@ from datetime import datetime, timedelta
 yesterday = datetime.now() - timedelta(days=1)
 foldername = yesterday.strftime('%Y%m%d')
 
-cmd = "/usr/local/bin/aws s3 sync "+"s3://nykaa-ups/daily_data/"+foldername+" "+"/home/ubuntu/nykaa_scripts/feed_pipeline/data/"+foldername+"/"
+cmd = "/usr/local/bin/aws s3 sync "+"s3://" + UPS_S3_BUCKET + "/daily_data/"+foldername+" "+"/home/ubuntu/nykaa_scripts/feed_pipeline/data/"+foldername+"/"
 out = subprocess.check_output(cmd , shell=True).strip()
 if out:
     print(out)
