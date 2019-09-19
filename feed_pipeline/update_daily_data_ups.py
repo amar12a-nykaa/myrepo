@@ -53,5 +53,5 @@ for filename in files:
           table.update_item(Key={'user_id':  user_data['Item']['user_id']},AttributeUpdates={attribute:{"Action": "PUT","Value":privy_data}})
         else:
           table.put_item(Item = {'user_id':  user['customer_id'],attribute:privy_data})
-      except Exception as e:
-          print(e.message)
+      except Exception as err:
+          print(err)
