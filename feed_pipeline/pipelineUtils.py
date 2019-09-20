@@ -29,7 +29,7 @@ class PipelineUtils:
   def getOffersAPIHost():
     host = 'preprod-api.nykaa.com/offer'
     if socket.gethostname().startswith('admin'):
-      host = 'offers-host-for-prod'
+      host = 'prod-offer.nyk00-int.network'
     return host
 
   def getAdPlatformEndPoint():
