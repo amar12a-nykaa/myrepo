@@ -26,6 +26,12 @@ class PipelineUtils:
       host = 'priceapi.nyk00-int.network'
     return host
 
+  def getOffersAPIHost():
+    host = 'preprod-api.nykaa.com/offer'
+    if socket.gethostname().startswith('admin'):
+      host = 'offers-host-for-prod'
+    return host
+
   def getAdPlatformEndPoint():
     host = 'nykaa-widgets-staging.nykaa.com'
     if socket.gethostname().startswith('admin'):
