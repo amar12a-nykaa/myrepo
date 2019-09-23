@@ -11,6 +11,10 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from mongoutils import MongoUtils
 
 DAYS = -7
+WEIGHT_DELTA_DISCOUNT = 90
+WEIGHT_DELTA_SP = 3
+WEIGHT_POPULARITY = 10
+SAMPLE_SIZE = 500
 
 def getPriceChangeData():
   pipeline = boto3.session.Session(profile_name='datapipeline')
@@ -191,6 +195,13 @@ def getBestDeals():
   valid_products = valid_products[(valid_products.delta_sp > 0) & (valid_products.avg_sp < valid_products.mrp) & (valid_products.mrp > 100)]
   popularity_data = getPopularityData()
   valid_products = pd.merge(valid_products, popularity_data, on='product_id')
+  valid_products['delta_discount'] = valid_products.apply(lambda x: (x['delta_sp']*100)/x['mrp'], axis=1)
+  valid_products['score'] = valid_products.apply(lambda x: (x['delta_sp']*WEIGHT_DELTA_SP) + (x['delta_discount']*WEIGHT_DELTA_DISCOUNT)
+                                                           + (x['popularity']*WEIGHT_POPULARITY), axis=1)
+  valid_products = valid_products.sort_values(by='score', ascending=False)
+  valid_products = valid_products.drop_duplicates('parent_id', keep='first')
+  valid_products = valid_products[:SAMPLE_SIZE]
+  # valid_products.to_csv('data_.csv', index=False)
   return
 
 getBestDeals()
