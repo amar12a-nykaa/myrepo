@@ -450,10 +450,7 @@ class CatalogIndexer:
                 record["categoryIds"] = ""
                 if doc.get('category_ids'):
                     category_ids_list = doc.get('category_ids')
-                    list_len = len(category_ids_list) - 1
-                    for j in range(0, list_len):
-                        record["categoryIds"] = record["categoryIds"] + category_ids_list[j] + ","
-                    record["categoryIds"] = record["categoryIds"] + category_ids_list[list_len]
+                    record["categoryIds"] = ','.join(str(category_id) for category_id in category_ids_list)
                 record["mrp"] = doc.get('mrp', 0)
                 record["sp"] = doc.get('price', 0)
                 manufacturer_id_list = doc.get('old_brand_ids',[])
@@ -480,52 +477,48 @@ class CatalogIndexer:
 
             if(attempts>0):
                 # update in input docs
-                response_data = result["data"]
-                for product_id in response_data:
-                    offers_data = response_data[product_id]
-                    for doc in current_docs_batch:
-                        if product_id == doc.get('product_id'):
-
-                            nykaa_offers = offers_data.get('nykaa', [])
-                            doc['offers'] = nykaa_offers
-                            doc['offer_count'] = len(doc['offers'])
-                            doc['offer_ids'] = []
-                            doc['offer_facet'] = []
-                            for offer in nykaa_offers:
-                                doc['key'] = []
-                                doc['key'].append(offer)
-                                offer_facet = OrderedDict()
-                                offer_facet['id'] = offer.get("id")
-                                offer_facet['name'] = offer.get("name")
-                                doc['offer_facet'].append(offer_facet)
-                                doc['offer_ids'].append(offer.get("id"))
+                response_data = result.get('data',{})
+                for doc in current_docs_batch:
+                    product_id = doc.get('product_id')
+                    offers_data = response_data.get(product_id,{})
+                    nykaa_offers = offers_data.get('nykaa', [])
+                    doc['offers'] = nykaa_offers
+                    doc['offer_count'] = len(doc['offers'])
+                    doc['offer_ids'] = []
+                    doc['offer_facet'] = []
+                    for offer in nykaa_offers:
+                        doc['key'] = []
+                        doc['key'].append(offer)
+                        offer_facet = OrderedDict()
+                        offer_facet['id'] = offer.get("id")
+                        offer_facet['name'] = offer.get("name")
+                        doc['offer_facet'].append(offer_facet)
+                        doc['offer_ids'].append(offer.get("id"))
 
 
-                            nykaaman_offers = offers_data.get('nykaaman', [])
-                            doc['nykaaman_offers'] = nykaaman_offers
-                            doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
-                            doc['nykaaman_offer_ids'] = []
-                            doc['nykaaman_offer_facet'] = []
-                            for offer in nykaaman_offers:
-                                nykaaman_offer_facet = OrderedDict()
-                                nykaaman_offer_facet['id'] = offer['id']
-                                nykaaman_offer_facet['name'] = offer['name']
-                                doc['nykaaman_offer_facet'].append(nykaaman_offer_facet)
-                                doc['nykaaman_offer_ids'].append(offer['id'])
+                    nykaaman_offers = offers_data.get('nykaaman', [])
+                    doc['nykaaman_offers'] = nykaaman_offers
+                    doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
+                    doc['nykaaman_offer_ids'] = []
+                    doc['nykaaman_offer_facet'] = []
+                    for offer in nykaaman_offers:
+                        nykaaman_offer_facet = OrderedDict()
+                        nykaaman_offer_facet['id'] = offer['id']
+                        nykaaman_offer_facet['name'] = offer['name']
+                        doc['nykaaman_offer_facet'].append(nykaaman_offer_facet)
+                        doc['nykaaman_offer_ids'].append(offer['id'])
 
-                            nykaa_pro_offers = offers_data.get('nykaa_pro', [])
-                            doc['nykaa_pro_offers'] = nykaa_pro_offers
-                            doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
-                            doc['nykaa_pro_offer_ids'] = []
-                            doc['nykaa_pro_offer_facet'] = []
-                            for offer in nykaa_pro_offers:
-                                nykaa_pro_offer_facet = OrderedDict()
-                                nykaa_pro_offer_facet['id'] = offer['id']
-                                nykaa_pro_offer_facet['name'] = offer['name']
-                                doc['nykaa_pro_offer_facet'].append(nykaa_pro_offer_facet)
-                                doc['nykaa_pro_offer_ids'].append(offer['id'])
-
-                            break
+                    nykaa_pro_offers = offers_data.get('nykaa_pro', [])
+                    doc['nykaa_pro_offers'] = nykaa_pro_offers
+                    doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
+                    doc['nykaa_pro_offer_ids'] = []
+                    doc['nykaa_pro_offer_facet'] = []
+                    for offer in nykaa_pro_offers:
+                        nykaa_pro_offer_facet = OrderedDict()
+                        nykaa_pro_offer_facet['id'] = offer['id']
+                        nykaa_pro_offer_facet['name'] = offer['name']
+                        doc['nykaa_pro_offer_facet'].append(nykaa_pro_offer_facet)
+                        doc['nykaa_pro_offer_ids'].append(offer['id'])
 
 
     def indexES(docs, index):
