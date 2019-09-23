@@ -434,7 +434,7 @@ class CatalogIndexer:
         request_url = "http://" + PipelineUtils.getOffersAPIHost() + "/api/v1/catalog/products/offer"
 
         for i in range(0, len(input_docs), offerbatchsize):
-            current_docs_batch = input_docs[i, i+offerbatchsize]
+            current_docs_batch = input_docs[i:i+offerbatchsize]
             req_body = []
             product_id_list = []
             for doc in current_docs_batch:
