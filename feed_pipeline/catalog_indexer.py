@@ -86,7 +86,7 @@ def getCurrentDateTime():
 
 class Worker(threading.Thread):
     def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
-                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize):
+                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch):
         self.q = q
         self.search_engine = search_engine
         self.collection = collection
@@ -100,6 +100,7 @@ class Worker(threading.Thread):
         self.product_2_vector_lsi_300 = product_2_vector_lsi_300 
         self.size_filter = size_filter
         self.offerbatchsize = offerbatchsize
+        self.offerswitch = offerswitch
 
         super().__init__()
 
@@ -117,7 +118,7 @@ class Worker(threading.Thread):
                 db_result = product_history_table.find({"_id": {"$in": product_ids}})
                 for row in db_result:
                   product_history[row['_id']] = row
-                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history,self.offerbatchsize)
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history,self.offerbatchsize,self.offerswitch)
                 is_first=False
             except queue.Empty:
                 return
@@ -475,50 +476,51 @@ class CatalogIndexer:
                         for x in range(len(product_id_list)):
                             print(product_id_list[x])
 
-            if(attempts>0):
-                # update in input docs
-                response_data = result.get('data',{})
-                for doc in current_docs_batch:
-                    product_id = doc.get('product_id')
-                    offers_data = response_data.get(product_id,{})
-                    nykaa_offers = offers_data.get('nykaa', [])
-                    doc['offers'] = nykaa_offers
-                    doc['offer_count'] = len(doc['offers'])
-                    doc['offer_ids'] = []
-                    doc['offer_facet'] = []
-                    for offer in nykaa_offers:
-                        doc['key'] = []
-                        doc['key'].append(offer)
-                        offer_facet = OrderedDict()
-                        offer_facet['id'] = offer.get("id")
-                        offer_facet['name'] = offer.get("name")
-                        doc['offer_facet'].append(offer_facet)
-                        doc['offer_ids'].append(offer.get("id"))
+            if(attempts==0):
+                continue
+            #update in input docs
+            response_data = result.get('data',{})
+            for doc in current_docs_batch:
+                product_id = doc.get('product_id')
+                offers_data = response_data.get(product_id,{})
+                nykaa_offers = offers_data.get('nykaa', [])
+                doc['offers'] = nykaa_offers
+                doc['offer_count'] = len(doc['offers'])
+                doc['offer_ids'] = []
+                doc['offer_facet'] = []
+                for offer in nykaa_offers:
+                    doc['key'] = []
+                    doc['key'].append(offer)
+                    offer_facet = OrderedDict()
+                    offer_facet['id'] = offer.get("id")
+                    offer_facet['name'] = offer.get("name")
+                    doc['offer_facet'].append(offer_facet)
+                    doc['offer_ids'].append(offer.get("id"))
 
 
-                    nykaaman_offers = offers_data.get('nykaaman', [])
-                    doc['nykaaman_offers'] = nykaaman_offers
-                    doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
-                    doc['nykaaman_offer_ids'] = []
-                    doc['nykaaman_offer_facet'] = []
-                    for offer in nykaaman_offers:
-                        nykaaman_offer_facet = OrderedDict()
-                        nykaaman_offer_facet['id'] = offer['id']
-                        nykaaman_offer_facet['name'] = offer['name']
-                        doc['nykaaman_offer_facet'].append(nykaaman_offer_facet)
-                        doc['nykaaman_offer_ids'].append(offer['id'])
+                nykaaman_offers = offers_data.get('nykaaman', [])
+                doc['nykaaman_offers'] = nykaaman_offers
+                doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
+                doc['nykaaman_offer_ids'] = []
+                doc['nykaaman_offer_facet'] = []
+                for offer in nykaaman_offers:
+                    nykaaman_offer_facet = OrderedDict()
+                    nykaaman_offer_facet['id'] = offer['id']
+                    nykaaman_offer_facet['name'] = offer['name']
+                    doc['nykaaman_offer_facet'].append(nykaaman_offer_facet)
+                    doc['nykaaman_offer_ids'].append(offer['id'])
 
-                    nykaa_pro_offers = offers_data.get('nykaa_pro', [])
-                    doc['nykaa_pro_offers'] = nykaa_pro_offers
-                    doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
-                    doc['nykaa_pro_offer_ids'] = []
-                    doc['nykaa_pro_offer_facet'] = []
-                    for offer in nykaa_pro_offers:
-                        nykaa_pro_offer_facet = OrderedDict()
-                        nykaa_pro_offer_facet['id'] = offer['id']
-                        nykaa_pro_offer_facet['name'] = offer['name']
-                        doc['nykaa_pro_offer_facet'].append(nykaa_pro_offer_facet)
-                        doc['nykaa_pro_offer_ids'].append(offer['id'])
+                nykaa_pro_offers = offers_data.get('nykaa_pro', [])
+                doc['nykaa_pro_offers'] = nykaa_pro_offers
+                doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
+                doc['nykaa_pro_offer_ids'] = []
+                doc['nykaa_pro_offer_facet'] = []
+                for offer in nykaa_pro_offers:
+                    nykaa_pro_offer_facet = OrderedDict()
+                    nykaa_pro_offer_facet['id'] = offer['id']
+                    nykaa_pro_offer_facet['name'] = offer['name']
+                    doc['nykaa_pro_offer_facet'].append(nykaa_pro_offer_facet)
+                    doc['nykaa_pro_offer_ids'].append(offer['id'])
 
 
     def indexES(docs, index):
@@ -580,7 +582,7 @@ class CatalogIndexer:
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
     @classmethod
-    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history,offerbatchsize):
+    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history,offerbatchsize,offerswitch):
         input_docs = []
         pws_fetch_products = []
         size_filter_flag = 0
@@ -1109,7 +1111,8 @@ class CatalogIndexer:
             # index_duration = index_stop - index_start
             # print("fetch_price_availability time: %s seconds." % (
             #     time.strftime("%M min %S seconds", time.gmtime(index_duration))))
-            CatalogIndexer.fetch_offers(input_docs, offerbatchsize)
+            if offerswitch:
+                CatalogIndexer.fetch_offers(input_docs, offerbatchsize)
             # index elastic search
             if search_engine == 'elasticsearch':
                 # index_start = timeit.default_timer()
@@ -1120,7 +1123,7 @@ class CatalogIndexer:
                 
             CatalogIndexer.print_errors(errors)
 
-    def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None, offerbatchsize=1000):
+    def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None, offerbatchsize=1000, offerswitch=True):
         skus = skus or []
         skus = [x for x in skus if x]
         if skus:
@@ -1202,7 +1205,7 @@ class CatalogIndexer:
 
         for _ in range(NUMBER_OF_THREADS):
             Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
-                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize).start()
+                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch).start()
         q.join()
         print("Index Catalog Finished!")
 
@@ -1214,13 +1217,15 @@ if __name__ == "__main__":
     parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
     parser.add_argument("--sku", type=str, default="")
     parser.add_argument("-b", "--offerbatchsize", default=1000, help='size of offer docs batch', type=int)
+    parser.add_argument("-w", "--offerswitch", default=True, help='switch for fetch_offers function', type=bool)
     argv = vars(parser.parse_args())
     file_path = argv['filepath']
     collection = argv['collection']
     searchengine = argv['searchengine']
     offerbatchsize = argv['offerbatchsize']
+    offerswitch = argv['offerswitch']
     argv['update_productids'] = True
     if argv['sku']:
       NUMBER_OF_THREADS = 1
     CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'],
-                         skus=argv['sku'].split(","), offerbatchsize)
+                         skus=argv['sku'].split(","), offerbatchsize, offerswitch)
