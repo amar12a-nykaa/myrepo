@@ -534,7 +534,7 @@ class CatalogIndexer:
                 CatalogIndexer.validate_catalog_feed_row(row)
                 doc = {}
                 CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
-                doc['size_chart_enabled'] = doc.get('size_chart_enabled') == '1'
+                doc['size_chart_enabled'] = bool(doc.get('size_chart_enabled'))
                 if doc['size_chart_enabled']:
                     CatalogIndexer.update_size_chart_attributes(doc=doc)
                 doc['sku'] = row['sku']
