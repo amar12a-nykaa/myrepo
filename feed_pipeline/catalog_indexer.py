@@ -439,22 +439,22 @@ class CatalogIndexer:
             product_id_list = []
             for doc in current_docs_batch:
                 record = {}
-                if doc.get('product_id'):
-                    record['productId'] = doc.get('product_id')
-                    product_id_list.append(record['productId'])
+                if doc.get("product_id"):
+                    record["productId"] = doc.get('product_id')
+                    product_id_list.append(record["productId"])
                 else:
                     continue
-                record['sku'] = doc.get('sku', "")
-                record['name'] = doc.get('title', "")
-                record['description'] = doc.get('description', "")
-                record['categoryIds'] = doc.get('category_ids', "")
-                record['mrp'] = doc.get('mrp', 0)
-                record['sp'] = doc.get('price', 0)
+                record["sku"] = doc.get('sku', "")
+                record["name"] = doc.get('title', "")
+                record["description"] = doc.get('description', "")
+                record["categoryIds"] = doc.get('category_ids', "")
+                record["mrp"] = doc.get('mrp', 0)
+                record["sp"] = doc.get('price', 0)
                 manufacturer_id_list = doc.get('old_brand_ids',[])
                 if len(manufacturer_id_list)==0:
-                    record['manufacturerId'] = ""
+                    record["manufacturerId"] = ""
                 else:
-                    record['manufacturerId'] = manufacturer_id_list[0]
+                    record["manufacturerId"] = manufacturer_id_list[0]
                 req_body.append(record)
             req_body = json.dumps(req_body)
             res = Request(request_url, data=req_body, headers={'content-type': 'application/json'})
