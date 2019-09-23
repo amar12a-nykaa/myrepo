@@ -456,13 +456,13 @@ class CatalogIndexer:
                 else:
                     record["manufacturerId"] = manufacturer_id_list[0]
                 req_body.append(record)
-            req_body = json.dumps(req_body)
+            req_body = json.dumps(req_body).encode('utf8')
             res = Request(request_url, data=req_body, headers={'content-type': 'application/json'})
 
             attempts = 2
             while(attempts):
                 try:
-                    result = json.loads(str(urlopen(res).read()))
+                    result = json.loads(str(urlopen(res).read().decode('utf-8')))
                     break
                 except:
                     attempts = attempts-1
