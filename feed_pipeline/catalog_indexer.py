@@ -447,7 +447,13 @@ class CatalogIndexer:
                 record["sku"] = doc.get('sku', "")
                 record["name"] = doc.get('title', "")
                 record["description"] = doc.get('description', "")
-                record["categoryIds"] = doc.get('category_ids', "")
+                record["categoryIds"] = ""
+                if doc.get('category_ids'):
+                    category_ids_list = doc.get('category_ids')
+                    list_len = len(category_ids_list) - 1
+                    for j in range(0, list_len):
+                        record["categoryIds"] = record["categoryIds"] + category_ids_list[j] + ","
+                    record["categoryIds"] = record["categoryIds"] + category_ids_list[list_len]
                 record["mrp"] = doc.get('mrp', 0)
                 record["sp"] = doc.get('price', 0)
                 manufacturer_id_list = doc.get('old_brand_ids',[])
