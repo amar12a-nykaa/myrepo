@@ -1109,7 +1109,7 @@ class CatalogIndexer:
             # index_duration = index_stop - index_start
             # print("fetch_price_availability time: %s seconds." % (
             #     time.strftime("%M min %S seconds", time.gmtime(index_duration))))
-            (input_docs, errors) = CatalogIndexer.fetch_offers(input_docs, offerbatchsize)
+            CatalogIndexer.fetch_offers(input_docs, offerbatchsize)
             # index elastic search
             if search_engine == 'elasticsearch':
                 # index_start = timeit.default_timer()
