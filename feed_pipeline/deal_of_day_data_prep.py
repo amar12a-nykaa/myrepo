@@ -7,6 +7,8 @@ import sys
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
+sys.path.append("/nykaa/scripts/sharedutils")
+from mongoutils import MongoUtils
 
 DAYS = -7
 
@@ -163,9 +165,21 @@ def getProductValidity():
   data.parent_id = data.parent_id.fillna(-1)
   data.product_id = data.product_id.fillna(-1)
   data = data.astype({'product_id': int, 'parent_id': int})
+  data = data.astype({'product_id': str, 'parent_id': str})
   data.drop(['is_in_stock', 'disabled'], axis=1, inplace=True)
   return data
 
+
+def getPopularityData():
+  client = MongoUtils.getClient()
+  popularity_table = client['search']['popularity']
+  cursor = popularity_table.find({}, {"id": 1, "popularity": 1, "_id": 0})
+  data = pd.DataFrame(list(cursor))
+  # data = pd.read_csv('pop_sh.csv')
+  data.rename(columns={'id': 'product_id'}, inplace=True)
+  data = data.astype({'product_id': str})
+  return data
+  
 
 def getBestDeals():
   price_data = getPriceChangeData()
@@ -174,8 +188,9 @@ def getBestDeals():
   validity = getProductValidity()
   valid_products = pd.merge(price_data, validity, on='sku')
   valid_products['delta_sp'] = valid_products.apply(lambda x: x['avg_sp'] - x['sp'], axis=1)
-  valid_products = valid_products[valid_products.delta_sp > 0]
-  valid_products.to_csv('data_1.csv', index=False)
+  valid_products = valid_products[(valid_products.delta_sp > 0) & (valid_products.avg_sp < valid_products.mrp) & (valid_products.mrp > 100)]
+  popularity_data = getPopularityData()
+  valid_products = pd.merge(valid_products, popularity_data, on='product_id')
   return
 
 getBestDeals()
