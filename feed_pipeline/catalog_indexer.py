@@ -490,7 +490,7 @@ class CatalogIndexer:
                                  'size_shoulder',
                                  'size_underbust',
                                  'size_waist']
-        if doc.get('size_unit') and doc.get('size_unit').lower() in ['cm', 'inch']:
+        if doc.get('size_unit') and doc.get('size_unit').strip().lower() in ['cm', 'inch']:
             size_unit = doc.pop('size_unit')
             inch_size = {}
             cm_size = {}
@@ -536,6 +536,7 @@ class CatalogIndexer:
                 CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
                 doc['size_chart_enabled'] = bool(doc.get('size_chart_enabled'))
                 if doc['size_chart_enabled']:
+                    doc['size_unit'] = row.get('size_unit')
                     CatalogIndexer.update_size_chart_attributes(doc=doc)
                 doc['sku'] = row['sku']
                 if skus and doc['sku'] not in skus:
