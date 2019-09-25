@@ -19,6 +19,7 @@ import threading
 import time
 import timeit
 import traceback
+import boto3
 
 from IPython import embed
 from collections import OrderedDict
@@ -433,7 +434,7 @@ class CatalogIndexer:
     def fetch_offers(input_docs, offerbatchsize=1000):
 
         request_url = "http://" + PipelineUtils.getOffersAPIHost() + "/api/v1/catalog/products/offer"
-
+        SQS_ENDPOINT, SQS_REGION = PipelineUtils.getSQSDetails()
         for i in range(0, len(input_docs), offerbatchsize):
             current_docs_batch = input_docs[i:i+offerbatchsize]
             req_body = []
@@ -472,9 +473,18 @@ class CatalogIndexer:
                     attempts = attempts-1
                     print("Bulk offers api request failed. Attempts remaining %s " % attempts)
                     if attempts==0:
-                        print("Skipping offers updation on ")
-                        for x in range(len(product_id_list)):
-                            print(product_id_list[x])
+                        sqs = boto3.client("sqs", region_name=SQS_REGION)
+                        queue_url = SQS_ENDPOINT
+                        response = sqs.send_message(
+                            QueueUrl=queue_url,
+                            DelaySeconds=0,
+                            MessageAttributes={},
+                            MessageBody=(json.dumps(product_id_list, default=str)),
+                            MessageGroupId="1",
+                            MessageDeduplicationId=str(time.time()),
+                        )
+                        print("Skipping offers updation on " + str(product_id_list))
+                        print(traceback.format_exc())
 
             if(attempts==0):
                 continue
