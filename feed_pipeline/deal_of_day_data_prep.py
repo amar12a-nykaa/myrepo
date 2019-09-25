@@ -1,6 +1,7 @@
 import boto3
 import arrow
 import pandas as pd
+import numpy as np
 import re
 import time
 import sys
@@ -11,10 +12,22 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from mongoutils import MongoUtils
 
 DAYS = -7
+ENDDAYS = 0
 WEIGHT_DELTA_DISCOUNT = 90
 WEIGHT_DELTA_SP = 3
 WEIGHT_POPULARITY = 10
-SAMPLE_SIZE = 500
+SAMPLE_SIZE = 1000
+DECAY_0_30 = 0.9
+DECAY_31_60 = 0.95
+DECAY_61_100 = 0.99
+FINAL_SIZE = 100
+WINDOW_SIZE = 6
+
+current_pos = 1
+position_map = {}
+assigned_positions = []
+flag = True
+
 
 def getPriceChangeData():
   pipeline = boto3.session.Session(profile_name='datapipeline')
@@ -22,7 +35,7 @@ def getPriceChangeData():
   s3_file_location = 'price_change_data'
   outputFileName = 'price_change_data.csv'
   startdate = arrow.now().replace(days=DAYS).strftime("%Y-%m-%d")
-  enddate = arrow.now().replace(days=0).strftime("%Y-%m-%d")
+  enddate = arrow.now().replace(days=ENDDAYS).strftime("%Y-%m-%d")
   query = """select sku, dt, hh, max(old_price) as old_price, min(new_price) as new_price
               from events_pds
               where dt >= '%s' and dt < '%s'
@@ -97,7 +110,7 @@ def aggregate_price_data_on_date(price_data):
 
 
 def get_date_list():
-  lastdate = arrow.now().replace(days=0, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+  lastdate = arrow.now().replace(days=ENDDAYS, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
   date = arrow.now().replace(days=DAYS, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
   all_dates = []
   while date <= lastdate:
@@ -185,6 +198,78 @@ def getPopularityData():
   return data
   
 
+def getPrevDotdProducts():
+  back_date_7_days = arrow.now().replace(days=DAYS, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+  today = arrow.now().replace(days=ENDDAYS, hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+  redshift_conn = PasUtils.redshiftConnection()
+  query = """select sku, datediff(day, date_time, current_date) as days, position as pos from deal_of_the_day_data where date_time>='{0}'
+                and date_time <'{1}'""".format(back_date_7_days, today)
+  data = pd.read_sql(query, con=redshift_conn)
+  redshift_conn.close()
+  data['days'] = data['days'].apply(lambda x: (DAYS * -1) - x)
+  data['decay'] = data.apply(lambda x: DECAY_0_30 if x['pos'] <= 30 else DECAY_31_60 if x['pos'] <= 60 else DECAY_61_100, axis=1)
+  data['decay'] = data.apply(lambda x: x['decay']**x['days'], axis=1)
+  data.drop(['days', 'pos'], axis=1, inplace=True)
+  data = data.groupby(['sku'], as_index=False).prod()
+  return data
+
+def populateBrandCategoryInfo(data):
+  redshift_conn = PasUtils.redshiftConnection()
+  query = """select sku, brand_code, name as title as brand from dim_sku"""
+  brand_data = pd.read_sql(query, con=redshift_conn)
+  data = pd.merge(data, brand_data, on='sku', how='left')
+
+  query = """select distinct product_id, l3_id as category from product_category_mapping"""
+  category_data = pd.read_sql(query, con=redshift_conn)
+  category_data = category_data.astype({'product_id': str})
+  data = pd.merge(data.astype({'product_id': str}), category_data, on='product_id', how='left')
+  redshift_conn.close()
+  return data
+  
+  
+def assignPosition(data):
+  def assign_pos(row):
+    global current_pos
+    global flag
+    # print(assigned_positions)
+    if row['brand'] in position_map:
+      #handle side-effect of apply(1st row gets processed twice)
+      if flag:
+        flag = False
+        row['position'] = 1
+        return row
+      pos = position_map.get(row['brand'])
+      if pos < current_pos:
+        row['position'] = current_pos
+        position_map[row['brand']] = min(current_pos + WINDOW_SIZE, FINAL_SIZE)
+        assigned_positions.append(current_pos)
+        current_pos = current_pos + 1
+      else:
+        if pos == FINAL_SIZE:
+          row['position'] = current_pos
+          assigned_positions.append(current_pos)
+          current_pos = current_pos + 1
+        else:
+          while pos in assigned_positions:
+            pos = pos + 1
+          row['position'] = pos
+          position_map[row['brand']] = min(pos + WINDOW_SIZE, FINAL_SIZE)
+          assigned_positions.append(pos)
+    else:
+      row['position'] = current_pos
+      assigned_positions.append(current_pos)
+      position_map[row['brand']] = min(current_pos + WINDOW_SIZE, FINAL_SIZE)
+      current_pos = current_pos + 1
+    while current_pos in assigned_positions:
+      current_pos = current_pos + 1
+    # print("%s %s"%(row['title'], row['position']))
+    return row
+  
+  data = data.apply(assign_pos, axis=1)
+  data = data.sort_values(by='position')
+  return data
+      
+
 def getBestDeals():
   price_data = getPriceChangeData()
   price_data = aggregate_price_data_on_date(price_data)
@@ -201,7 +286,20 @@ def getBestDeals():
   valid_products = valid_products.sort_values(by='score', ascending=False)
   valid_products = valid_products.drop_duplicates('parent_id', keep='first')
   valid_products = valid_products[:SAMPLE_SIZE]
-  # valid_products.to_csv('data_.csv', index=False)
+  prev_products = getPrevDotdProducts()
+  valid_products = pd.merge(valid_products, prev_products, on='sku', how='left')
+  valid_products.decay = valid_products.decay.fillna(1)
+  valid_products['score'] = valid_products.apply(lambda x: x['score']*x['decay'], axis=1)
+  valid_products = populateBrandCategoryInfo(valid_products)
+  valid_products = valid_products.sort_values(by='score', ascending=False)
+  valid_products = valid_products.drop_duplicates(['brand', 'category'], keep='first')
+  valid_products = valid_products[np.isfinite(valid_products['category'])]
+  valid_products = valid_products.drop_duplicates(['sku'], keep='first')
+  valid_products = valid_products[:FINAL_SIZE]
+  valid_products = valid_products.sort_values(by='popularity', ascending=False)
+  valid_products = assignPosition(valid_products)
+  filename = "dotd" + str(ENDDAYS) + ".csv"
+  valid_products.to_csv(filename, index=False)
   return
 
 getBestDeals()
