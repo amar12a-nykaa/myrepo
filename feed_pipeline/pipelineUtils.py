@@ -33,7 +33,7 @@ class PipelineUtils:
     return host
 
   def getSQSDetails():
-    SQS_ENDPOINT = 'https://sqs.ap-south-1.amazonaws.com/911609873560/OfferCatalogUpdate'
+    SQS_ENDPOINT = 'https://sqs.ap-south-1.amazonaws.com/911609873560/failedOfferUpdate'
     SQS_REGION = 'ap-south-1'
     if socket.gethostname().startswith('admin'):
       SQS_ENDPOINT = 'https://sqs.ap-south-1.amazonaws.com/268361018769/OfferCatalogUpdate'
