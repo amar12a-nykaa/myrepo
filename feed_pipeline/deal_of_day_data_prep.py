@@ -5,6 +5,9 @@ import numpy as np
 import re
 import time
 import sys
+from decimal import ROUND_HALF_UP, Decimal
+from datetime import datetime
+from dateutil import tz
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
@@ -27,6 +30,12 @@ current_pos = 1
 position_map = {}
 assigned_positions = []
 flag = True
+
+from_zone = tz.gettz("UTC")
+to_zone = tz.gettz("Asia/Kolkata")
+current_datetime = datetime.utcnow()
+current_datetime = current_datetime.replace(tzinfo=from_zone)
+current_datetime = current_datetime.astimezone(to_zone)
 
 
 def getPriceChangeData():
@@ -172,18 +181,34 @@ def get_average_sp(price_data):
 
 
 def getProductValidity():
-  query = """select sku, product_id, parent_id, mrp, sp, discount, is_in_stock, disabled from products"""
+  query = """select sku, product_id, parent_id, mrp, sp, discount, is_in_stock, schedule_start, schedule_end,
+                scheduled_discount from products where disabled=0"""
   mysql_conn = PasUtils.mysqlConnection()
   data = pd.read_sql(query, con=mysql_conn)
   mysql_conn.close()
   data.mrp = data.mrp.fillna(0)
+
+  def calculateSP(row):
+    global current_datetime
+    schedule_start = row["schedule_start"]
+    schedule_end = row["schedule_end"]
+    scheduled_discount = row["scheduled_discount"]
+    if schedule_start and schedule_end and scheduled_discount is not None:
+      if current_datetime >= schedule_start.replace(tzinfo=to_zone) and \
+        current_datetime < schedule_end.replace(tzinfo=to_zone):
+        row["discount"] = scheduled_discount
+        sp = Decimal(str(row["mrp"])) - Decimal(str(row["mrp"])) * Decimal(str(row["discount"])) / Decimal(str(100))
+        row["sp"] = float(sp.quantize(0, ROUND_HALF_UP))
+    return row
   
-  data = data[(data.is_in_stock > 0) & (data.disabled != 1) & (data.mrp >= 1) & (data.discount > 0)]
+  data = data[(data.is_in_stock > 0) & (data.mrp >= 1)]
+  data = data.apply(calculateSP, axis=1)
+  data = data[data.discount > 0]
   data.parent_id = data.parent_id.fillna(-1)
   data.product_id = data.product_id.fillna(-1)
   data = data.astype({'product_id': int, 'parent_id': int})
   data = data.astype({'product_id': str, 'parent_id': str})
-  data.drop(['is_in_stock', 'disabled'], axis=1, inplace=True)
+  data.drop(['is_in_stock', 'schedule_start', 'schedule_end', 'scheduled_discount'], axis=1, inplace=True)
   return data
 
 
