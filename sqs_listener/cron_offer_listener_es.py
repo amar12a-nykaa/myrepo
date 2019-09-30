@@ -169,10 +169,15 @@ class OfferSQSConsumer:
         print("Thread {} start".format(thread_id))
 
         process_docs = []
-        for offer_data in chunk:
-            process_doc = {}
-            OfferSQSConsumer.offers_data_merge(process_doc, offer_data)
-            process_docs.append(process_doc)
+        for data in chunk:
+            sku = data.get('sku')
+            offer_data = data.get('offer')
+            if offer_data and sku:
+                process_doc = {"sku": sku}
+                OfferSQSConsumer.offers_data_merge(process_doc, offer_data)
+                process_docs.append(process_doc)
+            else:
+                print("Error in offer updation of sku : {} , error :{}".format(sku, data.get('error')))
 
 
         try:
