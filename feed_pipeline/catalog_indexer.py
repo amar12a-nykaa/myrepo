@@ -494,8 +494,12 @@ class CatalogIndexer:
             for doc in current_docs_batch:
                 product_id = doc.get('product_id')
                 offers_data = response_data.get(product_id,{})
-                OfferUtils.merge_offer_data(doc, offers_data)
-
+                if offers_data.get('offers'):
+                    offers_dict = offers_data.get('offers',{})
+                    OfferUtils.merge_offer_data(doc, offers_dict)
+                else:
+                    error = offers_data.get('error')
+                    print("Product_id {},Error {}".format(product_id,error))
 
     def indexES(docs, index):
         if not index:
