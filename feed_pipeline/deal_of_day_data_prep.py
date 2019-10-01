@@ -117,7 +117,7 @@ def getPriceChangeData():
     price_change_table.update(filt, row, upsert=True)
   
   data = price_change_table.find({"dt": {"$gte": startdate, "$lte": enddate}})
-  final_df = pd.DataFrame(data)
+  final_df = pd.DataFrame(list(data))
   return final_df
 
 
@@ -256,7 +256,7 @@ def getPrevDotdProducts():
 
 def populateBrandCategoryInfo(data):
   redshift_conn = PasUtils.redshiftConnection()
-  query = """select sku, brand_code, name as title as brand from dim_sku"""
+  query = """select sku, brand_code as brand, name as title from dim_sku"""
   brand_data = pd.read_sql(query, con=redshift_conn)
   data = pd.merge(data, brand_data, on='sku', how='left')
 
