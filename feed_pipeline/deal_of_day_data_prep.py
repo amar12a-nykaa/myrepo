@@ -45,11 +45,12 @@ def getPriceChangeData():
   outputFileName = 'price_change_data.csv'
   startdate = arrow.now().replace(days=DAYS).strftime("%Y-%m-%d")
   enddate = arrow.now().replace(days=ENDDAYS).strftime("%Y-%m-%d")
+  qstartdate = arrow.now().replace(days=-1).strftime("%Y-%m-%d")
   query = """select sku, dt, hh, max(old_price) as old_price, min(new_price) as new_price
-              from events_pds
+              from events_pds1
               where dt >= '%s' and dt < '%s'
-                and event='price_changed' and product_type='simple'
-              group by sku, dt, hh""" % (startdate, enddate)
+                and event='price_changed' and old_price != 'None'
+              group by sku, dt, hh""" % (qstartdate, enddate)
   params = {
     'region': 'ap-south-1',
     'database': 'datapipeline',
@@ -102,7 +103,22 @@ def getPriceChangeData():
   except:
     print("Unable to download file from s3")
   df = pd.read_csv(outputFileName)
-  return df
+  df = aggregate_price_data_on_date(df)
+  
+  client = MongoUtils.getClient()
+  price_change_table = client['search']['price_change']
+  #remove data older than 7 days
+  price_change_table.remove({"dt": {"$lt": startdate}})
+  timestamp = arrow.now().datetime
+  for id, row in df.iterrows():
+    row = dict(row)
+    row['last_calculated'] = timestamp
+    filt = {"sku": row["sku"], "dt": row['dt']}
+    price_change_table.update(filt, row, upsert=True)
+  
+  data = price_change_table.find({"dt": {"$gte": startdate, "$lte": enddate}})
+  final_df = pd.DataFrame(data)
+  return final_df
 
 
 def aggregate_price_data_on_date(price_data):
@@ -297,7 +313,7 @@ def assignPosition(data):
 
 def getBestDeals():
   price_data = getPriceChangeData()
-  price_data = aggregate_price_data_on_date(price_data)
+  # price_data = aggregate_price_data_on_date(price_data)
   price_data = get_average_sp(price_data)
   validity = getProductValidity()
   valid_products = pd.merge(price_data, validity, on='sku')
