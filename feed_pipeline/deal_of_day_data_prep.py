@@ -8,9 +8,12 @@ import sys
 from decimal import ROUND_HALF_UP, Decimal
 from datetime import datetime
 from dateutil import tz
+import requests
+import json
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
+from pipelineUtils import PipelineUtils
 sys.path.append("/nykaa/scripts/sharedutils")
 from mongoutils import MongoUtils
 
@@ -72,7 +75,6 @@ def getPriceChangeData():
     )
     return response
 
-
   def pollForStatus(execution_id, max_execution=10):
     state = 'RUNNING'
     while (max_execution > 0 and state in ['RUNNING']):
@@ -93,6 +95,18 @@ def getPriceChangeData():
           return outputFile
       time.sleep(6)
     return False
+
+  def aggregate_price_data_on_date(price_data):
+    hour_info_min = price_data.groupby(['sku', 'dt'], as_index=False).agg({'hh': 'min'})
+    hour_info_min = price_data.merge(hour_info_min, on=['sku', 'dt', 'hh'])
+    hour_info_min.drop(['hh', 'new_price'], axis=1, inplace=True)
+  
+    hour_info_max = price_data.groupby(['sku', 'dt'], as_index=False).agg({'hh': 'max'})
+    hour_info_max = price_data.merge(hour_info_max, on=['sku', 'dt', 'hh'])
+    hour_info_max.drop(['hh', 'old_price'], axis=1, inplace=True)
+  
+    final_data = hour_info_min.merge(hour_info_max, on=['sku', 'dt'])
+    return final_data
 
   execution = query_athena(params)
   execution_id = execution['QueryExecutionId']
@@ -119,19 +133,6 @@ def getPriceChangeData():
   data = price_change_table.find({"dt": {"$gte": startdate, "$lte": enddate}})
   final_df = pd.DataFrame(list(data))
   return final_df
-
-
-def aggregate_price_data_on_date(price_data):
-  hour_info_min = price_data.groupby(['sku', 'dt'], as_index=False).agg({'hh': 'min'})
-  hour_info_min = price_data.merge(hour_info_min, on=['sku', 'dt', 'hh'])
-  hour_info_min.drop(['hh', 'new_price'], axis=1, inplace=True)
-
-  hour_info_max = price_data.groupby(['sku', 'dt'], as_index=False).agg({'hh': 'max'})
-  hour_info_max = price_data.merge(hour_info_max, on=['sku', 'dt', 'hh'])
-  hour_info_max.drop(['hh', 'old_price'], axis=1, inplace=True)
-  
-  final_data = hour_info_min.merge(hour_info_max, on=['sku', 'dt'])
-  return final_data
 
 
 def get_date_list():
@@ -254,6 +255,7 @@ def getPrevDotdProducts():
   data = data.groupby(['sku'], as_index=False).prod()
   return data
 
+
 def populateBrandCategoryInfo(data):
   redshift_conn = PasUtils.redshiftConnection()
   query = """select sku, brand_code as brand, name as title from dim_sku"""
@@ -268,7 +270,7 @@ def populateBrandCategoryInfo(data):
   return data
   
   
-def assignPosition(data):
+def insertInDatabase(data):
   def assign_pos(row):
     global current_pos
     global flag
@@ -306,14 +308,67 @@ def assignPosition(data):
     # print("%s %s"%(row['title'], row['position']))
     return row
   
+  def get_featured_products():
+    inventories = list()
+    query = {"page_type": "adhoc-data", "page_section": "deals-of-the-day", "page_data": "featured-products"}
+    inventories.append(query)
+    requestBody = {'inventories': inventories}
+    url = 'https://' + PipelineUtils.getAdPlatformEndPoint() + '/inventory/data/json/'
+    response = requests.post(url, json=requestBody, headers={'Content-Type': 'application/json'})
+    if (response.ok):
+      result = json.loads(response.content.decode('utf-8')).get('result')[0]
+      for inventory in result['inventories']:
+        if inventory['widget_data']['wtype'] == "DATA_WIDGET":
+          product_id_list = inventory['widget_data']['parameters']["data_"]
+          return product_id_list
+    return ""
+  
   data = data.apply(assign_pos, axis=1)
   data = data.sort_values(by='position')
+  pinned_products = get_featured_products().split(',')
+  
+  #insert in mysql
+  date_today = str(datetime.now().date())
+  starttime = str(date_today) + ' 10:00:00'
+  endtime = str(date_today) + ' 23:59:59'
+  position = 0
+  for pid in pinned_products:
+    pid = str(pid)
+    query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}')
+              on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """. \
+      format(pid, "", starttime, endtime, position)
+    PasUtils.mysql_write(query)
+    position = position + 1
+  
+  #delete today's data from redshift
+  redshift_conn = PasUtils.redshiftConnection()
+  cur = redshift_conn.cursor()
+  delete_query = "delete from deal_of_the_day_data where date_time ='{0}'".format(date_today)
+  cur.execute(delete_query)
+  redshift_conn.commit()
+  
+  #insert remaining data in both mysql and redshift
+  for id, row in data.iterrows():
+    if position > FINAL_SIZE:
+      break
+    if row['product_id'] in pinned_products:
+      continue
+    row = dict(row)
+    query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}')
+                  on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """. \
+      format(row['product_id'], row['sku'], starttime, endtime, position)
+    PasUtils.mysql_write(query)
+
+    query = "insert into deal_of_the_day_data values ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}')".format(
+      row['product_id'], row['sku'], position, date_today, "", row['sp'], row['discount'])
+    cur.execute(query)
+    position = position + 1
+  redshift_conn.commit()
   return data
       
 
 def getBestDeals():
   price_data = getPriceChangeData()
-  # price_data = aggregate_price_data_on_date(price_data)
   price_data = get_average_sp(price_data)
   validity = getProductValidity()
   valid_products = pd.merge(price_data, validity, on='sku')
@@ -338,9 +393,8 @@ def getBestDeals():
   valid_products = valid_products.drop_duplicates(['sku'], keep='first')
   valid_products = valid_products[:FINAL_SIZE]
   valid_products = valid_products.sort_values(by='popularity', ascending=False)
-  valid_products = assignPosition(valid_products)
-  filename = "dotd" + str(ENDDAYS) + ".csv"
-  valid_products.to_csv(filename, index=False)
+  valid_products = insertInDatabase(valid_products)
+  print(valid_products.head(5))
   return
 
 getBestDeals()
