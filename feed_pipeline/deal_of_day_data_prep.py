@@ -13,6 +13,8 @@ import json
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
+sys.path.append("/var/www/discovery_api")
+from disc.v2.deals_product_category_mapping import CATEGORY_MAP
 from pipelineUtils import PipelineUtils
 sys.path.append("/nykaa/scripts/sharedutils")
 from mongoutils import MongoUtils
@@ -269,6 +271,41 @@ def populateBrandCategoryInfo(data):
   redshift_conn.close()
   return data
   
+
+def addCategoryInfo(data):
+  products = list(data.product_id.unique())
+  products = [str(x) for x in products]
+  products = ','.join(products)
+  valid_categories = CATEGORY_MAP.values()
+  valid_categories = [x.split(',') for x in valid_categories]
+  valid_categories = [str(item) for sublist in valid_categories for item in sublist]
+  valid_categories = ','.join(valid_categories)
+  
+  query = """select distinct product_id, cat_id as category_l1
+              from (
+                select distinct product_id, l1_id as cat_id from product_category_mapping
+                  where l1_id in (%s) and product_id in (%s)
+                union
+                select distinct product_id, l2_id as cat_id from product_category_mapping
+                  where l2_id in (%s) and product_id in (%s)
+                union
+                select distinct product_id, l3_id as cat_id from product_category_mapping
+                  where l3_id in (%s) and product_id in (%s)
+                union
+                select distinct product_id, l4_id as cat_id from product_category_mapping
+                  where l4_id in (%s) and product_id in (%s)
+              )
+  """%(valid_categories, products, valid_categories, products, valid_categories, products, valid_categories, products)
+  print(query)
+
+  redshift_conn = PasUtils.redshiftConnection()
+  category_data = pd.read_sql(query, con=redshift_conn)
+  category_data = category_data.astype({'category_l1': str})
+  category_data['category_l1'] = category_data.groupby('product_id')['category_l1'].transform(lambda x: ','.join(x))
+  
+  data = pd.merge(data.astype({'product_id': str}), category_data.astype({'product_id': str}), on='product_id')
+  return data
+  
   
 def insertInDatabase(data):
   def assign_pos(row):
@@ -393,6 +430,7 @@ def getBestDeals():
   valid_products = valid_products.drop_duplicates(['sku'], keep='first')
   valid_products = valid_products[:FINAL_SIZE]
   valid_products = valid_products.sort_values(by='popularity', ascending=False)
+  valid_products = addCategoryInfo(valid_products)
   valid_products = insertInDatabase(valid_products)
   print(valid_products.head(5))
   return
