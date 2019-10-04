@@ -396,7 +396,7 @@ def insertInDatabase(data):
       format(row['product_id'], row['sku'], starttime, endtime, position, row['category_l1'])
     PasUtils.mysql_write(query)
 
-    query = "insert into deal_of_the_day_data values ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', '{7}'})".format(
+    query = "insert into deal_of_the_day_data values ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', '{7}')".format(
       row['product_id'], row['sku'], position, date_today, "", row['sp'], row['discount'], row['category_l1'])
     cur.execute(query)
     position = position + 1
