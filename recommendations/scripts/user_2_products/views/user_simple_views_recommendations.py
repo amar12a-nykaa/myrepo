@@ -201,7 +201,7 @@ def generate_recommendations(cav_df, days=None, limit=None):
     FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, [])
     csvs_path = S3Utils.ls_file_paths(env_details['bucket_name'], VIEWS_CA_S3_PREFIX, True)
     # TODO check below
-    csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 5 , csvs_path))
+    csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 15 , csvs_path))
     print(csvs_path)
     df, results = DataUtils.prepare_views_ca_dataframe(spark, csvs_path, VIEWS_CA_S3_PREFIX, '/data/u2p/views/data/', True)
     customer_ids_need_update = []
@@ -223,9 +223,9 @@ def generate_recommendations(cav_df, days=None, limit=None):
         weight = views*0.3 + cart_additions*0.7
         #row_date = datetime.strptime(row_date, '%Y-%m-%d').date()
         today = date.today()
-        if (today - row_date).days <= 7:
+        if (today - row_date).days <= 5:
             return 2*weight
-        elif (today - row_date).days <= 14:
+        elif (today - row_date).days <= 10:
             return 1.5*weight
         else:
             return weight
@@ -294,7 +294,7 @@ if __name__ == '__main__':
     #files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
     print('Filtering out last 3 months data')
     # TODO check below
-    files = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 10 , files))
+    files = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 90 , files))
 
     cav_df = compute_cav(platform, files)
     generate_recommendations(cav_df, days=argv.get('days'), limit=limit)
