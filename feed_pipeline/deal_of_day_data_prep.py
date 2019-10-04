@@ -302,7 +302,7 @@ def addCategoryInfo(data):
   category_data = pd.read_sql(query, con=redshift_conn)
   category_data = category_data.astype({'category_l1': str})
   category_data['category_l1'] = category_data.groupby('product_id')['category_l1'].transform(lambda x: ','.join(x))
-  
+  category_data.drop_duplicates(subset=['product_id'], inplace=True)
   data = pd.merge(data.astype({'product_id': str}), category_data.astype({'product_id': str}), on='product_id')
   return data
   
