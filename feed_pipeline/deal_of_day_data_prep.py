@@ -371,9 +371,9 @@ def insertInDatabase(data):
   position = 0
   for pid in pinned_products:
     pid = str(pid)
-    query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}')
-              on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """. \
-      format(pid, "", starttime, endtime, position)
+    query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position, category) values ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')
+              on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}', category= '{5}' """. \
+      format(pid, "", starttime, endtime, position, "")
     PasUtils.mysql_write(query)
     position = position + 1
   
@@ -391,13 +391,13 @@ def insertInDatabase(data):
     if row['product_id'] in pinned_products:
       continue
     row = dict(row)
-    query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position) values ('{0}', '{1}', '{2}', '{3}', '{4}')
-                  on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}' """. \
-      format(row['product_id'], row['sku'], starttime, endtime, position)
+    query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position, category) values ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')
+                  on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}', category = '{5}' """. \
+      format(row['product_id'], row['sku'], starttime, endtime, position, row['category_l1'])
     PasUtils.mysql_write(query)
 
-    query = "insert into deal_of_the_day_data values ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}')".format(
-      row['product_id'], row['sku'], position, date_today, "", row['sp'], row['discount'])
+    query = "insert into deal_of_the_day_data values ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}', '{6}', '{7}'})".format(
+      row['product_id'], row['sku'], position, date_today, "", row['sp'], row['discount'], row['category_l1'])
     cur.execute(query)
     position = position + 1
   redshift_conn.commit()
