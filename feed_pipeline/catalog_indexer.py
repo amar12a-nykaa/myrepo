@@ -1206,4 +1206,5 @@ if __name__ == "__main__":
     if argv['sku']:
       NUMBER_OF_THREADS = 1
     CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'],
-                         skus=argv['sku'].split(","), offerbatchsize, offerswitch)
+                         skus=argv['sku'].split(","), offerbatchsize=offerbatchsize, offerswitch=offerswitch)
+
