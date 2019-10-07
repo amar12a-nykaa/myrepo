@@ -29,7 +29,6 @@ from dateutil import tz
 from operator import itemgetter
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
-from utils.offerutils import OfferUtils
 
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health, get_bestseller_products
@@ -38,6 +37,7 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
 from loopcounter import LoopCounter
 from mongoutils import MongoUtils
+from offerutils import OfferUtils
 
 sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
 from generate_user_product_vectors import get_vectors_from_mysql_for_es
