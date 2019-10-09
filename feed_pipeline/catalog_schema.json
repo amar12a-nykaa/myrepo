@@ -70,7 +70,8 @@
           ]
         }
       }
-    }
+    },
+    "number_of_replicas" : 2
   },
   "mappings": {
     "product": {
