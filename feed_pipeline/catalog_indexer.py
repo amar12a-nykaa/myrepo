@@ -894,8 +894,8 @@ class CatalogIndexer:
                     # elif len(facet_ids) != len(facet_values):
                     #  with open("/data/inconsistent_facet.txt", "a") as f:
                     #    f.write("%s  %s\n"%(doc['sku'], field))
-                if size_filter_flag == 1 and row['instock_size_ids']:
-                    doc['instock_size_ids'] = row['instock_size_ids']
+                if doc.get("size_ids"):
+                    doc['instock_size_ids'] = (row['instock_size_ids'] or "").split(',') if row["instock_size_ids"] else doc['size_ids']
                 doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
                 if not doc['brand_facet_searchable']:
                     doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
@@ -1100,7 +1100,7 @@ class CatalogIndexer:
           
           if row['size_id']:
             if sku in instock_size_info:
-                all_rows[index]['instock_size_ids'] = instock_size_info[sku]
+                all_rows[index]['instock_size_ids'] = ','.join(instock_size_info[sku])
             else:
                 all_rows[index]['instock_size_ids'] = row['size_id']
             
