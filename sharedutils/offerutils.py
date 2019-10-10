@@ -6,6 +6,11 @@ class OfferUtils:
 	@staticmethod
 	def merge_offer_data(doc, offers_data):
 		nykaa_offers = offers_data.get('nykaa', [])
+		for offer in nykaa_offers:
+			if not offer.get('offer_start_date'):
+				offer['offer_start_date'] = ""
+			if not offer.get('offer_end_date'):
+				offer['offer_end_date'] = ""
 		doc['offers'] = nykaa_offers
 		doc['offer_count'] = len(doc['offers'])
 		doc['offer_ids'] = []
