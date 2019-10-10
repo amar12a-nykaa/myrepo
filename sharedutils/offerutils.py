@@ -25,6 +25,11 @@ class OfferUtils:
 			doc['offer_ids'].append(offer.get("id"))
 
 		nykaaman_offers = offers_data.get('nykaaman', [])
+		for offer in nykaaman_offers:
+			if not offer.get('offer_start_date'):
+				offer['offer_start_date'] = ""
+			if not offer.get('offer_end_date'):
+				offer['offer_end_date'] = ""
 		doc['nykaaman_offers'] = nykaaman_offers
 		doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
 		doc['nykaaman_offer_ids'] = []
@@ -37,6 +42,11 @@ class OfferUtils:
 			doc['nykaaman_offer_ids'].append(offer['id'])
 
 		nykaa_pro_offers = offers_data.get('nykaa_pro', [])
+		for offer in nykaa_pro_offers:
+			if not offer.get('offer_start_date'):
+				offer['offer_start_date'] = ""
+			if not offer.get('offer_end_date'):
+				offer['offer_end_date'] = ""
 		doc['nykaa_pro_offers'] = nykaa_pro_offers
 		doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
 		doc['nykaa_pro_offer_ids'] = []
