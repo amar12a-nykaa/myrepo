@@ -1098,12 +1098,9 @@ class CatalogIndexer:
               if word and word not in searchable_info[psku]:
                 title_searchable.append(word)
           
-          if row['size_id']:
-            if sku in instock_size_info:
-                all_rows[index]['instock_size_ids'] = ','.join(instock_size_info[sku])
-            else:
-                all_rows[index]['instock_size_ids'] = row['size_id']
-            
+          all_rows[index]['instock_size_ids'] = row['size_id']
+          if sku in instock_size_info:
+            all_rows[index]['instock_size_ids'] = ','.join(instock_size_info[sku])
 
           all_rows[index]['title_searchable'] = " ".join(title_searchable)
 
