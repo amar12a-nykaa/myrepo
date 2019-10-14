@@ -92,7 +92,7 @@ class EsUtils:
           for index in settings['collections']:
             if not index_client.exists(index):
               if index in ['yin', 'yang']:
-                schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/schema.json'))
+                schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/catalog_schema.json'))
                 es.indices.create(index = index, body = schema)
                 es.indices.put_alias(index= index, name = alias)
               if index in ['autocomplete_yin', 'autocomplete_yang']:
