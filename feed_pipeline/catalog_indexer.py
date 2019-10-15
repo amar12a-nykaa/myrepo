@@ -474,20 +474,23 @@ class CatalogIndexer:
                     attempts = attempts-1
                     print("Bulk offers api request failed. Attempts remaining %s " % attempts)
                     if attempts==0:
-                        sqs = boto3.client("sqs", region_name=SQS_REGION)
-                        queue_url = SQS_ENDPOINT
-                        response = sqs.send_message(
-                            QueueUrl=queue_url,
-                            DelaySeconds=0,
-                            MessageAttributes={},
-                            MessageBody=(json.dumps(product_id_list, default=str)),
-                            MessageGroupId="1",
-                            MessageDeduplicationId=str(time.time()),
-                        )
                         print("Skipping offers updation on " + str(product_id_list))
                         print(traceback.format_exc())
 
             if(attempts==0):
+                try:
+                    sqs = boto3.client("sqs", region_name=SQS_REGION)
+                    queue_url = SQS_ENDPOINT
+                    response = sqs.send_message(
+                        QueueUrl=queue_url,
+                        DelaySeconds=0,
+                        MessageAttributes={},
+                        MessageBody=(json.dumps(product_id_list, default=str)),
+                        MessageGroupId="1",
+                        MessageDeduplicationId=str(time.time()),
+                    )
+                except:
+                    print("Insertion in SQS failed")
                 continue
             #update in input docs
             response_data = result.get('data',{})
