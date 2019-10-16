@@ -488,6 +488,7 @@ class CatalogIndexer:
                         MessageBody=(json.dumps(product_id_list, default=str))
                     )
                 except:
+                    print(traceback.format_exc())
                     print("Insertion in SQS failed")
                 continue
             #update in input docs
@@ -498,6 +499,7 @@ class CatalogIndexer:
                 if offers_data.get('offers'):
                     offers_dict = offers_data.get('offers',{})
                     OfferUtils.merge_offer_data(doc, offers_dict)
+                    doc['offerUpdateEnable'] = True
                 else:
                     error = offers_data.get('error')
                     print("Product_id {},Error {}".format(product_id,error))
