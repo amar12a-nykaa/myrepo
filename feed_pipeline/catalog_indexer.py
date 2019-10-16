@@ -485,9 +485,7 @@ class CatalogIndexer:
                         QueueUrl=queue_url,
                         DelaySeconds=0,
                         MessageAttributes={},
-                        MessageBody=(json.dumps(product_id_list, default=str)),
-                        MessageGroupId="1",
-                        MessageDeduplicationId=str(time.time()),
+                        MessageBody=(json.dumps(product_id_list, default=str))
                     )
                 except:
                     print("Insertion in SQS failed")
