@@ -463,11 +463,11 @@ class CatalogIndexer:
                     record["manufacturerId"] = manufacturer_id_list[0]
                 req_body.append(record)
             req_body = json.dumps(req_body).encode('utf8')
-            res = Request(request_url, data=req_body, headers={'content-type': 'application/json'})
 
             attempts = 2
             while(attempts):
                 try:
+                    res = Request(request_url, data=req_body, headers={'content-type': 'application/json'})
                     result = json.loads(str(urlopen(res).read().decode('utf-8')))
                     break
                 except:
@@ -1104,7 +1104,7 @@ class CatalogIndexer:
                 
             CatalogIndexer.print_errors(errors)
 
-    def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None, offerbatchsize=1000, offerswitch=True):
+    def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None, offerbatchsize=1000, offerswitch=False):
         skus = skus or []
         skus = [x for x in skus if x]
         if skus:
@@ -1198,7 +1198,7 @@ if __name__ == "__main__":
     parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
     parser.add_argument("--sku", type=str, default="")
     parser.add_argument("-b", "--offerbatchsize", default=1000, help='size of offer docs batch', type=int)
-    parser.add_argument("-w", "--offerswitch", default=True, help='switch for fetch_offers function', type=bool)
+    parser.add_argument("-w", "--offerswitch", default=False, help='switch for fetch_offers function', type=bool)
     argv = vars(parser.parse_args())
     file_path = argv['filepath']
     collection = argv['collection']
