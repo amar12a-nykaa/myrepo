@@ -9,7 +9,7 @@ from esutils import EsUtils
 from loopcounter import LoopCounter
 from idutils import strip_accents
 
-VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro']
+VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro', 'ultra_lux']
 PRIVATE_LABEL_BRANDS = ['1937','7666','9127']
 BOOST_FACTOR = 1.1
 BLACKLISTED_FACETS = ['old_brand_facet', ]
