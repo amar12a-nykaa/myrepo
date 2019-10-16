@@ -36,7 +36,7 @@ class PipelineUtils:
     SQS_ENDPOINT = 'https://sqs.ap-south-1.amazonaws.com/911609873560/failedOfferUpdate'
     SQS_REGION = 'ap-south-1'
     if socket.gethostname().startswith('admin'):
-      SQS_ENDPOINT = 'https://sqs.ap-south-1.amazonaws.com/268361018769/OfferCatalogUpdate'
+      SQS_ENDPOINT = 'https://sqs.ap-south-1.amazonaws.com/268361018769/failedOfferUpdate'
     return SQS_ENDPOINT, SQS_REGION
 
   def getAdPlatformEndPoint():
