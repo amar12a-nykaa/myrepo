@@ -60,7 +60,7 @@ BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 COLDSTART_BRAND_PROMOTION_LIST = ['1937', '13754', '7666', '71596']
 PRODUCT_PUNISH_LIST = []
 PRODUCT_POPULARITY_OVERRIDES =  { "37894":  40, "502824": 36, "502823": 35, "502828": 34, "502825": 23, "502827": 20,
-                                  "502826": 14, "574470": 100, "573588": 100, "573572": 100, "573181": 100}
+                                  "502826": 14, "574470": 50, "573588": 50, "573572": 50, "573181": 50}
 
 client = MongoUtils.getClient()
 raw_data = client['search']['raw_data']
