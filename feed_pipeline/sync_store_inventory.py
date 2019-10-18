@@ -53,14 +53,10 @@ def save_data_into_db(data):
             skus.append(row['SKUCODE'])
         skus = tuple(skus)
         if len(skus) == 1:
-            skus = '(' + skus[0] + ')'
+            skus = '("' + skus[0] + '")'
         query = "SELECT sku,product_id FROM products WHERE sku in {}".format(skus)
-        try:
-            cursor.execute(query)
-            product_id_sku_results = cursor.fetchall()
-        except:
-            print("Skipped Updation on {}".format(skus))
-            continue
+        cursor.execute(query)
+        product_id_sku_results = cursor.fetchall()
         product_id_sku_dict = dict(product_id_sku_results)
         _save_data_into_db(store_cursor, product_id_sku_dict, data[i:i + RECORD_GROUP_SIZE])
         store_mysql_conn.commit()
