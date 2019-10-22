@@ -94,6 +94,7 @@ class ScheduledPriceUpdater:
         sku_list = []
         psku_list = []
         totalProductsToLog = []
+        priceChangeData={}
         batch_Id = uuid.uuid4().int
         for single_product in product_chunk:
             sku_list.append(single_product['sku'])
@@ -108,7 +109,9 @@ class ScheduledPriceUpdater:
                     json.dumps({"scheduled_discount":single_product['scheduled_discount']})
                 )
             )
-
+            priceChangeData[single_product['sku']] = {}
+            priceChangeData[single_product['sku']]['old_price'] = single_product['sp']
+            priceChangeData[single_product['sku']]['type'] = single_product['type']
         new_sku_list = list(set(sku_list) | set(psku_list))
         sku_string = "','".join(new_sku_list)
         query = "SELECT product_sku, bundle_sku FROM bundle_products_mappings WHERE product_sku in('" + sku_string + "')"
@@ -126,6 +129,8 @@ class ScheduledPriceUpdater:
                 DiscUtils.updateESCatalog(update_docs)
                 for single_doc in update_docs:
                     print("sku : %s" % single_doc['sku'])
+                    if single_doc['sku'] in priceChangeData:
+                      priceChangeData[single_doc['sku']]['new_price'] = single_doc['price']
         except Exception as e:
             print(traceback.format_exc())
 
@@ -133,7 +138,8 @@ class ScheduledPriceUpdater:
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
         if totalProductsToLog:
             PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", schedule_start, schedule_end,totalProductsToLog)
-
+        if priceChangeData:
+            PriceUpdateLogUtils.logBulkPriceChange(priceChangeData)
     def update():
         # Current time
         q = queue.Queue(maxsize=0)
@@ -160,7 +166,7 @@ class ScheduledPriceUpdater:
         product_type_condition = " AND type = %s"
         product_updated_count = 0
 
-        query = "SELECT sku, psku, type,scheduled_discount,schedule_start,schedule_end FROM products" + where_clause + product_type_condition
+        query = "SELECT sku, psku, type,scheduled_discount,schedule_start,schedule_end,sp FROM products" + where_clause + product_type_condition
         print("[%s] " % getCurrentDateTime() + query % (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
         mysql_conn = PasUtils.mysqlConnection('r')
         results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))

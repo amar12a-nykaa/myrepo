@@ -40,7 +40,8 @@
               "tokenizer": "whitespace"
             }
           }
-        }
+        },
+        "number_of_replicas" : 3
     
   },
   "mappings": {

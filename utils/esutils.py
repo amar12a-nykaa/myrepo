@@ -13,9 +13,9 @@ class ESUtils:
 
     def esConn():
         if env_details['env'] == 'prod':
-            ES_ENDPOINT = 'vpc-prod-api-vzcc4i4e4zk2w4z45mqkisjo4u.ap-southeast-1.es.amazonaws.com'
+            ES_ENDPOINT = 'vpc-prod-priceapi-u22xdmuudgqkzoiiufyezkmrkq.ap-south-1.es.amazonaws.com'
         elif env_details['env'] == 'non_prod':
-            ES_ENDPOINT = 'search-preprod-api-ub7noqs5xxaerxm6vhv5yjuc7u.ap-southeast-1.es.amazonaws.com'
+            ES_ENDPOINT = 'vpc-preprod-priceapi-plwkmnbdhm6td5itzwxznsfn44.ap-south-1.es.amazonaws.com'
         else:
             raise Exception('Unknown env')
         print(ES_ENDPOINT)

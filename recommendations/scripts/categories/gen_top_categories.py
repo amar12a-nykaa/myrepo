@@ -35,6 +35,7 @@ from mysqlredshiftutils import MysqlRedshiftUtils
 from sparkutils import SparkUtils
 from ftputils import FTPUtils
 from esutils import ESUtils
+from upsutils import UPSUtils
 
 spark = SparkUtils.get_spark_instance('Gen Top Categories')
 
@@ -46,39 +47,18 @@ s3_client = boto3.client('s3')
 ORDER_SOURCE_NYKAA = ['Nykaa', 'Nykaa(Old)', 'NYKAA', 'CS-Manual']
 ORDER_SOURCE_NYKAAMEN = ['NykaaMen']
 
-TOP_CATEGORIES_JSON = 'categories_page/top_categories.json'
-CATEGORY_2_NAME_JSON = 'categories_page/category_2_name.json'
-CATEGORIES_LSI_MODEL_DIR = 'categories_page/models'
+CAT_PAGE_TOP_CATEGORIES_JSON = 'categories_page/top_categories.json'
+CAT_PAGE_TOP_CATEGORIES_CUSTOM_N_JSON = 'categories_page/top_categories_%d.json'
+CAT_PAGE_CATEGORY_2_NAME_JSON = 'categories_page/category_2_name.json'
+CAT_PAGE_CATEGORIES_LSI_MODEL_DIR = 'categories_page/models'
+CAT_PAGE_CATEGORIES_LSI_MODEL_CUSTOM_N_DIR = 'categories_page/models_%d'
+
+SEARCH_BAR_TOP_CATEGORIES_JSON = 'search_bar/categories/top_categories.json'
+SEARCH_BAR_CATEGORY_2_NAME_JSON = 'search_bar/categories/category_2_name.json'
+SEARCH_BAR_CATEGORIES_LSI_MODEL_DIR = 'search_bar/categories/models/lsi_views'
 
 DAILY_SYNC_FILE_PREFIX= 'Nykaa_CustomerInteractions_'
 VIEWS_CA_S3_PREFIX = 'categories_page/data/'
-
-class CategoriesUtils:
-
-    dynamodb = boto3.resource('dynamodb')
-
-    def _add_categories_in_ups(rows):
-        keys = [{'user_id': '%s' % customer_id} for customer_id in rows.keys()]
-        get_response = CategoriesUtils.dynamodb.batch_get_item(RequestItems={'user_profile_service': {'Keys': keys}})
-        put_items = []
-        for user_obj in get_response['Responses']['user_profile_service']:
-            if user_obj.get('categories'):
-                user_obj['categories'].update(rows[user_obj['user_id']])
-            else:
-                user_obj['categories'] = rows[user_obj['user_id']]
-            put_items.append({'PutRequest': {'Item': user_obj}})
-        for i in range(0, len(put_items), 25):
-            CategoriesUtils.dynamodb.batch_write_item(RequestItems={'user_profile_service': put_items[i:i+25]})
-
-    def add_categories_in_ups(rows):
-        rows_chunks = [rows[i:i+100] for i in range(0, len(rows), 100)]
-        for chunk in rows_chunks:
-            CategoriesUtils._add_categories_in_ups({row['customer_id']: row['value'] for row in chunk})
-
-#    def add_categories_in_ups(rows):
-#        table = dynamodb.Table('user_profile_service')
-#        for i, row in enumerate(rows):
-#            table.update_item(Key={'user_id': '%s' % row['customer_id']}, UpdateExpression='SET categories = :val', ExpressionAttributeValues={':val': row['value']})
 
 def _generate_top_categories(df, es_scroll_results, bucket_name):
     l3_cat_2_name = {cat_obj['id']: cat_obj['name'] for l in es_scroll_results['primary_categories'].values() for ele in l for cat_type, cat_obj in json.loads(ele).items() if cat_type == 'l3'}
@@ -88,8 +68,8 @@ def _generate_top_categories(df, es_scroll_results, bucket_name):
     l3_name_udf = udf(lambda cat_id: l3_cat_2_name.get(cat_id), StringType())
     df = df.withColumn('name', l3_name_udf('l3_category'))
     top_categories = df.select(['l3_category']).limit(n).rdd.flatMap(lambda x: x).collect()
-    s3_client.put_object(Bucket=bucket_name, Key=CATEGORY_2_NAME_JSON, Body=json.dumps(l3_cat_2_name), ContentType='application/json')
-    s3_client.put_object(Bucket=bucket_name, Key=TOP_CATEGORIES_JSON, Body=json.dumps(top_categories), ContentType='application/json')
+    s3_client.put_object(Bucket=bucket_name, Key=category_2_name_json, Body=json.dumps(l3_cat_2_name), ContentType='application/json')
+    s3_client.put_object(Bucket=bucket_name, Key=top_categories_json, Body=json.dumps(top_categories), ContentType='application/json')
     return df
 
 def generate_top_categories(platform, bucket_name, n, start_datetime, end_datetime):
@@ -115,8 +95,8 @@ def make_and_save_model(bucket_name, corpus):
         lsi = models.LsiModel(normalized_corpus, num_topics=200)
         lsi.save(temp_dir + '/model.lsi')
         print('Uploading lsi model onto s3')
-        S3Utils.upload_dir(temp_dir, bucket_name, CATEGORIES_LSI_MODEL_DIR)
-        return CATEGORIES_LSI_MODEL_DIR
+        S3Utils.upload_dir(temp_dir, bucket_name, categories_lsi_model_dir)
+        return categories_lsi_model_dir
 
 def load_model(bucket_name, s3_path):
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -146,7 +126,8 @@ def generate_top_categories_for_user(platform, start_datetime, end_datetime, top
     print("Total number of customers to be updated: %d" % len(rows))
     print("Few users getting updated are listed below")
     print([row['customer_id'] for row in rows[:10]])
-    CategoriesUtils.add_categories_in_ups(rows)
+    #CategoriesUtils.add_categories_in_ups(rows)
+    UPSUtils.add_recommendations_in_ups(ups_field_name, rows)
     print("Done Writing the categories recommendations " + str(datetime.now()))
 
 def prepare_views_ca_dataframe(files):
@@ -198,7 +179,7 @@ def prepare_views_ca_dataframe(files):
     print("Total Number of rows now: %d" % df.count())
     return df
 
-def generate_top_categories_from_views(top_categories, lsi_model, days=None, limit=None):
+def generate_top_categories_from_views(top_categories, lsi_model, algo, days=None, limit=None):
     FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, [])
     csvs_path = S3Utils.ls_file_paths(env_details['bucket_name'], VIEWS_CA_S3_PREFIX, True)
     csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 31 , csvs_path))
@@ -257,12 +238,14 @@ def generate_top_categories_from_views(top_categories, lsi_model, days=None, lim
     norm_model = models.NormModel()
     sorted_cats_rdd = views_rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=row['vec'], sorted_cats=list(filter(lambda x: x not in customer_2_last_order_categories.get(row['customer_id'], []), map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(row['vec'])]]), key=lambda e: -e[1])))) + customer_2_last_order_categories.get(row['customer_id'], [])))
     #sorted_cats_udf = udf(lambda customer_id, user_cat_doc: list(filter(lambda x: x not in customer_2_last_order_categories[customer_id], map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(user_cat_doc)]]), key=lambda e: -e[1])))) + customer_2_last_order_categories[customer_id], ArrayType(IntegerType()))
-    rows = [{'customer_id': row['customer_id'], 'value': {'lsi_views': row['sorted_cats']}} for row in sorted_cats_rdd.collect()]
+    #rows = [{'customer_id': row['customer_id'], 'value': {'lsi_views': row['sorted_cats']}} for row in sorted_cats_rdd.collect()]
+    rows = [{'customer_id': row['customer_id'], 'value': {algo: row['sorted_cats']}} for row in sorted_cats_rdd.collect()]
     print("Writing the categories recommendations " + str(datetime.now()))
     print("Total number of customers to be updated: %d" % len(rows))
     print("Few users getting updated are listed below")
-    print([row['customer_id'] for row in rows[:10]])
-    CategoriesUtils.add_categories_in_ups(rows)
+    print([row['customer_id'] for row in rows[:100]])
+    #CategoriesUtils.add_categories_in_ups(rows)
+    UPSUtils.add_recommendations_in_ups(ups_field_name, rows)
     print("Done Writing the categories recommendations " + str(datetime.now()))
 
 if __name__ == '__main__':
@@ -279,6 +262,7 @@ if __name__ == '__main__':
     parser.add_argument('--orders-count', type=int, default=10)
     parser.add_argument('--limit', type=int)
     parser.add_argument('--platform', default='nykaa', choices=['nykaa','men'])
+    parser.add_argument('--target-widget', default='categories', choices=['categories','search_bar'])
     parser.add_argument('-n', '--n', default=20, type=int)
     
     argv = vars(parser.parse_args())
@@ -298,12 +282,39 @@ if __name__ == '__main__':
     platform = argv.get('platform')
     n = argv.get('n')
     orders_count = argv.get('orders_count')
+    target_widget = argv.get('target_widget')
     limit = argv.get('limit')
 
     env_details = RecoUtils.get_env_details()
     computation_start_datetime = datetime.now() - timedelta(days=use_months*30)
 
+    if target_widget == 'categories':
+        if n == 20:
+            top_categories_json = CAT_PAGE_TOP_CATEGORIES_JSON
+            categories_lsi_model_dir = CAT_PAGE_CATEGORIES_LSI_MODEL_DIR
+            algo = "lsi_views"
+        else:
+            top_categories_json = CAT_PAGE_TOP_CATEGORIES_CUSTOM_N_JSON % n
+            categories_lsi_model_dir = CAT_PAGE_CATEGORIES_LSI_MODEL_CUSTOM_N_DIR % n
+            algo = "lsi_views_%d" % n
+        category_2_name_json = CAT_PAGE_CATEGORY_2_NAME_JSON
+        #categories_lsi_model_dir = CAT_PAGE_CATEGORIES_LSI_MODEL_DIR
+        ups_field_name = 'categories'
+    elif target_widget == 'search_bar':
+        top_categories_json = SEARCH_BAR_TOP_CATEGORIES_JSON
+        category_2_name_json = SEARCH_BAR_CATEGORY_2_NAME_JSON
+        categories_lsi_model_dir = SEARCH_BAR_CATEGORIES_LSI_MODEL_DIR
+        ups_field_name = 'search_bar_categories'
+        algo = "lsi_views"
+    else:
+        raise Exception('unknown target widget')
 
+    print("Printing the various variable values custom to target widget")
+    print("top_categories_json=%s" % top_categories_json)
+    print("category_2_name_json=%s" % category_2_name_json)
+    print("categories_lsi_model_dir=%s" % categories_lsi_model_dir)
+    print("ups_field_name=%s" % ups_field_name)
+ 
     if do_gen_top_cats | do_prepare_model:
         df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, str(computation_start_datetime), None, None) 
         if do_gen_top_cats:
@@ -315,12 +326,12 @@ if __name__ == '__main__':
     if gen_user_categories:
         #json.loads(s3_client.get_object(Bucket='nykaa-dev-recommendations', Key='cool.json')['Body'].read().decode('utf-8'))
         print('Loading top categories')
-        top_categories = json.loads(s3_client.get_object(Key=TOP_CATEGORIES_JSON, Bucket=env_details['bucket_name'])['Body'].read().decode('utf-8'))
+        top_categories = json.loads(s3_client.get_object(Key=top_categories_json, Bucket=env_details['bucket_name'])['Body'].read().decode('utf-8'))
         print('Loading LSI Model')
-        lsi_model = load_model(env_details['bucket_name'], CATEGORIES_LSI_MODEL_DIR)
+        lsi_model = load_model(env_details['bucket_name'], categories_lsi_model_dir)
         print('Generate top categories for user')
         #generate_top_categories_for_user(platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count)
         if views:
-            generate_top_categories_from_views(top_categories, lsi_model, days=argv.get('days'), limit=limit)
+            generate_top_categories_from_views(top_categories, lsi_model, algo, days=argv.get('days'), limit=limit)
         else:
             generate_top_categories_for_user(platform, start_datetime, end_datetime, top_categories, lsi_model, orders_count)

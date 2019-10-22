@@ -205,7 +205,7 @@ def compute_recommendations(algo, platform, computation_start_datetime, p2p_star
     print("Total number of customers to be updated: %d" % len(rows))
     print("Few users getting updated are listed below")
     print([row['customer_id'] for row in rows[:10]])
-    UPSUtils.add_recommendations_in_ups(rows)
+    UPSUtils.add_recommendations_in_ups('recommendations', rows)
     print("Done Writing the user recommendations " + str(datetime.now()))
     #MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
 

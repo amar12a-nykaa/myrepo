@@ -20,7 +20,7 @@ if __name__ == '__main__':
             'HadoopJarStep': {
                 'Jar': 'command-runner.jar',
                 'Args': [
-                    'spark-submit', '/home/hadoop/%s' % Constants.GEN_U2P_VIEWS_SCRIPT
+                    'spark-submit', '/home/hadoop/%s' % Constants.GEN_U2P_SIMPLE_VIEWS_SCRIPT
                 ] + command_line_arguments
             }
         }
