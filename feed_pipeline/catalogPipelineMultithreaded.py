@@ -63,7 +63,7 @@ if getCount() > 1:
     raise Exception("Pipeline is already running. Exiting without doing anything")
 
 
-def indexESData(file_path, force_run):
+def indexESData(file_path, force_run, offerbatchsize, offerswitch):
     indexes = EsUtils.get_active_inactive_indexes("livecore")
     active_index = indexes['active_index']
     inactive_index = indexes['inactive_index']
@@ -85,7 +85,7 @@ def indexESData(file_path, force_run):
 
     print("\n\nES: Indexing documents from csv file '%s' to index '%s'." % (file_path, inactive_index))
     CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index,
-                         limit=argv['limit'], update_productids=True)
+                         limit=argv['limit'], update_productids=True, offerbatchsize=offerbatchsize, offerswitch=offerswitch)
 
     sett = {'refresh_interval': '1s'}
     index_client.put_settings(sett, inactive_index)
@@ -138,6 +138,8 @@ if __name__ == "__main__":
     parser.add_argument("--no-swap", action="store_true", help="Do not swap index")
     parser.add_argument("--throw-dummy-error", action="store_true", help="Throws an dummy error for testing purpose")
     parser.add_argument("--bestsellerupdate", default=True, type=bool)
+    parser.add_argument("-b", "--offerbatchsize", default=1000, help='size of offer docs batch', type=int)
+    parser.add_argument("-w", "--offerswitch", default=False, help='switch for fetch_offers function', type=bool)
 
     argv = vars(parser.parse_args())
 
@@ -194,9 +196,11 @@ if __name__ == "__main__":
     print("Time taken to import data from Nykaa: %s seconds" % time.strftime("%M min %S seconds",
                                                                              time.gmtime(import_duration)))
 
+    offerbatchsize = argv['offerbatchsize']
+    offerswitch = argv['offerswitch']
     # Index Elastic Search Data
     if argv['search_engine'] in ['elasticsearch', None]:
-        indexESData(file_path, force_run)
+        indexESData(file_path, force_run, offerbatchsize, offerswitch)
 
     if argv['bestsellerupdate']:
         update_bestseller_data(100)
