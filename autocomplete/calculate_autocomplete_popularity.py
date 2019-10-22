@@ -13,7 +13,7 @@ VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro']
 PRIVATE_LABEL_BRANDS = ['1937','7666','9127']
 BOOST_FACTOR = 1.1
 BLACKLISTED_FACETS = ['old_brand_facet', ]
-BRAND_EXCLUDE_LIST = ['1172', '1257']
+BRAND_EXCLUDE_LIST = ['9817']
 POPULARITY_THRESHOLD = 0.1
 base_aggregation = {
     "tags": {
