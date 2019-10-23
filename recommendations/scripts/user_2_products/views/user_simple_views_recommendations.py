@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, date
 from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType, ArrayType
 from pyspark.sql.functions import udf, col, desc
+from pyspark.sql.functions import concat, col, lit, udf, isnan, desc
 import pyspark.sql.functions as func
 from pyspark.sql.window import Window
 
@@ -52,38 +53,90 @@ U2P_LSI_MODEL_DIR = 'u2p/models/lsi_views'
 DAILY_SYNC_FILE_PREFIX= 'Nykaa_CustomerInteractions_'
 VIEWS_CA_S3_PREFIX = 'u2p/data/'
 
+CAV_APP_DATA_PATH = 'cav/data/app/'
+DAILY_SYNC_FILE_APP_PREFIX = 'cav_app_daily'
 
-def generate_customer_purchases_corpus(df):
-    df = df.select(['customer_id', 'order_id', 'product_id']).distinct().dropna().groupBy(['customer_id', 'product_id']).agg({'order_id': 'count'}).withColumnRenamed('count(order_id)', 'orders_count')
-    df = df.groupBy(['customer_id']).agg(func.collect_list(func.struct(col('product_id'), col('orders_count'))).alias('product_freq'))
-    return df.select(['customer_id', 'product_freq']).rdd.map(lambda row: (row['customer_id'], [[product_count['product_id'], product_count['orders_count']] for product_count in row['product_freq']])).toDF(['customer_id', 'product_freq'])
-    #return {row['customer_id']: row['l3_category_freq'] for row in customer_cat_corpus_rows}
+def prepare_data(files, desktop):
+    schema = StructType([
+        StructField("Date", StringType(), True),
+        StructField("Visitor_ID", StringType(), True),
+        StructField("Visit Number", IntegerType(), True),
+        StructField("Products", IntegerType(), True),
+        StructField("Product Views", IntegerType(), True)])
 
-def make_and_save_model(bucket_name, all_products, corpus):
-    s3 = boto3.client('s3')
-    with tempfile.TemporaryDirectory() as temp_dir:
-        with open(temp_dir + '/all_products.json', 'w+') as f:
-            json.dump(all_products, f)
-        norm_model = models.NormModel()
-        normalized_corpus = []
-        print('Normalizing the corpus')
-        for doc in corpus:
-            normalized_corpus.append(norm_model.normalize(doc))
-        print('Making lsi model')
-        lsi = models.LsiModel(normalized_corpus, num_topics=200)
-        lsi.save(temp_dir + '/model.lsi')
-        print('Uploading lsi model onto s3')
-        S3Utils.upload_dir(temp_dir, bucket_name, U2P_LSI_MODEL_DIR)
-        return U2P_LSI_MODEL_DIR
+    df = spark.read.load(files[0], header=True, format='csv', schema=schema)
 
-def load_model(bucket_name, s3_path):
-    with tempfile.TemporaryDirectory() as temp_dir:
-        S3Utils.download_dir(s3_path, s3_path, temp_dir, bucket_name)
-        model = models.LsiModel.load(temp_dir + '/model.lsi')
-        return model
+    for i in range(1, len(files)):
+        df = df.union(spark.read.load(files[i], header=True, format='csv', schema=schema))
+    df = df.cache()
 
-def generate_products_corpus(product_ids):
-    return [[[product_id, 1]] for product_id in product_ids]
+    df = df.filter(df['Date'].isNotNull())
+    df = df.withColumn("Date", udf(lambda d: datetime.strptime(d, '%B %d, %Y'), DateType())(col('Date')))
+    # Check below
+    df = df.filter(((date.today() - timedelta(days=10)) <= col('Date')))
+
+    print("Rows count: " + str(df.count()))
+
+    print('Cleaning out null or empty Visitor_ID and Visit Number')
+    df = df.filter((df["Visitor_ID"] != "") & df["Visitor_ID"].isNotNull() & df["Visit Number"].isNotNull() & ~isnan(df["Visit Number"]))
+    print("Rows count: " + str(df.count()))
+
+    df = df.withColumn('session_id', concat(col("Visitor_ID"), lit("_"), col("Visit Number")))
+
+    print('Cleaning out null products and zero product views')
+    df = df.filter(df['Products'].isNotNull() & (df['Product Views'] > 0))
+    print("Rows count: " + str(df.count()))
+    df = df.withColumnRenamed('Products', 'product_id')
+    print('Only taking distinct product_id and session_id')
+    df = df.select(['product_id', 'session_id']).distinct()
+    print("Rows count: " + str(df.count()))
+
+    print('Scrolling ES for results')
+    results = ESUtils.scrollESForResults()
+    print('Scrolling ES done')
+    child_2_parent = results['child_2_parent']
+
+    def convert_to_parent(product_id):
+        return child_2_parent.get(product_id, product_id)
+
+    convert_to_parent_udf = udf(convert_to_parent, IntegerType())
+    print('Converting product_id to parent')
+    df = df.withColumn("product_id", convert_to_parent_udf(df['product_id']))
+    df = df.na.drop()
+    df = df.select(['product_id', 'session_id']).distinct()
+    print("Distinct Product counts: " + str(df.select('product_id').distinct().count()))
+    print('Data preparation done, returning dataframe')
+    return df, results
+
+def compute_cav(platform, files):
+    df, results = prepare_data(files, False)
+
+    print("Self joining the dataframe: Computing all the non product to product pairs")
+    df = df.withColumnRenamed('product_id', 'product_id_x').join(df.withColumnRenamed('product_id', 'product_id_y'), on="session_id", how="inner")
+
+    print("Product Pairs count: " + str(df.count()))
+
+    print("Filtering out duplicate pairs")
+    df = df[df.product_id_x < df.product_id_y]
+    print("Product Pairs count: " + str(df.count()))
+
+    print("Computing sessions for product pairs")
+    df = df.groupBy(['product_id_x', 'product_id_y']).agg({'session_id': 'count'})
+    print("Product pairs count: " + str(df.count()))
+
+    df = df.withColumnRenamed("count(session_id)", 'similarity')
+
+    print("Filtering out all the product pairs with a threshold of atleast 2 sessions")
+    df = df[df['similarity'] >= 2]
+    print("Product Pairs count: " + str(df.count()))
+
+    product_2_mrp = results['product_2_mrp']
+
+    df = df.withColumnRenamed('product_id_x', 'product').withColumnRenamed('product_id_y', 'recommendation').select(['product', 'recommendation', 'similarity']).union(df.withColumnRenamed('product_id_y', 'product').withColumnRenamed('product_id_x', 'recommendation').select(['product', 'recommendation', 'similarity'])).select(['product', 'recommendation', 'similarity']).withColumn('rank', func.dense_rank().over(Window.partitionBy('product').orderBy(desc('similarity')))).filter(col('rank') < 25)
+    #df = df.groupby(['product']).agg(func.collect_list(func.struct('recommendation', 'similarity')).alias('recommendation_struct_list'))
+    return df
+    #sort_udf = udf(lambda l: [ele[0] for ele in sorted(l, key=lambda e: -e[1])], ArrayType(IntegerType()))
+    #df = df.select("product", sort_udf("recommendation_struct_list").alias("recommendations"))
 
 def prepare_views_ca_dataframe(files):
     schema = StructType([
@@ -144,13 +197,12 @@ def prepare_views_ca_dataframe(files):
     print("Total Number of rows now: %d" % df.count())
     return df, results
 
-def generate_recommendations(all_products, lsi_model, days=None, limit=None):
-    #FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, ['Interaction_one_time_20190501-20190620.zip'])
+def generate_recommendations(cav_df, days=None, limit=None):
     FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, [])
     csvs_path = S3Utils.ls_file_paths(env_details['bucket_name'], VIEWS_CA_S3_PREFIX, True)
-    csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 30 , csvs_path))
+    # TODO check below
+    csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 15 , csvs_path))
     print(csvs_path)
-    #update_csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")) >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24)).date() , csvs_path))
     df, results = DataUtils.prepare_views_ca_dataframe(spark, csvs_path, VIEWS_CA_S3_PREFIX, '/data/u2p/views/data/', True)
     customer_ids_need_update = []
     if days:
@@ -171,9 +223,9 @@ def generate_recommendations(all_products, lsi_model, days=None, limit=None):
         weight = views*0.3 + cart_additions*0.7
         #row_date = datetime.strptime(row_date, '%Y-%m-%d').date()
         today = date.today()
-        if (today - row_date).days <= 7:
+        if (today - row_date).days <= 5:
             return 2*weight
-        elif (today - row_date).days <= 14:
+        elif (today - row_date).days <= 10:
             return 1.5*weight
         else:
             return weight
@@ -186,35 +238,29 @@ def generate_recommendations(all_products, lsi_model, days=None, limit=None):
     df = df.withColumn('weight', udf(calculate_weight, FloatType())(col('date'), col('views'), col('cart_additions')))
     df = df.filter(col('weight') != 0.0)
     df = df.groupBy(['customer_id', 'product_id']).agg(func.sum(col('weight')).alias('weight'))
-    df = df.groupBy(['customer_id']).agg(func.collect_list(func.struct('product_id', 'weight')).alias('vec'))
+    df = df.join(cav_df.withColumnRenamed('product', 'product_id'), on="product_id", how="inner")
+    #df = df.withColumn("Date", udf(lambda d: datetime.strptime(d, '%B %d, %Y'), DateType())(col('Date')))
+    df = df.withColumn('weighted_similarity', udf(lambda sim, w: sim*w, FloatType())(col('similarity'), col('weight'))).groupBy(['customer_id', 'recommendation']).agg({'weighted_similarity': 'sum'}).withColumnRenamed('sum(weighted_similarity)', 'weighted_similarity').groupBy(['customer_id']).agg(func.collect_list(func.struct('recommendation', 'weighted_similarity')).alias('vec'))
 
     print("Total number of customers to vector: %d" % df.count())
-    views_rdd = df.select(['customer_id', 'vec']).rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=[[product_count['product_id'], product_count['weight']] for product_count in row['vec']]))
+    views_rdd = df.select(['customer_id', 'vec']).rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=[[product_count['recommendation'], product_count['weighted_similarity']] for product_count in row['vec']]))
 
     # Preparing customer_2_last_order_categories
     start_datetime = (datetime.now() - timedelta(hours=24*30))
     orders_df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, start_datetime, None, None, customer_ids_need_update) 
     # TODO instead of just removing the products, we can give neg weightage to products purchased
     customer_2_last_month_purchase_categories = {int(row['customer_id']): row['categories'] for row in orders_df.select(['customer_id', 'l3_category']).dropna().distinct().groupBy(['customer_id']).agg(func.collect_list('l3_category').alias('categories')).collect()}
-    #customer_2_last_month_purchases = {int(row['customer_id']): row['products'] for row in orders_df.select(['customer_id', 'product_id']).distinct().groupBy(['customer_id']).agg(func.collect_list('product_id').alias('products')).collect()}
-
 
     product_2_l3_category = results['product_2_l3_category']
-    idx_2_product_id = {key: product_id for key, product_id in enumerate(all_products)}
-    print("Total number of products: %d" % len(all_products))
-    products_corpus_lsi = lsi_model[generate_products_corpus(all_products)]
-    index = similarities.MatrixSimilarity(products_corpus_lsi)
-    norm_model = models.NormModel()
-    sorted_products_rdd = views_rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=row['vec'], sorted_products=list(filter(lambda x: (not product_2_l3_category.get(x) ) or product_2_l3_category[x] not in customer_2_last_month_purchase_categories.get(row['customer_id'], []), map(lambda ele: idx_2_product_id[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(row['vec'])]]), key=lambda e: -e[1]))))[:200])) 
-    #sorted_cats_udf = udf(lambda customer_id, user_cat_doc: list(filter(lambda x: x not in customer_2_last_order_categories[customer_id], map(lambda ele: idx_2_cat[ele[0]], sorted(enumerate(index[lsi_model[norm_model.normalize(user_cat_doc)]]), key=lambda e: -e[1])))) + customer_2_last_order_categories[customer_id], ArrayType(IntegerType()))
-    #rows = [(platform, row['customer_id'], 'user', 'bought', 'views_lsi_model', json.dumps(row['sorted_products'])) for row in sorted_products_rdd.collect()]
-    rows = [{'customer_id': row['customer_id'], 'value': {'views_lsi_model': row['sorted_products']}} for row in sorted_products_rdd.collect()]
+    sorted_products_rdd = views_rdd.map(lambda row: Row(customer_id=row['customer_id'], vec=row['vec'], sorted_products=list(filter(lambda x: (not product_2_l3_category.get(x) ) or product_2_l3_category[x] not in customer_2_last_month_purchase_categories.get(row['customer_id'], []), map(lambda ele: ele[0], sorted(row['vec'], key=lambda e: -e[1]))))[:200])) 
+    rows = [{'customer_id': row['customer_id'], 'value': {'coccurence_simple_views': row['sorted_products']}} for row in sorted_products_rdd.collect()]
     print("Writing the user recommendations " + str(datetime.now()))
     print("Total number of customers to be updated: %d" % len(rows))
     print("Few users getting updated are listed below")
     print([row['customer_id'] for row in rows[:10]])
     #MysqlRedshiftUtils.add_recommendations_in_mysql(MysqlRedshiftUtils.mlMysqlConnection(), 'recommendations_v2', rows)
-    UPSUtils.add_recommendations_in_ups(rows)
+    UPSUtils.add_recommendations_in_ups('recommendations', rows)
+    #UPSUtils.add_recommendations_in_ups('', rows)
     print("Done Writing the user recommendations " + str(datetime.now()))
 
 if __name__ == '__main__':
@@ -228,8 +274,6 @@ if __name__ == '__main__':
     parser.add_argument('--platform', default='nykaa', choices=['nykaa','men'])
  
     argv = vars(parser.parse_args())
-    do_prepare_model = argv.get('prepare_model')
-    gen_user_recommendations = argv.get('gen_user_recommendations')
     use_months = argv.get('use_months')
     days = argv.get('days')
     hours = argv.get('hours')
@@ -238,21 +282,21 @@ if __name__ == '__main__':
 
     env_details = RecoUtils.get_env_details()
     computation_start_datetime = datetime.now() - timedelta(days=use_months*30)
+    FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_APP_PREFIX, env_details['bucket_name'], CAV_APP_DATA_PATH)
+    data_path = CAV_APP_DATA_PATH
+
+    if not env_details['is_emr']:
+        S3Utils.download_dir(CAV_APP_DATA_PATH, CAV_APP_DATA_PATH, '/data/cav/app/data/', env_details['bucket_name'])
+        files = [f for f in glob.glob('/data/cav/app/data/' + CAV_APP_DATA_PATH + "**/*.csv", recursive=True)]
+    else:
+        files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
+
+    #files = S3Utils.ls_file_paths(env_details['bucket_name'], data_path, True)
+    print('Filtering out last 3 months data')
+    # TODO check below
+    files = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 90 , files))
+
+    cav_df = compute_cav(platform, files)
+    generate_recommendations(cav_df, days=argv.get('days'), limit=limit)
 
 
-    if do_prepare_model:
-        df, results = DataUtils.prepare_orders_dataframe(spark, platform, True, str(computation_start_datetime), None, None) 
-        print('Total number of product_ids: %d' % df.select('product_id').distinct().count())
-        all_products = df.select(['product_id']).distinct().rdd.flatMap(lambda x: x).collect()
-        customer_2_product_corpus_dict = {row['customer_id']: row['product_freq'] for row in generate_customer_purchases_corpus(df).collect()}
-        make_and_save_model(env_details['bucket_name'], all_products, list(customer_2_product_corpus_dict.values()))
-
-    if gen_user_recommendations:
-        print('Loading LSI Model')
-        lsi_model = load_model(env_details['bucket_name'], U2P_LSI_MODEL_DIR)
-        s3_resource = boto3.resource('s3')
-        content_object = s3_resource.Object(env_details['bucket_name'], U2P_LSI_MODEL_DIR + '/all_products.json')
-        file_content = content_object.get()['Body'].read().decode('utf-8')
-        all_products = json.loads(file_content)
-        print('Generate recommendations for user')
-        generate_recommendations(all_products, lsi_model, days=argv.get('days'), limit=limit)

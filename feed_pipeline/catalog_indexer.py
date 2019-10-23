@@ -13,11 +13,13 @@ import pprint
 import queue
 import re
 import socket
+import subprocess
 import sys
 import threading
 import time
 import timeit
 import traceback
+import boto3
 
 from IPython import embed
 from collections import OrderedDict
@@ -35,6 +37,7 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
 from loopcounter import LoopCounter
 from mongoutils import MongoUtils
+from offerutils import OfferUtils
 
 sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
 from generate_user_product_vectors import get_vectors_from_mysql_for_es
@@ -53,6 +56,8 @@ else:
 
 RECORD_GROUP_SIZE = 100
 APPLIANCE_MAIN_CATEGORY_ID = "1390"
+CM_TO_INCH_FACTOR = 0.3937
+INCH_TO_CM_FACTOR = 2.54
 
 conn = DiscUtils.mysqlConnection()
 
@@ -81,11 +86,9 @@ def getCurrentDateTime():
     current_datetime = current_datetime.astimezone(to_zone)
     return current_datetime
 
-
-
 class Worker(threading.Thread):
     def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
-                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter):
+                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch):
         self.q = q
         self.search_engine = search_engine
         self.collection = collection
@@ -98,6 +101,8 @@ class Worker(threading.Thread):
         self.product_2_vector_lsi_200 = product_2_vector_lsi_200 
         self.product_2_vector_lsi_300 = product_2_vector_lsi_300 
         self.size_filter = size_filter
+        self.offerbatchsize = offerbatchsize
+        self.offerswitch = offerswitch
 
         super().__init__()
 
@@ -115,7 +120,7 @@ class Worker(threading.Thread):
                 db_result = product_history_table.find({"_id": {"$in": product_ids}})
                 for row in db_result:
                   product_history[row['_id']] = row
-                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history)
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history,self.offerbatchsize,self.offerswitch)
                 is_first=False
             except queue.Empty:
                 return
@@ -223,14 +228,17 @@ class CatalogIndexer:
         "gravitymud": "gravitymud gravity mud",
         "youthmud": "youthmud youth mud",
         "waxing": "waxing wax",
-        "wax": "wax waxing"
+        "wax": "wax waxing",
+        "bags": "bags women women's ladies girls female girl",
+        "jewellery": "jewellery women women's ladies girls female girl",
+        "lingerie": "lingerie women women's ladies girls female girl",
+        "dresses": "dresses women women's ladies girls female girl",
+        "twenty dresses": "twenty dresses 20dresses 20"
     }
 
-    yesterday = datetime.now() - timedelta(days=1)
-    foldername = yesterday.strftime('%Y%m%d')
-    folderpath = "/nykaa/product_metadata/dt="+foldername
+    folderpath = "/nykaa/product_metadata/"
 
-    filepath = folderpath +"/"+foldername+".csv"
+    filepath = folderpath +"data.csv"
 
     if os.path.exists(filepath):
       os.remove(filepath)
@@ -424,6 +432,78 @@ class CatalogIndexer:
             pws_input_docs.append(doc)
         return pws_input_docs, errors
 
+    def fetch_offers(input_docs, offerbatchsize=1000):
+
+        request_url = "http://" + PipelineUtils.getOffersAPIHost() + "/api/v1/catalog/products/offer"
+        SQS_ENDPOINT, SQS_REGION = PipelineUtils.getSQSDetails()
+        for i in range(0, len(input_docs), offerbatchsize):
+            current_docs_batch = input_docs[i:i+offerbatchsize]
+            req_body = []
+            product_id_list = []
+            for doc in current_docs_batch:
+                record = {}
+                if doc.get("product_id"):
+                    record["productId"] = doc.get('product_id')
+                    product_id_list.append(record["productId"])
+                else:
+                    continue
+                record["sku"] = doc.get('sku', "")
+                record["name"] = doc.get('title', "")
+                record["description"] = doc.get('description', "")
+                record["categoryIds"] = ""
+                if doc.get('category_ids'):
+                    category_ids_list = doc.get('category_ids')
+                    record["categoryIds"] = ','.join(str(category_id) for category_id in category_ids_list)
+                record["mrp"] = doc.get('mrp', 0)
+                record["sp"] = doc.get('price', 0)
+                manufacturer_id_list = doc.get('old_brand_ids',[])
+                if len(manufacturer_id_list)==0:
+                    record["manufacturerId"] = ""
+                else:
+                    record["manufacturerId"] = manufacturer_id_list[0]
+                req_body.append(record)
+            req_body = json.dumps(req_body).encode('utf8')
+
+            attempts = 2
+            while(attempts):
+                try:
+                    res = Request(request_url, data=req_body, headers={'content-type': 'application/json'})
+                    result = json.loads(str(urlopen(res).read().decode('utf-8')))
+                    break
+                except:
+                    attempts = attempts-1
+                    print("Bulk offers api request failed. Attempts remaining %s " % attempts)
+                    if attempts==0:
+                        print("Skipping offers updation on " + str(product_id_list))
+                        print(traceback.format_exc())
+
+            if(attempts==0):
+                try:
+                    sqs = boto3.client("sqs", region_name=SQS_REGION)
+                    queue_url = SQS_ENDPOINT
+                    response = sqs.send_message(
+                        QueueUrl=queue_url,
+                        DelaySeconds=0,
+                        MessageAttributes={},
+                        MessageBody=(json.dumps(product_id_list, default=str))
+                    )
+                except:
+                    print(traceback.format_exc())
+                    print("Insertion in SQS failed")
+                continue
+            #update in input docs
+            response_data = result.get('data',{})
+            for doc in current_docs_batch:
+                product_id = doc.get('product_id')
+                offers_data = response_data.get(product_id,{})
+                if offers_data.get('offers'):
+                    offers_dict = offers_data.get('offers',{})
+                    OfferUtils.merge_offer_data(doc, offers_dict)
+                    doc['offerUpdateEnable'] = True
+                else:
+                    error = offers_data.get('error')
+                    print("Product_id {},Error {}".format(product_id,error))
+
     def indexES(docs, index):
         if not index:
             indexes = EsUtils.get_active_inactive_indexes("livecore")
@@ -478,12 +558,47 @@ class CatalogIndexer:
         except Exception as ex:
             print({"msg": ex, "row": row})
 
+    def update_size_chart_attributes(doc):
+        size_chart_attributes = ['size_bust',
+                                 'size_hip',
+                                 'size_length',
+                                 'size_overbust',
+                                 'size_shoulder',
+                                 'size_underbust',
+                                 'size_waist']
+        if doc.get('size_unit') and doc.get('size_unit').strip().lower() in ['cm', 'inch']:
+            size_unit = doc.pop('size_unit')
+            inch_size = {}
+            cm_size = {}
+            for attribute in size_chart_attributes:
+                if doc.get(attribute):
+                    value = doc.get(attribute).replace(' ', '')
+                    #removing size_ from attributes
+                    if size_unit == 'inch':
+                        inch_size[attribute] = value
+                        cm_size[attribute] = CatalogIndexer.unit_conversion(attribute_value=value, factor=INCH_TO_CM_FACTOR)
+                    elif size_unit == 'cm':
+                        cm_size[attribute] = value
+                        inch_size[attribute] = CatalogIndexer.unit_conversion(attribute_value=value, factor=CM_TO_INCH_FACTOR)
+            if cm_size:
+                doc['inch_size'] = inch_size
+                doc['cm_size'] = cm_size
+
+    def unit_conversion(attribute_value, factor):
+        value_array = attribute_value.split('-')
+        for key, value in enumerate(value_array):
+            if value.isdigit():
+                value_array[key] = str(round(float(value) * factor))
+
+        val = '-'.join(value_array).replace(' ', '')
+        return val
+
     def formatESDoc(doc):
         for key, value in doc.items():
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
     @classmethod
-    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history):
+    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history,offerbatchsize,offerswitch):
         input_docs = []
         pws_fetch_products = []
         size_filter_flag = 0
@@ -495,7 +610,10 @@ class CatalogIndexer:
                 CatalogIndexer.validate_catalog_feed_row(row)
                 doc = {}
                 CatalogIndexer.update_generic_attributes_filters(doc=doc, row=row)
-                
+                doc['size_chart_enabled'] = bool(doc.get('size_chart_enabled'))
+                if doc['size_chart_enabled']:
+                    doc['size_unit'] = row.get('size_unit')
+                    CatalogIndexer.update_size_chart_attributes(doc=doc)
                 doc['sku'] = row['sku']
                 if skus and doc['sku'] not in skus:
                     continue
@@ -517,6 +635,9 @@ class CatalogIndexer:
                 doc['parent_id'] = row['parent_id'] if doc['type'] == 'simple' and row['parent_id'] else row[
                     'product_id']
                 doc['title'] = (re.sub(r'\s+', ' ', row['name'])).strip()
+                if 'with' in doc['title'].lower():
+                  title = doc['title'].lower()
+                  doc['title_prefix'] = title.split('with',1)[0]
                 doc['title_text_split'] = row['name']
                 doc['description'] = row['description']
                 doc['tags'] = (row['tag'] or "").split('|')
@@ -524,9 +645,9 @@ class CatalogIndexer:
                 doc['featured_in_titles'] = (row['featured_in_titles'] or "").split('|')
                 doc['featured_in_urls'] = (row['featured_in_urls'] or "").split('|')
                 doc['star_rating_count'] = int(row['rating'] or 0)
-                if row['rating_num'] and row['rating_percentage']:
+                if row['rating_num']:
                     doc['star_rating'] = row['rating_num']
-                    doc['star_rating_percentage'] = float(row['rating_percentage'] or 0)
+                    doc['star_rating_percentage'] = int(row['rating_num']*20)
                 doc['review_count'] = row['review_count'] or 0
                 doc['qna_count'] = row['qna_count'] or 0
                 if row['product_expiry']:
@@ -1009,7 +1130,8 @@ class CatalogIndexer:
             # index_duration = index_stop - index_start
             # print("fetch_price_availability time: %s seconds." % (
             #     time.strftime("%M min %S seconds", time.gmtime(index_duration))))
-
+            if offerswitch:
+                CatalogIndexer.fetch_offers(input_docs, offerbatchsize)
             # index elastic search
             if search_engine == 'elasticsearch':
                 # index_start = timeit.default_timer()
@@ -1020,7 +1142,7 @@ class CatalogIndexer:
                 
             CatalogIndexer.print_errors(errors)
 
-    def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None):
+    def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None, offerbatchsize=1000, offerswitch=False):
         skus = skus or []
         skus = [x for x in skus if x]
         if skus:
@@ -1102,10 +1224,9 @@ class CatalogIndexer:
 
         for _ in range(NUMBER_OF_THREADS):
             Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
-                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter).start()
+                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch).start()
         q.join()
         print("Index Catalog Finished!")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -1114,13 +1235,17 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--searchengine", default='elasticsearch')
     parser.add_argument("--update_productids", action='store_true', help='Adds product_id and parent_id to products table')
     parser.add_argument("--sku", type=str, default="")
+    parser.add_argument("-b", "--offerbatchsize", default=1000, help='size of offer docs batch', type=int)
+    parser.add_argument("-w", "--offerswitch", default=False, help='switch for fetch_offers function', type=bool)
     argv = vars(parser.parse_args())
     file_path = argv['filepath']
     collection = argv['collection']
     searchengine = argv['searchengine']
-
+    offerbatchsize = argv['offerbatchsize']
+    offerswitch = argv['offerswitch']
     argv['update_productids'] = True
     if argv['sku']:
       NUMBER_OF_THREADS = 1
     CatalogIndexer.index(searchengine, file_path, collection, update_productids=argv['update_productids'],
-                         skus=argv['sku'].split(","))
+                         skus=argv['sku'].split(","), offerbatchsize=offerbatchsize, offerswitch=offerswitch)
+

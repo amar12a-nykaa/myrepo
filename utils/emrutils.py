@@ -9,7 +9,7 @@ import constants as Constants
 class EMRUtils:
 
     def get_emr_client():
-        return boto3.client('emr', region_name='ap-southeast-1')
+        return boto3.client('emr', region_name='ap-south-1')
 
     def get_emr_setup_steps():
         env_details = RecoUtils.get_env_details()
@@ -39,6 +39,13 @@ class EMRUtils:
         env_details = RecoUtils.get_env_details()
         print(env_details)
         S3Utils.upload_dir(Constants.HOME_DIR, env_details['bucket_name'], 'nykaa_scripts', ['.git'])
+        if env_details['env'] == 'prod':
+            jobflow_role = 'DataPipelineDefaultResourceRole'
+            service_role = 'DataPipelineDefaultRole'
+        else:
+            jobflow_role = 'EMR_EC2_DefaultRole'
+            service_role = 'EMR_DefaultRole'
+
         with open(config) as f:
             configurations = json.load(f)
         try:
@@ -48,8 +55,10 @@ class EMRUtils:
                 LogUri='s3://%s/logs' % env_details['bucket_name'], \
                 Applications=[{'Name': 'Spark'}], \
                 Instances=instances, \
-                JobFlowRole='EMR_EC2_DefaultRole', \
-                ServiceRole='EMR_DefaultRole', \
+                JobFlowRole=jobflow_role, \
+                ServiceRole=service_role, \
+                #JobFlowRole='EMR_EC2_DefaultRole', \
+                #ServiceRole='EMR_DefaultRole', \
                 ScaleDownBehavior='TERMINATE_AT_TASK_COMPLETION',
                 VisibleToAllUsers=True,
                 Steps= before_steps + EMRUtils.get_emr_setup_steps() + after_steps,
@@ -62,6 +71,22 @@ class EMRUtils:
                     {
                         'Key': 'Purpose',
                         'Value': 'EMR'
+                    },
+                    {
+                        'Key': 'Environment',
+                        'Value': 'prod'
+                    },
+                    {
+                        'Key': 'Component',
+                        'Value': 'cd'
+                    },
+                    {
+                        'Key': 'Subcomponent',
+                        'Value': 'emr'
+                    },
+                    {
+                        'Key': 'Servicetype',
+                        'Value': 'EC2'
                     }
                 ],
                 EbsRootVolumeSize=100,

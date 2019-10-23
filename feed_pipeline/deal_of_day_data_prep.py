@@ -19,7 +19,7 @@ from popularity_api import get_popularity_for_id, validate_popularity_data_healt
 quantile_lower_limit = .25
 quantile_upper_limit = .75
 quantile_mid_limit = .50
-min_discount = 30
+min_discount = 25
 max_discount = 60
 DAILY_CATEGORY_LIMIT = 5
 DAILY_BRAND_LIMIT = 3
@@ -125,7 +125,7 @@ def get_sales_data():
   
   redshift_conn =  PasUtils.redshiftConnection()
   query  = """select ds.product_id as entity_id , count( distinct fodn.nykaa_orderno) from fact_order_detail_new fodn
-  left join fact_order_new fon on fon.nykaa_orderno = fodn.nykaa_orderno
+  left join fact_order_view fon on fon.nykaa_orderno = fodn.nykaa_orderno
   left join dim_sku ds on ds.sku = fodn.product_sku  
   where fon.order_date >= '{0}'
   and fon.order_date < '{1}'

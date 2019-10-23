@@ -10,7 +10,10 @@ from loopcounter import LoopCounter
 from idutils import strip_accents
 
 VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro']
+PRIVATE_LABEL_BRANDS = ['1937','7666','9127']
+BOOST_FACTOR = 1.1
 BLACKLISTED_FACETS = ['old_brand_facet', ]
+BRAND_EXCLUDE_LIST = ['9817']
 POPULARITY_THRESHOLD = 0.1
 base_aggregation = {
     "tags": {
@@ -34,6 +37,13 @@ def normalize(a):
   return (a-min(a))/(max(a)-min(a))
 
 
+def check_base_popularity(row):
+  for tag in VALID_CATALOG_TAGS:
+    if not row["valid_"+tag]:
+      row[tag] = 0
+  return row
+  
+
 def get_store_popularity_str(row):
   data = {}
   for tag in VALID_CATALOG_TAGS:
@@ -43,7 +53,7 @@ def get_store_popularity_str(row):
 
 def get_category_data():
   query = """select distinct l3_id as category_id, l3_name as category_name from product_category_mapping
-              where ( l1_id not in (77,194,9564,7287,3048)
+              where ( l1_id not in (77,194,9564,7287,3048, 5926)
                 and lower(l2_name) not like '%shop by%'
                 and l3_id not in (4036,3746,3745,3819,6620,6621)
                   or l2_id in (9614, 1286))"""
@@ -100,6 +110,7 @@ def get_popularity_data_from_es(valid_category_list):
       "brand_data": {
         "terms": {
           "field": "brand_ids.keyword",
+          "exclude": BRAND_EXCLUDE_LIST,
           "size": 10000
         },
         "aggs": base_aggregation
@@ -114,6 +125,7 @@ def get_popularity_data_from_es(valid_category_list):
           "brands" : {
             "terms": {
               "field": "brand_ids.keyword",
+              "exclude": BRAND_EXCLUDE_LIST,
               "size": 10000
             },
             "aggs": base_aggregation
@@ -138,14 +150,7 @@ def process_category_facet_popularity(valid_category_list):
   for tag in VALID_CATALOG_TAGS:
     data[tag] = []
   
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "benefits_facet", "color_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "concern_facet", "coverage_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "finish_facet", "formulation_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "gender_facet", "hair_type_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "filter_size_facet", "speciality_search_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "filter_product_facet", "usage_period_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "spf_facet", "preference_facet"), data)
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "skin_tone_facet", "skin_type_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "color_facet"), data)
   
   facet_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
@@ -155,10 +160,10 @@ def process_category_facet_popularity(valid_category_list):
   print("writing facet popularity to db")
   mysql_conn = PasUtils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
-  if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category_facets'"):
-    PasUtils.mysql_write("""create table brand_category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32),
+  if not PasUtils.mysql_read("SHOW TABLES LIKE 'category_facets'"):
+    PasUtils.mysql_write("""create table category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32),
                                 category_name varchar(32), facet varchar(20), popularity float, store_popularity varchar(255))""")
-  PasUtils.mysql_write("delete from brand_category_facets", connection=mysql_conn)
+  PasUtils.mysql_write("delete from category_facets", connection=mysql_conn)
   
   query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, store_popularity) VALUES (%s, %s, %s, %s, %s, %s) """
   data = pd.merge(facet_popularity, category_info, on='category_id')
@@ -185,6 +190,7 @@ def process_category(category_data):
   data['category_id'] = []
   for tag in VALID_CATALOG_TAGS:
     data[tag] = []
+    data["valid_"+tag] = []
   
   for category in category_data:
     popularity_data = {'category_id': category.get('key', 0)}
@@ -193,12 +199,17 @@ def process_category(category_data):
     
     data['category_id'].append(popularity_data.get('category_id'))
     for tag in VALID_CATALOG_TAGS:
-      data[tag].append(popularity_data.get(tag, 0))
-  
+      popularity = popularity_data.get(tag, -1)
+      if popularity < 0:
+        data[tag].append(0)
+        data["valid_"+tag].append(False)
+      else:
+        data[tag].append(popularity)
+        data["valid_" + tag].append(True)
   category_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
     category_popularity[tag] = 100 * normalize(category_popularity[tag]) + 100
-    category_popularity[tag] = category_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
+  category_popularity = category_popularity.apply(check_base_popularity, axis=1)
   category_popularity.to_csv('category_pop.csv', index=False)
   
   print("inserting category data in db")
@@ -229,10 +240,9 @@ def process_category(category_data):
   return
 
 
-def getAggQueryResult(valid_category_list, facet1, facet2):
+def getAggQueryResult(valid_category_list, facet1):
   global base_aggregation
   key1 = facet1 + ".keyword"
-  key2 = facet2 + ".keyword"
 
   query = {
     "aggs": {
@@ -243,8 +253,7 @@ def getAggQueryResult(valid_category_list, facet1, facet2):
           "size": 200
         },
         "aggs": {
-          facet1: {"terms": {"field": key1, "size": 100}, "aggs": base_aggregation},
-          facet2: {"terms": {"field": key2, "size": 100}, "aggs": base_aggregation}
+          facet1: {"terms": {"field": key1, "size": 100}, "aggs": base_aggregation}
         }
       }
     },
@@ -288,6 +297,7 @@ def process_brand(brand_data):
   data['brand_id'] = []
   for tag in VALID_CATALOG_TAGS:
     data[tag] = []
+    data["valid_"+tag] = []
   
   for brand in brand_data:
     popularity_data = {'brand_id': brand.get('key', 0)}
@@ -296,12 +306,18 @@ def process_brand(brand_data):
     
     data['brand_id'].append(popularity_data.get('brand_id'))
     for tag in VALID_CATALOG_TAGS:
-      data[tag].append(popularity_data.get(tag, 0))
+      popularity = popularity_data.get(tag, -1)
+      if popularity < 0:
+        data[tag].append(0)
+        data["valid_" + tag].append(False)
+      else:
+        data[tag].append(popularity)
+        data["valid_" + tag].append(True)
   
   brand_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
     brand_popularity[tag] = 200 * normalize(brand_popularity[tag]) + 100
-    brand_popularity[tag] = brand_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
+  brand_popularity = brand_popularity.apply(check_base_popularity, axis=1)
   brand_popularity.to_csv('brand_pop.csv', index=False)
   return brand_popularity
 
@@ -327,8 +343,17 @@ def process_brand_category(brand_category_data):
   
   brand_category_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
-    brand_category_popularity[tag] = 100 * normalize(brand_category_popularity[tag])
+    brand_category_popularity[tag] = (50 * normalize(brand_category_popularity[tag])) + 50
+    brand_category_popularity[tag] = brand_category_popularity[tag].apply(lambda x: x if x > 50.0 else 0)
   brand_category_popularity.to_csv('brand_category_popularity.csv', index=False)
+  
+  # promote private label
+  def boost_brand(row):
+    if str(row['brand_id']) in PRIVATE_LABEL_BRANDS:
+      for tag in VALID_CATALOG_TAGS:
+        row[tag] = BOOST_FACTOR * row[tag]
+    return row
+  brand_category_popularity = brand_category_popularity.apply(boost_brand, axis=1)
   
   print("writing brand category popularity to db")
   mysql_conn = PasUtils.mysqlConnection('w')
