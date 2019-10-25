@@ -71,6 +71,22 @@ class EMRUtils:
                     {
                         'Key': 'Purpose',
                         'Value': 'EMR'
+                    },
+                    {
+                        'Key': 'Environment',
+                        'Value': 'prod'
+                    },
+                    {
+                        'Key': 'Component',
+                        'Value': 'cd'
+                    },
+                    {
+                        'Key': 'Subcomponent',
+                        'Value': 'emr'
+                    },
+                    {
+                        'Key': 'Servicetype',
+                        'Value': 'EC2'
                     }
                 ],
                 EbsRootVolumeSize=100,
