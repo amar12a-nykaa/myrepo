@@ -102,7 +102,7 @@ class OfferSQSConsumer:
                 for message in response["Messages"]:
                     receipt_handle = message["ReceiptHandle"]
                     update_docs += json.loads(message["Body"])
-                    self.sqs.delete_message(QueueUrl=OFFERS_UPDATE_SQS_ENDPOINT, ReceiptHandle=receipt_handle)
+                    self.sqs.delete_message(QueueUrl=sqs_endpoint, ReceiptHandle=receipt_handle)
             else:
                 is_sqs_empty = True
                 print("Main Thread: SQS is empty!")
@@ -160,6 +160,7 @@ class OfferSQSConsumer:
             nykaa_pro_offer_facet['name'] = offer['name']
             doc['nykaa_pro_offer_facet'].append(nykaa_pro_offer_facet)
             doc['nykaa_pro_offer_ids'].append(offer['id'])
+        doc['delta_offer_update'] = True
 
     @classmethod
     def upload_one_chunk(cls, chunk, threadname):
