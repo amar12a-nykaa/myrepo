@@ -12,12 +12,11 @@ import threading
 import time
 import traceback
 from dateutil import tz
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
-from nykaa.settings import OFFERS_UPDATE_SQS_ENDPOINT
 
 
 total = 0
@@ -85,10 +84,12 @@ class OfferSQSConsumer:
             index -= 1
             self.q.put_nowait({})
 
+        sqs_endpoint = DiscUtils.get_offer_delta_sqs_details()
+
         while not is_sqs_empty:
 
             response = self.sqs.receive_message(
-                QueueUrl=OFFERS_UPDATE_SQS_ENDPOINT,
+                QueueUrl=sqs_endpoint,
                 AttributeNames=["SentTimestamp"],
                 MaxNumberOfMessages=10,
                 MessageAttributeNames=["All"],
