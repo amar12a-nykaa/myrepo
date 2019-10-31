@@ -600,6 +600,7 @@ class CatalogIndexer:
                 doc[key] = []
     @classmethod
     def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history,offerbatchsize,offerswitch):
+        start_time = int(round(time.time() * 1000))
         input_docs = []
         pws_fetch_products = []
         size_filter_flag = 0
@@ -1147,6 +1148,9 @@ class CatalogIndexer:
                 # print("indexES time: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
                 
             CatalogIndexer.print_errors(errors)
+
+        end_time = int(round(time.time() * 1000))
+        print("index record sync time : {} ms".format(end_time - start_time))
 
     def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None, offerbatchsize=1000, offerswitch=False):
         skus = skus or []
