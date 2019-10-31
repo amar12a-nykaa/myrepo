@@ -459,6 +459,9 @@ def handleColdStart(df):
   result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new']]
   result = result.groupby('product_id').agg({'calculated_popularity': 'max', 'calculated_popularity_new': 'max'}).reset_index()
   final_df = pd.merge(df.astype({'id': int}),  result.astype({'product_id': int}), left_on='id', right_on='product_id', how='outer')
+  final_df['id'] = numpy.where(final_df.id.notnull(), final_df.id, final_df.product_id)
+  final_df = final_df[final_df.id.notnull()]
+  final_df = final_df.astype({'id': int})
   final_df['popularity'] = numpy.where(final_df.calculated_popularity.notnull(), final_df.calculated_popularity, final_df.popularity)
   final_df['popularity_new'] = numpy.where(final_df.calculated_popularity_new.notnull(), final_df.calculated_popularity_new, final_df.popularity_new)
   final_df.drop(['calculated_popularity', 'calculated_popularity_new', 'product_id'], axis=1, inplace=True)
