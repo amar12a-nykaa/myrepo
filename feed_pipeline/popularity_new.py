@@ -310,6 +310,7 @@ def calculate_new_popularity():
   a = handleColdStart(a)
   a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
+  a.views = a.views.fillna(0)
   a.to_csv('a.csv', index=False)
   
   ctr = LoopCounter(name='Writing popularity to db', total=len(a.index))
