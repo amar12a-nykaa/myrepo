@@ -56,7 +56,8 @@
           "token_separator": ""
         }
       }
-    }
+    },
+    "number_of_replicas" : 3
   },
   "mappings": {
     "entity": {

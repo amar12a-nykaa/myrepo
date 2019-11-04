@@ -9,10 +9,11 @@ from esutils import EsUtils
 from loopcounter import LoopCounter
 from idutils import strip_accents
 
-VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro']
+VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro', 'ultra_lux']
 PRIVATE_LABEL_BRANDS = ['1937','7666','9127']
 BOOST_FACTOR = 1.1
 BLACKLISTED_FACETS = ['old_brand_facet', ]
+BRAND_EXCLUDE_LIST = ['9817']
 POPULARITY_THRESHOLD = 0.1
 base_aggregation = {
     "tags": {
@@ -109,6 +110,7 @@ def get_popularity_data_from_es(valid_category_list):
       "brand_data": {
         "terms": {
           "field": "brand_ids.keyword",
+          "exclude": BRAND_EXCLUDE_LIST,
           "size": 10000
         },
         "aggs": base_aggregation
@@ -123,6 +125,7 @@ def get_popularity_data_from_es(valid_category_list):
           "brands" : {
             "terms": {
               "field": "brand_ids.keyword",
+              "exclude": BRAND_EXCLUDE_LIST,
               "size": 10000
             },
             "aggs": base_aggregation

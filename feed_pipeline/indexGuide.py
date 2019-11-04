@@ -17,8 +17,7 @@ GUIDE_SIZE = 20
 
 def process_guides(filename='guide.csv'):
     file_path = '/nykaa/scripts/' + filename
-    df = pd.read_csv(file_path, encoding="ISO-8859-1")
-
+    df = pd.read_csv(file_path, encoding="ISO-8859-1", sep='\t', header=0)
     #apply frequency threshold
     df = df[df.freq >= FREQUENCY_THRESHOLD]
 
