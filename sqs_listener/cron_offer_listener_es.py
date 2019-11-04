@@ -63,7 +63,7 @@ class OfferSQSConsumer:
     @classmethod
     def __init__(self):
         self.q = queue.Queue(maxsize=0)
-        self.sqs = boto3.client("sqs")
+        self.sqs = boto3.client("sqs", region_name='ap-south-1')
 
         self.thread_manager = ThreadManager(self.q, callback=self.upload_one_chunk)
         self.thread_manager.start_threads(NUMBER_OF_THREADS)
@@ -101,17 +101,11 @@ class OfferSQSConsumer:
             if "Messages" in response:
                 for message in response["Messages"]:
                     receipt_handle = message["ReceiptHandle"]
-                    update_docs += json.loads(message["Body"])
+                    self.q.put_nowait(json.loads(message["Body"]))
                     self.sqs.delete_message(QueueUrl=sqs_endpoint, ReceiptHandle=receipt_handle)
             else:
                 is_sqs_empty = True
                 print("Main Thread: SQS is empty!")
-
-            if len(update_docs) >= ES_BULK_UPLOAD_BATCH_SIZE or (len(update_docs) >= 1 and is_sqs_empty):
-                print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
-                self.q.put_nowait(update_docs)
-                num_products_processed += len(update_docs)
-                update_docs = []
 
         self.thread_manager.stop_workers()
         self.thread_manager.join()
@@ -171,20 +165,14 @@ class OfferSQSConsumer:
         print("Thread {} start".format(thread_id))
 
         process_docs = []
-        for data in chunk:
-            sku = data.get('sku')
-            offer_data = data.get('offer')
+        for sku in chunk:
+            offer_data = chunk.get(sku)
             if offer_data and sku:
-                process_doc = {"sku": sku}
+                process_doc = {"sku": offer_data['sku']}
                 OfferSQSConsumer.offers_data_merge(process_doc, offer_data)
                 process_docs.append(process_doc)
-            else:
-                print("Error in offer updation of sku : {} , error :{}".format(sku, data.get('error')))
-
 
         try:
-            update_docs = chunk
-            #print(chunk)
             print(threadname + ": Sending %s docs to bulk upload" % len(process_docs))
             response = DiscUtils.updateESCatalog(process_docs, refresh=True, raise_on_error=False)
             # print("response: ", response)
