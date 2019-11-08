@@ -37,6 +37,11 @@ def getCount():
         "ps aux | grep python | grep cron_offer_listener_es.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
         shell=True).strip())
 
+def getPipelineCount():
+    return int(subprocess.check_output(
+        "ps aux | grep python | grep catalogPipelineMultithreaded.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
+        shell=True).strip())
+
 
 if getCount() >= 2:
     print("getCount(): %r" % getCount())
@@ -44,6 +49,10 @@ if getCount() >= 2:
     print(str(
         subprocess.check_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
                                 shell=True)))
+    exit()
+
+if getPipelineCount() > 1:
+    print("[%s] Pipeline script is already running. Exiting without doing anything" % getCurrentDateTime())
     exit()
 
 
