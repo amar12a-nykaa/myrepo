@@ -32,7 +32,7 @@ def getCurrentDateTime():
     return current_datetime
 
 
-def getCount():
+def getOfferConsumerCount():
     return int(subprocess.check_output(
         "ps aux | grep python | grep cron_offer_listener_es.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
         shell=True).strip())
@@ -41,20 +41,6 @@ def getPipelineCount():
     return int(subprocess.check_output(
         "ps aux | grep python | grep catalogPipelineMultithreaded.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
         shell=True).strip())
-
-
-if getCount() >= 2:
-    print("getCount(): %r" % getCount())
-    print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
-    print(str(
-        subprocess.check_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
-                                shell=True)))
-    exit()
-
-if getPipelineCount() > 1:
-    print("[%s] Pipeline script is already running. Exiting without doing anything" % getCurrentDateTime())
-    exit()
-
 
 print("=" * 30 + " %s ======= " % getCurrentDateTime())
 
@@ -262,6 +248,15 @@ class WorkerThread(threading.Thread):
 
 
 if __name__ == "__main__":
+    if getOfferConsumerCount() >= 2:
+        print("getCount(): %r" % getOfferConsumerCount())
+        print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
+        exit()
+    if getPipelineCount() > 1:
+        print("getPipelineCount(): %r" % getPipelineCount())
+        print("[%s] Catalog pipeline running. Exiting without doing anything" % getCurrentDateTime())
+        exit()
+        
     parser = argparse.ArgumentParser()
     parser.add_argument("--threads", type=int, help="number of records in single index request")
     argv = vars(parser.parse_args())
