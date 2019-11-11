@@ -12,12 +12,11 @@ import threading
 import time
 import traceback
 from dateutil import tz
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
-from nykaa.settings import OFFERS_UPDATE_SQS_ENDPOINT
 
 
 total = 0
@@ -33,20 +32,15 @@ def getCurrentDateTime():
     return current_datetime
 
 
-def getCount():
+def getOfferConsumerCount():
     return int(subprocess.check_output(
         "ps aux | grep python | grep cron_offer_listener_es.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
         shell=True).strip())
 
-
-if getCount() >= 2:
-    print("getCount(): %r" % getCount())
-    print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
-    print(str(
-        subprocess.check_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
-                                shell=True)))
-    exit()
-
+def getPipelineCount():
+    return int(subprocess.check_output(
+        "ps aux | grep python | grep catalogPipelineMultithreaded.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
+        shell=True).strip())
 
 print("=" * 30 + " %s ======= " % getCurrentDateTime())
 
@@ -64,7 +58,7 @@ class OfferSQSConsumer:
     @classmethod
     def __init__(self):
         self.q = queue.Queue(maxsize=0)
-        self.sqs = boto3.client("sqs")
+        self.sqs = boto3.client("sqs", region_name='ap-south-1')
 
         self.thread_manager = ThreadManager(self.q, callback=self.upload_one_chunk)
         self.thread_manager.start_threads(NUMBER_OF_THREADS)
@@ -85,10 +79,12 @@ class OfferSQSConsumer:
             index -= 1
             self.q.put_nowait({})
 
+        sqs_endpoint = DiscUtils.get_offer_delta_sqs_details()
+
         while not is_sqs_empty:
 
             response = self.sqs.receive_message(
-                QueueUrl=OFFERS_UPDATE_SQS_ENDPOINT,
+                QueueUrl=sqs_endpoint,
                 AttributeNames=["SentTimestamp"],
                 MaxNumberOfMessages=10,
                 MessageAttributeNames=["All"],
@@ -100,17 +96,11 @@ class OfferSQSConsumer:
             if "Messages" in response:
                 for message in response["Messages"]:
                     receipt_handle = message["ReceiptHandle"]
-                    update_docs += json.loads(message["Body"])
-                    self.sqs.delete_message(QueueUrl=OFFERS_UPDATE_SQS_ENDPOINT, ReceiptHandle=receipt_handle)
+                    self.q.put_nowait(json.loads(message["Body"]))
+                    self.sqs.delete_message(QueueUrl=sqs_endpoint, ReceiptHandle=receipt_handle)
             else:
                 is_sqs_empty = True
                 print("Main Thread: SQS is empty!")
-
-            if len(update_docs) >= ES_BULK_UPLOAD_BATCH_SIZE or (len(update_docs) >= 1 and is_sqs_empty):
-                print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
-                self.q.put_nowait(update_docs)
-                num_products_processed += len(update_docs)
-                update_docs = []
 
         self.thread_manager.stop_workers()
         self.thread_manager.join()
@@ -159,6 +149,7 @@ class OfferSQSConsumer:
             nykaa_pro_offer_facet['name'] = offer['name']
             doc['nykaa_pro_offer_facet'].append(nykaa_pro_offer_facet)
             doc['nykaa_pro_offer_ids'].append(offer['id'])
+        doc['delta_offer_update'] = True
 
     @classmethod
     def upload_one_chunk(cls, chunk, threadname):
@@ -169,20 +160,14 @@ class OfferSQSConsumer:
         print("Thread {} start".format(thread_id))
 
         process_docs = []
-        for data in chunk:
-            sku = data.get('sku')
-            offer_data = data.get('offer')
+        for sku in chunk:
+            offer_data = chunk.get(sku)
             if offer_data and sku:
-                process_doc = {"sku": sku}
+                process_doc = {"sku": offer_data['sku']}
                 OfferSQSConsumer.offers_data_merge(process_doc, offer_data)
                 process_docs.append(process_doc)
-            else:
-                print("Error in offer updation of sku : {} , error :{}".format(sku, data.get('error')))
-
 
         try:
-            update_docs = chunk
-            #print(chunk)
             print(threadname + ": Sending %s docs to bulk upload" % len(process_docs))
             response = DiscUtils.updateESCatalog(process_docs, refresh=True, raise_on_error=False)
             # print("response: ", response)
@@ -263,6 +248,15 @@ class WorkerThread(threading.Thread):
 
 
 if __name__ == "__main__":
+    if getOfferConsumerCount() >= 2:
+        print("getCount(): %r" % getOfferConsumerCount())
+        print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
+        exit()
+    if getPipelineCount() > 1:
+        print("getPipelineCount(): %r" % getPipelineCount())
+        print("[%s] Catalog pipeline running. Exiting without doing anything" % getCurrentDateTime())
+        exit()
+        
     parser = argparse.ArgumentParser()
     parser.add_argument("--threads", type=int, help="number of records in single index request")
     argv = vars(parser.parse_args())
