@@ -23,7 +23,9 @@
           "tokenizer": "keyword"
         }
       }
-    }
+    },
+    "index.search.slowlog.level": "debug",
+    "index.search.slowlog.threshold.query.debug": "10ms"
   },
   "mappings": {
     "entity": {
