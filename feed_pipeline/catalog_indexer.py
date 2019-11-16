@@ -599,7 +599,7 @@ class CatalogIndexer:
         for row in rows:
             data_map[row['sku']] = {
                 "product_id": str(row['product_id']),
-                "parent_id": str(row['parent_id']) if row['type'] == 'simple' and row['parent_id'] else str(
+                "parent_id": str(row['parent_id']) if row['type_id'] == 'simple' and row['parent_id'] else str(
                     row['product_id'])
             }
         query = "UPDATE products SET "
