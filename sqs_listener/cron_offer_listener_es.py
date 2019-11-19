@@ -13,6 +13,7 @@ import time
 import traceback
 from dateutil import tz
 from datetime import datetime
+from dateutil import parser
 
 
 sys.path.append("/var/www/discovery_api")
@@ -21,6 +22,12 @@ from disc.v2.utils import Utils as DiscUtils
 
 total = 0
 CHUNK_SIZE = 200
+
+
+def format_date(offer_date):
+    offer_date = parser.parse(offer_date)
+    offer_date = offer_date.strftime("%Y-%m-%d %H:%M:%S")
+    return offer_date
 
 
 def getCurrentDateTime():
@@ -113,6 +120,15 @@ class OfferSQSConsumer:
     @staticmethod
     def offers_data_merge(doc, offers_data):
         nykaa_offers = offers_data.get('nykaa', [])
+        for offer in nykaa_offers:
+            if not offer.get('offer_start_date'):
+                offer['offer_start_date'] = ""
+            else:
+                offer['offer_start_date'] = format_date(offer['offer_start_date'])
+            if not offer.get('offer_end_date'):
+                offer['offer_end_date'] = ""
+            else:
+                offer['offer_end_date'] = format_date(offer['offer_end_date'])
         doc['offers'] = nykaa_offers
         doc['offer_count'] = len(doc['offers'])
         doc['offer_ids'] = []
@@ -127,6 +143,15 @@ class OfferSQSConsumer:
             doc['offer_ids'].append(offer.get("id"))
 
         nykaaman_offers = offers_data.get('nykaaman', [])
+        for offer in nykaaman_offers:
+            if not offer.get('offer_start_date'):
+                offer['offer_start_date'] = ""
+            else:
+                offer['offer_start_date'] = format_date(offer['offer_start_date'])
+            if not offer.get('offer_end_date'):
+                offer['offer_end_date'] = ""
+            else:
+                offer['offer_end_date'] = format_date(offer['offer_end_date'])
         doc['nykaaman_offers'] = nykaaman_offers
         doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
         doc['nykaaman_offer_ids'] = []
@@ -139,6 +164,15 @@ class OfferSQSConsumer:
             doc['nykaaman_offer_ids'].append(offer['id'])
 
         nykaa_pro_offers = offers_data.get('nykaa_pro', [])
+        for offer in nykaa_pro_offers:
+            if not offer.get('offer_start_date'):
+                offer['offer_start_date'] = ""
+            else:
+                offer['offer_start_date'] = format_date(offer['offer_start_date'])
+            if not offer.get('offer_end_date'):
+                offer['offer_end_date'] = ""
+            else:
+                offer['offer_end_date'] = format_date(offer['offer_end_date'])
         doc['nykaa_pro_offers'] = nykaa_pro_offers
         doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
         doc['nykaa_pro_offer_ids'] = []
