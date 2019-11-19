@@ -198,7 +198,7 @@ class OfferSQSConsumer:
             offer_data = chunk.get(sku)
             if offer_data and sku:
                 process_doc = {"sku": offer_data['sku']}
-                OfferSQSConsumer.offers_data_merge(process_doc, offer_data)
+                OfferSQSConsumer.offers_data_merge(process_doc, offer_data.get('offers',{}))
                 process_docs.append(process_doc)
 
         try:
@@ -291,9 +291,9 @@ if __name__ == "__main__":
         print("[%s] Catalog pipeline running. Exiting without doing anything" % getCurrentDateTime())
         exit()
         
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--threads", type=int, help="number of records in single index request")
-    argv = vars(parser.parse_args())
+    parser1 = argparse.ArgumentParser()
+    parser1.add_argument("--threads", type=int, help="number of records in single index request")
+    argv = vars(parser1.parse_args())
     if argv["threads"]:
         NUMBER_OF_THREADS = argv["threads"]
 
