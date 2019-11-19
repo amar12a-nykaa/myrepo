@@ -53,7 +53,7 @@ print("=" * 30 + " %s ======= " % getCurrentDateTime())
 
 
 ES_BULK_UPLOAD_BATCH_SIZE = 100
-NUMBER_OF_THREADS = 5
+NUMBER_OF_THREADS = 3
 
 
 class OfferSQSConsumer:
