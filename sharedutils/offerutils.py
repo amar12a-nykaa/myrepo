@@ -4,10 +4,10 @@ from dateutil import parser
 
 class OfferUtils:
 
-    def format_date(offer_date):
-        offer_date = parser.parse(offer_date)
-        offer_date = offer_date.strftime("%Y-%m-%d %H:%M:%S")
-        return offer_date
+	def format_date(offer_date):
+		offer_date = parser.parse(offer_date)
+		offer_date = offer_date.strftime("%Y-%m-%d %H:%M:%S")
+		return offer_date
 
 	@staticmethod
 	def merge_offer_data(doc, offers_data):
