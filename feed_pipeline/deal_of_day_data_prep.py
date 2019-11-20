@@ -52,7 +52,7 @@ def getPriceChangeData():
   enddate = arrow.now().replace(days=ENDDAYS).strftime("%Y-%m-%d")
   qstartdate = arrow.now().replace(days=-1).strftime("%Y-%m-%d")
   query = """select sku, dt, hh, max(old_price) as old_price, min(new_price) as new_price
-              from events_pds1
+              from events_pds
               where dt >= '%s' and dt < '%s'
                 and event='price_changed' and old_price != 'None'
               group by sku, dt, hh""" % (qstartdate, enddate)
