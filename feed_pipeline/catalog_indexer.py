@@ -629,7 +629,7 @@ class CatalogIndexer:
             query += parent_set_query + ", " + product_set_query
         elif parent_id_found:
             query += parent_set_query
-        elif product_set_query:
+        elif product_id_found:
             query += product_set_query
 
         query += " WHERE sku in ( " + ','.join("'{}'".format(sku) for sku in sku_list) + ") "
