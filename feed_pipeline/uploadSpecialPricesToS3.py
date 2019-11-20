@@ -83,7 +83,7 @@ def write_to_result_to_file(query, file, batch_size):
             response_data = json.loads(response.text)
             skus = response_data['skus']
             for sku in skus:
-              line = '"{}", "{}", "{}", "{}", "{}", "{}"\n'.format(sku, skus[sku]['sp'], skus[sku]['type'], skus[sku]['disabled'], skus[sku]['mrp'], skus[sku]['is_in_stock'])
+              line = '"{}", "{}", "{}", "{}", "{}", "{}", "{}"\n'.format(sku, skus[sku]['sp'], skus[sku]['type'], skus[sku]['disabled'], skus[sku]['mrp'], skus[sku]['is_in_stock'], sku[sku]['quantity'])
               print(line)
               file.write(line)
             break
