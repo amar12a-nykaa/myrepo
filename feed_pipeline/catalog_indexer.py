@@ -595,47 +595,53 @@ class CatalogIndexer:
         return val
 
     def update_sku_product_mapping(rows):
-        data_map = {}
-        for row in rows:
-            data_map[row['sku']] = {
-                "product_id": str(row['product_id']),
-                "parent_id": str(row['parent_id']) if row['type_id'] == 'simple' and row['parent_id'] else str(
-                    row['product_id'])
-            }
-        query = "UPDATE products SET "
 
-        parent_set_query = "parent_id = (case "
-        product_set_query = "product_id = (case "
-
-        parent_id_found = False
-        product_id_found = False
         sku_list = []
-        for sku in data_map:
-            sku_list.append(sku)
-            product_id = data_map[sku]['product_id']
-            parent_id = data_map[sku]['parent_id']
+        try:
+            data_map = {}
+            for row in rows:
+                data_map[row['sku']] = {
+                    "product_id": str(row['product_id']).strip(),
+                    "parent_id": str(row['parent_id']).strip() if row['type_id'].strip() == 'simple' and row['parent_id'] else str(
+                        row['product_id']).strip()
+                }
+            query = "UPDATE products SET "
 
-            if parent_id:
-                parent_id_found = True
-                parent_set_query += " when sku = '" + sku + "' then " + parent_id + " "
-            if product_id:
-                product_id_found = True
-                product_set_query += " when sku = '" + sku + "' then " + product_id + " "
+            parent_set_query = "parent_id = (case "
+            product_set_query = "product_id = (case "
 
-        parent_set_query += " end) "
-        product_set_query += " end) "
+            parent_id_found = False
+            product_id_found = False
 
-        if parent_id_found and product_id_found:
-            query += parent_set_query + ", " + product_set_query
-        elif parent_id_found:
-            query += parent_set_query
-        elif product_id_found:
-            query += product_set_query
+            for sku in data_map:
+                sku_list.append(sku)
+                product_id = data_map[sku]['product_id']
+                parent_id = data_map[sku]['parent_id']
 
-        query += " WHERE sku in ( " + ','.join("'{}'".format(sku) for sku in sku_list) + ") "
+                if parent_id:
+                    parent_id_found = True
+                    parent_set_query += " when sku = '" + sku + "' then " + parent_id + " "
+                if product_id:
+                    product_id_found = True
+                    product_set_query += " when sku = '" + sku + "' then " + product_id + " "
 
-        if parent_id_found or product_id_found:
-            DiscUtils.mysql_write(query)
+            parent_set_query += " end) "
+            product_set_query += " end) "
+
+            if parent_id_found and product_id_found:
+                query += parent_set_query + ", " + product_set_query
+            elif parent_id_found:
+                query += parent_set_query
+            elif product_id_found:
+                query += product_set_query
+
+            query += " WHERE sku in ( " + ','.join("'{}'".format(sku) for sku in sku_list) + ") "
+
+            if parent_id_found or product_id_found:
+                DiscUtils.mysql_write(query)
+        except:
+            print(traceback.format_exc())
+            print("[ERROR] Failed to update product_id and parent_id for sku: {}".format(sku_list))
 
     def formatESDoc(doc):
         for key, value in doc.items():
