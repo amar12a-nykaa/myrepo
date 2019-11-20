@@ -12,16 +12,22 @@ import threading
 import time
 import traceback
 from dateutil import tz
-from datetime import datetime, timedelta
+from datetime import datetime
+from dateutil import parser
 
 
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
-from nykaa.settings import OFFERS_UPDATE_SQS_ENDPOINT
 
 
 total = 0
 CHUNK_SIZE = 200
+
+
+def format_date(offer_date):
+    offer_date = parser.parse(offer_date)
+    offer_date = offer_date.strftime("%Y-%m-%d %H:%M:%S")
+    return offer_date
 
 
 def getCurrentDateTime():
@@ -33,26 +39,21 @@ def getCurrentDateTime():
     return current_datetime
 
 
-def getCount():
+def getOfferConsumerCount():
     return int(subprocess.check_output(
         "ps aux | grep python | grep cron_offer_listener_es.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
         shell=True).strip())
 
-
-if getCount() >= 2:
-    print("getCount(): %r" % getCount())
-    print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
-    print(str(
-        subprocess.check_output("ps aux | grep python | grep cron_pas_listener_es.py | grep -vE 'vim|grep|/bin/sh' ",
-                                shell=True)))
-    exit()
-
+def getPipelineCount():
+    return int(subprocess.check_output(
+        "ps aux | grep python | grep catalogPipelineMultithreaded.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
+        shell=True).strip())
 
 print("=" * 30 + " %s ======= " % getCurrentDateTime())
 
 
 ES_BULK_UPLOAD_BATCH_SIZE = 100
-NUMBER_OF_THREADS = 5
+NUMBER_OF_THREADS = 3
 
 
 class OfferSQSConsumer:
@@ -64,7 +65,7 @@ class OfferSQSConsumer:
     @classmethod
     def __init__(self):
         self.q = queue.Queue(maxsize=0)
-        self.sqs = boto3.client("sqs")
+        self.sqs = boto3.client("sqs", region_name='ap-south-1')
 
         self.thread_manager = ThreadManager(self.q, callback=self.upload_one_chunk)
         self.thread_manager.start_threads(NUMBER_OF_THREADS)
@@ -85,10 +86,12 @@ class OfferSQSConsumer:
             index -= 1
             self.q.put_nowait({})
 
+        sqs_endpoint = DiscUtils.get_offer_delta_sqs_details()
+
         while not is_sqs_empty:
 
             response = self.sqs.receive_message(
-                QueueUrl=OFFERS_UPDATE_SQS_ENDPOINT,
+                QueueUrl=sqs_endpoint,
                 AttributeNames=["SentTimestamp"],
                 MaxNumberOfMessages=10,
                 MessageAttributeNames=["All"],
@@ -100,17 +103,11 @@ class OfferSQSConsumer:
             if "Messages" in response:
                 for message in response["Messages"]:
                     receipt_handle = message["ReceiptHandle"]
-                    update_docs += json.loads(message["Body"])
-                    self.sqs.delete_message(QueueUrl=OFFERS_UPDATE_SQS_ENDPOINT, ReceiptHandle=receipt_handle)
+                    self.q.put_nowait(json.loads(message["Body"]))
+                    self.sqs.delete_message(QueueUrl=sqs_endpoint, ReceiptHandle=receipt_handle)
             else:
                 is_sqs_empty = True
                 print("Main Thread: SQS is empty!")
-
-            if len(update_docs) >= ES_BULK_UPLOAD_BATCH_SIZE or (len(update_docs) >= 1 and is_sqs_empty):
-                print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
-                self.q.put_nowait(update_docs)
-                num_products_processed += len(update_docs)
-                update_docs = []
 
         self.thread_manager.stop_workers()
         self.thread_manager.join()
@@ -122,43 +119,76 @@ class OfferSQSConsumer:
 
     @staticmethod
     def offers_data_merge(doc, offers_data):
-        nykaa_offers = offers_data.get('nykaa', [])
+        nykaa_offers = [] #offers_data.get('nykaa', [])
+        for offer in offers_data.get('nykaa', []):
+            if not offer.get('offer_start_date'):
+                offer['offer_start_date'] = ""
+            else:
+                offer['offer_start_date'] = format_date(offer['offer_start_date'])
+            if not offer.get('offer_end_date'):
+                offer['offer_end_date'] = ""
+            else:
+                offer['offer_end_date'] = format_date(offer['offer_end_date'])
+            nykaa_offers.append(json.dumps(offer))
         doc['offers'] = nykaa_offers
         doc['offer_count'] = len(doc['offers'])
         doc['offer_ids'] = []
         doc['offer_facet'] = []
-        for offer in nykaa_offers:
+        for offer in offers_data.get('nykaa', []):
             doc['key'] = []
-            doc['key'].append(offer)
+            doc['key'].append(json.dumps(offer))
             offer_facet = OrderedDict()
             offer_facet['id'] = offer.get("id")
             offer_facet['name'] = offer.get("name")
-            doc['offer_facet'].append(offer_facet)
+            doc['offer_facet'].append(json.dumps(offer_facet))
             doc['offer_ids'].append(offer.get("id"))
 
-        nykaaman_offers = offers_data.get('nykaaman', [])
+        nykaaman_offers = [] #offers_data.get('nykaaman', [])
+        for offer in offers_data.get('nykaaman', []):
+            if not offer.get('offer_start_date'):
+                offer['offer_start_date'] = ""
+            else:
+                offer['offer_start_date'] = format_date(offer['offer_start_date'])
+            if not offer.get('offer_end_date'):
+                offer['offer_end_date'] = ""
+            else:
+                offer['offer_end_date'] = format_date(offer['offer_end_date'])
+            nykaaman_offers.append(json.dumps(offer))
+
         doc['nykaaman_offers'] = nykaaman_offers
         doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
         doc['nykaaman_offer_ids'] = []
         doc['nykaaman_offer_facet'] = []
-        for offer in nykaaman_offers:
+        for offer in offers_data.get('nykaaman', []):
             nykaaman_offer_facet = OrderedDict()
             nykaaman_offer_facet['id'] = offer['id']
             nykaaman_offer_facet['name'] = offer['name']
-            doc['nykaaman_offer_facet'].append(nykaaman_offer_facet)
+            doc['nykaaman_offer_facet'].append(json.dumps(nykaaman_offer_facet))
             doc['nykaaman_offer_ids'].append(offer['id'])
 
-        nykaa_pro_offers = offers_data.get('nykaa_pro', [])
+        nykaa_pro_offers = [] # offers_data.get('nykaa_pro', [])
+        for offer in nykaa_pro_offers:
+            if not offer.get('offer_start_date'):
+                offer['offer_start_date'] = ""
+            else:
+                offer['offer_start_date'] = format_date(offer['offer_start_date'])
+            if not offer.get('offer_end_date'):
+                offer['offer_end_date'] = ""
+            else:
+                offer['offer_end_date'] = format_date(offer['offer_end_date'])
+            nykaa_pro_offers.append(json.dumps(offer))
+
         doc['nykaa_pro_offers'] = nykaa_pro_offers
         doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
         doc['nykaa_pro_offer_ids'] = []
         doc['nykaa_pro_offer_facet'] = []
-        for offer in nykaa_pro_offers:
+        for offer in offers_data.get('nykaa_pro', []):
             nykaa_pro_offer_facet = OrderedDict()
             nykaa_pro_offer_facet['id'] = offer['id']
             nykaa_pro_offer_facet['name'] = offer['name']
-            doc['nykaa_pro_offer_facet'].append(nykaa_pro_offer_facet)
+            doc['nykaa_pro_offer_facet'].append(json.dumps(nykaa_pro_offer_facet))
             doc['nykaa_pro_offer_ids'].append(offer['id'])
+        doc['delta_offer_update'] = True
 
     @classmethod
     def upload_one_chunk(cls, chunk, threadname):
@@ -169,20 +199,14 @@ class OfferSQSConsumer:
         print("Thread {} start".format(thread_id))
 
         process_docs = []
-        for data in chunk:
-            sku = data.get('sku')
-            offer_data = data.get('offer')
+        for sku in chunk:
+            offer_data = chunk.get(sku)
             if offer_data and sku:
-                process_doc = {"sku": sku}
-                OfferSQSConsumer.offers_data_merge(process_doc, offer_data)
+                process_doc = {"sku": offer_data['sku']}
+                OfferSQSConsumer.offers_data_merge(process_doc, offer_data.get('offers',{}))
                 process_docs.append(process_doc)
-            else:
-                print("Error in offer updation of sku : {} , error :{}".format(sku, data.get('error')))
-
 
         try:
-            update_docs = chunk
-            #print(chunk)
             print(threadname + ": Sending %s docs to bulk upload" % len(process_docs))
             response = DiscUtils.updateESCatalog(process_docs, refresh=True, raise_on_error=False)
             # print("response: ", response)
@@ -263,9 +287,18 @@ class WorkerThread(threading.Thread):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--threads", type=int, help="number of records in single index request")
-    argv = vars(parser.parse_args())
+    if getOfferConsumerCount() >= 2:
+        print("getCount(): %r" % getOfferConsumerCount())
+        print("[%s] This script is already running. Exiting without doing anything" % getCurrentDateTime())
+        exit()
+    if getPipelineCount() > 1:
+        print("getPipelineCount(): %r" % getPipelineCount())
+        print("[%s] Catalog pipeline running. Exiting without doing anything" % getCurrentDateTime())
+        exit()
+        
+    parser1 = argparse.ArgumentParser()
+    parser1.add_argument("--threads", type=int, help="number of records in single index request")
+    argv = vars(parser1.parse_args())
     if argv["threads"]:
         NUMBER_OF_THREADS = argv["threads"]
 

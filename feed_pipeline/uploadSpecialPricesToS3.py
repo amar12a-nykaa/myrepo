@@ -29,7 +29,7 @@ def get_gludo_url():
         gludo_base_url = 'http://qa-api.nyk00-int.network/apis/v2'
 
     else:
-        gludo_base_url = 'http://qa-api.nyk00-int.network/apis/v2'
+        gludo_base_url = 'http://preprod-api.nyk00-int.network/apis/v2'
 
     return gludo_base_url + '/pas.get'
 
@@ -83,7 +83,7 @@ def write_to_result_to_file(query, file, batch_size):
             response_data = json.loads(response.text)
             skus = response_data['skus']
             for sku in skus:
-              line = '"{}", "{}", "{}", "{}", "{}", "{}"\n'.format(sku, skus[sku]['sp'], skus[sku]['type'], skus[sku]['disabled'], skus[sku]['mrp'], skus[sku]['is_in_stock'])
+              line = '"{}", "{}", "{}", "{}", "{}", "{}", "{}"\n'.format(sku, skus[sku]['sp'], skus[sku]['type'], skus[sku]['disabled'], skus[sku]['mrp'], skus[sku]['is_in_stock'], skus[sku]['quantity'])
               print(line)
               file.write(line)
             break
