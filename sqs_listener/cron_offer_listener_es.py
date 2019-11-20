@@ -53,7 +53,7 @@ print("=" * 30 + " %s ======= " % getCurrentDateTime())
 
 
 ES_BULK_UPLOAD_BATCH_SIZE = 100
-NUMBER_OF_THREADS = 5
+NUMBER_OF_THREADS = 3
 
 
 class OfferSQSConsumer:
@@ -119,8 +119,8 @@ class OfferSQSConsumer:
 
     @staticmethod
     def offers_data_merge(doc, offers_data):
-        nykaa_offers = offers_data.get('nykaa', [])
-        for offer in nykaa_offers:
+        nykaa_offers = [] #offers_data.get('nykaa', [])
+        for offer in offers_data.get('nykaa', []):
             if not offer.get('offer_start_date'):
                 offer['offer_start_date'] = ""
             else:
@@ -129,21 +129,22 @@ class OfferSQSConsumer:
                 offer['offer_end_date'] = ""
             else:
                 offer['offer_end_date'] = format_date(offer['offer_end_date'])
+            nykaa_offers.append(json.dumps(offer))
         doc['offers'] = nykaa_offers
         doc['offer_count'] = len(doc['offers'])
         doc['offer_ids'] = []
         doc['offer_facet'] = []
-        for offer in nykaa_offers:
+        for offer in offers_data.get('nykaa', []):
             doc['key'] = []
-            doc['key'].append(offer)
+            doc['key'].append(json.dumps(offer))
             offer_facet = OrderedDict()
             offer_facet['id'] = offer.get("id")
             offer_facet['name'] = offer.get("name")
-            doc['offer_facet'].append(offer_facet)
+            doc['offer_facet'].append(json.dumps(offer_facet))
             doc['offer_ids'].append(offer.get("id"))
 
-        nykaaman_offers = offers_data.get('nykaaman', [])
-        for offer in nykaaman_offers:
+        nykaaman_offers = [] #offers_data.get('nykaaman', [])
+        for offer in offers_data.get('nykaaman', []):
             if not offer.get('offer_start_date'):
                 offer['offer_start_date'] = ""
             else:
@@ -152,18 +153,20 @@ class OfferSQSConsumer:
                 offer['offer_end_date'] = ""
             else:
                 offer['offer_end_date'] = format_date(offer['offer_end_date'])
+            nykaaman_offers.append(json.dumps(offer))
+
         doc['nykaaman_offers'] = nykaaman_offers
         doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
         doc['nykaaman_offer_ids'] = []
         doc['nykaaman_offer_facet'] = []
-        for offer in nykaaman_offers:
+        for offer in offers_data.get('nykaaman', []):
             nykaaman_offer_facet = OrderedDict()
             nykaaman_offer_facet['id'] = offer['id']
             nykaaman_offer_facet['name'] = offer['name']
-            doc['nykaaman_offer_facet'].append(nykaaman_offer_facet)
+            doc['nykaaman_offer_facet'].append(json.dumps(nykaaman_offer_facet))
             doc['nykaaman_offer_ids'].append(offer['id'])
 
-        nykaa_pro_offers = offers_data.get('nykaa_pro', [])
+        nykaa_pro_offers = [] # offers_data.get('nykaa_pro', [])
         for offer in nykaa_pro_offers:
             if not offer.get('offer_start_date'):
                 offer['offer_start_date'] = ""
@@ -173,15 +176,17 @@ class OfferSQSConsumer:
                 offer['offer_end_date'] = ""
             else:
                 offer['offer_end_date'] = format_date(offer['offer_end_date'])
+            nykaa_pro_offers.append(json.dumps(offer))
+
         doc['nykaa_pro_offers'] = nykaa_pro_offers
         doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
         doc['nykaa_pro_offer_ids'] = []
         doc['nykaa_pro_offer_facet'] = []
-        for offer in nykaa_pro_offers:
+        for offer in offers_data.get('nykaa_pro', []):
             nykaa_pro_offer_facet = OrderedDict()
             nykaa_pro_offer_facet['id'] = offer['id']
             nykaa_pro_offer_facet['name'] = offer['name']
-            doc['nykaa_pro_offer_facet'].append(nykaa_pro_offer_facet)
+            doc['nykaa_pro_offer_facet'].append(json.dumps(nykaa_pro_offer_facet))
             doc['nykaa_pro_offer_ids'].append(offer['id'])
         doc['delta_offer_update'] = True
 
@@ -198,7 +203,7 @@ class OfferSQSConsumer:
             offer_data = chunk.get(sku)
             if offer_data and sku:
                 process_doc = {"sku": offer_data['sku']}
-                OfferSQSConsumer.offers_data_merge(process_doc, offer_data)
+                OfferSQSConsumer.offers_data_merge(process_doc, offer_data.get('offers',{}))
                 process_docs.append(process_doc)
 
         try:
@@ -291,9 +296,9 @@ if __name__ == "__main__":
         print("[%s] Catalog pipeline running. Exiting without doing anything" % getCurrentDateTime())
         exit()
         
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--threads", type=int, help="number of records in single index request")
-    argv = vars(parser.parse_args())
+    parser1 = argparse.ArgumentParser()
+    parser1.add_argument("--threads", type=int, help="number of records in single index request")
+    argv = vars(parser1.parse_args())
     if argv["threads"]:
         NUMBER_OF_THREADS = argv["threads"]
 
