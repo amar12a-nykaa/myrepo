@@ -26,6 +26,19 @@ class PipelineUtils:
       host = 'priceapi.nyk00-int.network'
     return host
 
+  def getOffersAPIHost():
+    host = 'preprod-api.nykaa.com/offer'
+    if socket.gethostname().startswith('admin'):
+      host = 'prod-offer.nyk00-int.network/offer'
+    return host
+
+  def getSQSDetails():
+    SQS_ENDPOINT = 'https://sqs.ap-south-1.amazonaws.com/911609873560/failedOfferUpdate'
+    SQS_REGION = 'ap-south-1'
+    if socket.gethostname().startswith('admin'):
+      SQS_ENDPOINT = 'https://sqs.ap-south-1.amazonaws.com/268361018769/failedOfferUpdate'
+    return SQS_ENDPOINT, SQS_REGION
+
   def getAdPlatformEndPoint():
     host = 'nykaa-widgets-staging.nykaa.com'
     if socket.gethostname().startswith('admin'):

@@ -18,6 +18,7 @@ import json
 sys.path.append("/home/ubuntu/nykaa_scripts/")
 from utils.priceUpdateLogUtils import PriceUpdateLogUtils
 import uuid
+import time
 
 total = 0
 CHUNK_SIZE = 200
@@ -39,20 +40,6 @@ def incrementGlobalCounter(increment):
     total = curr
     return total
 
-def logPriceChangeEvent(update_docs,products):
-  for doc in update_docs:
-    for product in products:
-      if product["sku"] == doc["sku"] and product["price"] != doc["price"]:
-        data = {
-              "timestamp": int(time.time()),
-              "event": "price_changed",
-              "old_price": product['price'],
-              "new_price": doc["price"],
-              "sku": doc["sku"],
-              "product_type": product["type"]
-             }
-        PasUtils.logEvent(data)
-
 class Worker(threading.Thread):
     def __init__(self, q,schedule_start,schedule_end):
         self.q = q
@@ -61,12 +48,15 @@ class Worker(threading.Thread):
         super().__init__()
 
     def run(self):
+        DELAY_FOR_THREADS_IN_SEC = argv['delay']
         while True:
             try:
                 product_chunk = self.q.get(timeout=3)  # 3s timeout
                 ScheduledPriceUpdater.updateChunkPrice(product_chunk,self.schedule_start,self.schedule_end)
             except queue.Empty:
                 return
+            if DELAY_FOR_THREADS_IN_SEC:
+                time.sleep(DELAY_FOR_THREADS_IN_SEC)
             self.q.task_done()
 
 
@@ -108,11 +98,12 @@ class ScheduledPriceUpdater:
         sku_list = []
         psku_list = []
         totalProductsToLog = []
+        priceChangeData={}
         batch_Id = uuid.uuid4().int
         for single_product in product_chunk:
             sku_list.append(single_product['sku'])
             psku_list.append(single_product['psku'])
-            products.append({'sku': single_product['sku'], 'type': single_product['type'],'price':single_product['sp']})
+            products.append({'sku': single_product['sku'], 'type': single_product['type']})
             if single_product['psku'] and single_product['psku'] != single_product['sku']:
                 products.append({'sku': single_product['psku'], 'type': 'configurable'})
             totalProductsToLog.append(
@@ -122,7 +113,9 @@ class ScheduledPriceUpdater:
                     json.dumps({"scheduled_discount":single_product['scheduled_discount']})
                 )
             )
-
+            priceChangeData[single_product['sku']] = {}
+            priceChangeData[single_product['sku']]['old_price'] = single_product['sp']
+            priceChangeData[single_product['sku']]['type'] = single_product['type']
         new_sku_list = list(set(sku_list) | set(psku_list))
         sku_string = "','".join(new_sku_list)
         query = "SELECT product_sku, bundle_sku FROM bundle_products_mappings WHERE product_sku in('" + sku_string + "')"
@@ -130,7 +123,7 @@ class ScheduledPriceUpdater:
         results = PasUtils.fetchResults(mysql_conn, query)
         mysql_conn.close()
         for res in results:
-            products.append({'sku': res['bundle_sku'], 'type': 'bundle','price':res['sp']})
+            products.append({'sku': res['bundle_sku'], 'type': 'bundle'})
 
         products = [dict(t) for t in {tuple(d.items()) for d in products}]
         update_docs = []
@@ -138,9 +131,10 @@ class ScheduledPriceUpdater:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit = True)
             if update_docs:
                 DiscUtils.updateESCatalog(update_docs)
-                logPriceChangeEvent(update_docs,products)
                 for single_doc in update_docs:
                     print("sku : %s" % single_doc['sku'])
+                    if single_doc['sku'] in priceChangeData:
+                      priceChangeData[single_doc['sku']]['new_price'] = single_doc['price']
         except Exception as e:
             print(traceback.format_exc())
 
@@ -148,7 +142,8 @@ class ScheduledPriceUpdater:
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
         if totalProductsToLog:
             PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", schedule_start, schedule_end,totalProductsToLog)
-
+        if priceChangeData:
+            PriceUpdateLogUtils.logBulkPriceChange(priceChangeData)
     def update():
         # Current time
         q = queue.Queue(maxsize=0)
@@ -175,7 +170,7 @@ class ScheduledPriceUpdater:
         product_type_condition = " AND type = %s"
         product_updated_count = 0
 
-        query = "SELECT sku, psku, type,scheduled_discount,schedule_start,schedule_end FROM products" + where_clause + product_type_condition
+        query = "SELECT sku, psku, type,scheduled_discount,schedule_start,schedule_end,sp FROM products" + where_clause + product_type_condition
         print("[%s] " % getCurrentDateTime() + query % (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
         mysql_conn = PasUtils.mysqlConnection('r')
         results = PasUtils.fetchResults(mysql_conn, query, (last_datetime, current_datetime, last_datetime, current_datetime, 'simple'))
@@ -239,5 +234,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, help='number of records in single index request')
     parser.add_argument("--threads", type=int, help='number of records in single index request')
+    parser.add_argument("--delay", type=int, help='number of seconds of delay in each thread')
     argv = vars(parser.parse_args())
     ScheduledPriceUpdater.update()

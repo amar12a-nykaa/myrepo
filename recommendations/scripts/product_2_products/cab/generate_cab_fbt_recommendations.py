@@ -91,11 +91,11 @@ class Utils:
     @staticmethod
     def esConn(env):
         if env == 'prod':
-            ES_ENDPOINT = 'vpc-prod-api-vzcc4i4e4zk2w4z45mqkisjo4u.ap-southeast-1.es.amazonaws.com'
+            ES_ENDPOINT = 'vpc-prod-priceapi-u22xdmuudgqkzoiiufyezkmrkq.ap-south-1.es.amazonaws.com'
         elif env in ['non_prod', 'preprod']:
-            ES_ENDPOINT = 'search-preprod-api-ub7noqs5xxaerxm6vhv5yjuc7u.ap-southeast-1.es.amazonaws.com'
+            ES_ENDPOINT = 'vpc-preprod-priceapi-plwkmnbdhm6td5itzwxznsfn44.ap-south-1.es.amazonaws.com'
         elif env == 'qa':
-            ES_ENDPOINT = 'search-qa-api-fvmcnxoaknewsdvt6gxgdtmodq.ap-southeast-1.es.amazonaws.com'
+            ES_ENDPOINT = 'vpc-preprod-priceapi-plwkmnbdhm6td5itzwxznsfn44.ap-south-1.es.amazonaws.com'
         else:
             raise Exception('Unknown env')
         print(ES_ENDPOINT)
@@ -140,18 +140,45 @@ class Utils:
 
         return {'luxe_products': luxe_products, 'product_2_mrp': product_2_mrp, 'child_2_parent': child_2_parent, 'primary_categories': primary_categories, 'brand_facets': brand_facets, 'sku_2_product_id': sku_2_product_id, 'product_2_image': product_2_image}
 
+    @staticmethod
+    def mlMysqlConnection(connection_details=None):
+        if env == 'prod':
+            host = "ml-rds-master.mumbai-nyk.internal"
+            password = 'fjxcneXnq2gptsTs'
+        elif env in ['non_prod', 'preprod', 'qa']:
+            host = 'ml-master.preprod-mumbai-nyk.internal'
+            password = 'JKaPHGB4JWXM'
+        else:
+            raise Exception('Unknow env')
+        print(host)
+        user = 'ml'
+        db = 'nykaa_ml'
+        for i in [0, 1, 2]:
+            try:
+                if connection_details is not None and isinstance(connection_details, dict):
+                    connection_details['host'] = host
+                    connection_details['user'] = user
+                    connection_details['password'] = password
+                    connection_details['database'] = db
+                return mysql.connector.connect(host=host, user=user, password=password, database=db)
+            except:
+                print("MySQL connection failed! Retyring %d.." % i)
+                if i == 2:
+                    print(traceback.format_exc())
+                    print("MySQL connection failed 3 times. Giving up..")
+                    raise
 
     @staticmethod
     def redshiftConnection(env):
         if env == 'prod':
-            host = 'dwhcluster.cy0qwrxs0juz.ap-southeast-1.redshift.amazonaws.com'
+            host = 'prod-datawarehouse.nyk00-int.network'
         elif env in ['non_prod', 'preprod', 'qa']:
-            host = 'nka-preprod-dwhcluster.c742iibw9j1g.ap-southeast-1.redshift.amazonaws.com'
+            host = 'dwhcluster-mumbai.c8g20qmwdp4e.ap-south-1.redshift.amazonaws.com'
         else:
             raise Exception('Unknown env')
         port = 5439
-        username = 'dwh_redshift_ro'
-        password = 'GSrjC7hYPC9V'
+        username = 'gludo'
+        password = 'G1uD0@Nyk@@'
         dbname = 'datawarehouse'
         con = psycopg2.connect(dbname=dbname, host=host, port=port, user=username, password=password)
         return con
@@ -316,7 +343,7 @@ def compute_fbt(env, platform, start_datetime=None, end_datetime=None, limit=Non
             rows.append((platform, variant, 'product', 'fbt', 'coccurence_direct', str(direct_similar_products)))
 
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
+    RecommendationsUtils.add_recommendations_in_mysql(Utils.mlMysqlConnection(env), 'recommendations_v2', rows)
 
 def compute_cab(env, cab_algo, platform, start_datetime=None, end_datetime=None, limit=None):
     print("Computing CAB")
@@ -390,7 +417,7 @@ def compute_cab(env, cab_algo, platform, start_datetime=None, end_datetime=None,
 
     print('Adding recommendations for %d products in DB' % len(product_ids_updated))
     print('Total number of rows: %d' % len(rows))
-    RecommendationsUtils.add_recommendations_in_mysql(Utils.mysqlConnection(env), 'recommendations_v2', rows)
+    RecommendationsUtils.add_recommendations_in_mysql(Utils.mlMysqlConnection(env), 'recommendations_v2', rows)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

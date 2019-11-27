@@ -9,10 +9,11 @@ from esutils import EsUtils
 from loopcounter import LoopCounter
 from idutils import strip_accents
 
-VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro']
+VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro', 'ultra_lux']
 PRIVATE_LABEL_BRANDS = ['1937','7666','9127']
 BOOST_FACTOR = 1.1
 BLACKLISTED_FACETS = ['old_brand_facet', ]
+BRAND_EXCLUDE_LIST = ['9817']
 POPULARITY_THRESHOLD = 0.1
 base_aggregation = {
     "tags": {
@@ -36,6 +37,13 @@ def normalize(a):
   return (a-min(a))/(max(a)-min(a))
 
 
+def check_base_popularity(row):
+  for tag in VALID_CATALOG_TAGS:
+    if not row["valid_"+tag]:
+      row[tag] = 0
+  return row
+  
+
 def get_store_popularity_str(row):
   data = {}
   for tag in VALID_CATALOG_TAGS:
@@ -44,11 +52,15 @@ def get_store_popularity_str(row):
 
 
 def get_category_data():
-  query = """select distinct l3_id as category_id, l3_name as category_name from product_category_mapping
-              where ( l1_id not in (77,194,9564,7287,3048)
-                and lower(l2_name) not like '%shop by%'
-                and l3_id not in (4036,3746,3745,3819,6620,6621)
-                  or l2_id in (9614, 1286))"""
+  query = """select distinct l3_id as category_id, l3_name as category_name from
+              (select * from product_category_mapping
+              where ( l1_id not in (77,194,9564,7287,3048,5926)
+                   and lower(l2_name) not like '%shop by%'
+                   and l3_id not in (4036,3746,3745,3819,6620,6621)
+                   or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052))
+              )
+              where l3_id not in (0)
+              group by l3_name, l3_id;"""
   nykaa_redshift_connection = PasUtils.redshiftConnection()
   valid_categories = pd.read_sql(query, con=nykaa_redshift_connection)
 
@@ -102,6 +114,7 @@ def get_popularity_data_from_es(valid_category_list):
       "brand_data": {
         "terms": {
           "field": "brand_ids.keyword",
+          "exclude": BRAND_EXCLUDE_LIST,
           "size": 10000
         },
         "aggs": base_aggregation
@@ -116,6 +129,7 @@ def get_popularity_data_from_es(valid_category_list):
           "brands" : {
             "terms": {
               "field": "brand_ids.keyword",
+              "exclude": BRAND_EXCLUDE_LIST,
               "size": 10000
             },
             "aggs": base_aggregation
@@ -180,6 +194,7 @@ def process_category(category_data):
   data['category_id'] = []
   for tag in VALID_CATALOG_TAGS:
     data[tag] = []
+    data["valid_"+tag] = []
   
   for category in category_data:
     popularity_data = {'category_id': category.get('key', 0)}
@@ -188,12 +203,17 @@ def process_category(category_data):
     
     data['category_id'].append(popularity_data.get('category_id'))
     for tag in VALID_CATALOG_TAGS:
-      data[tag].append(popularity_data.get(tag, 0))
-  
+      popularity = popularity_data.get(tag, -1)
+      if popularity < 0:
+        data[tag].append(0)
+        data["valid_"+tag].append(False)
+      else:
+        data[tag].append(popularity)
+        data["valid_" + tag].append(True)
   category_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
     category_popularity[tag] = 100 * normalize(category_popularity[tag]) + 100
-    category_popularity[tag] = category_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
+  category_popularity = category_popularity.apply(check_base_popularity, axis=1)
   category_popularity.to_csv('category_pop.csv', index=False)
   
   print("inserting category data in db")
@@ -281,6 +301,7 @@ def process_brand(brand_data):
   data['brand_id'] = []
   for tag in VALID_CATALOG_TAGS:
     data[tag] = []
+    data["valid_"+tag] = []
   
   for brand in brand_data:
     popularity_data = {'brand_id': brand.get('key', 0)}
@@ -289,12 +310,18 @@ def process_brand(brand_data):
     
     data['brand_id'].append(popularity_data.get('brand_id'))
     for tag in VALID_CATALOG_TAGS:
-      data[tag].append(popularity_data.get(tag, 0))
+      popularity = popularity_data.get(tag, -1)
+      if popularity < 0:
+        data[tag].append(0)
+        data["valid_" + tag].append(False)
+      else:
+        data[tag].append(popularity)
+        data["valid_" + tag].append(True)
   
   brand_popularity = pd.DataFrame.from_dict(data)
   for tag in VALID_CATALOG_TAGS:
     brand_popularity[tag] = 200 * normalize(brand_popularity[tag]) + 100
-    brand_popularity[tag] = brand_popularity[tag].apply(lambda x: x if x > 100.0 else 0)
+  brand_popularity = brand_popularity.apply(check_base_popularity, axis=1)
   brand_popularity.to_csv('brand_pop.csv', index=False)
   return brand_popularity
 

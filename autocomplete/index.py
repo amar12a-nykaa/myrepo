@@ -50,7 +50,7 @@ top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = DiscUtils.esConn()
 
-STORE_LIST = ['men', 'pro', 'luxe']
+STORE_LIST = ['men', 'pro', 'luxe', 'nykaa', 'ultra_lux']
 GLOBAL_FAST_INDEXING = False
 
 MIN_COUNTS = {
@@ -218,8 +218,8 @@ def create_map_search_product():
 
 def index_search_queries(collection, searchengine):
   map_search_product = create_map_search_product()
-  df = pd.read_csv('/nykaa/scripts/low_ctr_queries.csv')
-  low_ctr_query_list = list(df['name'].values)
+  df = pd.read_csv('/nykaa/scripts/low_ctr_queries.csv', encoding="ISO-8859-1", sep='\t', header=0)
+  low_ctr_query_list = list(df['names'].values)
 
   docs = []
 
@@ -260,6 +260,8 @@ def index_search_queries(collection, searchengine):
         "weight": row['popularity'],
         "type": _type,
         "data": data,
+        "is_nykaa": True,
+        "weight_nykaa": row['popularity'],
         "is_visible": False if entity in low_ctr_query_list else True,
         "source": "search_query"
       })
@@ -296,7 +298,7 @@ def index_brands(collection, searchengine):
         "entity": row['brand'],
         "weight": row['brand_popularity'],
         "type": "brand",
-        "data": json.dumps({"url": url, "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_men_url']}),
+        "data": json.dumps({"url": url, "type": "brand", "rank": ctr.count, "id": row['brand_id'], "men_url" : row['brand_url']}),
         "id": row['brand_id'],
         "is_visible": True,
         "source": "brand"
@@ -455,17 +457,23 @@ def index_custom_queries(collection, searchengine):
     _type = 'search_query'
     url = "/search/result/?" + str(urllib.parse.urlencode({'q': query}))
     data = json.dumps({"type": _type, "url": url, "corrected_query": query})
-    docs.append({
+    doc = {
       "_id": createId(query),
       "id": createId(query),
       "entity": query,
-      "weight": row['popularity'],
+      "weight": row['nykaa'],
       "is_corrected": False,
       "is_visible": True,
       "type": _type,
       "data": data,
       "source": "override"
-    })
+    }
+    store_popularity = {}
+    for store in STORE_LIST:
+      store_popularity[store] = float(row.get(store,0))
+    row['store_popularity'] = json.dumps(store_popularity)
+    doc = add_store_popularity(doc, row)
+    docs.append(doc)
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
       docs = []
@@ -557,9 +565,13 @@ def index_products(collection, searchengine):
       if unique_id in uniqueList:
         continue
       store_popularity = {}
+      popularity_to_store = product['popularity']
+      if product['popularity'] == 0:
+        popularity_to_store = 0.0001
       for store in STORE_LIST:
         if store in product['catalog_tag']:
-          store_popularity[store] = product['popularity']
+          store_popularity[store] = popularity_to_store
+          
       product['store_popularity'] = json.dumps(store_popularity)
       
       doc = {

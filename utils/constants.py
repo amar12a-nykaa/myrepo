@@ -12,6 +12,7 @@ GEN_TOP_CATEGORIES_SCRIPT = 'nykaa_scripts/recommendations/scripts/categories/ge
 
 GEN_U2P_SCRIPT = 'nykaa_scripts/recommendations/scripts/user_2_products/bought_recommendations/generate_combined_coccurence_direct.py'
 GEN_U2P_VIEWS_SCRIPT = 'nykaa_scripts/recommendations/scripts/user_2_products/views/user_views_recommendations.py'
+GEN_U2P_SIMPLE_VIEWS_SCRIPT = 'nykaa_scripts/recommendations/scripts/user_2_products/views/user_simple_views_recommendations.py'
 
 GEN_CAV_SCRIPT = 'nykaa_scripts/recommendations/scripts/product_2_products/cav/coccurence/cav_coccurence.py'
 

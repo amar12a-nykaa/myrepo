@@ -31,24 +31,41 @@ if get_process_count() > 1:
     raise Exception("Pipeline is already running. Exiting without doing anything")
 
 
-def _save_data_into_db(cursor, data_chunk):
+def _save_data_into_db(store_cursor, product_id_sku_dict, data_chunk):
     for row in data_chunk:
-        query = "INSERT INTO nykaa_retail_store_inventory_data (sku, store_code, inventory, store_update_time) VALUES(%s, %s, %s, %s) ON DUPLICATE KEY UPDATE inventory = VALUES(inventory), store_update_time=VALUES(store_update_time);"
-        cursor.execute(query, (row['SKUCODE'], row['LocCode'], row['SOH'], row['LastUpdatedOn']))
-
-
+        product_id = product_id_sku_dict.get(row['SKUCODE'])
+        store_query = "INSERT INTO nykaa_retail_store_inventory_data (sku, product_id, store_code, inventory, store_update_time) VALUES(%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE inventory = VALUES(inventory), store_update_time=VALUES(store_update_time);"
+        store_cursor.execute(store_query, (row['SKUCODE'], product_id, row['LocCode'], row['SOH'], row['LastUpdatedOn']))
 
 def save_data_into_db(data):
     RECORD_GROUP_SIZE = 100
-    mysql_conn = PasUtils.mysqlConnection(mode='w')
-    cursor = mysql_conn.cursor()
-    for i in range(0, len(data), RECORD_GROUP_SIZE):
-        _save_data_into_db(cursor, data[i:i + RECORD_GROUP_SIZE])
-        mysql_conn.commit()
-    cursor.close()
-    mysql_conn.commit()
-    mysql_conn.close()
 
+    store_mysql_conn = PasUtils.storeMysqlConnection(mode='w')
+    store_cursor = store_mysql_conn.cursor()
+
+    mysql_conn = PasUtils.mysqlConnection(mode='r')
+    cursor = mysql_conn.cursor()
+
+    for i in range(0, len(data), RECORD_GROUP_SIZE):
+        chunk = data[i:i + RECORD_GROUP_SIZE]
+        skus = []
+        for row in chunk:
+            skus.append(row['SKUCODE'])
+        skus = tuple(skus)
+        if len(skus) == 1:
+            skus = '("' + skus[0] + '")'
+        query = "SELECT sku,product_id FROM products WHERE sku in {}".format(skus)
+        cursor.execute(query)
+        product_id_sku_results = cursor.fetchall()
+        product_id_sku_dict = dict(product_id_sku_results)
+        _save_data_into_db(store_cursor, product_id_sku_dict, data[i:i + RECORD_GROUP_SIZE])
+        store_mysql_conn.commit()
+
+    store_cursor.close()
+    store_mysql_conn.commit()
+    cursor.close()
+    mysql_conn.close()
+    store_mysql_conn.close()
 
 def download_file_from_ftp(sync_type):
     status_flag = False

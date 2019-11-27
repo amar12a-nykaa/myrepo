@@ -71,12 +71,12 @@ class MysqlRedshiftUtils:
         if env_details['env'] == 'prod':
             host = 'prod-datawarehouse.nyk00-int.network'
         elif env_details['env'] in ['non_prod', 'preprod', 'qa']:
-            host = 'nka-preprod-dwhcluster.c742iibw9j1g.ap-southeast-1.redshift.amazonaws.com'
+            host = 'dwhcluster-mumbai.c8g20qmwdp4e.ap-south-1.redshift.amazonaws.com'
         else:
             raise Exception('Unknown env')
         port = 5439
-        username = 'dwh_redshift_ro'
-        password = 'GSrjC7hYPC9V'
+        username = 'gludo'
+        password = 'G1uD0@Nyk@@'
         dbname = 'datawarehouse'
         con = psycopg2.connect(dbname=dbname, host=host, port=port, user=username, password=password)
         return con
