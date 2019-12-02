@@ -17,6 +17,7 @@ from elasticsearch import helpers, Elasticsearch
 from IPython import embed
 import tempfile
 from datetime import datetime, timedelta, date
+import math
 
 from pyspark.sql import SparkSession, Row
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, DateType, TimestampType, FloatType, BooleanType, ArrayType
@@ -67,55 +68,48 @@ def prepare_views_ca_dataframe(files):
         StructField("Products", IntegerType(), True),
         StructField("Product Views", IntegerType(), True),
         StructField("Cart Additions", IntegerType(), True)])
-
     if not env_details['is_emr']:
         S3Utils.download_dir(VIEWS_CA_S3_PREFIX, VIEWS_CA_S3_PREFIX, '/data/categories_page/data/', env_details['bucket_name'])
-        files = [f for f in glob.glob('~/categories_page/data/' + "**/*.csv", recursive=True)]
-
+        files = [f for f in glob.glob('/data/categories_page/data/' + "**/*.csv", recursive=True)]
     print("Using files: " + str(files))
     df = spark.read.load(files[0], header=True, format='csv', schema=schema)
     for i in range(1, len(files)):
         df = df.union(spark.read.load(files[i], header=True, format='csv', schema=schema))
-
     df = df.withColumnRenamed("Date", "date").withColumnRenamed("Customer ID (evar23)", "customer_id").withColumnRenamed("Products", "product_id").withColumnRenamed("Product Views", "views").withColumnRenamed("Cart Additions", "cart_additions")
-
-    print("Total Number of rows: %d" % df.count())
+    #print("Total Number of rows: %d" % df.count())
     print("Dropping nulls")
     df = df.dropna()
-    print("Total Number of rows now: %d" % df.count())
-
+    #print("Total Number of rows now: %d" % df.count())
     print("Filtering out junk data")
     df = df.filter((col('cart_additions') <= 5) & (col('views') <= 5))
-    print("Total Number of rows now: %d" % df.count())
-
+    #print("Total Number of rows now: %d" % df.count())
     print('Scrolling ES for results')
-    results = ESUtils.scrollESForResults()
-    print('Scrolling ES done')
-
+    #results = ESUtils.scrollESForResults()
+    #print('Scrolling ES done')
     #product_2_l3_category = {product_id: json.loads(categories[0])['l3']['id'] for product_id, categories in results['primary_categories'].items()}
     #l3_udf = udf(lambda product_id: product_2_l3_category.get(product_id), StringType())
     #df = df.withColumn('l3_category', l3_udf('product_id'))
     #df = df.filter(col('l3_category') != 'LEVEL')
     #df = df.withColumn('l3_category', col('l3_category').cast('int'))
-
     #print("Dropping nulls after l3 category addition for products")
     df = df.dropna()
-    print("Total Number of rows now: %d" % df.count())
-
+    #print("Total Number of rows now: %d" % df.count())
     df = df.withColumn("date", udf(lambda d: datetime.strptime(d, '%B %d, %Y'), DateType())(col('date')))
-
     print("Dropping nulls after changing the type of date")
     df = df.dropna()
-    print("Total Number of rows now: %d" % df.count())
+    #print("Total Number of rows now: %d" % df.count())
     return df
 
-def generate_trending_products_from_CA(floating=False, algo="ca", days=15, limit=None):
+def generate_trending_products_from_CA(env_details,floating=False, algo="ca", days=15, limit=None):
     FTPUtils.sync_ftp_data(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, [])
     csvs_path = S3Utils.ls_file_paths(env_details['bucket_name'], VIEWS_CA_S3_PREFIX, True)
     csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 31 , csvs_path))
     print(csvs_path)
     #update_csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")) >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24)).date() , csvs_path))
     df = prepare_views_ca_dataframe(csvs_path)
+    df.show()
+    df = df.filter(col('cart_additions')!=0)
+    df.show()
     customer_ids_need_update = [] 
     if days:
         if limit:
@@ -127,7 +121,12 @@ def generate_trending_products_from_CA(floating=False, algo="ca", days=15, limit
         else:
             df = df.filter(col('date') >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24*days)).date())
         print("Total Number of rows now: %d" % df.count())
-    product_ids = df.filter(col('cart_additions')>0).groupBy("product_id").agg(count("cart_additions").alias("ca_count")).where(col("ca_count")==15).select("product_id").rdd.flatMap.collect()
+    #print("df before cart_additions filter")
+    #df.show()
+    product_ids = df.filter(col('cart_additions')>0).groupBy("product_id").agg(func.count("cart_additions").alias("ca_count")).where(col("ca_count")==15).select("product_id").collect()
+    #print("df after cart_additions filter")
+    #df.filter(col('cart_additions')>0)
+    product_ids = list(map(lambda x: x.product_id, product_ids))
     df = df.filter(col('product_id').isin(product_ids)).orderBy(['product_id', 'date'], ascending=False)
     df = df.groupBy("product_id").agg(func.collect_list("cart_additions").alias("past_ca"))
 
@@ -139,16 +138,18 @@ def generate_trending_products_from_CA(floating=False, algo="ca", days=15, limit
         for value in ls1:
             avg = avg * decay + value * (1-decay)
             sqrAvg = sqrAvg * decay + (value ** 2) * (1 - decay)
-        std = sqrt(sqrAvg - avg ** 2)
+        std = math.sqrt(sqrAvg - avg ** 2)
         if std == 0:
             return (obs - avg) 
         else:
             return (obs - avg)/std
 
     def get_z_score(ls):
+        pop = ls[1:]
+        obs = ls[0]
         number = float(len(pop))
         avg = sum(pop) / number
-        std = sqrt(sum(((c - avg) ** 2) for c in pop) / number)
+        std = math.sqrt(sum(((c - avg) ** 2) for c in pop) / number)
         return (obs - avg) / std
     if floating:
         df = df.withColumn("z_score", udf(get_floating_z_score, FloatType())(col("past_ca")))
@@ -182,6 +183,9 @@ if __name__ == '__main__':
     parser.add_argument('--platform', default='nykaa', choices=['nykaa','men'])
     parser.add_argument('--target-widget', default='categories', choices=['categories','search_bar'])
     parser.add_argument('-n', '--n', default=20, type=int)
+
+    env_details = RecoUtils.get_env_details()
+    generate_trending_products_from_CA(env_details)
     
     argv = vars(parser.parse_args())
 
