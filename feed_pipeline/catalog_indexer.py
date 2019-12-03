@@ -594,6 +594,55 @@ class CatalogIndexer:
         val = '-'.join(value_array).replace(' ', '')
         return val
 
+    def update_sku_product_mapping(rows):
+
+        sku_list = []
+        try:
+            data_map = {}
+            for row in rows:
+                data_map[row['sku']] = {
+                    "product_id": str(row['product_id']).strip(),
+                    "parent_id": str(row['parent_id']).strip() if row['type_id'].strip() == 'simple' and row['parent_id'] and row['parent_id'] != 'NULL' else str(
+                        row['product_id']).strip()
+                }
+            query = "UPDATE products SET "
+
+            parent_set_query = "parent_id = (case "
+            product_set_query = "product_id = (case "
+
+            parent_id_found = False
+            product_id_found = False
+
+            for sku in data_map:
+                sku_list.append(sku)
+                product_id = data_map[sku]['product_id']
+                parent_id = data_map[sku]['parent_id']
+
+                if parent_id:
+                    parent_id_found = True
+                    parent_set_query += " when sku = '" + sku + "' then " + parent_id + " "
+                if product_id:
+                    product_id_found = True
+                    product_set_query += " when sku = '" + sku + "' then " + product_id + " "
+
+            parent_set_query += " end) "
+            product_set_query += " end) "
+
+            if parent_id_found and product_id_found:
+                query += parent_set_query + ", " + product_set_query
+            elif parent_id_found:
+                query += parent_set_query
+            elif product_id_found:
+                query += product_set_query
+
+            query += " WHERE sku in ( " + ','.join("'{}'".format(sku) for sku in sku_list) + ") "
+
+            if parent_id_found or product_id_found:
+                DiscUtils.mysql_write(query)
+        except:
+            print(traceback.format_exc())
+            print("[ERROR] Failed to update product_id and parent_id for sku: {}".format(sku_list))
+
     def formatESDoc(doc):
         for key, value in doc.items():
             if isinstance(value, list) and value == ['']:
@@ -607,6 +656,9 @@ class CatalogIndexer:
         csvfile = open(cls.filepath, 'a')
         bestsellers = get_bestseller_products()
         # index_start = timeit.default_timer()
+        if update_productids:
+            CatalogIndexer.update_sku_product_mapping(records)
+
         for index, row in enumerate(records):
             try:
                 CatalogIndexer.validate_catalog_feed_row(row)
@@ -687,7 +739,7 @@ class CatalogIndexer:
                 doc['vendor_sku'] = row['vendor_sku']
                 doc['catalog_tag'] = row['catalog_tag'].split('|')
                 try:
-                    if update_productids:
+                    if False:
                         set_clause_arr = []
                         if doc.get('parent_id'):
                             set_clause_arr.append("parent_id='%s'" % doc.get('parent_id'))
