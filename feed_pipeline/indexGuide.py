@@ -57,6 +57,7 @@ def process_guides(filename='guide.csv'):
         entities, coverage = EntityUtils.get_matched_entities(keyword)
         filter_list = list(entities.keys())
         temp_df = df[df['keyword'] == keyword]
+        temp_df = temp_df.sort_values(by='freq', ascending=False)
         cat_df = temp_df[temp_df['filter_name'] == 'category']
         cat_df = cat_df.head(GUIDE_SIZE)
         non_cat_df = temp_df[temp_df['filter_name'] != 'category']
