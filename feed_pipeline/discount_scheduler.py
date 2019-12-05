@@ -18,6 +18,7 @@ import json
 sys.path.append("/home/ubuntu/nykaa_scripts/")
 from utils.priceUpdateLogUtils import PriceUpdateLogUtils
 import uuid
+import time
 
 total = 0
 CHUNK_SIZE = 200
@@ -47,12 +48,15 @@ class Worker(threading.Thread):
         super().__init__()
 
     def run(self):
+        DELAY_FOR_THREADS_IN_SEC = argv['delay']
         while True:
             try:
                 product_chunk = self.q.get(timeout=3)  # 3s timeout
                 ScheduledPriceUpdater.updateChunkPrice(product_chunk,self.schedule_start,self.schedule_end)
             except queue.Empty:
                 return
+            if DELAY_FOR_THREADS_IN_SEC:
+                time.sleep(DELAY_FOR_THREADS_IN_SEC)
             self.q.task_done()
 
 
@@ -213,11 +217,13 @@ class ScheduledPriceUpdater:
                 print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
 
         try:
-            update_docs = PipelineUtils.getProductsToIndex(products, add_limit=True)
-            if update_docs:
-                DiscUtils.updateESCatalog(update_docs)
-                for singleBundle in update_docs:
-                    print("bundle sku: %s" % singleBundle['sku'])
+            bundle_chunks = list(ScheduledPriceUpdater.getChunks(products, 100))
+            for bundle_products in bundle_chunks:
+                update_docs = PipelineUtils.getProductsToIndex(bundle_products, add_limit=True)
+                if update_docs:
+                    DiscUtils.updateESCatalog(update_docs)
+                    for singleBundle in update_docs:
+                        print("bundle sku: %s" % singleBundle['sku'])
         except Exception as e:
             print(traceback.format_exc())
 
@@ -230,5 +236,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, help='number of records in single index request')
     parser.add_argument("--threads", type=int, help='number of records in single index request')
+    parser.add_argument("--delay", type=int, help='number of seconds of delay in each thread')
     argv = vars(parser.parse_args())
     ScheduledPriceUpdater.update()

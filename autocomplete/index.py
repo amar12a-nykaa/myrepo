@@ -50,7 +50,7 @@ top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = DiscUtils.esConn()
 
-STORE_LIST = ['men', 'pro', 'luxe', 'nykaa']
+STORE_LIST = ['men', 'pro', 'luxe', 'nykaa', 'ultra_lux']
 GLOBAL_FAST_INDEXING = False
 
 MIN_COUNTS = {
@@ -58,7 +58,7 @@ MIN_COUNTS = {
   "brand": 1000,
   "category": 200,
   "brand_category": 10000,
-  "search_query": 40000,
+  "search_query": 20000,
   "category_facet": 200,
 }
 PasUtils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
@@ -218,8 +218,8 @@ def create_map_search_product():
 
 def index_search_queries(collection, searchengine):
   map_search_product = create_map_search_product()
-  df = pd.read_csv('/nykaa/scripts/low_ctr_queries.csv')
-  low_ctr_query_list = list(df['name'].values)
+  df = pd.read_csv('/nykaa/scripts/low_ctr_queries.csv', encoding="ISO-8859-1", sep='\t', header=0)
+  low_ctr_query_list = list(df['names'].values)
 
   docs = []
 

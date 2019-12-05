@@ -31,9 +31,124 @@ if __name__ == '__main__':
         }
     ]
     instance_groups = {
-        'InstanceGroups': [
-            Constants.BIG_MASTER_INSTANCE,
-            dict(Constants.BIG_CORE_INSTANCE, **{'InstanceCount': 3}) ]
+        'InstanceFleets': [
+            {
+              "Name": "Task",
+              "InstanceFleetType": "TASK",
+              "TargetSpotCapacity": 700,
+              "InstanceTypeConfigs": [
+                {
+                  "InstanceType": "m4.4xlarge",
+                  "WeightedCapacity": 64,
+                  "BidPriceAsPercentageOfOnDemandPrice": 50,
+                  "EbsConfiguration": {
+                    "EbsBlockDeviceConfigs": [
+                      {
+                        "VolumeSpecification": {
+                          "VolumeType": "gp2",
+                          "SizeInGB": 32
+                        },
+                        "VolumesPerInstance": 8
+                      }
+                    ]
+                  }
+                },
+                {
+                  "InstanceType": "m5d.24xlarge",
+                  "WeightedCapacity": 384,
+                  "BidPriceAsPercentageOfOnDemandPrice": 50,
+                  "EbsConfiguration": {
+                    "EbsBlockDeviceConfigs": [
+                      {
+                        "VolumeSpecification": {
+                          "VolumeType": "gp2",
+                          "SizeInGB": 32
+                        },
+                        "VolumesPerInstance": 8
+                      }
+                    ]
+                  }
+                },
+                {
+                  "InstanceType": "m5.12xlarge",
+                  "WeightedCapacity": 192,
+                  "BidPriceAsPercentageOfOnDemandPrice": 50,
+                  "EbsConfiguration": {
+                    "EbsBlockDeviceConfigs": [
+                      {
+                        "VolumeSpecification": {
+                          "VolumeType": "gp2",
+                          "SizeInGB": 32
+                        },
+                        "VolumesPerInstance": 8
+                      }
+                    ]
+                  }
+                },
+                {
+                  "InstanceType": "m5d.2xlarge",
+                  "WeightedCapacity": 32,
+                  "BidPriceAsPercentageOfOnDemandPrice": 50,
+                  "EbsConfiguration": {
+                    "EbsBlockDeviceConfigs": [
+                      {
+                        "VolumeSpecification": {
+                          "VolumeType": "gp2",
+                          "SizeInGB": 32
+                        },
+                        "VolumesPerInstance": 8
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "Name": "Master",
+              "InstanceFleetType": "MASTER",
+              "TargetOnDemandCapacity": 1,
+              "InstanceTypeConfigs": [
+                {
+                  "InstanceType": "m5.12xlarge",
+                  "WeightedCapacity": 1,
+                  "EbsConfiguration": {
+                    "EbsBlockDeviceConfigs": [
+                      {
+                        "VolumeSpecification": {
+                          "VolumeType": "gp2",
+                          "SizeInGB": 32
+                        },
+                        "VolumesPerInstance": 8
+                      }
+                    ]
+                  }
+                },
+              ]
+            },
+            {
+              "Name": "Core",
+              "InstanceFleetType": "CORE",
+              "TargetSpotCapacity": 200,
+              "InstanceTypeConfigs": [
+                {
+                  "InstanceType": "m5.12xlarge",
+                  "WeightedCapacity": 192,
+                  "BidPriceAsPercentageOfOnDemandPrice": 50,
+                  "EbsConfiguration": {
+                    "EbsBlockDeviceConfigs": [
+                      {
+                        "VolumeSpecification": {
+                          "VolumeType": "gp2",
+                          "SizeInGB": 32
+                        },
+                        "VolumesPerInstance": 8
+                      }
+                    ]
+                  }
+                },
+              ]
+            }
+        ]
     }
     if views:
         config = '%s/%s' % (Constants.HOME_DIR, Constants.BIG_EMR_CONFIG)
