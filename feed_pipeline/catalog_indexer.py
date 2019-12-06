@@ -1062,8 +1062,7 @@ class CatalogIndexer:
                     # elif len(facet_ids) != len(facet_values):
                     #  with open("/data/inconsistent_facet.txt", "a") as f:
                     #    f.write("%s  %s\n"%(doc['sku'], field))
-                if doc.get("size_ids"):
-                    doc['instock_size_ids'] = (row['instock_size_ids'] or "").split(',') if row["instock_size_ids"] else doc['size_ids']
+                
                 doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
                 if not doc['brand_facet_searchable']:
                     doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
@@ -1253,14 +1252,11 @@ class CatalogIndexer:
         q = queue.Queue(maxsize=0)
 
         searchable_info = defaultdict(list)
-        instock_size_info = defaultdict(list)
         for index, row in enumerate(all_rows):
           psku = row['parent_sku']
           sku = row['sku']
           if psku == sku:
             continue
-          if row['size_id'] and (row['is_in_stock'] == "1" or row['is_in_stock'] == 1):
-            instock_size_info[psku].append(row['size_id'])
           name_arr = row['name'].split(" ")
           for word in row['name'].split(" "):
             if word and word not in searchable_info[psku]:
@@ -1275,9 +1271,6 @@ class CatalogIndexer:
               if word and word not in searchable_info[psku]:
                 title_searchable.append(word)
           
-          all_rows[index]['instock_size_ids'] = row['size_id']
-          if sku in instock_size_info:
-            all_rows[index]['instock_size_ids'] = ','.join(instock_size_info[sku])
 
           all_rows[index]['title_searchable'] = " ".join(title_searchable)
 
