@@ -205,7 +205,7 @@ if __name__ == "__main__":
 
     offerbatchsize = argv['offerbatchsize']
     offerswitch = argv['offerswitch']
-    instockswitch = argv['oos-size-switch']
+    instockswitch = argv['oos_size_switch']
     # Index Elastic Search Data
     if argv['search_engine'] in ['elasticsearch', None]:
         indexESData(file_path, force_run, offerbatchsize, offerswitch,instockswitch)
