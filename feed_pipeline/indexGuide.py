@@ -58,6 +58,7 @@ def process_guides(filename='guide.csv'):
         filter_list = list(entities.keys())
         temp_df = df[df['keyword'] == keyword]
         cat_df = temp_df[temp_df['filter_name'] == 'category']
+        cat_df = cat_df.sort_values(by='freq', ascending=False)
         cat_df = cat_df.head(GUIDE_SIZE)
         non_cat_df = temp_df[temp_df['filter_name'] != 'category']
         temp_df = pd.concat([cat_df, non_cat_df])

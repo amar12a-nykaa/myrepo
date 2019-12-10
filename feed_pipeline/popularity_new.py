@@ -61,22 +61,6 @@ def get_brand_popularity():
   print(data.head(5))
   return data
 
-def get_product_validity():
-  print('get product validity')
-
-  query = """select product_id, parent_id, is_in_stock, mrp, disabled
-                from products"""
-  mysql_conn = PasUtils.mysqlConnection()
-  data = pd.read_sql(query, con=mysql_conn)
-  mysql_conn.close()
-  data.mrp = data.mrp.fillna(0)
-  data = data[(data.is_in_stock == 0) | (data.disabled == 1) | (data.mrp < 1)]
-  data['valid'] = 0
-  data = data.astype({'product_id': str, 'parent_id': str})
-  data.drop(['is_in_stock', 'mrp', 'disabled'], axis=1, inplace=True)
-  print(data.columns)
-  return data
-  
 
 def create_child_parent_map():
   print("create child parent map")
@@ -173,7 +157,6 @@ def normalize(a):
 
 def get_bucket_results(date_bucket=None):
   global child_parent_map
-  global product_validity
   
   if date_bucket:
     startday = date_bucket[1] * -1
@@ -193,14 +176,11 @@ def get_bucket_results(date_bucket=None):
   if not valid:
     print("Skipping bucket:", date_bucket)
     return None
-  order_data = get_order_data(startdate, enddate)
   
-  #remove oos products
-  order_data = pd.merge(order_data, product_validity, how='left', on=['product_id', 'parent_id'])
-  order_data.valid = order_data.valid.fillna(1)
-  order_data.orders = order_data.apply(lambda x: 0 if not x['valid'] else x['orders'], axis=1)
-  order_data.revenue = order_data.apply(lambda x: 0 if not x['valid'] else x['revenue'], axis=1)
-  order_data.units = order_data.apply(lambda x: 0 if not x['valid'] else x['units'], axis=1)
+  order_data = get_order_data(startdate, enddate)
+  order_data.orders = order_data.orders.fillna(0)
+  order_data.revenue = order_data.revenue.fillna(0)
+  order_data.units = order_data.units.fillna(0)
   
   # create_parent_matrix
   parent_order_data = order_data.groupby('parent_id').agg({'orders': 'sum', 'revenue': 'sum', 'units': 'sum'}).reset_index()
@@ -470,7 +450,6 @@ def handleColdStart(df):
   return final_df
 
 child_parent_map = create_child_parent_map()
-product_validity = get_product_validity()
 brand_popularity = get_brand_popularity()
 
 if __name__ == '__main__':
