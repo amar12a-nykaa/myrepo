@@ -32,7 +32,10 @@ from pas.v2.utils import Utils as PasUtils
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
-filter_attribute_map = [("656","concern"), ("661","preference"), ("659","formulation"), ("664","finish"), ("658","color")]
+filter_attribute_map = [("656","concern"), ("661","preference"), ("659","formulation"), ("664","finish"), ("658","color"),
+                        ("gender", "655"), ("skin_type", "657"), ("hair_type", "677"), ("ingredient", "857"),
+                        ("skin_tone", "665"), ("coverage", "663"), ("wiring", "812"), ("padding", "813"),
+                        ("fabric", "815"), ("pattern", "822"), ("rise", "823")]
 FILTER_WEIGHT = 50
 ASSORTMENT_WEIGHT = 1
 
