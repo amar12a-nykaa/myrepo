@@ -187,6 +187,41 @@ class EntityIndexer:
 
   def index_filters(collection):
     mysql_conn = PasUtils.nykaaMysqlConnection(force_production=True)
+    synonyms = {
+      {'10777': {'name': 'Acne/Blemishes', 'synonym': ['acne', 'anti acne', 'blemishes', 'anti blemishes']}},
+      {'10753': {'name': 'Dark Spots/Pigmentation', 'synonym': ['dark spots', 'pigmentation', 'anti pigmentation']}},
+      {'10771': {'name': 'Pores/Blackheads/Whiteheads', 'synonym': ['pores', 'blackheads', 'whiteheads']}},
+      {'10749': {'name': 'Fine Lines/Wrinkles', 'synonym': ['fines lines', 'wrinkle', 'anti wrinkle']}},
+      {'10776': {'name': 'Anti-ageing', 'synonym': ['ageing', 'anti ageing']}},
+      {'10770': {'name': 'Brightening/Fairness', 'synonym': ['brightening', 'fairness']}},
+      {'91637': {'name': 'Hairfall & Thinning', 'synonym': ['anti hairfall', 'hairfall', 'thinning']}},
+      {'91638': {'name': 'Dry & Frizzy Hair', 'synonym': ['dry hair', 'frizzy hair']}},
+      {'10755': {'name': 'Dandruff', 'synonym': ['dandruff', 'anti dandruff']}},
+      {'80231': {'name': 'Tan Removal', 'synonym': ['tan removal', 'tan', 'anti tan', 'de tan']}},
+      {'12089': {'name': 'Lotion/Body Butter', 'synonym': ['lotion', 'body butter']}},
+      {'10711': {'name': 'Female', 'synonym': ['women', 'woman', 'ladies']}},
+      {'11075': {'name': 'Normal', 'synonym': ['normal hair']}},
+      {'11079': {'name': 'Curly', 'synonym': ['curly hair']}},
+      {'11073': {'name': 'Straight', 'synonym': ['straight hair']}},
+      {'11076': {'name': 'Fine', 'synonym': ['fine hair']}},
+      {'11074': {'name': 'Oily', 'synonym': ['oily hair']}},
+      {'11078': {'name': 'Dryness', 'synonym': ['dry hair']}},
+      {'11077': {'name': 'Dull Hair', 'synonym': ['dull hair']}},
+      {'11072': {'name': 'Thick', 'synonym': ['thick hair']}},
+      {'11071': {'name': 'Thin', 'synonym': ['thin hair']}},
+      {'91639': {'name': 'Wavy', 'synonym': ['wavy hair']}},
+      {'91643': {'name': 'Argan Oil', 'synonym': ['argan']}},
+      {'67293': {'name': 'Solid/Plain', 'synonym': ['solid', 'plain']}},
+      {'96358': {'name': 'Embellished/Sequined', 'synonym': ['embellished', 'sequined']}},
+      {'10887': {'name': 'Medium/Wheatish', 'synonym': ['medium skin', 'wheatish skin']}},
+      {'10886': {'name': 'Fair/Light', 'synonym': ['fair skin', 'light skin']}},
+      {'10888': {'name': 'Dusky/Dark', 'synonym': ['dusky skin', 'dark skin']}},
+      {'10781': {'name': 'Dry', 'synonym': ['dry skin']}},
+      {'10779': {'name': 'Oily', 'synonym': ['oily skin']}},
+      {'10780': {'name': 'Normal', 'synonym': ['normal skin']}},
+      {'10778': {'name': 'Sensitive', 'synonym': ['sensitive skin']}},
+      {'10782': {'name': 'Combination', 'synonym': ['combination skin']}}
+    }
     for filt in filter_attribute_map:
       id = filt[0]
       filter = filt[1]
@@ -207,6 +242,8 @@ class EntityIndexer:
           "type": filter,
           "id": str(row['filter_id'])
         }
+        if filter_doc["id"] in synonyms:
+          filter_doc["entity_synonyms"] = synonyms[filter_doc["id"]]
         docs.append(filter_doc)
         if len(docs) >= 100:
           EsUtils.indexDocs(docs, collection)
