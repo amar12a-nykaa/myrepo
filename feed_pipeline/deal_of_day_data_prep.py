@@ -51,11 +51,11 @@ def getPriceChangeData():
   startdate = arrow.now().replace(days=DAYS).strftime("%Y-%m-%d")
   enddate = arrow.now().replace(days=ENDDAYS).strftime("%Y-%m-%d")
   qstartdate = arrow.now().replace(days=-1).strftime("%Y-%m-%d")
-  query = """select sku, dt, hh, max(old_price) as old_price, min(new_price) as new_price
-              from events_pds
-              where dt >= '%s' and dt < '%s'
-                and event='price_changed' and old_price != 'None'
-              group by sku, dt, hh""" % (qstartdate, enddate)
+  query = """select sku, date as dt, hour as hh, max(old_price) as old_price, min(new_price) as new_price
+              from events_pds_processed
+              where date >= '%s' and date < '%s'
+                and event='price_changed' and old_price > 1
+              group by sku, date, hour""" % (qstartdate, enddate)
   params = {
     'region': 'ap-south-1',
     'database': 'datapipeline',
