@@ -84,6 +84,9 @@ class EntityIndexer:
       "Vaadi Herbals": ["Vaadi"],
       "Kama Ayurveda": ["Kama"],
       "Layer'r": ["Layer"],
+      "wet and wild": ["wet n wild"],
+      "sugar cosmetics": ["sugar"],
+      "la girl": ["l.a. girl"],
     }
     mysql_conn = PasUtils.mysqlConnection()
     query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
@@ -195,31 +198,32 @@ class EntityIndexer:
                 '10770': {'name': 'Brightening/Fairness', 'synonym': ['brightening', 'fairness']},
                 '91637': {'name': 'Hairfall & Thinning', 'synonym': ['anti hairfall', 'hairfall', 'thinning']},
                 '91638': {'name': 'Dry & Frizzy Hair', 'synonym': ['dry hair', 'frizzy hair']},
-                '10755': {'name': 'Dandruff', 'synonym': ['dandruff', 'anti dandruff']},
-                '80231': {'name': 'Tan Removal', 'synonym': ['tan removal', 'tan', 'anti tan', 'de tan']},
+                '10755': {'name': 'Dandruff', 'synonym': ['anti dandruff']},
+                '80231': {'name': 'Tan Removal', 'synonym': ['tan', 'anti tan', 'de tan']},
                 '12089': {'name': 'Lotion/Body Butter', 'synonym': ['lotion', 'body butter']},
                 '10711': {'name': 'Female', 'synonym': ['women', 'woman', 'ladies']},
-                '11075': {'name': 'Normal', 'synonym': ['normal hair']},
-                '11079': {'name': 'Curly', 'synonym': ['curly hair']},
-                '11073': {'name': 'Straight', 'synonym': ['straight hair']},
-                '11076': {'name': 'Fine', 'synonym': ['fine hair']},
-                '11074': {'name': 'Oily', 'synonym': ['oily hair']},
-                '11078': {'name': 'Dryness', 'synonym': ['dry hair']},
-                '11077': {'name': 'Dull Hair', 'synonym': ['dull hair']},
-                '11072': {'name': 'Thick', 'synonym': ['thick hair']},
-                '11071': {'name': 'Thin', 'synonym': ['thin hair']},
-                '91639': {'name': 'Wavy', 'synonym': ['wavy hair']},
-                '91643': {'name': 'Argan Oil', 'synonym': ['argan']},
                 '67293': {'name': 'Solid/Plain', 'synonym': ['solid', 'plain']},
                 '96358': {'name': 'Embellished/Sequined', 'synonym': ['embellished', 'sequined']},
-                '10887': {'name': 'Medium/Wheatish', 'synonym': ['medum skin', 'wheatish skin']},
-                '10886': {'name': 'Fair/Light', 'synonym': ['fair skin', 'light skin']},
-                '10888': {'name': 'Dusky/Dark', 'synonym': ['dusky skin', 'dark skin']},
-                '10781': {'name': 'Dry', 'synonym': ['dry skin']},
-                '10779': {'name': 'Oily', 'synonym': ['oily skin']},
-                '10780': {'name': 'Normal', 'synonym': ['normal skin']},
-                '10778': {'name': 'Sensitive', 'synonym': ['sensitive skin']},
-                '10782': {'name': 'Combination', 'synonym': ['combination skin']}}
+                '10887': {'name': 'Medium/Wheatish Skin', 'synonym': ['medium skin', 'wheatish skin']},
+                '10886': {'name': 'Fair/Light Skin', 'synonym': ['fair skin', 'light skin']},
+                '10888': {'name': 'Dusky/Dark Skin', 'synonym': ['dusky skin', 'dark skin']},
+                '11075': {'name': 'Normal hair'},
+                '11079': {'name': 'Curly hair'},
+                '11073': {'name': 'Straight hair'},
+                '11076': {'name': 'Fine hair'},
+                '11074': {'name': 'Oily hair'},
+                '11078': {'name': 'Dry hair'},
+                '11077': {'name': 'Dull Hair'},
+                '11072': {'name': 'Thick hair'},
+                '11071': {'name': 'Thin hair'},
+                '91639': {'name': 'Wavy hair'},
+                '91643': {'name': 'Argan'},
+                '10781': {'name': 'Dry skin'},
+                '10779': {'name': 'Oily skin'},
+                '10780': {'name': 'Normal skin'},
+                '10778': {'name': 'Sensitive skin'},
+                '10782': {'name': 'Combination skin'},
+    }
     for filt in filter_attribute_map:
       id = filt[0]
       filter = filt[1]
@@ -235,19 +239,22 @@ class EntityIndexer:
 
         filter_doc = {
           "_id": createId(row['name']),
-          "entity": row['name'],
+          "entity": row['name'].strip(),
           "weight": FILTER_WEIGHT,
           "type": filter,
           "id": str(row['filter_id'])
         }
         if filter_doc["id"] in synonyms:
-          filter_doc["entity_synonyms"] = synonyms[filter_doc["id"]]['synonym']
+          filter_doc["entity"] = synonyms[filter_doc["id"]]["name"]
+          filter_doc["_id"] = createId(filter_doc["entity"])
+          if 'synonym' in synonyms[filter_doc["id"]]:
+            filter_doc["entity_synonyms"] = synonyms[filter_doc["id"]]["synonym"]
         docs.append(filter_doc)
         if len(docs) >= 100:
           EsUtils.indexDocs(docs, collection)
           docs = []
 
-        print(row['name'], ctr.count)
+        print(filter, filter_doc["entity"], filter_doc["id"])
       EsUtils.indexDocs(docs, collection)
 
   def index(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False,
