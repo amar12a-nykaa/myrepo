@@ -84,9 +84,6 @@ class EntityIndexer:
       "Vaadi Herbals": ["Vaadi"],
       "Kama Ayurveda": ["Kama"],
       "Layer'r": ["Layer"],
-      "wet and wild": ["wet n wild"],
-      "sugar cosmetics": ["sugar"],
-      "la girl": ["l.a. girl"],
     }
     mysql_conn = PasUtils.mysqlConnection()
     query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
