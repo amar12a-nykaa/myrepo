@@ -17,6 +17,7 @@ from esutils import EsUtils
 from catalog_nykaa_importer import NykaaImporter
 from catalog_indexer import CatalogIndexer
 from update_bestseller_product_to_es import update_bestseller_data
+from update_instock_info_to_es import updateInStockInformation
 
 sys.path.append("/var/www/discovery_api/")
 from disc.v2.utils import Utils as DiscUtils
@@ -63,7 +64,7 @@ if getCount() > 1:
     raise Exception("Pipeline is already running. Exiting without doing anything")
 
 
-def indexESData(file_path, force_run, offerbatchsize, offerswitch):
+def indexESData(file_path, force_run, offerbatchsize, offerswitch, instockswitch):
     indexes = EsUtils.get_active_inactive_indexes("livecore")
     active_index = indexes['active_index']
     inactive_index = indexes['inactive_index']
@@ -87,6 +88,11 @@ def indexESData(file_path, force_run, offerbatchsize, offerswitch):
     CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index,
                          limit=argv['limit'], update_productids=True, offerbatchsize=offerbatchsize, offerswitch=offerswitch)
 
+    if instockswitch:
+      print("Adding in_stock size value")
+      updateInStockInformation(inactive_index, 100)
+      print("Update Done")
+    
     sett = {'refresh_interval': '1s'}
     index_client.put_settings(sett, inactive_index)
     try:
@@ -140,7 +146,8 @@ if __name__ == "__main__":
     parser.add_argument("--bestsellerupdate", default=True, type=bool)
     parser.add_argument("-b", "--offerbatchsize", default=1000, help='size of offer docs batch', type=int)
     parser.add_argument("-w", "--offerswitch", default=False, help='switch for fetch_offers function', type=bool)
-
+    parser.add_argument("-o", "--oos-size-switch", default=False, help='switch for fetch_offers function', type=bool)
+    
     argv = vars(parser.parse_args())
 
     if argv['throw_dummy_error']:
@@ -198,9 +205,10 @@ if __name__ == "__main__":
 
     offerbatchsize = argv['offerbatchsize']
     offerswitch = argv['offerswitch']
+    instockswitch = argv['oos_size_switch']
     # Index Elastic Search Data
     if argv['search_engine'] in ['elasticsearch', None]:
-        indexESData(file_path, force_run, offerbatchsize, offerswitch)
+        indexESData(file_path, force_run, offerbatchsize, offerswitch,instockswitch)
 
     if argv['bestsellerupdate']:
         update_bestseller_data(100)
