@@ -48,8 +48,6 @@ def updateInStockInformation(collection, batch_size=500):
   for doc in data:
     product = doc["_source"]
     instock_size_info[product["psku"]].append(product["size_ids"])
-    if product["sku"] != product["psku"]:
-      instock_size_info[product["sku"]].append(product["size_ids"])
   
   for docs in chunks(instock_size_info, batch_size):
     update_info(docs, collection)
