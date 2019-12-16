@@ -54,8 +54,11 @@ def process_guides(filename='guide.csv'):
     keyword_list = list(map(str, keyword_frequency.iloc[:, 0]))
     for keyword in keyword_list:
         # remove filters present in keyword itself
-        entities, coverage = EntityUtils.get_matched_entities(keyword)
-        filter_list = list(entities.keys())
+        if df['type'] == 'keyword':
+            entities, coverage = EntityUtils.get_matched_entities(keyword)
+            filter_list = list(entities.keys())
+        else:
+            filter_list = [df['type']]
         temp_df = df[df['keyword'] == keyword]
         cat_df = temp_df[temp_df['filter_name'] == 'category']
         cat_df = cat_df.sort_values(by='freq', ascending=False)
