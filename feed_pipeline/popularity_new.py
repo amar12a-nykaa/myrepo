@@ -345,11 +345,8 @@ def applyBoost(df):
   return temp_df
 
 def get_product_creation():
-  query = """select product_id, parent_id from solr_dump_3 where type_id != 'bundle'"""
+  query = """select product_id, brands_v1 as brand_code, generic_attributes from solr_dump_4"""
   df = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
-  query = """select product_id, brands_v1 as brand_ids, generic_attributes from solr_dump_4"""
-  df2 = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
-  df = pd.merge(df, df2, on="product_id")
   df['product_enable_time'] = None
   today = datetime.datetime.combine(datetime.datetime.today(), datetime.time.min)
   startdate = today - datetime.timedelta(days=30)
@@ -365,6 +362,8 @@ def get_product_creation():
           enable_time = datetime.datetime.strptime(enable_time, "%Y-%m-%d %H:%M:%S")
           if enable_time >= startdate and enable_time <= today:
             row['product_enable_time'] = enable_time
+      if row.get('brand_code'):
+        row['brand_code'] = row['brand_code'].split('|')[0]
     except Exception as ex:
       print(ex)
       pass
@@ -373,6 +372,9 @@ def get_product_creation():
   df = df.apply(extract_product_enable_time, axis=1)
   df = df.dropna()
   df.drop(['generic_attributes'], axis=1, inplace=True)
+  query = """select product_id, parent_id from solr_dump_3 where type_id != 'bundle'"""
+  df2 = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
+  df = pd.merge(df, df2, on="product_id", how="inner")
   return df
 
 
