@@ -1,4 +1,4 @@
-keyword	filter_name	filter_value	freq	type
+keyword	filter_name	filter_value	freq	keyword_type
 249	color	25802	5	category
 249	brand	1937	10	category
 249	brand	3899	6	category
