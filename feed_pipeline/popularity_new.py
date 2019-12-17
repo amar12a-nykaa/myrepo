@@ -3,6 +3,7 @@ import pandas as pd
 import arrow
 import numpy
 import datetime
+import json
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
@@ -344,40 +345,36 @@ def applyBoost(df):
   return temp_df
 
 def get_product_creation():
-  required_field_list = [
-    "product_id",
-    "parent_id",
-    "brand_ids",
-    "product_enable_time"
-  ]
-  querydsl={}
-  querydsl['_source'] = required_field_list
-  querydsl['query'] = {}
-  must=[]
-  must_not=[]
+  query = """select product_id, parent_id from solr_dump_3 where type_id != 'bundle'"""
+  df = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
+  query = """select product_id, brands_v1 as brand_ids, generic_attributes from solr_dump_4"""
+  df2 = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
+  df = pd.merge(df, df2, on="product_id")
+  df['product_enable_time'] = None
   today = datetime.datetime.combine(datetime.datetime.today(), datetime.time.min)
   startdate = today - datetime.timedelta(days=30)
-  must_not.append({"term": {"type":"bundle"}})
-  must.append({"range":{
-            "product_enable_time":{
-              "gte": str(startdate),
-              "lte": str(today)
-            }
-          }})
-  querydsl["query"]["bool"] = {"must": must, "must_not": must_not}
-  querydsl['size'] = 10000
-  print (querydsl)
-  response = DiscUtils.makeESRequest(querydsl, index="livecore")
-  hits = response['hits']['hits']
-  product_list = []
-  for product in hits:
-    if product['_source'].get('brand_ids', 0):
-      product['_source']['brand_code'] = product['_source'].pop('brand_ids')[0]
-      product_list.append(product['_source'])
-  df = pd.DataFrame(product_list)
-  print(len(df.index))
-
+  
+  def extract_product_enable_time(row):
+    try:
+      if row.get('generic_attributes'):
+        generic_attributes_raw = '{' + row.get('generic_attributes') + '}'
+        ga = json.loads(generic_attributes_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').
+                        replace('\\r', '').replace('\\\\"', '\\"'))
+        if ga.get('product_enable_time'):
+          enable_time = ga.get('product_enable_time').get('value')
+          enable_time = datetime.datetime.strptime(enable_time, "%Y-%m-%d %H:%M:%S")
+          if enable_time >= startdate and enable_time <= today:
+            row['product_enable_time'] = enable_time
+    except Exception as ex:
+      print(ex)
+      pass
+    return row
+  
+  df = df.apply(extract_product_enable_time, axis=1)
+  df = df.dropna()
+  df.drop(['generic_attributes'], axis=1, inplace=True)
   return df
+
 
 def handleColdStart(df):
   global child_parent_map
