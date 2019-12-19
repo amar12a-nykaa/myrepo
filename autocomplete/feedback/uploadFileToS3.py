@@ -10,7 +10,7 @@ sys.path.append("/nykaa/scripts/feed_pipeline")
 from pipelineUtils import PipelineUtils
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--days", type=int, default=15)
+parser.add_argument("--days", type=int, default=1)
 argv = vars(parser.parse_args())
 days = -1 * argv['days']
 
@@ -19,7 +19,7 @@ pipeline = boto3.session.Session(profile_name='datapipeline')
 bucket_name = PipelineUtils.getBucketNameForFeedback()
 
 params = {
-    'region': 'ap-southeast-1',
+    'region': 'ap-south-1',
     'database': 'datapipeline',
     'bucket': bucket_name
 }
@@ -81,18 +81,18 @@ for date in dates_to_process:
                     (SELECT DISTINCT lower(typed_term) AS typed_term,
                          lower(clicked_term) AS clicked_term,
                          count(*) AS click_freq
-                    FROM _events
+                    FROM events
                     WHERE visible_sugg!=''
-                            AND CAST(dt AS DATE) = DATE('%s')
+                            AND CAST(date AS DATE) = DATE('%s')
                     GROUP BY  1,2 ) a
                 RIGHT JOIN
                     (SELECT DISTINCT lower(typed_term) AS typed_term,
                          lower(visible_term) AS visible_term,
                          count(*) AS visible_freq
-                    FROM _events
+                    FROM events
                     CROSS JOIN UNNEST(SPLIT(visible_sugg,'|')) AS t (visible_term)
                     WHERE visible_sugg!=''
-                            AND CAST(dt AS DATE) = DATE('%s')
+                            AND CAST(date AS DATE) = DATE('%s')
                     GROUP BY  1,2 ) b
                     ON a.typed_term=b.typed_term
                         AND a.clicked_term=b.visible_term

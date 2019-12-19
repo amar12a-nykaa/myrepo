@@ -48,7 +48,7 @@ class PipelineUtils:
   def getBucketNameForFeedback():
     bucket_name = 'nykaa-nonprod-feedback-autocomplete'
     if socket.gethostname().startswith('admin'):
-      bucket_name = 'nykaa-prod-feedback-autocomplete'
+      bucket_name = 'nykaa-prod-autocomplete-feedback'
     return bucket_name
 
   def getOptionAttributes(option_ids):
