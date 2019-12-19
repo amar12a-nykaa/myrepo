@@ -217,11 +217,13 @@ class ScheduledPriceUpdater:
                 print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
 
         try:
-            update_docs = PipelineUtils.getProductsToIndex(products, add_limit=True)
-            if update_docs:
-                DiscUtils.updateESCatalog(update_docs)
-                for singleBundle in update_docs:
-                    print("bundle sku: %s" % singleBundle['sku'])
+            bundle_chunks = list(ScheduledPriceUpdater.getChunks(products, 100))
+            for bundle_products in bundle_chunks:
+                update_docs = PipelineUtils.getProductsToIndex(bundle_products, add_limit=True)
+                if update_docs:
+                    DiscUtils.updateESCatalog(update_docs)
+                    for singleBundle in update_docs:
+                        print("bundle sku: %s" % singleBundle['sku'])
         except Exception as e:
             print(traceback.format_exc())
 

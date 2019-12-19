@@ -1062,7 +1062,7 @@ class CatalogIndexer:
                     # elif len(facet_ids) != len(facet_values):
                     #  with open("/data/inconsistent_facet.txt", "a") as f:
                     #    f.write("%s  %s\n"%(doc['sku'], field))
-
+ 
                 doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
                 if not doc['brand_facet_searchable']:
                     doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
