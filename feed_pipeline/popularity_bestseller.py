@@ -6,12 +6,9 @@ import datetime
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
-sys.path.append("/var/www/discovery_api")
-from disc.v2.utils import Utils as DiscUtils
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from mongoutils import MongoUtils
-from popularity_new import product_validity
 from loopcounter import LoopCounter
 
 client = MongoUtils.getClient()
@@ -23,6 +20,22 @@ NO_OF_PRODUCTS_FROM_EACH_BRAND = 2
 NO_OF_PRODUCTS_FROM_EACH_CATEGORY = 5
 
 #_id:product_id, type:[brand,category]
+
+def get_product_validity():
+  print('get product validity')
+
+  query = """select product_id, parent_id, is_in_stock, mrp, disabled
+                from products"""
+  mysql_conn = PasUtils.mysqlConnection()
+  data = pd.read_sql(query, con=mysql_conn)
+  mysql_conn.close()
+  data.mrp = data.mrp.fillna(0)
+  data = data[(data.is_in_stock == 0) | (data.disabled == 1) | (data.mrp < 1)]
+  data['valid'] = 0
+  data = data.astype({'product_id': str, 'parent_id': str})
+  data.drop(['is_in_stock', 'mrp', 'disabled'], axis=1, inplace=True)
+  print(data.columns)
+  return data
 
 def get_order_data(startdate, enddate):
   print('get order data')
@@ -107,6 +120,7 @@ if __name__ == '__main__':
   enddate = arrow.now().replace(days=0, hour=0, minute=0, second=0, microsecond=0,
                                 tzinfo=None).datetime.replace(tzinfo=None)
   order_data = get_order_data(startdate, enddate)
+  product_validity = get_product_validity()
   order_data = pd.merge(order_data, product_validity, how='left', on=['product_id', 'parent_id'])
   order_data.valid = order_data.valid.fillna(1)
   order_data.orders = order_data.apply(lambda x: 0 if not x['valid'] else x['orders'], axis=1)
