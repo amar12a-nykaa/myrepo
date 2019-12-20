@@ -64,7 +64,7 @@ def renameS3File(source, destination):
     print('file renamed successfully')
 
 
-def uploadFile(days=1):
+def uploadFile(days=-1):
     dates_to_process = enumerate_dates(days, -1)
     for date in dates_to_process:
         s3_file_location = 'dt=%s' % date.strftime("%Y%m%d")
