@@ -290,7 +290,7 @@ def getFacetPopularityArray(results, data):
         coverage_percentage = facet_bucket['doc_count'] / catbucket['doc_count'] * 100
         if 5 < coverage_percentage < 95:
           is_good_facet = True
-        name = facet_bucket['key']['name'].lower()
+        name = facet_bucket['key']['name']
         popularity_data = {}
         for bucket in facet_bucket.get('tags', {}).get('buckets', []):
           popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
