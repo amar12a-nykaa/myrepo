@@ -90,7 +90,7 @@ def indexESData(file_path, force_run, offerbatchsize, offerswitch, instockswitch
 
     if instockswitch:
       print("Adding in_stock size value")
-      updateInStockInformation(inactive_index, 100)
+      updateInStockInformation(inactive_index, offerbatchsize)
       print("Update Done")
     
     sett = {'refresh_interval': '1s'}
