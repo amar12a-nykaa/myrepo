@@ -13,17 +13,7 @@ from pipelineUtils import PipelineUtils
 TYPED_QUERY_LENGTH_THRESHOLD = 3
 IMPRESSION_COUNT_THRESHOLD = 10
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Argument parser for feedback script')
-    parser.add_argument('--verbose', '-v', action='store_true')
-    parser.add_argument('--days', type=int, default=7)
-    parser.add_argument('--output', '-o', default='feedback_autocomplete_result.json')
-    
-    argv = vars(parser.parse_args())
-    verbose = argv['verbose']
-    days = argv['days']
-    output_file = argv['output']
-    
+def calculate_feedback(days=7, output_file='feedback_autocomplete_result.json', verbose=False):
     dfs = []
     bucket = PipelineUtils.getBucketNameForFeedback()
     pipeline = boto3.session.Session(profile_name='datapipeline')
@@ -58,11 +48,9 @@ if __name__ == "__main__":
         if verbose:
             print("Rows count: " + str(final_df.shape[0]))
         
-        
         def normalize_data(data):
             data = data.lower()
             return re.sub(pattern='[.$]+', repl="_", string=data)
-        
         
         final_df['typed_term'] = final_df['typed_term'].apply(normalize_data)
         
@@ -97,7 +85,8 @@ if __name__ == "__main__":
         max_click_df = final_df.groupby('typed_term').agg({'click_count': 'max'}).reset_index()
         max_click_df.rename(columns={'click_count': 'max_click_count'}, inplace=True)
         final_df = pd.merge(final_df, max_click_df, on='typed_term')
-        final_df['click_count'] = final_df.apply(lambda x: x['click_count'] / x['max_click_count'] if x['max_click_count'] else 0, axis=1)
+        final_df['click_count'] = final_df.apply(
+            lambda x: x['click_count'] / x['max_click_count'] if x['max_click_count'] else 0, axis=1)
         final_df.visible_term = final_df.visible_term.astype(str)
         final_df = final_df.sort_values(by='visible_term')
         
@@ -117,6 +106,19 @@ if __name__ == "__main__":
                 final_list.append({"search_term": key, "typed_terms": value})
             except Exception as e:
                 print("exception occured for %s", key)
-
+        
         s3.Bucket(bucket).put_object(Key=output_file, Body=json.dumps(final_list))
         print("done")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Argument parser for feedback script')
+    parser.add_argument('--verbose', '-v', action='store_true')
+    parser.add_argument('--days', type=int, default=7)
+    parser.add_argument('--output', '-o', default='feedback_autocomplete_result.json')
+    
+    argv = vars(parser.parse_args())
+    verbose = argv['verbose']
+    days = argv['days']
+    output_file = argv['output']
+    calculate_feedback(days=days, output_file=output_file, verbose=verbose)

@@ -9,12 +9,6 @@ from dateutils import enumerate_dates
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from pipelineUtils import PipelineUtils
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--days", type=int, default=1)
-argv = vars(parser.parse_args())
-days = -1 * argv['days']
-
-dates_to_process = enumerate_dates(days, -1)
 pipeline = boto3.session.Session(profile_name='datapipeline')
 bucket_name = PipelineUtils.getBucketNameForFeedback()
 
@@ -70,48 +64,57 @@ def renameS3File(source, destination):
     print('file renamed successfully')
 
 
-for date in dates_to_process:
-    s3_file_location = 'dt=%s' % date.strftime("%Y%m%d")
-    params['path'] = s3_file_location
+def uploadFile(days=1):
+    dates_to_process = enumerate_dates(days, -1)
+    for date in dates_to_process:
+        s3_file_location = 'dt=%s' % date.strftime("%Y%m%d")
+        params['path'] = s3_file_location
     
-    dateStr = date.strftime("%Y-%m-%d")
-    query = """SELECT b.*,
-                      a.click_freq
-                FROM
-                    (SELECT DISTINCT lower(typed_term) AS typed_term,
-                         lower(clicked_term) AS clicked_term,
-                         count(*) AS click_freq
-                    FROM events
-                    WHERE visible_sugg!=''
-                            AND CAST(date AS DATE) = DATE('%s')
-                    GROUP BY  1,2 ) a
-                RIGHT JOIN
-                    (SELECT DISTINCT lower(typed_term) AS typed_term,
-                         lower(visible_term) AS visible_term,
-                         count(*) AS visible_freq
-                    FROM events
-                    CROSS JOIN UNNEST(SPLIT(visible_sugg,'|')) AS t (visible_term)
-                    WHERE visible_sugg!=''
-                            AND CAST(date AS DATE) = DATE('%s')
-                    GROUP BY  1,2 ) b
-                    ON a.typed_term=b.typed_term
-                        AND a.clicked_term=b.visible_term
-                ORDER BY  4 desc, 3 desc
-    """%(dateStr, dateStr)
-    params['query'] = query
-
-    execution = query_athena(params)
-    execution_id = execution['QueryExecutionId']
-    outputFile = pollForStatus(execution_id, max_execution=20)
-    if outputFile:
-        renameS3File(outputFile, 'autocompleteFeedbackV2.csv')
+        dateStr = date.strftime("%Y-%m-%d")
+        query = """SELECT b.*,
+                          a.click_freq
+                    FROM
+                        (SELECT DISTINCT lower(typed_term) AS typed_term,
+                             lower(clicked_term) AS clicked_term,
+                             count(*) AS click_freq
+                        FROM events
+                        WHERE visible_sugg!=''
+                                AND CAST(date AS DATE) = DATE('%s')
+                        GROUP BY  1,2 ) a
+                    RIGHT JOIN
+                        (SELECT DISTINCT lower(typed_term) AS typed_term,
+                             lower(visible_term) AS visible_term,
+                             count(*) AS visible_freq
+                        FROM events
+                        CROSS JOIN UNNEST(SPLIT(visible_sugg,'|')) AS t (visible_term)
+                        WHERE visible_sugg!=''
+                                AND CAST(date AS DATE) = DATE('%s')
+                        GROUP BY  1,2 ) b
+                        ON a.typed_term=b.typed_term
+                            AND a.clicked_term=b.visible_term
+                    ORDER BY  4 desc, 3 desc
+        """ % (dateStr, dateStr)
+        params['query'] = query
     
-    # sss_query = """TO-DO
-    # """
-    # params['query'] = sss_query
-    #
-    # execution = query_athena(params)
-    # execution_id = execution['QueryExecutionId']
-    # outputFile = pollForStatus(execution_id, max_execution=20)
-    # if outputFile:
-    #     renameS3File(outputFile, 'autocompleteSSScore.csv')
+        execution = query_athena(params)
+        execution_id = execution['QueryExecutionId']
+        outputFile = pollForStatus(execution_id, max_execution=20)
+        if outputFile:
+            renameS3File(outputFile, 'autocompleteFeedbackV2.csv')
+    
+        # sss_query = """TO-DO
+        # """
+        # params['query'] = sss_query
+        #
+        # execution = query_athena(params)
+        # execution_id = execution['QueryExecutionId']
+        # outputFile = pollForStatus(execution_id, max_execution=20)
+        # if outputFile:
+        #     renameS3File(outputFile, 'autocompleteSSScore.csv')
+    
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--days", type=int, default=1)
+    argv = vars(parser.parse_args())
+    days = -1 * argv['days']
+    uploadFile(days)
