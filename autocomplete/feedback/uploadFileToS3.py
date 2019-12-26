@@ -54,7 +54,7 @@ def pollForStatus(execution_id, max_execution=10):
     return False
 
 
-def renameS3File(source, destination):
+def renameS3File(source, destination, s3_file_location):
     s3 = pipeline.client('s3')
     source = s3_file_location + '/' + source
     destination = s3_file_location + '/' + destination
@@ -100,7 +100,7 @@ def uploadFile(days=-1):
         execution_id = execution['QueryExecutionId']
         outputFile = pollForStatus(execution_id, max_execution=20)
         if outputFile:
-            renameS3File(outputFile, 'autocompleteFeedbackV2.csv')
+            renameS3File(outputFile, 'autocompleteFeedbackV2.csv', s3_file_location)
     
         # sss_query = """TO-DO
         # """
