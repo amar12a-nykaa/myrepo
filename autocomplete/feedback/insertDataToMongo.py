@@ -27,7 +27,7 @@ def insertFeedBackDataInMongo(filename='feedback_autocomplete_result.json'):
         s3.Bucket(bucket).download_file(filename, filename)
     except:
         print("Unable to download file from s3")
-        exit()
+        return False
 
     with open(filename) as f:
         file_data = json.load(f)
