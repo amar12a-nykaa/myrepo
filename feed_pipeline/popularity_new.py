@@ -429,15 +429,29 @@ def handleColdStart(df):
           calculated_popularity_new = row['popularity_new'] + (0.9**count)*med_popularity_new*(percentile_value ** date_diff)
           data.at[index, 'calculated_popularity'] = calculated_popularity
           data.at[index, 'calculated_popularity_new'] = calculated_popularity_new
+          data.at[index, 'cold_start_value'] = calculated_popularity - row['popularity']
           count += 1
     return data
 
   result['calculated_popularity'] = result['popularity']
   result['calculated_popularity_new'] = result['popularity_new']
+  result['cold_start_value'] = -1
   result = result.groupby('parent_id', as_index=False).apply(update_popularity)
 
-  result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new']]
-  result = result.groupby('product_id').agg({'calculated_popularity': 'max', 'calculated_popularity_new': 'max'}).reset_index()
+  result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new', 'cold_start_value']]
+  result = result.groupby('product_id').agg({'calculated_popularity': 'max', 'calculated_popularity_new': 'max', 'cold_start_value': 'max'}).reset_index()
+  cold_start = result.sort_values(by='cold_start_value', ascending=False)
+  ids = map(str, cold_start.iloc[:,3])
+  ids = ids[:50]
+  ids = ','.join(ids)
+  try:
+    query = """replace into static_product_widget(type, data) values('NEW_LAUNCHES', %s)"""%ids
+    PasUtils.mysql_write(query)
+  except Exception as ex:
+    print(ex)
+    print('Could not write in mysql')
+    pass
+  
   final_df = pd.merge(df.astype({'id': int}),  result.astype({'product_id': int}), left_on='id', right_on='product_id', how='outer')
   final_df['id'] = numpy.where(final_df.id.notnull(), final_df.id, final_df.product_id)
   final_df = final_df[final_df.id.notnull()]
