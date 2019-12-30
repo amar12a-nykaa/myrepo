@@ -299,7 +299,7 @@ def calculate_new_popularity():
     ids = ids[-50:]
     ids.reverse()
     ids = ','.join(ids)
-    query = """replace into static_product_widget(type, data) values('BESTSELLERS', %s)""" % ids
+    query = """replace into static_product_widget(type, data) values('BESTSELLERS', '%s')""" %ids
     PasUtils.mysql_write(query)
   except Exception as ex:
     print(ex)
@@ -456,8 +456,8 @@ def handleColdStart(df):
     cold_start = result.sort_values(by='cold_start_value', ascending=False)
     ids = list(cold_start['product_id'])
     ids = ids[:50]
-    ids = ','.join(ids)
-    query = """replace into static_product_widget(type, data) values('NEW_LAUNCHES', %s)"""%ids
+    ids = ','.join(map(str, ids))
+    query = """replace into static_product_widget(type, data) values('NEW_LAUNCHES', '%s')"""%ids
     PasUtils.mysql_write(query)
   except Exception as ex:
     print(ex)
