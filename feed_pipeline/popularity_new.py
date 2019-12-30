@@ -294,6 +294,18 @@ def calculate_new_popularity():
   a.views = a.views.fillna(0)
   a.to_csv('a.csv', index=False)
   
+  try:
+    ids = list(a['id'])
+    ids = ids[-50:]
+    ids.reverse()
+    ids = ','.join(ids)
+    query = """replace into static_product_widget(type, data) values('BESTSELLERS', %s)""" % ids
+    PasUtils.mysql_write(query)
+  except Exception as ex:
+    print(ex)
+    print('Could not write in mysql')
+    pass
+  
   ctr = LoopCounter(name='Writing popularity to db', total=len(a.index))
   for i, row in a.iterrows():
     ctr += 1
@@ -440,11 +452,11 @@ def handleColdStart(df):
 
   result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new', 'cold_start_value']]
   result = result.groupby('product_id').agg({'calculated_popularity': 'max', 'calculated_popularity_new': 'max', 'cold_start_value': 'max'}).reset_index()
-  cold_start = result.sort_values(by='cold_start_value', ascending=False)
-  ids = map(str, cold_start.iloc[:,3])
-  ids = ids[:50]
-  ids = ','.join(ids)
   try:
+    cold_start = result.sort_values(by='cold_start_value', ascending=False)
+    ids = list(cold_start['product_id'])
+    ids = ids[:50]
+    ids = ','.join(ids)
     query = """replace into static_product_widget(type, data) values('NEW_LAUNCHES', %s)"""%ids
     PasUtils.mysql_write(query)
   except Exception as ex:
