@@ -147,7 +147,7 @@ def process_category_facet_popularity(valid_category_list):
       print(ctr.summary)
     
     row = dict(row)
-    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row['nykaa'], get_store_popularity_str(row))
+    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row['nykaa'], SearchUtils.StoreUtils.get_store_popularity_str(row))
     cursor.execute(query, values)
     mysql_conn.commit()
   
@@ -348,7 +348,8 @@ def process_brand_category(brand_category_data):
     if row['brand_id'] not in brand_info:
       print("brand %s not found in brand_info"%row['brand_id'])
       continue
-    values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], row['category_id'], row['category_name'], row['nykaa'], get_store_popularity_str(row))
+    values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], row['category_id'], row['category_name'], row['nykaa'],
+              SearchUtils.StoreUtils.get_store_popularity_str(row))
     cursor.execute(query, values)
     mysql_conn.commit()
 
