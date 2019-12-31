@@ -8,47 +8,8 @@ sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
 from loopcounter import LoopCounter
 from idutils import strip_accents
-
-VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro', 'ultra_lux']
-PRIVATE_LABEL_BRANDS = ['1937','7666','9127']
-BOOST_FACTOR = 1.1
-BLACKLISTED_FACETS = ['old_brand_facet', ]
-BRAND_EXCLUDE_LIST = ['9817']
-POPULARITY_THRESHOLD = 0.1
-base_aggregation = {
-    "tags": {
-      "terms": {
-        "field": "catalog_tag.keyword",
-        "include": VALID_CATALOG_TAGS,
-        "size": 10
-      },
-      "aggs": {
-        "popularity_sum": {
-          "sum": {"field": "popularity"}
-        }
-      }
-    }
-  }
-
-
-def normalize(a):
-  if max(a) == 0:
-    return a
-  return (a-min(a))/(max(a)-min(a))
-
-
-def check_base_popularity(row):
-  for tag in VALID_CATALOG_TAGS:
-    if not row["valid_"+tag]:
-      row[tag] = 0
-  return row
-  
-
-def get_store_popularity_str(row):
-  data = {}
-  for tag in VALID_CATALOG_TAGS:
-    data[tag] = row.get(tag, 0)
-  return json.dumps(data)
+sys.path.append("/nykaa/scripts/utils")
+import searchutils as SearchUtils
 
 
 def get_category_data():
@@ -107,7 +68,6 @@ def get_brand_data():
 
 
 def get_popularity_data_from_es(valid_category_list):
-  global base_aggregation
   query = {
     "size": 0,
     "aggs": {
@@ -117,15 +77,15 @@ def get_popularity_data_from_es(valid_category_list):
           "include": valid_category_list,
           "size": 10000
         },
-        "aggs": base_aggregation
+        "aggs": SearchUtils.BASE_AGGREGATION
       },
       "brand_data": {
         "terms": {
           "field": "brand_ids.keyword",
-          "exclude": BRAND_EXCLUDE_LIST,
+          "exclude": SearchUtils.BRAND_EXCLUDE_LIST,
           "size": 10000
         },
-        "aggs": base_aggregation
+        "aggs": SearchUtils.BASE_AGGREGATION
       },
       "brand_category_data": {
         "terms": {
@@ -137,10 +97,10 @@ def get_popularity_data_from_es(valid_category_list):
           "brands" : {
             "terms": {
               "field": "brand_ids.keyword",
-              "exclude": BRAND_EXCLUDE_LIST,
+              "exclude": SearchUtils.BRAND_EXCLUDE_LIST,
               "size": 10000
             },
-            "aggs": base_aggregation
+            "aggs": SearchUtils.BASE_AGGREGATION
           }
         }
       }
@@ -159,14 +119,14 @@ def process_category_facet_popularity(valid_category_list):
   data['category_id'] = []
   data['facet_name'] = []
   data['facet_val'] = []
-  for tag in VALID_CATALOG_TAGS:
+  for tag in SearchUtils.VALID_CATALOG_TAGS:
     data[tag] = []
   
   data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "color_facet"), data)
   
   facet_popularity = pd.DataFrame.from_dict(data)
-  for tag in VALID_CATALOG_TAGS:
-    facet_popularity[tag] = 100 * normalize(facet_popularity[tag])
+  for tag in SearchUtils.VALID_CATALOG_TAGS:
+    facet_popularity[tag] = 100 * SearchUtils.normalize(facet_popularity[tag])
   facet_popularity.to_csv('facet_pop.csv', index=False)
   
   print("writing facet popularity to db")
@@ -200,7 +160,7 @@ def process_category(category_data):
   global category_info
   data = {}
   data['category_id'] = []
-  for tag in VALID_CATALOG_TAGS:
+  for tag in SearchUtils.VALID_CATALOG_TAGS:
     data[tag] = []
     data["valid_"+tag] = []
   
@@ -210,7 +170,7 @@ def process_category(category_data):
       popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
     
     data['category_id'].append(popularity_data.get('category_id'))
-    for tag in VALID_CATALOG_TAGS:
+    for tag in SearchUtils.VALID_CATALOG_TAGS:
       popularity = popularity_data.get(tag, -1)
       if popularity < 0:
         data[tag].append(0)
@@ -219,9 +179,9 @@ def process_category(category_data):
         data[tag].append(popularity)
         data["valid_" + tag].append(True)
   category_popularity = pd.DataFrame.from_dict(data)
-  for tag in VALID_CATALOG_TAGS:
-    category_popularity[tag] = 100 * normalize(category_popularity[tag]) + 100
-  category_popularity = category_popularity.apply(check_base_popularity, axis=1)
+  for tag in SearchUtils.VALID_CATALOG_TAGS:
+    category_popularity[tag] = 100 * SearchUtils.normalize(category_popularity[tag]) + 100
+  category_popularity = category_popularity.apply(SearchUtils.StoreUtils.check_base_popularity, axis=1)
   category_popularity.to_csv('category_pop.csv', index=False)
   
   print("inserting category data in db")
@@ -240,7 +200,7 @@ def process_category(category_data):
       print(ctr.summary)
     
     row = dict(row)
-    values = (row['category_id'], row['category_name'], row['category_url'], row['nykaa'], get_store_popularity_str(row))
+    values = (row['category_id'], row['category_name'], row['category_url'], row['nykaa'], SearchUtils.StoreUtils.get_store_popularity_str(row))
     cursor.execute(query, values)
     mysql_conn.commit()
   
@@ -253,7 +213,6 @@ def process_category(category_data):
 
 
 def getAggQueryResult(valid_category_list, facet1):
-  global base_aggregation
   key1 = facet1 + ".keyword"
 
   query = {
@@ -265,7 +224,7 @@ def getAggQueryResult(valid_category_list, facet1):
           "size": 200
         },
         "aggs": {
-          facet1: {"terms": {"field": key1, "size": 100}, "aggs": base_aggregation}
+          facet1: {"terms": {"field": key1, "size": 100}, "aggs": SearchUtils.BASE_AGGREGATION}
         }
       }
     },
@@ -299,7 +258,7 @@ def getFacetPopularityArray(results, data):
           data['category_id'].append(catbucket['key'])
           data['facet_name'].append(facet_name)
           data['facet_val'].append(name)
-          for tag in VALID_CATALOG_TAGS:
+          for tag in SearchUtils.VALID_CATALOG_TAGS:
             data[tag].append(popularity_data.get(tag, 0))
   return data
 
@@ -307,7 +266,7 @@ def getFacetPopularityArray(results, data):
 def process_brand(brand_data):
   data = {}
   data['brand_id'] = []
-  for tag in VALID_CATALOG_TAGS:
+  for tag in SearchUtils.VALID_CATALOG_TAGS:
     data[tag] = []
     data["valid_"+tag] = []
   
@@ -317,7 +276,7 @@ def process_brand(brand_data):
       popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
     
     data['brand_id'].append(popularity_data.get('brand_id'))
-    for tag in VALID_CATALOG_TAGS:
+    for tag in SearchUtils.VALID_CATALOG_TAGS:
       popularity = popularity_data.get(tag, -1)
       if popularity < 0:
         data[tag].append(0)
@@ -327,9 +286,9 @@ def process_brand(brand_data):
         data["valid_" + tag].append(True)
   
   brand_popularity = pd.DataFrame.from_dict(data)
-  for tag in VALID_CATALOG_TAGS:
-    brand_popularity[tag] = 200 * normalize(brand_popularity[tag]) + 100
-  brand_popularity = brand_popularity.apply(check_base_popularity, axis=1)
+  for tag in SearchUtils.VALID_CATALOG_TAGS:
+    brand_popularity[tag] = 200 * SearchUtils.normalize(brand_popularity[tag]) + 100
+  brand_popularity = brand_popularity.apply(SearchUtils.StoreUtils.check_base_popularity, axis=1)
   brand_popularity.to_csv('brand_pop.csv', index=False)
   return brand_popularity
 
@@ -340,7 +299,7 @@ def process_brand_category(brand_category_data):
   data = {}
   data['brand_id'] = []
   data['category_id'] = []
-  for tag in VALID_CATALOG_TAGS:
+  for tag in SearchUtils.VALID_CATALOG_TAGS:
     data[tag] = []
   
   for category in brand_category_data:
@@ -350,20 +309,20 @@ def process_brand_category(brand_category_data):
         popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
       data['category_id'].append(popularity_data.get('category_id'))
       data['brand_id'].append(popularity_data.get('brand_id'))
-      for tag in VALID_CATALOG_TAGS:
+      for tag in SearchUtils.VALID_CATALOG_TAGS:
         data[tag].append(popularity_data.get(tag, 0))
   
   brand_category_popularity = pd.DataFrame.from_dict(data)
-  for tag in VALID_CATALOG_TAGS:
-    brand_category_popularity[tag] = (50 * normalize(brand_category_popularity[tag])) + 50
+  for tag in SearchUtils.VALID_CATALOG_TAGS:
+    brand_category_popularity[tag] = (50 * SearchUtils.normalize(brand_category_popularity[tag])) + 50
     brand_category_popularity[tag] = brand_category_popularity[tag].apply(lambda x: x if x > 50.0 else 0)
   brand_category_popularity.to_csv('brand_category_popularity.csv', index=False)
   
   # promote private label
   def boost_brand(row):
-    if str(row['brand_id']) in PRIVATE_LABEL_BRANDS:
-      for tag in VALID_CATALOG_TAGS:
-        row[tag] = BOOST_FACTOR * row[tag]
+    if str(row['brand_id']) in SearchUtils.PRIVATE_LABEL_BRANDS:
+      for tag in SearchUtils.VALID_CATALOG_TAGS:
+        row[tag] = SearchUtils.AUTOCOMPLETE_BRAND_BOOST_FACTOR * row[tag]
     return row
   brand_category_popularity = brand_category_popularity.apply(boost_brand, axis=1)
   
@@ -431,7 +390,7 @@ def db_insert_brand(brand_popularity, top_category):
       continue
     
     values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], brand_info[row['brand_id']]['brands_v1'], row["nykaa"],
-              get_store_popularity_str(row), json.dumps(top_category_brand.get(row['brand_id'], [])), brand_info[row['brand_id']]['brand_url'])
+              SearchUtils.StoreUtils.get_store_popularity_str(row), json.dumps(top_category_brand.get(row['brand_id'], [])), brand_info[row['brand_id']]['brand_url'])
     cursor.execute(query, values)
     mysql_conn.commit()
 
