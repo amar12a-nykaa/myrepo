@@ -30,6 +30,25 @@ base_aggregation = {
     }
   }
 
+base_aggregation_top_hits = {
+  "tags": {
+    "terms": {
+      "field": "catalog_tag.keyword",
+      "include": VALID_CATALOG_TAGS,
+      "size": 10
+    },
+    "aggs": {
+      "top_popularity": {
+        "top_hits": {
+          "size": 10,
+          "sort": [{"popularity": {"order": "desc"}}],
+          "_source": ["popularity"]
+        }
+      }
+    }
+  }
+}
+
 
 def normalize(a):
   if max(a) == 0:
@@ -107,7 +126,7 @@ def get_brand_data():
 
 
 def get_popularity_data_from_es(valid_category_list):
-  global base_aggregation
+  global base_aggregation_top_hits
   query = {
     "size": 0,
     "aggs": {
@@ -117,7 +136,7 @@ def get_popularity_data_from_es(valid_category_list):
           "include": valid_category_list,
           "size": 10000
         },
-        "aggs": base_aggregation
+        "aggs": base_aggregation_top_hits
       },
       "brand_data": {
         "terms": {
@@ -125,7 +144,7 @@ def get_popularity_data_from_es(valid_category_list):
           "exclude": BRAND_EXCLUDE_LIST,
           "size": 10000
         },
-        "aggs": base_aggregation
+        "aggs": base_aggregation_top_hits
       },
       "brand_category_data": {
         "terms": {
@@ -140,7 +159,7 @@ def get_popularity_data_from_es(valid_category_list):
               "exclude": BRAND_EXCLUDE_LIST,
               "size": 10000
             },
-            "aggs": base_aggregation
+            "aggs": base_aggregation_top_hits
           }
         }
       }
@@ -196,6 +215,19 @@ def process_category_facet_popularity(valid_category_list):
   return facet_popularity
 
 
+def get_avg_bucket_popularity(bucket):
+  data = bucket.get('top_popularity', {}).get('hits', {}).get('hits', [])
+  cnt = 0
+  pop_sum = 0
+  for popularity in data:
+    pop_sum = pop_sum + round(popularity.get('_source', {}).get('popularity', 0), 4)
+    cnt = cnt + 1
+  if cnt > 0:
+    return pop_sum/cnt
+  else:
+    return 0
+  
+  
 def process_category(category_data):
   global category_info
   data = {}
@@ -207,7 +239,8 @@ def process_category(category_data):
   for category in category_data:
     popularity_data = {'category_id': category.get('key', 0)}
     for bucket in category.get('tags', {}).get('buckets', []):
-      popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
+      average_popularity = get_avg_bucket_popularity(bucket)
+      popularity_data[bucket.get('key')] = average_popularity
     
     data['category_id'].append(popularity_data.get('category_id'))
     for tag in VALID_CATALOG_TAGS:
@@ -314,7 +347,8 @@ def process_brand(brand_data):
   for brand in brand_data:
     popularity_data = {'brand_id': brand.get('key', 0)}
     for bucket in brand.get('tags', {}).get('buckets', []):
-      popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
+      average_popularity = get_avg_bucket_popularity(bucket)
+      popularity_data[bucket.get('key')] = average_popularity
     
     data['brand_id'].append(popularity_data.get('brand_id'))
     for tag in VALID_CATALOG_TAGS:
@@ -347,7 +381,8 @@ def process_brand_category(brand_category_data):
     for brand in category.get('brands', {}).get('buckets', []):
       popularity_data = {'category_id': category.get('key', 0), 'brand_id': brand.get('key', 0)}
       for bucket in brand.get('tags', {}).get('buckets', []):
-        popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
+        average_popularity = get_avg_bucket_popularity(bucket)
+        popularity_data[bucket.get('key')] = average_popularity
       data['category_id'].append(popularity_data.get('category_id'))
       data['brand_id'].append(popularity_data.get('brand_id'))
       for tag in VALID_CATALOG_TAGS:
