@@ -50,6 +50,10 @@ class EntityIndexer:
                           FROM product_category_mapping
                           WHERE l1_id not in (77,194,9564,7287,3048,5926,11723)
                             and lower(l2_name) not like '%shop by%'
+                        UNION
+                        select distinct l2_id as category_id, l2_name as category_name
+                          FROM product_category_mapping
+                          WHERE l2_id not in (3024,1448,1402,1384,1385,1403,6916,672,1286,3053,3049,3054,3057,3052,3056,9113,9112)
                           """
     nykaa_redshift_connection = PasUtils.redshiftConnection()
     valid_categories = pd.read_sql(category_query, con=nykaa_redshift_connection)
