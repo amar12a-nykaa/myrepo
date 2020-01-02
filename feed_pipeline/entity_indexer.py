@@ -44,7 +44,7 @@ ASSORTMENT_WEIGHT = 1
 class EntityIndexer:
   DOCS_BATCH_SIZE = 1000
   
-  def fetch_category_information()
+  def fetch_category_information():
     #TO_DO
     category_query = """select distinct l1_id as category_id, l1_name as category_name
                           FROM product_category_mapping
