@@ -52,7 +52,7 @@ def populateFrequentProductDetails():
             store_data = store_data[store_data.purchase_count >= threshold]
             for index, row in store_data.iterrows():
                 row = dict(row)
-                rows.append((str(row['product_id']), row['l3_id'], row['bucket'], row['purchase_count'], store))
+                rows.append((str(int(row['product_id'])), row['l3_id'], row['bucket'], row['purchase_count'], store))
         
         print("doing mysql queries")
         PasUtils.mysql_write("""create table if not exists free_shipping_recommendation(product_id varchar(50),
