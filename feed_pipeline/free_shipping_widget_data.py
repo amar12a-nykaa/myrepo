@@ -52,7 +52,7 @@ def populateFrequentProductDetails():
             store_data = store_data[store_data.purchase_count >= threshold]
             for index, row in store_data.iterrows():
                 row = dict(row)
-                rows.append((str(row['product_id']), row['l3_id'], row['bucket'], row['bought_count'], store))
+                rows.append((str(row['product_id']), row['l3_id'], row['bucket'], row['purchase_count'], store))
         
         print("doing mysql queries")
         PasUtils.mysql_write("""create table if not exists free_shipping_recommendation(product_id varchar(50),
@@ -60,7 +60,7 @@ def populateFrequentProductDetails():
         PasUtils.mysql_write("""create table free_shipping_recommendation_tmp select * from free_shipping_recommendation""")
         PasUtils.mysql_write("""truncate table free_shipping_recommendation""")
         truncate_table = True
-        add_freeshipping_recommendations_in_mysql(mysql_conn, rows)
+        add_freeshipping_recommendations_in_mysql(PasUtils.mysqlConnection("w"), rows)
         PasUtils.mysql_write("""drop table free_shipping_recommendation_tmp""")
     except Exception as e:
         print("Not ABLE TO RETRIEVE FREQUENT PRODUCT DATA")
