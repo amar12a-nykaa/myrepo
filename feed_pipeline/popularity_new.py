@@ -384,8 +384,17 @@ def get_product_creation():
   df = df.apply(extract_product_enable_time, axis=1)
   df = df.dropna()
   df.drop(['generic_attributes'], axis=1, inplace=True)
-  query = """select product_id, parent_id from solr_dump_3 where type_id != 'bundle'"""
+  query = """select product_id, parent_id, type_id from solr_dump_3 where type_id != 'bundle'"""
   df2 = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
+  
+  def extract_parent_id(row):
+    if row['type_id'].strip() == 'simple' and row['parent_id'] and row['parent_id'] != 'NULL':
+      return row
+    else:
+      row['parent_id'] = row['product_id']
+      return row
+
+  df2 = df2.apply(extract_parent_id, axis=1)
   df = pd.merge(df, df2, on="product_id", how="inner")
   return df
 
