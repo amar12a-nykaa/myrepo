@@ -31,7 +31,7 @@ def populateFrequentProductDetails():
                     from fact_order_detail_new fodn join
                     dim_sku s on s.sku = fodn.product_sku
                     where fodn.orderdetail_dt_created > '{0}'
-                    and s.mrp > 1 and s.mrp < 251
+                    and s.mrp > 1 and s.mrp <= 200
                     group by s.product_id, l3_id, bucket
         """.format(back_date_90_days)
         redshift_conn = PasUtils.redshiftConnection()
