@@ -446,7 +446,7 @@ def handleColdStart(df):
       if count==3:
         break
       date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['product_enable_time']).astype(datetime.datetime))).days
-      if date_diff > 0 and row.get('kits_combo','No') == 'No':
+      if date_diff > 0 and (row.get('kits_combo','No') == 'No' or not row.get('kits_combo')):
           percentile_value = row['brand_popularity']
           if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
             percentile_value = BRAND_PROMOTION_SCORE
