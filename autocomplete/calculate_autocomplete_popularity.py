@@ -12,24 +12,33 @@ sys.path.append("/nykaa/scripts/utils")
 import searchutils as SearchUtils
 
 
-def get_category_data():
-  query = """select distinct l3_id as category_id, l3_name as category_name
-              from
-              (select * from product_category_mapping
-                where ( l1_id not in (77,194,9564,7287,3048,5926,11723)
-                      and lower(l2_name) not like '%shop by%'
-                      and l3_id not in (4036,3746,3745,3819)
-                      or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
-              )
-              where l3_id not in (0)
-              group by l3_name, l3_id
-              UNION
-              select distinct l2_id as category_id, l2_name as category_name from
-              (select * from product_category_mapping
-              where  l2_id in (3024,1448,1402,1384,1385,1403,6916,672,1286,3053,3049,3054,3057,3052,3056,9113,9112)
-              )
-              where l2_id not in (0)
-              group by l2_name, l2_id;"""
+def get_category_data(store):
+  if not store or store == "nykaa":
+    query = """select distinct l3_id as category_id, l3_name as category_name
+                from
+                (select * from product_category_mapping
+                  where ( l1_id not in (77,194,9564,7287,3048,5926,11723)
+                        and lower(l2_name) not like '%shop by%'
+                        and l3_id not in (4036,3746,3745,3819)
+                        or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
+                )
+                where l3_id not in (0)
+                group by l3_name, l3_id
+                UNION
+                select distinct l2_id as category_id, l2_name as category_name from
+                (select * from product_category_mapping
+                where  l2_id in (3024,1448,1402,1384,1385,1403,6916,672,1286,3053,3049,3054,3057,3052,3056,9113,9112)
+                )
+                where l2_id not in (0)
+                group by l2_name, l2_id;"""
+  else:
+    l1_id = SearchUtils.STORE_MAP.get(store, {}).get('l1_id')
+    if not l1_id:
+      print('valid category list not present for %s'%store)
+      return []
+    query = """select distinct l4_id as category_id, l4_name as category_name
+                FROM product_category_mapping
+                WHERE l1_id = %s and l4_id not in (0)"""
   nykaa_redshift_connection = PasUtils.redshiftConnection()
   valid_categories = pd.read_sql(query, con=nykaa_redshift_connection)
 
@@ -79,14 +88,6 @@ def get_popularity_data_from_es(valid_category_list):
         },
         "aggs": SearchUtils.BASE_AGGREGATION_TOP_HITS
       },
-      "brand_data": {
-        "terms": {
-          "field": "brand_ids.keyword",
-          "exclude": SearchUtils.BRAND_EXCLUDE_LIST,
-          "size": 10000
-        },
-        "aggs": SearchUtils.BASE_AGGREGATION_TOP_HITS
-      },
       "brand_category_data": {
         "terms": {
           "field": "category_ids.keyword",
@@ -109,7 +110,27 @@ def get_popularity_data_from_es(valid_category_list):
   es = EsUtils.get_connection()
   results = es.search(index='livecore', body=query, request_timeout=120)
   aggregation = results["aggregations"]
-  return aggregation["category_data"]["buckets"], aggregation["brand_data"]["buckets"], aggregation["brand_category_data"]["buckets"]
+  return aggregation["category_data"]["buckets"], aggregation["brand_category_data"]["buckets"]
+
+
+def get_popularity_data_for_brand():
+  query = {
+    "size": 0,
+    "aggs": {
+      "brand_data": {
+        "terms": {
+          "field": "brand_ids.keyword",
+          "exclude": SearchUtils.BRAND_EXCLUDE_LIST,
+          "size": 10000
+        },
+        "aggs": SearchUtils.BASE_AGGREGATION_TOP_HITS
+      }
+    }
+}
+  es = EsUtils.get_connection()
+  results = es.search(index='livecore', body=query, request_timeout=120)
+  aggregation = results["aggregations"]
+  return aggregation["brand_data"]["buckets"]
 
 
 def process_category_facet_popularity(valid_category_list):
@@ -156,8 +177,7 @@ def process_category_facet_popularity(valid_category_list):
   return facet_popularity
   
   
-def process_category(category_data):
-  global category_info
+def process_category(category_data, category_info, store):
   data = {}
   data['category_id'] = []
   for tag in SearchUtils.VALID_CATALOG_TAGS:
@@ -189,8 +209,8 @@ def process_category(category_data):
   mysql_conn = PasUtils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
   PasUtils.mysql_write("delete from l3_categories", connection=mysql_conn)
-  query = """REPLACE INTO l3_categories(id, name, url, category_popularity, store_popularity)
-                  VALUES (%s, %s, %s, %s, %s)"""
+  query = """REPLACE INTO l3_categories(id, name, url, category_popularity, store_popularity, store)
+                  VALUES (%s, %s, %s, %s, %s, %s)"""
   
   data = pd.merge(category_popularity, category_info, on='category_id')
   print(data)
@@ -201,15 +221,13 @@ def process_category(category_data):
       print(ctr.summary)
     
     row = dict(row)
-    values = (row['category_id'], row['category_name'], row['category_url'], row['nykaa'], SearchUtils.StoreUtils.get_store_popularity_str(row))
+    values = (row['category_id'], row['category_name'], row['category_url'], row['nykaa'],
+              SearchUtils.StoreUtils.get_store_popularity_str(row), store)
     cursor.execute(query, values)
     mysql_conn.commit()
   
   cursor.close()
   mysql_conn.close()
-  
-  PasUtils.mysql_write("""create or replace view l3_categories_clean as select * from l3_categories
-                              where url not like '%luxe%' and url not like '%shop-by-concern%';""")
   return
 
 
@@ -295,8 +313,7 @@ def process_brand(brand_data):
   return brand_popularity
 
 
-def process_brand_category(brand_category_data):
-  global category_info
+def process_brand_category(brand_category_data, category_info, store):
   global brand_info
   data = {}
   data['brand_id'] = []
@@ -334,11 +351,11 @@ def process_brand_category(brand_category_data):
   cursor = mysql_conn.cursor()
   if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category'"):
     PasUtils.mysql_write("""create table brand_category(brand varchar(30), brand_id varchar(32), category_id varchar(32),
-                            category_name varchar(32), popularity float, store_popularity varchar(255))""")
+                            category_name varchar(32), popularity float, store_popularity varchar(255), store varchar(20))""")
   PasUtils.mysql_write("delete from brand_category", connection=mysql_conn)
   
-  query = """REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity, store_popularity)
-              VALUES (%s, %s, %s, %s, %s, %s)"""
+  query = """REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity, store_popularity, store)
+              VALUES (%s, %s, %s, %s, %s, %s, %s)"""
   brand_category_popularity = pd.merge(brand_category_popularity, category_info, on='category_id')
   print(brand_category_popularity)
   ctr = LoopCounter(name='Writing brand category popularity to db', total=len(brand_category_popularity.index))
@@ -351,8 +368,8 @@ def process_brand_category(brand_category_data):
     if row['brand_id'] not in brand_info:
       print("brand %s not found in brand_info"%row['brand_id'])
       continue
-    values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], row['category_id'], row['category_name'], row['nykaa'],
-              SearchUtils.StoreUtils.get_store_popularity_str(row))
+    values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], row['category_id'], row['category_name'],
+              row['nykaa'], SearchUtils.StoreUtils.get_store_popularity_str(row), store)
     cursor.execute(query, values)
     mysql_conn.commit()
 
@@ -403,18 +420,27 @@ def db_insert_brand(brand_popularity, top_category):
     
   
 def calculate_popularity_autocomplete():
-  global category_info
-  valid_category_list = list(category_info.category_id.values)
-  valid_category_list = [int(_id) for _id in valid_category_list]
-  print("getting popularity from es")
-  category_data, brand_data, brand_category_data = get_popularity_data_from_es(valid_category_list)
-  print("processing category")
-  process_category(category_data)
   print("processing brand")
+  brand_data = get_popularity_data_for_brand()
   brand_popularity = process_brand(brand_data)
-  print("processing brand category")
-  brand_category_popularity = process_brand_category(brand_category_data)
+  
+  nykaa_brand_category_popularity = None
+  for tag in SearchUtils.VALID_CATALOG_TAGS:
+    category_info = get_category_data(tag)
+    valid_category_list = list(category_info.category_id.values)
+    valid_category_list = [int(_id) for _id in valid_category_list]
+    print("getting popularity from es")
+    category_data, brand_category_data = get_popularity_data_from_es(valid_category_list)
+    print("processing category")
+    process_category(category_data, category_info, tag)
+    print("processing brand category")
+    brand_category_popularity = process_brand_category(brand_category_data, category_info, tag)
+    if tag == 'nykaa':
+      nykaa_brand_category_popularity = brand_category_popularity.copy()
+      print(brand_category_popularity.head())
+  
   print("getting top category")
+  print(nykaa_brand_category_popularity.head())
   top_category = brand_category_popularity.sort_values('nykaa', ascending=False).groupby('brand_id').head(5)
   top_category.to_csv('top_category.csv', index=False)
   db_insert_brand(brand_popularity, top_category)
@@ -423,7 +449,6 @@ def calculate_popularity_autocomplete():
   return
   
 
-category_info = get_category_data()
 brand_info = get_brand_data()
 if __name__ == "__main__":
   calculate_popularity_autocomplete()
