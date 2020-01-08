@@ -297,6 +297,10 @@ def calculate_new_popularity():
   a = handleColdStart(a)
   a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
+  try:
+    a.views = a.views.fillna(0)
+  except:
+    a['views'] = 0
   a.views = a.views.fillna(0)
   a.to_csv('a.csv', index=False)
   
