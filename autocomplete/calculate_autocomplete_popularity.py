@@ -77,7 +77,7 @@ def get_popularity_data_from_es(valid_category_list):
           "include": valid_category_list,
           "size": 10000
         },
-        "aggs": SearchUtils.BASE_AGGREGATION
+        "aggs": SearchUtils.BASE_AGGREGATION_TOP_HITS
       },
       "brand_data": {
         "terms": {
@@ -85,7 +85,7 @@ def get_popularity_data_from_es(valid_category_list):
           "exclude": SearchUtils.BRAND_EXCLUDE_LIST,
           "size": 10000
         },
-        "aggs": SearchUtils.BASE_AGGREGATION
+        "aggs": SearchUtils.BASE_AGGREGATION_TOP_HITS
       },
       "brand_category_data": {
         "terms": {
@@ -100,7 +100,7 @@ def get_popularity_data_from_es(valid_category_list):
               "exclude": SearchUtils.BRAND_EXCLUDE_LIST,
               "size": 10000
             },
-            "aggs": SearchUtils.BASE_AGGREGATION
+            "aggs": SearchUtils.BASE_AGGREGATION_TOP_HITS
           }
         }
       }
@@ -154,8 +154,8 @@ def process_category_facet_popularity(valid_category_list):
   cursor.close()
   mysql_conn.close()
   return facet_popularity
-
-
+  
+  
 def process_category(category_data):
   global category_info
   data = {}
@@ -167,7 +167,8 @@ def process_category(category_data):
   for category in category_data:
     popularity_data = {'category_id': category.get('key', 0)}
     for bucket in category.get('tags', {}).get('buckets', []):
-      popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
+      average_popularity = SearchUtils.get_avg_bucket_popularity(bucket)
+      popularity_data[bucket.get('key')] = average_popularity
     
     data['category_id'].append(popularity_data.get('category_id'))
     for tag in SearchUtils.VALID_CATALOG_TAGS:
@@ -273,7 +274,8 @@ def process_brand(brand_data):
   for brand in brand_data:
     popularity_data = {'brand_id': brand.get('key', 0)}
     for bucket in brand.get('tags', {}).get('buckets', []):
-      popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
+      average_popularity = SearchUtils.get_avg_bucket_popularity(bucket)
+      popularity_data[bucket.get('key')] = average_popularity
     
     data['brand_id'].append(popularity_data.get('brand_id'))
     for tag in SearchUtils.VALID_CATALOG_TAGS:
@@ -306,7 +308,8 @@ def process_brand_category(brand_category_data):
     for brand in category.get('brands', {}).get('buckets', []):
       popularity_data = {'category_id': category.get('key', 0), 'brand_id': brand.get('key', 0)}
       for bucket in brand.get('tags', {}).get('buckets', []):
-        popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
+        average_popularity = SearchUtils.get_avg_bucket_popularity(bucket)
+        popularity_data[bucket.get('key')] = average_popularity
       data['category_id'].append(popularity_data.get('category_id'))
       data['brand_id'].append(popularity_data.get('brand_id'))
       for tag in SearchUtils.VALID_CATALOG_TAGS:

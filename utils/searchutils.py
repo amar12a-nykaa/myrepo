@@ -20,7 +20,24 @@ BASE_AGGREGATION = {
       }
     }
   }
-
+BASE_AGGREGATION_TOP_HITS = {
+  "tags": {
+    "terms": {
+      "field": "catalog_tag.keyword",
+      "include": VALID_CATALOG_TAGS,
+      "size": 10
+    },
+    "aggs": {
+      "top_popularity": {
+        "top_hits": {
+          "size": 10,
+          "sort": [{"popularity": {"order": "desc"}}],
+          "_source": ["popularity"]
+        }
+      }
+    }
+  }
+}
 
 def normalize(a):
   if max(a) == 0:
@@ -28,6 +45,19 @@ def normalize(a):
   return (a - min(a)) / (max(a) - min(a))
 
 
+def get_avg_bucket_popularity(bucket):
+  data = bucket.get('top_popularity', {}).get('hits', {}).get('hits', [])
+  cnt = 0
+  pop_sum = 0
+  for popularity in data:
+    pop_sum = pop_sum + round(popularity.get('_source', {}).get('popularity', 0), 4)
+    cnt = cnt + 1
+  if cnt > 0:
+    return pop_sum/cnt
+  else:
+    return 0
+  
+  
 class StoreUtils(object):
   
   def check_base_popularity(row):

@@ -68,7 +68,7 @@ class EntityIndexer:
             "include": valid_category_list,
             "size": 10000
           },
-          "aggs": SearchUtils.BASE_AGGREGATION
+          "aggs": SearchUtils.BASE_AGGREGATION_TOP_HITS
         }
       }
     }
@@ -84,7 +84,8 @@ class EntityIndexer:
     for category in category_data:
       popularity_data = {'category_id': category.get('key', 0)}
       for bucket in category.get('tags', {}).get('buckets', []):
-        popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
+        average_popularity = SearchUtils.get_avg_bucket_popularity(bucket)
+        popularity_data[bucket.get('key')] = average_popularity
   
       data['category_id'].append(popularity_data.get('category_id'))
       for tag in SearchUtils.VALID_CATALOG_TAGS:
