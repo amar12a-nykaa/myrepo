@@ -286,7 +286,7 @@ def calculate_new_popularity():
     a['popularity_new'] = 100 * normalize(
       POPULARITY_TOTAL_RATIO_NEW * a['popularity_new_total'] + POPULARITY_BUCKET_RATIO_NEW * a['popularity_new_bucket'])
   else:
-    a = final_df
+    a = final_df.reset_index()
     a['popularity'] = 100 * normalize(a['popularity'])
     a['popularity_new'] = 100 * normalize(a['popularity_new'])
   
