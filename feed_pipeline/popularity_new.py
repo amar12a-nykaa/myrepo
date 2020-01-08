@@ -266,24 +266,30 @@ def calculate_new_popularity():
     final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
   final_df.popularity = final_df.popularity.fillna(0)
   final_df.popularity_new = final_df.popularity_new.fillna(0)
-
-  final_df['popularity_bucket'] = 100 * normalize(final_df['popularity'])
-  final_df['popularity_new_bucket'] = 100 * normalize(final_df['popularity_new'])
-  final_df.drop(['popularity', 'popularity_new'], axis=1, inplace=True)
   
   #get_total_popularity
-  df = get_bucket_results()
-  df['popularity_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_ORDERS * df['orders'] + WEIGHT_UNITS * df['units'] +
-                              WEIGHT_CART_ADDITIONS * df['cart_additions'] + WEIGHT_REVENUE * df['revenue'])) * 100
-  df['popularity_new_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_ORDERS_NEW * df['orders'] + WEIGHT_UNITS_NEW * df['units'] +
-                              WEIGHT_CART_ADDITIONS_NEW * df['cart_additions'] + WEIGHT_REVENUE_NEW * df['revenue'])) * 100
-  df = df.set_index("id")
-
-  a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
-  a['popularity'] = 100 * normalize(
-    POPULARITY_TOTAL_RATIO * a['popularity_total'] + POPULARITY_BUCKET_RATIO * a['popularity_bucket'])
-  a['popularity_new'] = 100 * normalize(
-    POPULARITY_TOTAL_RATIO_NEW * a['popularity_new_total'] + POPULARITY_BUCKET_RATIO_NEW * a['popularity_new_bucket'])
+  if POPULARITY_TOTAL_RATIO > 0:
+    final_df['popularity_bucket'] = 100 * normalize(final_df['popularity'])
+    final_df['popularity_new_bucket'] = 100 * normalize(final_df['popularity_new'])
+    final_df.drop(['popularity', 'popularity_new'], axis=1, inplace=True)
+    
+    df = get_bucket_results()
+    df['popularity_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_ORDERS * df['orders'] + WEIGHT_UNITS * df['units'] +
+                                WEIGHT_CART_ADDITIONS * df['cart_additions'] + WEIGHT_REVENUE * df['revenue'])) * 100
+    df['popularity_new_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_ORDERS_NEW * df['orders'] + WEIGHT_UNITS_NEW * df['units'] +
+                                WEIGHT_CART_ADDITIONS_NEW * df['cart_additions'] + WEIGHT_REVENUE_NEW * df['revenue'])) * 100
+    df = df.set_index("id")
+  
+    a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
+    a['popularity'] = 100 * normalize(
+      POPULARITY_TOTAL_RATIO * a['popularity_total'] + POPULARITY_BUCKET_RATIO * a['popularity_bucket'])
+    a['popularity_new'] = 100 * normalize(
+      POPULARITY_TOTAL_RATIO_NEW * a['popularity_new_total'] + POPULARITY_BUCKET_RATIO_NEW * a['popularity_new_bucket'])
+  else:
+    a = final_df.reset_index()
+    a['popularity'] = 100 * normalize(a['popularity'])
+    a['popularity_new'] = 100 * normalize(a['popularity_new'])
+  
   a.popularity = a.popularity.fillna(0)
   a.popularity_new = a.popularity_new.fillna(0)
   # business_logic
@@ -440,7 +446,7 @@ def handleColdStart(df):
       if count==3:
         break
       date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['product_enable_time']).astype(datetime.datetime))).days
-      if date_diff > 0 and row.get('kits_combo','No') == 'No':
+      if date_diff > 0 and (row.get('kits_combo','No') == 'No' or not row.get('kits_combo')):
           percentile_value = row['brand_popularity']
           if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
             percentile_value = BRAND_PROMOTION_SCORE
