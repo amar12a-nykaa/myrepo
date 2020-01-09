@@ -19,7 +19,7 @@ class FTPUtils:
 
         def fill_files(f):
             if f.startswith(files_prefix):
-                files.append(f)
+                files.append(gitf)
 
         ftp.retrlines('NLST', fill_files)
         csvs = list(map(lambda f: f.replace('zip', 'csv'), files))
@@ -44,9 +44,7 @@ class FTPUtils:
         ftp.cwd(key_dir)
 
         def fill_files(f):
-            #TODO: remove in prod
-            if f.startswith(files_prefix) and "2019" in f:
-                files.append(f)
+            files.append(f)
 
         ftp.retrlines('NLST', fill_files)
         csvs = list(map(lambda f: f.replace('zip', 'csv'), files))
