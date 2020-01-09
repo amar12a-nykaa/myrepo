@@ -24,7 +24,7 @@ ENDDAYS = 0
 WEIGHT_DELTA_DISCOUNT = 90
 WEIGHT_DELTA_SP = 0
 WEIGHT_POPULARITY = 10
-SAMPLE_SIZE = 1000
+SAMPLE_SIZE = 150
 DECAY_0_30 = 0.9
 DECAY_31_60 = 0.95
 DECAY_61_100 = 0.99
@@ -402,7 +402,16 @@ def insertInDatabase(data):
     position = position + 1
   redshift_conn.commit()
   return data
-      
+ 
+
+def get_fashion_ids():
+  query = """select distinct product_id from product_category_mapping
+              where l1_id in (3048,4362,9105,2310)"""
+  redshift_conn = PasUtils.redshiftConnection()
+  category_data = pd.read_sql(query, con=redshift_conn)
+  category_data['valid_l1'] = 0
+  return category_data
+
 
 def getBestDeals():
   price_data = getPriceChangeData()
@@ -418,19 +427,23 @@ def getBestDeals():
                                                            + (x['popularity']*WEIGHT_POPULARITY), axis=1)
   valid_products = valid_products.sort_values(by='score', ascending=False)
   valid_products = valid_products.drop_duplicates('parent_id', keep='first')
-  valid_products = valid_products[:SAMPLE_SIZE]
+  invalid_data = get_fashion_ids()
+  valid_products = pd.merge(valid_products, invalid_data, on="product_id", how="left")
+  valid_products = valid_products[valid_products.valid_l1.isnull()]
+  # valid_products = valid_products[:SAMPLE_SIZE]
   prev_products = getPrevDotdProducts()
   valid_products = pd.merge(valid_products, prev_products, on='sku', how='left')
   valid_products.decay = valid_products.decay.fillna(1)
   valid_products['score'] = valid_products.apply(lambda x: x['score']*x['decay'], axis=1)
   valid_products = populateBrandCategoryInfo(valid_products)
   valid_products = valid_products.sort_values(by='score', ascending=False)
-  valid_products = valid_products.drop_duplicates(['brand', 'category'], keep='first')
   valid_products = valid_products[np.isfinite(valid_products['category'])]
   valid_products = valid_products.drop_duplicates(['sku'], keep='first')
-  valid_products = valid_products[:FINAL_SIZE]
-  valid_products = valid_products.sort_values(by='popularity', ascending=False)
+  valid_products = valid_products.drop_duplicates(['brand', 'category'], keep='first')
+  valid_products = valid_products[:SAMPLE_SIZE]
   valid_products = addCategoryInfo(valid_products)
+  valid_products = valid_products.sort_values(by='popularity', ascending=False)
+  valid_products = valid_products[:FINAL_SIZE]
   valid_products = insertInDatabase(valid_products)
   print(valid_products.head(5))
   return
