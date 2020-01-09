@@ -71,23 +71,23 @@ def get_store_popularity_str(row):
 
 
 def get_category_data():
-  query = """select distinct l3_id as category_id, l3_name as category_name
-              from
-              (select * from product_category_mapping
-                where ( l1_id not in (77,194,9564,7287,3048,5926,11723)
+  query = """select distinct l3_id as category_id, l3_name as category_name from
+                (select * from product_category_mapping
+                where ( l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
                       and lower(l2_name) not like '%shop by%'
-                      and l3_id not in (4036,3746,3745,3819)
+                      and l3_id not in (4036,3746,3745,3819,1387)
                       or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
-              )
-              where l3_id not in (0)
-              group by l3_name, l3_id
-              UNION
-              select distinct l2_id as category_id, l2_name as category_name from
-              (select * from product_category_mapping
-              where  l2_id in (3024,1448,1402,1384,1385,1403,6916,672,1286,3053,3049,3054,3057,3052,3056,9113,9112)
-              )
-              where l2_id not in (0)
-              group by l2_name, l2_id;"""
+                )
+                where l3_id not in (0)
+                group by l3_name, l3_id
+                UNION
+                select distinct l2_id as category_id, l2_name as category_name from
+                (select * from product_category_mapping
+                where  l2_id in (3024,1448,1402,1384,1385,1403,6916,672,1286,3053,3049,3054,3057,3052,3056,9113,9112)
+                )
+                where l2_id not in (0)
+                group by l2_name, l2_id
+;"""
   nykaa_redshift_connection = PasUtils.redshiftConnection()
   valid_categories = pd.read_sql(query, con=nykaa_redshift_connection)
 
