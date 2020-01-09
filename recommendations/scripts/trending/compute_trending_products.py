@@ -110,7 +110,15 @@ def prepare_views_ca_dataframe(files):
     print("Total Number of rows now: %d" % df.count())
     return df
 
-def generate_trending_products_from_CA(env_details,floating=False, algo="ca", days=4, limit=None, views=False, threshold=2, latest_threshold=10):
+##
+# days - number of days data to filter
+# floating - whether use floating z-score
+# views - use views data or cart additions data
+# threshold - only use values which are greater than threshold
+# latest_threshold - only use the latest value which are greater than this threshold
+# min_data_points - minimum number of data points any product must have to be considered
+# window_size - window to be used to find trensing products
+def generate_trending_products_from_CA(env_details,floating=False, algo="ca", days=4, views=False, threshold=2, latest_threshold=10, min_data_points=15, window_size=15):
     FTPUtils.sync_ftp_data_from_search(DAILY_SYNC_FILE_PREFIX, env_details['bucket_name'], VIEWS_CA_S3_PREFIX, [])
     csvs_path = S3Utils.ls_file_paths(env_details['bucket_name'], VIEWS_CA_S3_PREFIX, True)
     csvs_path = list(filter(lambda f: (datetime.now() - datetime.strptime(("%s-%s-%s" % (f[-12:-8], f[-8:-6], f[-6:-4])), "%Y-%m-%d")).days <= 31 , csvs_path))
@@ -130,29 +138,22 @@ def generate_trending_products_from_CA(env_details,floating=False, algo="ca", da
     print("max date:", df.agg({"date": "max"}).collect()[0])
     df.printSchema()
     if days:
-        if limit:
-            customer_ids_need_update = df.filter(col('date') >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24*days)).date()).select(["customer_id"]).distinct().rdd.flatMap(lambda x: x).collect()
-            customer_ids_need_update = customer_ids_need_update[:limit]
-            print("Only taking customer_ids which need to be updated")
-            #print("Total number of customer_id=%d" % len(/))
-            df = df.filter(col('customer_id').isin(customer_ids_need_update))
-        else:
-            df = df.filter(col('date') >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24*days)).date())
+        df = df.filter(col('date') >= (datetime.now() + timedelta(hours=5, minutes=30) - timedelta(hours=24*days)).date())
     print("Total Number of rows now: %d" % df.count())
     if views:
-        product_ids = df.groupBy("product_id").agg(func.count("views").alias("ca_count")).where(col("ca_count")>=15).select("product_id").collect()
+        product_ids = df.groupBy("product_id").agg(func.count("views").alias("ca_count")).where(col("ca_count")>=min_data_points).select("product_id").collect()
         asdf = df.groupBy("product_id").agg(func.count("cart_additions").alias("ca_count")).orderBy(['ca_count'], ascending=False)
         print("TOtal prods:", asdf.count())
-        print("eligible prds: ", asdf.filter(col("ca_count")>=15).count())
+        print("eligible prds: ", asdf.filter(col("ca_count")>=min_data_points).count())
     else:
-        product_ids = df.groupBy("product_id").agg(func.count("cart_additions").alias("ca_count")).where(col("ca_count")>=15).select("product_id").collect()
+        product_ids = df.groupBy("product_id").agg(func.count("cart_additions").alias("ca_count")).where(col("ca_count")>=min_data_points).select("product_id").collect()
     #print("df after cart_additions filter")
     #df.filter(col('cart_additions')>0)
 
     product_ids = list(map(lambda x: x.product_id, product_ids))
     if not len(product_ids):
         print("max days data: ", df.groupBy("product_id").agg(func.count("cart_additions").alias("ca_count")).groupby().max('ca_count').first().asDict()['max(ca_count)'])
-        print("ALERT!!!! products count having 15 days data is 0")
+        print("ALERT!!!! products count having %s days data is 0" % min_data_points)
     print("product IDS: ", len(product_ids))
     df = df.filter(col('product_id').isin(product_ids)).orderBy(['product_id', 'date'], ascending=False)
     if views:
@@ -174,8 +175,8 @@ def generate_trending_products_from_CA(env_details,floating=False, algo="ca", da
             return (obs - avg)/std
 
     def get_z_score(ls):
-        if (len(ls)>=15):
-            pop = ls[1:14]
+        if (len(ls)>=window_size):
+            pop = ls[1:window_size-1]
         else:
             pop = ls[1:]
         obs = ls[0]
@@ -215,13 +216,12 @@ if __name__ == '__main__':
     parser.add_argument('--hours', type=int)
     parser.add_argument('--days', type=int)
     parser.add_argument('--orders-count', type=int, default=10)
-    parser.add_argument('--limit', type=int)
     parser.add_argument('--platform', default='nykaa', choices=['nykaa','men'])
     parser.add_argument('--target-widget', default='categories', choices=['categories','search_bar'])
     parser.add_argument('-n', '--n', default=20, type=int)
 
     env_details = RecoUtils.get_env_details()
-    generate_trending_products_from_CA(env_details, views=True, threshold=-1, latest_threshold=100, days=30)
+    generate_trending_products_from_CA(env_details, views=True, threshold=-1, latest_threshold=100, days=30, min_data_points=2, window_size=15)
     
     argv = vars(parser.parse_args())
 
