@@ -221,7 +221,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--n', default=20, type=int)
 
     env_details = RecoUtils.get_env_details()
-    generate_trending_products_from_CA(env_details, views=True, threshold=-1, latest_threshold=100, days=30)
+    generate_trending_products_from_CA(env_details, views=True, threshold=15, latest_threshold=100, days=30)
     
     argv = vars(parser.parse_args())
 
