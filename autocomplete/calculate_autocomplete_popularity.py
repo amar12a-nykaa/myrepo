@@ -208,7 +208,7 @@ def process_category(category_data, category_info, store):
   print("inserting category data in db")
   mysql_conn = PasUtils.mysqlConnection('w')
   cursor = mysql_conn.cursor()
-  PasUtils.mysql_write("delete from l3_categories", connection=mysql_conn)
+  # PasUtils.mysql_write("delete from l3_categories", connection=mysql_conn)
   query = """REPLACE INTO l3_categories(id, name, url, category_popularity, store_popularity, store)
                   VALUES (%s, %s, %s, %s, %s, %s)"""
   
@@ -352,7 +352,7 @@ def process_brand_category(brand_category_data, category_info, store):
   if not PasUtils.mysql_read("SHOW TABLES LIKE 'brand_category'"):
     PasUtils.mysql_write("""create table brand_category(brand varchar(30), brand_id varchar(32), category_id varchar(32),
                             category_name varchar(32), popularity float, store_popularity varchar(255), store varchar(20))""")
-  PasUtils.mysql_write("delete from brand_category", connection=mysql_conn)
+  # PasUtils.mysql_write("delete from brand_category", connection=mysql_conn)
   
   query = """REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity, store_popularity, store)
               VALUES (%s, %s, %s, %s, %s, %s, %s)"""
@@ -423,17 +423,23 @@ def calculate_popularity_autocomplete():
   print("processing brand")
   brand_data = get_popularity_data_for_brand()
   brand_popularity = process_brand(brand_data)
+
+  mysql_conn = PasUtils.mysqlConnection('w')
+  PasUtils.mysql_write("delete from brand_category", connection=mysql_conn)
+  PasUtils.mysql_write("delete from l3_categories", connection=mysql_conn)
   
   nykaa_brand_category_popularity = None
   for tag in SearchUtils.VALID_CATALOG_TAGS:
     category_info = get_category_data(tag)
     valid_category_list = list(category_info.category_id.values)
     valid_category_list = [int(_id) for _id in valid_category_list]
-    print("getting popularity from es")
+    if not valid_category_list:
+      continue
+    print("getting popularity from es for %s" % tag)
     category_data, brand_category_data = get_popularity_data_from_es(valid_category_list)
-    print("processing category")
+    print("processing category for %s" % tag)
     process_category(category_data, category_info, tag)
-    print("processing brand category")
+    print("processing brand category for %s" % tag)
     brand_category_popularity = process_brand_category(brand_category_data, category_info, tag)
     if tag == 'nykaa':
       nykaa_brand_category_popularity = brand_category_popularity.copy()
