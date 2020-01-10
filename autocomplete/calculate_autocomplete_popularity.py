@@ -38,7 +38,7 @@ def get_category_data(store):
       return []
     query = """select distinct l4_id as category_id, l4_name as category_name
                 FROM product_category_mapping
-                WHERE l1_id = %s and l4_id not in (0)"""
+                WHERE l1_id = %s and l4_id not in (0)"""%l1_id
   nykaa_redshift_connection = PasUtils.redshiftConnection()
   valid_categories = pd.read_sql(query, con=nykaa_redshift_connection)
 
