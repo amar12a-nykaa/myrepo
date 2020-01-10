@@ -133,9 +133,7 @@ def get_popularity_data_for_brand():
   return aggregation["brand_data"]["buckets"]
 
 
-def process_category_facet_popularity(valid_category_list):
-  global category_info
-  
+def process_category_facet_popularity(valid_category_list, category_info, store):
   data = {}
   data['category_id'] = []
   data['facet_name'] = []
@@ -156,9 +154,10 @@ def process_category_facet_popularity(valid_category_list):
   if not PasUtils.mysql_read("SHOW TABLES LIKE 'category_facets'"):
     PasUtils.mysql_write("""create table category_facets(brand varchar(30), brand_id varchar(32), category_id varchar(32),
                                 category_name varchar(32), facet varchar(20), popularity float, store_popularity varchar(255))""")
-  PasUtils.mysql_write("delete from category_facets", connection=mysql_conn)
+  # PasUtils.mysql_write("delete from category_facets", connection=mysql_conn)
   
-  query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, store_popularity) VALUES (%s, %s, %s, %s, %s, %s) """
+  query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, store_popularity, store)
+                VALUES (%s, %s, %s, %s, %s, %s, %s) """
   data = pd.merge(facet_popularity, category_info, on='category_id')
   print(data)
   ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
@@ -168,7 +167,8 @@ def process_category_facet_popularity(valid_category_list):
       print(ctr.summary)
     
     row = dict(row)
-    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row['nykaa'], SearchUtils.StoreUtils.get_store_popularity_str(row))
+    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row['nykaa'],
+              SearchUtils.StoreUtils.get_store_popularity_str(row), store)
     cursor.execute(query, values)
     mysql_conn.commit()
   
@@ -427,6 +427,7 @@ def calculate_popularity_autocomplete():
   mysql_conn = PasUtils.mysqlConnection('w')
   PasUtils.mysql_write("delete from brand_category", connection=mysql_conn)
   PasUtils.mysql_write("delete from l3_categories", connection=mysql_conn)
+  PasUtils.mysql_write("delete from category_facets", connection=mysql_conn)
   
   nykaa_brand_category_popularity = None
   for tag in SearchUtils.VALID_CATALOG_TAGS:
@@ -441,6 +442,8 @@ def calculate_popularity_autocomplete():
     process_category(category_data, category_info, tag)
     print("processing brand category for %s" % tag)
     brand_category_popularity = process_brand_category(brand_category_data, category_info, tag)
+    print("processing category facet for %s" % tag)
+    process_category_facet_popularity(valid_category_list, category_info, tag)
     if tag == 'nykaa':
       nykaa_brand_category_popularity = brand_category_popularity.copy()
       print(brand_category_popularity.head())
@@ -450,8 +453,6 @@ def calculate_popularity_autocomplete():
   top_category = brand_category_popularity.sort_values('nykaa', ascending=False).groupby('brand_id').head(5)
   top_category.to_csv('top_category.csv', index=False)
   db_insert_brand(brand_popularity, top_category)
-  print("processing category facet")
-  process_category_facet_popularity(valid_category_list)
   return
   
 
