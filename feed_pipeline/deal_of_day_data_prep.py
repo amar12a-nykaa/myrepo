@@ -371,6 +371,8 @@ def insertInDatabase(data):
   position = 0
   for pid in pinned_products:
     pid = str(pid)
+    if not pid:
+      continue
     query = """insert into deal_of_the_day_data (product_id, sku, starttime, endtime, position, category) values ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')
               on duplicate key update product_id ='{0}', sku='{1}', starttime='{2}', endtime = '{3}', category= '{5}' """. \
       format(pid, "", starttime, endtime, position, "")
@@ -404,12 +406,12 @@ def insertInDatabase(data):
   return data
  
 
-def get_fashion_ids():
+def get_valid_ids():
   query = """select distinct product_id from product_category_mapping
-              where l1_id in (3048,4362,9105,2310)"""
+              where l1_id in (8377, 12, 24, 9564)"""
   redshift_conn = PasUtils.redshiftConnection()
   category_data = pd.read_sql(query, con=redshift_conn)
-  category_data['valid_l1'] = 0
+  category_data = category_data.astype({'product_id': str})
   return category_data
 
 
@@ -427,9 +429,8 @@ def getBestDeals():
                                                            + (x['popularity']*WEIGHT_POPULARITY), axis=1)
   valid_products = valid_products.sort_values(by='score', ascending=False)
   valid_products = valid_products.drop_duplicates('parent_id', keep='first')
-  invalid_data = get_fashion_ids()
-  valid_products = pd.merge(valid_products, invalid_data, on="product_id", how="left")
-  valid_products = valid_products[valid_products.valid_l1.isnull()]
+  valid_data = get_valid_ids()
+  valid_products = pd.merge(valid_products, valid_data, on="product_id")
   # valid_products = valid_products[:SAMPLE_SIZE]
   prev_products = getPrevDotdProducts()
   valid_products = pd.merge(valid_products, prev_products, on='sku', how='left')
