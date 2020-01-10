@@ -19,7 +19,7 @@ class FTPUtils:
 
         def fill_files(f):
             if f.startswith(files_prefix):
-                files.append(gitf)
+                files.append(f)
 
         ftp.retrlines('NLST', fill_files)
         csvs = list(map(lambda f: f.replace('zip', 'csv'), files))
