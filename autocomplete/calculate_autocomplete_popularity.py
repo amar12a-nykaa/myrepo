@@ -37,9 +37,27 @@ def get_category_data(store):
     if not l1_id:
       print('valid category list not present for %s'%store)
       return []
-    query = """select distinct l4_id as category_id, l4_name as category_name
-                FROM product_category_mapping
-                WHERE l1_id = %s and l4_id not in (0)"""%l1_id
+    query = """(
+                select distinct l3_id as category_id, l3_name as category_name from product_category_mapping
+                where l1_id = {l1_id}
+                and lower(l3_name)  not like 'shop%'
+                and lower(l2_name)  not like '%luxe%'
+                and l4_id = 0
+                )
+                union
+                (
+                select distinct l4_id as category_id, l4_name as category_name from product_category_mapping
+                where l1_id = {l1_id}
+                and lower(l3_name)  not like 'shop%'
+                and lower(l2_name)  not like '%luxe%'
+                and l4_id <> 0
+                )
+                union
+                (
+                select distinct l2_id as category_id, l2_name as category_name from product_category_mapping
+                where l2_id in ('7340','7320')
+            )""".format(l1_id)
+  print(query)
   nykaa_redshift_connection = PasUtils.redshiftConnection()
   valid_categories = pd.read_sql(query, con=nykaa_redshift_connection)
   category_data = pd.merge(valid_categories, category_url_info, on="category_id")
