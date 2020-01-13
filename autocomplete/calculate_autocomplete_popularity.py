@@ -56,7 +56,7 @@ def get_category_data(store):
                 (
                 select distinct l2_id as category_id, l2_name as category_name from product_category_mapping
                 where l2_id in ('7340','7320')
-            )""".format(l1_id)
+            )""".format(l1_id=l1_id)
   print(query)
   nykaa_redshift_connection = PasUtils.redshiftConnection()
   valid_categories = pd.read_sql(query, con=nykaa_redshift_connection)
@@ -178,6 +178,7 @@ def process_category_facet_popularity(valid_category_list, category_info, store)
       print(ctr.summary)
     
     row = dict(row)
+    row['store'] = store
     values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row[store],
               SearchUtils.StoreUtils.get_store_popularity_str(row), store)
     cursor.execute(query, values)
@@ -232,6 +233,7 @@ def process_category(category_data, category_info, store):
       print(ctr.summary)
     
     row = dict(row)
+    row['store'] = store
     values = (row['category_id'], row['category_name'], row['category_url'], row[store],
               SearchUtils.StoreUtils.get_store_popularity_str(row), store)
     cursor.execute(query, values)
@@ -378,6 +380,7 @@ def process_brand_category(brand_category_data, category_info, store):
     if row['brand_id'] not in brand_info:
       print("brand %s not found in brand_info"%row['brand_id'])
       continue
+    row['store'] = store
     values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], row['category_id'], row['category_name'],
               row[store], SearchUtils.StoreUtils.get_store_popularity_str(row), store)
     cursor.execute(query, values)
