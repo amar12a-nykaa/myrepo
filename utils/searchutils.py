@@ -67,9 +67,12 @@ class StoreUtils(object):
         row[tag] = 0
     return row
   
-  def get_store_popularity_str(row):
+  def get_store_popularity_str(row, is_brand=False):
     data = {}
+    store = row.get('store', 'nykaa')
     for tag in VALID_CATALOG_TAGS:
       data[tag] = row.get(tag, 0)
+      if not is_brand and store != tag:
+        data[tag] = 0
     return json.dumps(data)
     
