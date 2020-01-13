@@ -13,6 +13,7 @@ import searchutils as SearchUtils
 
 
 def get_category_data(store):
+  global category_url_info
   if not store or store == "nykaa":
     query = """select distinct l3_id as category_id, l3_name as category_name
                 from
@@ -41,16 +42,8 @@ def get_category_data(store):
                 WHERE l1_id = %s and l4_id not in (0)"""%l1_id
   nykaa_redshift_connection = PasUtils.redshiftConnection()
   valid_categories = pd.read_sql(query, con=nykaa_redshift_connection)
-
-  query = """SELECT DISTINCT category_id, request_path AS category_url FROM nykaalive1.core_url_rewrite
-                WHERE product_id IS NULL AND category_id IS NOT NULL"""
-  nykaa_replica_db_conn = PasUtils.nykaaMysqlConnection()
-  category_url_info = pd.read_sql(query, con=nykaa_replica_db_conn)
-  category_url_info = category_url_info.drop_duplicates(subset=['category_id'], keep='first', inplace=False)
-  
   category_data = pd.merge(valid_categories, category_url_info, on="category_id")
   category_data = category_data.astype({'category_id': str})
-  category_data.to_csv('category_data.csv', index=False)
   return category_data
 
 
@@ -146,7 +139,7 @@ def process_category_facet_popularity(valid_category_list, category_info, store)
   facet_popularity = pd.DataFrame.from_dict(data)
   for tag in SearchUtils.VALID_CATALOG_TAGS:
     facet_popularity[tag] = 100 * SearchUtils.normalize(facet_popularity[tag])
-  facet_popularity.to_csv('facet_pop.csv', index=False)
+  # facet_popularity.to_csv('facet_pop.csv', index=False)
   
   print("writing facet popularity to db")
   mysql_conn = PasUtils.mysqlConnection('w')
@@ -159,7 +152,7 @@ def process_category_facet_popularity(valid_category_list, category_info, store)
   query = """REPLACE INTO category_facets (category_id, category_name, facet_name, facet_val, popularity, store_popularity, store)
                 VALUES (%s, %s, %s, %s, %s, %s, %s) """
   data = pd.merge(facet_popularity, category_info, on='category_id')
-  print(data)
+  print(data.head())
   ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
   for id, row in data.iterrows():
     ctr += 1
@@ -167,7 +160,7 @@ def process_category_facet_popularity(valid_category_list, category_info, store)
       print(ctr.summary)
     
     row = dict(row)
-    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row['nykaa'],
+    values = (row['category_id'], row['category_name'], row['facet_name'], row['facet_val'], row[store],
               SearchUtils.StoreUtils.get_store_popularity_str(row), store)
     cursor.execute(query, values)
     mysql_conn.commit()
@@ -203,7 +196,7 @@ def process_category(category_data, category_info, store):
   for tag in SearchUtils.VALID_CATALOG_TAGS:
     category_popularity[tag] = 100 * SearchUtils.normalize(category_popularity[tag]) + 100
   category_popularity = category_popularity.apply(SearchUtils.StoreUtils.check_base_popularity, axis=1)
-  category_popularity.to_csv('category_pop.csv', index=False)
+  # category_popularity.to_csv('category_pop.csv', index=False)
   
   print("inserting category data in db")
   mysql_conn = PasUtils.mysqlConnection('w')
@@ -213,7 +206,7 @@ def process_category(category_data, category_info, store):
                   VALUES (%s, %s, %s, %s, %s, %s)"""
   
   data = pd.merge(category_popularity, category_info, on='category_id')
-  print(data)
+  print(data.head())
   ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
   for id, row in data.iterrows():
     ctr += 1
@@ -221,7 +214,7 @@ def process_category(category_data, category_info, store):
       print(ctr.summary)
     
     row = dict(row)
-    values = (row['category_id'], row['category_name'], row['category_url'], row['nykaa'],
+    values = (row['category_id'], row['category_name'], row['category_url'], row[store],
               SearchUtils.StoreUtils.get_store_popularity_str(row), store)
     cursor.execute(query, values)
     mysql_conn.commit()
@@ -309,7 +302,6 @@ def process_brand(brand_data):
   for tag in SearchUtils.VALID_CATALOG_TAGS:
     brand_popularity[tag] = 200 * SearchUtils.normalize(brand_popularity[tag]) + 100
   brand_popularity = brand_popularity.apply(SearchUtils.StoreUtils.check_base_popularity, axis=1)
-  brand_popularity.to_csv('brand_pop.csv', index=False)
   return brand_popularity
 
 
@@ -336,7 +328,7 @@ def process_brand_category(brand_category_data, category_info, store):
   for tag in SearchUtils.VALID_CATALOG_TAGS:
     brand_category_popularity[tag] = (50 * SearchUtils.normalize(brand_category_popularity[tag])) + 50
     brand_category_popularity[tag] = brand_category_popularity[tag].apply(lambda x: x if x > 50.0 else 0)
-  brand_category_popularity.to_csv('brand_category_popularity.csv', index=False)
+  # brand_category_popularity.to_csv('brand_category_popularity.csv', index=False)
   
   # promote private label
   def boost_brand(row):
@@ -357,7 +349,7 @@ def process_brand_category(brand_category_data, category_info, store):
   query = """REPLACE INTO brand_category (brand, brand_id, category_id, category_name, popularity, store_popularity, store)
               VALUES (%s, %s, %s, %s, %s, %s, %s)"""
   brand_category_popularity = pd.merge(brand_category_popularity, category_info, on='category_id')
-  print(brand_category_popularity)
+  print(brand_category_popularity.head())
   ctr = LoopCounter(name='Writing brand category popularity to db', total=len(brand_category_popularity.index))
   for id, row in brand_category_popularity.iterrows():
     ctr += 1
@@ -369,7 +361,7 @@ def process_brand_category(brand_category_data, category_info, store):
       print("brand %s not found in brand_info"%row['brand_id'])
       continue
     values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], row['category_id'], row['category_name'],
-              row['nykaa'], SearchUtils.StoreUtils.get_store_popularity_str(row), store)
+              row[store], SearchUtils.StoreUtils.get_store_popularity_str(row), store)
     cursor.execute(query, values)
     mysql_conn.commit()
 
@@ -411,7 +403,7 @@ def db_insert_brand(brand_popularity, top_category):
       continue
     
     values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], brand_info[row['brand_id']]['brands_v1'], row["nykaa"],
-              SearchUtils.StoreUtils.get_store_popularity_str(row), json.dumps(top_category_brand.get(row['brand_id'], [])), brand_info[row['brand_id']]['brand_url'])
+              SearchUtils.StoreUtils.get_store_popularity_str(row, is_brand=True), json.dumps(top_category_brand.get(row['brand_id'], [])), brand_info[row['brand_id']]['brand_url'])
     cursor.execute(query, values)
     mysql_conn.commit()
 
@@ -450,12 +442,21 @@ def calculate_popularity_autocomplete():
   
   print("getting top category")
   print(nykaa_brand_category_popularity.head())
-  top_category = brand_category_popularity.sort_values('nykaa', ascending=False).groupby('brand_id').head(5)
-  top_category.to_csv('top_category.csv', index=False)
+  top_category = nykaa_brand_category_popularity.sort_values('nykaa', ascending=False).groupby('brand_id').head(5)
+  # top_category.to_csv('top_category.csv', index=False)
   db_insert_brand(brand_popularity, top_category)
   return
   
+def get_category_url_info():
+  query = """SELECT DISTINCT category_id, request_path AS category_url FROM nykaalive1.core_url_rewrite
+                    WHERE product_id IS NULL AND category_id IS NOT NULL"""
+  nykaa_replica_db_conn = PasUtils.nykaaMysqlConnection()
+  category_url_info = pd.read_sql(query, con=nykaa_replica_db_conn)
+  category_url_info = category_url_info.drop_duplicates(subset=['category_id'], keep='first', inplace=False)
+  return category_url_info
 
 brand_info = get_brand_data()
+category_url_info = get_category_url_info()
+
 if __name__ == "__main__":
   calculate_popularity_autocomplete()
