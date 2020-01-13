@@ -316,7 +316,8 @@ def index_categories(collection, searchengine):
   def getCategoryDoc(row, variant):
     category_url = row['url']
     category_men_url = row['men_url']
-    id = "category_" + str(row['category_id']) + "_" + variant
+    store = row.get('store', 'nykaa')
+    id = "category_" + str(row['category_id']) + "_" + variant + "_" + store
     
     url = "/search/result/?" + str(urllib.parse.urlencode({'q': variant}))
     men_url = "/search/result/?" + str(urllib.parse.urlencode({'q': variant}))
@@ -338,7 +339,8 @@ def index_categories(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, store_popularity FROM l3_categories_clean order by name, category_popularity desc"
+  query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, store_popularity, store " \
+            "FROM l3_categories_clean order by name, category_popularity desc"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Indexing - ' + searchengine)
   # prev_cat = None
@@ -369,10 +371,11 @@ def index_categories(collection, searchengine):
 def index_brands_categories(collection, searchengine):
 
   def getBrandCategoryDoc(row, variant):
+    store = row.get('store', 'nykaa')
     brand_category = row['brand'] + " " + variant
     url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
     men_url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
-    id = row['brand'] + "_" + variant + "_" + str(row['category_id'])
+    id = row['brand'] + "_" + variant + "_" + str(row['category_id']) + "_" + store
     doc = {"_id": createId(id),
            "entity": row['brand'] + " " + variant,
            "weight": row['popularity'],
@@ -390,7 +393,7 @@ def index_brands_categories(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT brand_id, brand, category_name, category_id, popularity, store_popularity FROM brand_category"
+  query = "SELECT brand_id, brand, category_name, category_id, popularity, store_popularity, store FROM brand_category"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
   for row in results:
@@ -416,7 +419,7 @@ def index_category_facets(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT category_name, category_id, facet_val, popularity, store_popularity FROM category_facets"
+  query = "SELECT category_name, category_id, facet_val, popularity, store_popularity, store FROM category_facets"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Facet Indexing - ' + searchengine)
   for row in results:
@@ -427,7 +430,7 @@ def index_category_facets(collection, searchengine):
     category_facet = row['facet_val'] + " " + row['category_name']
     url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': category_facet}))
     men_url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': category_facet}))
-    id = row['facet_val'] + "_" + row['category_name'] + "_" + str(row['category_id'])
+    id = row['facet_val'] + "_" + row['category_name'] + "_" + str(row['category_id']) + "_" + row['store']
     doc = {"_id": createId(id),
         "entity": row['facet_val'] + " " + row['category_name'],
         "weight": row['popularity'],
