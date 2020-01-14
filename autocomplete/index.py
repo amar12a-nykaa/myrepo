@@ -37,6 +37,8 @@ from pas.v2.utils import Utils as PasUtils
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 from disc.v2.utils import MemcacheUtils
+sys.path.append("/nykaa/scripts/utils")
+import searchutils as SearchUtils
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 ensure_mongo_indices_now()
@@ -50,7 +52,7 @@ top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = DiscUtils.esConn()
 
-STORE_LIST = ['men', 'pro', 'luxe', 'nykaa', 'ultra_lux', 'ngs']
+STORE_LIST = SearchUtils.VALID_CATALOG_TAGS
 GLOBAL_FAST_INDEXING = False
 
 MIN_COUNTS = {
