@@ -1,6 +1,6 @@
 import json
 
-STORE_MAP = {'nykaa': {}, 'men': {'l1_id': 7287}, 'pro': {'l1_id': 5926}, 'ultra_lux': {'l1_id': 11723}}
+STORE_MAP = {'nykaa': {}, 'men': {'l1_id': 7287}, 'pro': {'l1_id': 5926}, 'ultra_lux': {'l1_id': 11723}, 'ngs': {'l1_id': 12390}}
 VALID_CATALOG_TAGS = list(STORE_MAP.keys())
 PRIVATE_LABEL_BRANDS = ['1937','7666','9127']
 AUTOCOMPLETE_BRAND_BOOST_FACTOR = 1.1

@@ -18,7 +18,7 @@ def get_category_data(store):
     query = """select distinct l3_id as category_id, l3_name as category_name
                 from
                 (select * from product_category_mapping
-                  where ( l1_id not in (77,194,9564,7287,3048,5926,11723)
+                  where ( l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
                         and lower(l2_name) not like '%shop by%'
                         and l3_id not in (4036,3746,3745,3819)
                         or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
