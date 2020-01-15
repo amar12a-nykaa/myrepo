@@ -175,7 +175,7 @@ class EntityIndexer:
         store_doc = assortment_doc.copy()
         store_doc['store'] = tag
         store_doc['_id'] = assortment_doc['_id'] + tag
-        docs.append(assortment_doc)
+        docs.append(store_doc)
       
       if len(docs) >= 100:
         EsUtils.indexDocs(docs, collection)
@@ -221,7 +221,8 @@ class EntityIndexer:
       if row['brand'] in synonyms:
         brand_doc["entity_synonyms"] = synonyms[row['brand']]
       
-      for tag, value in row['store_popularity'].items():
+      store_popularity = json.loads(row['store_popularity'])
+      for tag, value in store_popularity.items():
         if value <= 0.0001:
           continue
         store_doc = brand_doc.copy()
