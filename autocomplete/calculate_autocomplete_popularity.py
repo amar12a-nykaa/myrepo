@@ -12,52 +12,11 @@ sys.path.append("/nykaa/scripts/utils")
 import searchutils as SearchUtils
 
 
-def get_category_data(store):
+def get_category_data(store='nykaa'):
   global category_url_info
-  if not store or store == "nykaa":
-    query = """select distinct l3_id as category_id, l3_name as category_name
-                from
-                (select * from product_category_mapping
-                  where ( l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
-                        and lower(l2_name) not like '%shop by%'
-                        and l3_id not in (4036,3746,3745,3819)
-                        or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
-                )
-                where l3_id not in (0)
-                group by l3_name, l3_id
-                UNION
-                select distinct l2_id as category_id, l2_name as category_name from
-                (select * from product_category_mapping
-                where  l2_id in (3024,1448,1402,1384,1385,1403,6916,672,1286,3053,3049,3054,3057,3052,3056,9113,9112)
-                )
-                where l2_id not in (0)
-                group by l2_name, l2_id;"""
-  else:
-    l1_id = SearchUtils.STORE_MAP.get(store, {}).get('l1_id')
-    if not l1_id:
-      print('valid category list not present for %s'%store)
-      return []
-    query = """(
-                select distinct l3_id as category_id, l3_name as category_name from product_category_mapping
-                where l1_id = {l1_id}
-                and lower(l3_name)  not like 'shop%'
-                and lower(l2_name)  not like '%luxe%'
-                and l4_id = 0
-                )
-                union
-                (
-                select distinct l4_id as category_id, l4_name as category_name from product_category_mapping
-                where l1_id = {l1_id}
-                and lower(l3_name)  not like 'shop%'
-                and lower(l2_name)  not like '%luxe%'
-                and l4_id <> 0
-                )
-                union
-                (
-                select distinct l2_id as category_id, l2_name as category_name from product_category_mapping
-                where l2_id in ('7340','7320')
-            )""".format(l1_id=l1_id)
-  print(query)
+  query = SearchUtils.STORE_MAP.get(store, {}).get('leaf_query')
+  if not query:
+    return []
   nykaa_redshift_connection = PasUtils.redshiftConnection()
   valid_categories = pd.read_sql(query, con=nykaa_redshift_connection)
   category_data = pd.merge(valid_categories, category_url_info, on="category_id")
