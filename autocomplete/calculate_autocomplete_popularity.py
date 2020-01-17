@@ -337,7 +337,7 @@ def process_brand_category(brand_category_data, category_info, store):
     
     row = dict(row)
     if row['brand_id'] not in brand_info:
-      print("brand %s not found in brand_info"%row['brand_id'])
+      # print("brand %s not found in brand_info"%row['brand_id'])
       continue
     row['store'] = store
     values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], row['category_id'], row['category_name'],
@@ -410,6 +410,9 @@ def calculate_popularity_autocomplete():
       continue
     print("getting popularity from es for %s" % tag)
     category_data, brand_category_data = get_popularity_data_from_es(valid_category_list)
+    if not category_data:
+      print("no category_info found for %s" % tag)
+      continue
     print("processing category for %s" % tag)
     process_category(category_data, category_info, tag)
     print("processing brand category for %s" % tag)
