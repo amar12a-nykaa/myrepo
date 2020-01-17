@@ -46,15 +46,20 @@ class EntityIndexer:
   
   def fetch_category_information():
     #TO_DO
-    category_query = """select distinct l1_id as category_id, l1_name as category_name
-                          FROM product_category_mapping
-                          WHERE l1_id not in (77,194,9564,7287,3048,5926,11723)
-                            and lower(l2_name) not like '%shop by%'
-                        UNION
-                        select distinct l2_id as category_id, l2_name as category_name
-                          FROM product_category_mapping
-                          WHERE l2_id not in (3024,1448,1402,1384,1385,1403,6916,672,1286,3053,3049,3054,3057,3052,3056,9113,9112)
-                          """
+    category_query = """select distinct  l2_ID as category_id,l2_name as category_name  from
+                        (
+                        select * from product_category_mapping
+                        where (l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
+                             and lower(l2_name) not like '%shop by%'
+                             and l3_id not in (4036,3746,3745,3819,1387)
+                             or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
+                        )
+                        where l3_id not in (0) and l2_id not in (735)
+                        Union
+                        (select distinct  l1_ID as category_id,l1_name as category_name
+                            from product_category_mapping
+                            where l1_id in (24,3048,12,9564,671,1390,53,4362,8377,2313,77,59)
+                        )"""
     nykaa_redshift_connection = PasUtils.redshiftConnection()
     valid_categories = pd.read_sql(category_query, con=nykaa_redshift_connection)
     valid_categories = valid_categories.astype({'category_id': str})
@@ -323,6 +328,7 @@ class EntityIndexer:
                 '80231': {'name': 'Tan Removal', 'synonym': ['tan', 'anti tan', 'de tan']},
                 '12089': {'name': 'Lotion/Body Butter', 'synonym': ['lotion', 'body butter']},
                 '10711': {'name': 'Female', 'synonym': ['women', 'woman', 'ladies']},
+                '10710': {'name': 'Male', 'synonym': ['men', 'man']},
                 '67293': {'name': 'Solid/Plain', 'synonym': ['solid', 'plain']},
                 '96358': {'name': 'Embellished/Sequined', 'synonym': ['embellished', 'sequined']},
                 '10887': {'name': 'Medium/Wheatish Skin', 'synonym': ['medium skin', 'wheatish skin']},
