@@ -46,32 +46,8 @@ ASSORTMENT_WEIGHT = 1
 class EntityIndexer:
   DOCS_BATCH_SIZE = 1000
   
-  def get_valid_category(store):
-    if not store or store == "nykaa":
-      query = """select distinct l1_id as category_id, l1_name as category_name
-                  FROM product_category_mapping
-                  WHERE l1_id not in (77,194,9564,7287,3048,5926,11723, 12390)
-                    and lower(l2_name) not like '%shop by%'
-                UNION
-                select distinct l2_id as category_id, l2_name as category_name
-                  FROM product_category_mapping
-                  WHERE l2_id not in (3024,1448,1402,1384,1385,1403,6916,672,1286,3053,3049,3054,3057,3052,3056,9113,9112)"""
-    else:
-      l1_id = SearchUtils.STORE_MAP.get(store, {}).get('l1_id')
-      query = """(
-        select distinct l2_id as category_id, l2_name as category_name from product_category_mapping
-            where l1_id = {l1_id}
-            and lower(l3_name)  not like '%shop%'
-            and lower(l2_name)  not like '%luxe%'
-        )
-        union
-        (
-        select distinct l3_id as category_id, l3_name as category_name from product_category_mapping
-            where l1_id = {l1_id}
-            and lower(l3_name)  not like '%shop%'
-            and lower(l2_name)  not like '%luxe%'
-            and l4_id <> 0
-        )""".format(l1_id=l1_id)
+  def get_valid_category(store='nykaa'):
+    query = SearchUtils.STORE_MAP.get(store, {}).get('non_leaf_query')
     nykaa_redshift_connection = PasUtils.redshiftConnection()
     valid_categories = pd.read_sql(query, con=nykaa_redshift_connection)
     valid_categories = valid_categories.astype({'category_id': str})
