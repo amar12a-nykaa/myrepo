@@ -1,6 +1,6 @@
 import json
 
-VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro', 'ultra_lux']
+VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro', 'ultra_lux','ngs']
 PRIVATE_LABEL_BRANDS = ['1937','7666','9127']
 AUTOCOMPLETE_BRAND_BOOST_FACTOR = 1.1
 BLACKLISTED_FACETS = ['old_brand_facet', ]
