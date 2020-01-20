@@ -2,7 +2,7 @@
 multicategoryList = {
     "1676": {"variant": ["Baby Creams","Baby Lotions","Baby Oils"], "name": "Creams, Lotions & Oils"},
     "1466": {"variant": ["Badges","Clothing Pins"], "name": "Badges and Clothing Pins"},
-    "1386": {"variant": ["Bath Brushes","Body Scrubs"], "name": "Body Scrubbers & Brushes"},
+    "1386": {"variant": ["Bath Brushes","Body Scrubbers"], "name": "Body Scrubbers & Brushes"},
     "1311": {"variant": ["Bath Gels","Shower Gels"], "name": "Bath / Shower Gels"},
     "232": {"variant": ["BB Creams","CC Creams"], "name": "BB & CC Cream"},
     "8398": {"variant": ["BB Creams","CC Creams"], "name": "BB & CC Creams"},
@@ -109,7 +109,7 @@ multicategoryList = {
     "4531": {"variant": ["Plus Size Bra"], "name": "Plus Size"},
     "3072": {"variant": ["Sexy Bra"], "name": "Sexy"},
     "5779": {"variant": ["Camisoles","Slips & Camisoles"], "name": "Slips & Camisoles"},
-    "8251": {"variant": ["Lingerie  Socks"], "name": "Socks"},
+    "8251": {"variant": ["Lingerie Socks"], "name": "Socks"},
     "3055": {"variant": ["Lingerie Value Packs"], "name": "Value Packs"},
     "3111": {"variant": ["One Piece Swimwear"], "name": "One Piece"},
     "3115": {"variant": ["Sarongs"], "name": "Sarongs & Cover-ups"},
@@ -118,7 +118,7 @@ multicategoryList = {
     "3081": {"variant": ["Lace Underwear"], "name": "Lace"},
     "3082": {"variant": ["Seamless Underwear"], "name": "Seamless"},
     "3090": {"variant": ["Sexy Underwear"], "name": "Sexy"},
-    "3056": {"variant": ["Sleepwear","Loungewear"], "name": "Sleep & Lounge"},
+    "3056": {"variant": ["Sleepwear","Loungewear"], "name": "Sleep & Lounge"}
   }
 
 
