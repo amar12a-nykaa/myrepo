@@ -138,13 +138,12 @@ class ScheduledPriceUpdater:
                     if single_doc['sku'] in priceChangeData:
                       priceChangeData[single_doc['sku']]['new_price'] = single_doc['price']
         except Exception as e:
-            Mail.send(MAIL_RECEIPIENTS,"noreply@nykaa.com","Alert : Discount Scheduler Failed",str(e))
+            Mail.send(MAIL_RECEIPIENTS,"noreply@nykaa.com","Alert : Discount Scheduler Failed" , str(getCurrentDateTime()) +"\n"+ str(e))
             print(traceback.format_exc())
 
         total_count = incrementGlobalCounter(len(update_docs))
         print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), total_count))
         if totalProductsToLog:
-            Mail.send()
             PriceUpdateLogUtils.logBulkChangeViaProductScheduleUpdate(batch_Id, "cron_schedule_es", schedule_start, schedule_end,totalProductsToLog)
         if priceChangeData:
             PriceUpdateLogUtils.logBulkPriceChange(priceChangeData)
@@ -229,7 +228,8 @@ class ScheduledPriceUpdater:
                     for singleBundle in update_docs:
                         print("bundle sku: %s" % singleBundle['sku'])
         except Exception as e:
-            Mail.send(MAIL_RECEIPIENTS, "noreply@nykaa.com", "Alert : Discount Scheduler Failed", str(e))
+            Mail.send(MAIL_RECEIPIENTS, "noreply@nykaa.com", "Alert : Discount Scheduler Failed",
+                      str(getCurrentDateTime()) + "\n" + str(e))
             print(traceback.format_exc())
 
         print("\n[%s] Total %s products updated." % (getCurrentDateTime(), product_updated_count))
