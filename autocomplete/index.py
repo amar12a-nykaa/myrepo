@@ -219,6 +219,7 @@ def create_map_search_product():
 def index_search_queries(collection, searchengine):
   map_search_product = create_map_search_product()
   df = pd.read_csv('/nykaa/scripts/low_ctr_queries.csv', encoding="ISO-8859-1", sep='\t', header=0)
+  df['names'] = df['names'].str.lower()
   low_ctr_query_list = list(df['names'].values)
 
   docs = []
