@@ -234,7 +234,9 @@ class CatalogIndexer:
         "lingerie": "lingerie women women's ladies girls female girl",
         "dresses": "dresses women women's ladies girls female girl",
         "kay beauty": "kay beauty katrina kaif by k",
-        "twenty dresses": "twenty dresses 20dresses 20"
+        "twenty dresses": "twenty dresses 20dresses 20",
+        "mcaffeine": "mcaffeine m caffeine",
+        "unisex": "unisex men women"
     }
 
     folderpath = "/nykaa/product_metadata/"
