@@ -45,92 +45,6 @@ ASSORTMENT_WEIGHT = 1
 
 class EntityIndexer:
   DOCS_BATCH_SIZE = 1000
-  
-  def get_valid_category(store='nykaa'):
-    query = SearchUtils.STORE_MAP.get(store, {}).get('non_leaf_query')
-    nykaa_redshift_connection = PasUtils.redshiftConnection()
-    valid_categories = pd.read_sql(query, con=nykaa_redshift_connection)
-    valid_categories = valid_categories.astype({'category_id': str})
-    return valid_categories
-      
-  
-  def insert_category_information():
-    mysql_conn = PasUtils.mysqlConnection('w')
-    PasUtils.mysql_write("delete from all_categories", connection=mysql_conn)
-    for tag in SearchUtils.VALID_CATALOG_TAGS:
-      EntityIndexer.fetch_category_information(tag)
-      
-      
-  def fetch_category_information(store):
-    valid_categories = EntityIndexer.get_valid_category(store)
-    valid_category_list = list(valid_categories.category_id.values)
-    query = {
-      "size": 0,
-      "aggs": {
-        "category_data": {
-          "terms": {
-            "field": "category_ids.keyword",
-            "include": valid_category_list,
-            "size": 10000
-          },
-          "aggs": SearchUtils.BASE_AGGREGATION_TOP_HITS
-        }
-      }
-    }
-    es = EsUtils.get_connection()
-    results = es.search(index='livecore', body=query, request_timeout=120)
-    category_data = results["aggregations"]["category_data"]["buckets"]
-    data = {}
-    data['category_id'] = []
-    for tag in SearchUtils.VALID_CATALOG_TAGS:
-      data[tag] = []
-      data["valid_" + tag] = []
-
-    for category in category_data:
-      popularity_data = {'category_id': category.get('key', 0)}
-      for bucket in category.get('tags', {}).get('buckets', []):
-        average_popularity = SearchUtils.get_avg_bucket_popularity(bucket)
-        popularity_data[bucket.get('key')] = average_popularity
-  
-      data['category_id'].append(popularity_data.get('category_id'))
-      for tag in SearchUtils.VALID_CATALOG_TAGS:
-        popularity = popularity_data.get(tag, -1)
-        if popularity < 0:
-          data[tag].append(0)
-          data["valid_" + tag].append(False)
-        else:
-          data[tag].append(popularity)
-          data["valid_" + tag].append(True)
-    category_popularity = pd.DataFrame.from_dict(data)
-    if category_popularity.empty:
-      print("No category data found for %s"%(store))
-      return
-    
-    for tag in SearchUtils.VALID_CATALOG_TAGS:
-      category_popularity[tag] = 100 * SearchUtils.normalize(category_popularity[tag]) + 100
-    category_popularity = category_popularity.apply(SearchUtils.StoreUtils.check_base_popularity, axis=1)
-    data = pd.merge(category_popularity, valid_categories, on='category_id')
-    print("inserting category data in db")
-    mysql_conn = PasUtils.mysqlConnection('w')
-    cursor = mysql_conn.cursor()
-    query = """REPLACE INTO all_categories(id, name, category_popularity, store_popularity, store)
-                      VALUES (%s, %s, %s, %s, %s)"""
-    
-    ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
-    for id, row in data.iterrows():
-      ctr += 1
-      if ctr.should_print():
-        print(ctr.summary)
-      row = dict(row)
-      row['store'] = store
-      values = (
-      row['category_id'], row['category_name'], row[store], SearchUtils.StoreUtils.get_store_popularity_str(row), store)
-      cursor.execute(query, values)
-      mysql_conn.commit()
-
-    cursor.close()
-    mysql_conn.close()
-    return
 
   
   def index_assortment_gap(collection):
@@ -276,7 +190,6 @@ class EntityIndexer:
       }
       return doc
     docs = []
-    EntityIndexer.insert_category_information()
     mysql_conn = PasUtils.mysqlConnection()
     query = """SELECT id as category_id, name as category_name, category_popularity, store FROM all_categories
                 order by store, name, category_popularity desc"""
