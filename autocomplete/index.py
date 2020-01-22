@@ -50,7 +50,7 @@ top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = DiscUtils.esConn()
 
-STORE_LIST = ['men', 'pro', 'luxe', 'nykaa', 'ultra_lux']
+STORE_LIST = ['men', 'pro', 'luxe', 'nykaa', 'ultra_lux', 'ngs']
 GLOBAL_FAST_INDEXING = False
 
 MIN_COUNTS = {
@@ -219,6 +219,7 @@ def create_map_search_product():
 def index_search_queries(collection, searchengine):
   map_search_product = create_map_search_product()
   df = pd.read_csv('/nykaa/scripts/low_ctr_queries.csv', encoding="ISO-8859-1", sep='\t', header=0)
+  df['names'] = df['names'].str.lower()
   low_ctr_query_list = list(df['names'].values)
 
   docs = []
@@ -263,6 +264,7 @@ def index_search_queries(collection, searchengine):
         "is_nykaa": True,
         "weight_nykaa": row['popularity'],
         "is_visible": False if entity in low_ctr_query_list else True,
+        "nz_query": row.get("nz_query", True),
         "source": "search_query"
       })
 

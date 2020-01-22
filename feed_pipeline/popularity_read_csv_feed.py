@@ -143,7 +143,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
     filepath = csvfilepath 
 
   print(filepath)
-  os.system('sed -i "s/, 201/ 201/g" %s' % filepath)
+  os.system('sed -i "s/, 202/ 202/g" %s' % filepath)
   os.system('sed -i "s/\\"//g" %s' % filepath)
 
   nrows = int(subprocess.check_output('wc -l ' + filepath, shell=True).decode().split()[0])
