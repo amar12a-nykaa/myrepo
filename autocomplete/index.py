@@ -705,6 +705,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_brands_categories_arg= True
       index_category_facets_arg = True
       index_custom_queries_arg = True
+      index_l1_categories_arg = True
 
     print(locals())
     assert engine == 'elasticsearch'
