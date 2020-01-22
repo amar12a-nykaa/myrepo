@@ -69,6 +69,31 @@ def create_missing_indices():
 
 create_missing_indices()
 
+def is_result_present(query):
+    must_not = []
+    must = []
+
+    must_not.append({"term": {"is_service": True}})
+    must.append({"term": {"is_searchable_i": 1}})
+    must.append(
+        {
+            "multi_match": {
+                "minimum_should_match": '100%',
+                "query": query,
+                "fuzziness": 0,
+                "fields": ["title_brand_category.shingle"],
+                "prefix_length": 1,
+            }
+        }
+    )
+    count_querydsl = {"query": {"bool": {"must": must, "must_not": must_not}}}
+    es = DiscUtils.esConn()
+    response_count = es.count(body=count_querydsl, index='livecore')
+    docs_count = response_count['count']
+    if docs_count > 0:
+        return True
+    return False
+
 def getQuerySuggestion(query_id, query, algo):
     for term in corrected_search_query.find({"_id": query_id, "query" : query}):
         modified_query = term["suggested_query"]
@@ -219,8 +244,10 @@ def normalize_search_terms():
 
         try:
             suggested_query = getQuerySuggestion(query_id, query, algo)
+            nz_query = is_result_present(suggested_query)
             requests.append(UpdateOne({"_id":  query_id},
-                                      {"$set": {"query": row['id'].lower(), 'popularity': row['popularity'], "suggested_query": suggested_query.lower()}}, upsert=True))
+                                      {"$set": {"query": row['id'].lower(), 'popularity': row['popularity'],
+                                        "suggested_query": suggested_query.lower(), "nz_query": nz_query}}, upsert=True))
             corrections.append(UpdateOne({"_id":  query_id},
                                          {"$set": {"query": row['id'].lower(),"suggested_query": suggested_query.lower(), "algo": algo}},upsert=True))
         except:
