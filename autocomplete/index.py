@@ -264,6 +264,7 @@ def index_search_queries(collection, searchengine):
         "is_nykaa": True,
         "weight_nykaa": row['popularity'],
         "is_visible": False if entity in low_ctr_query_list else True,
+        "nz_query": row.get("nz_query", True),
         "source": "search_query"
       })
 
