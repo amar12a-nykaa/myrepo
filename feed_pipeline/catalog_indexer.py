@@ -234,7 +234,9 @@ class CatalogIndexer:
         "lingerie": "lingerie women women's ladies girls female girl",
         "dresses": "dresses women women's ladies girls female girl",
         "kay beauty": "kay beauty katrina kaif by k",
-        "twenty dresses": "twenty dresses 20dresses 20"
+        "twenty dresses": "twenty dresses 20dresses 20",
+        "mcaffeine": "mcaffeine m caffeine",
+        "unisex": "unisex men women"
     }
 
     folderpath = "/nykaa/product_metadata/"
@@ -1130,7 +1132,8 @@ class CatalogIndexer:
                     doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'].lower())
                     
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet', 'benefits_facet', 'skin_tone_facet', 'spf_facet',
-                        'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet']:
+                        'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet',
+                        'ingredient_v1_facet', 'wiring_facet', 'padding_facet', 'fabric_facet', 'rise_facet', 'pattern_facet']:
                     try:
                         doc['title_brand_category'] += " " + " ".join([x['name'] for x in doc[facet]]) 
                     except:

@@ -14,6 +14,8 @@ from esutils import EsUtils
 
 sys.path.append('/nykaa/scripts/autocomplete/feedback')
 from insertDataToMongo import insertFeedBackDataInMongo
+from uploadFileToS3 import uploadFile
+from feedback_pipeline import calculate_feedback
 
 sys.path.append('/nykaa/api/')
 from pas.v2.utils import Utils as PasUtils
@@ -36,7 +38,15 @@ script_start = timeit.default_timer()
 
 normalize_search_terms()
 calculate_popularity_autocomplete()
-insertFeedBackDataInMongo()
+try:
+    print("uploading feedback file")
+    uploadFile()
+    print("calculating feedback")
+    calculate_feedback()
+    print("inserting in mongodb")
+    insertFeedBackDataInMongo()
+except Exception as ex:
+    print(ex)
 
 indexes = EsUtils.get_active_inactive_indexes(AUTOCOMPLETE)
 print(indexes)
