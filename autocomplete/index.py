@@ -364,7 +364,7 @@ def index_category(params):
         categoryDoc = getCategoryDoc(row, variant, type)
         docs.append(categoryDoc)
     else:
-      categoryDoc = getCategoryDoc(row, row['category_name'])
+      categoryDoc = getCategoryDoc(row, row['category_name'], type)
       docs.append(categoryDoc)
     
     if len(docs) >= 100:
