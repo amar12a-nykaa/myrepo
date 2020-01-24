@@ -1127,9 +1127,6 @@ class CatalogIndexer:
                     print(traceback.format_exc())
                     print("product_id: %s " % doc['product_id'])
 
-                for key, value in CatalogIndexer.final_replace_dict.items():
-                    pattern = '\\b' + key + '\\b'
-                    doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'].lower())
                     
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet', 'benefits_facet', 'skin_tone_facet', 'spf_facet',
                         'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet',
@@ -1138,6 +1135,10 @@ class CatalogIndexer:
                         doc['title_brand_category'] += " " + " ".join([x['name'] for x in doc[facet]]) 
                     except:
                         pass
+                
+                for key, value in CatalogIndexer.final_replace_dict.items():
+                    pattern = '\\b' + key + '\\b'
+                    doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'].lower())
 
                 product_id = doc['product_id']
                 if product_history and (product_id in product_history) and product_history[product_id]:
