@@ -1,6 +1,269 @@
 import json
 
-VALID_CATALOG_TAGS = ['nykaa', 'men', 'luxe', 'pro', 'ultra_lux','ngs']
+# STORE_MAP = {'nykaa': {}, 'men': {'l1_id': 7287}, 'pro': {'l1_id': 5926}, 'ultra_lux': {'l1_id': 11723}, 'ngs': {'l1_id': 12390}}
+STORE_MAP = {
+  "nykaa": {
+    "leaf_query": """select distinct l3_id as category_id, l3_name as category_name
+        from (
+          select * from product_category_mapping
+          where ( l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
+            and lower(l2_name) not like '%shop by%'
+            and l3_id not in (4036,3746,3745,3819)
+            or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
+        )
+        where l3_id not in (0)
+        group by l3_name, l3_id
+        UNION
+        select distinct l2_id as category_id, l2_name as category_name
+        from (
+          select * from product_category_mapping
+          where  l2_id in (3024,1448,1402,1384,1385,1403,6916,672,1286,3053,3049,3054,3057,3052,3056,9113,9112)
+        )
+        where l2_id not in (0)
+        group by l2_name, l2_id""",
+    
+    "non_leaf_query": """select distinct  l2_ID as category_id,l2_name as category_name
+        from(
+          select * from product_category_mapping
+          where (l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
+             and lower(l2_name) not like '%shop by%'
+             and l3_id not in (4036,3746,3745,3819,1387)
+             or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
+        )
+        where l3_id not in (0) and l2_id not in (735)
+        union
+        (select distinct  l1_ID as category_id,l1_name as category_name
+            from product_category_mapping
+            where l1_id in (24,3048,12,9564,671,1390,53,4362,8377,2313,77,59)
+        )"""
+  },
+  
+  "men": {
+    "leaf_query": """(
+        select distinct l3_ID as category_id,l3_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '7287'
+        and lower(l3_name)  not like '%shop%'
+        and lower(l2_name)  not like '%luxe%'
+        and l4_id = 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l4_ID as category_id,l4_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '7287'
+        and lower(l3_name)  not like '%shop%'
+        and lower(l2_name)  not like '%luxe%'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        (select distinct l2_ID as category_id,l2_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l2_id in ('7340','7320')
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ));""",
+    
+    "non_leaf_query": """(
+        select distinct l2_ID as category_id,l2_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '7287'
+        and lower(l3_name)  not like '%shop%'
+        and lower(l2_name)  not like '%luxe%'
+        and l4_id = 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l3_ID as category_id,l3_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '7287'
+        and lower(l3_name)  not like '%shop%'
+        and lower(l2_name)  not like '%luxe%'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l2_ID as category_id,l2_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '7287'
+        and lower(l3_name)  not like '%shop%'
+        and lower(l2_name)  not like '%luxe%'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ));""",
+    
+    "l1_id": 7287
+  },
+  
+  "pro": {
+    "leaf_query": """(
+        select distinct l3_ID as category_id,l3_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '5926'
+        and l4_id = 0
+        and l3_id<>0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l4_ID as category_id,l4_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '5926'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ));""",
+    
+    "non_leaf_query": """(
+        select distinct l2_ID as category_id,l2_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '5926'
+        and l4_id = 0
+        and l3_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l3_ID as category_id,l3_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '5926'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l2_ID as category_id,l2_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '5926'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ));""",
+    
+    "l1_id": 5926
+  },
+  
+  "ngs": {
+    "leaf_query": """(
+        select distinct l3_ID as category_id,l3_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '12390'
+        and l4_id = 0
+        and l3_id<>0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l4_ID as category_id,l4_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '12390'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ));""",
+    
+    "non_leaf_query": """(
+        select distinct l2_ID as category_id,l2_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '12390'
+        and l4_id = 0
+        and l3_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l3_ID as category_id,l3_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '12390'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l2_ID as category_id,l2_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '12390'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ));""",
+    
+    "l1_id": 12390
+  },
+  
+  "ultra_lux": {
+    "leaf_query": """(
+        select distinct l3_ID as category_id,l3_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '11723'
+        and lower(l2_name)  not like '%shop%'
+        and l4_id = 0
+        and l3_id<>0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l4_ID as category_id,l4_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '11723'
+        and lower(l2_name)  not like '%shop%'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l2_ID as category_id,l2_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '11723'
+        and l2_id in (11817,11819,11818)
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ));""",
+    
+    "non_leaf_query": """(
+        select distinct l2_ID as category_id,l2_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '11723'
+        and lower(l2_name)  not like '%shop%'
+        and lower(l2_name)  not like '%trending%'
+        and l4_id = 0
+        and l3_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l3_ID as category_id,l3_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '11723'
+        and lower(l2_name)  not like '%shop%'
+        and lower(l2_name)  not like '%trending%'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
+        union
+        ( select distinct l2_ID as category_id,l2_name as category_name from
+        (
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping
+        where l1_id = '11723'
+        and lower(l2_name)  not like '%shop%'
+        and lower(l2_name)  not like '%trending%'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ));""",
+    
+    "l1_id": 11723
+    
+  }
+}
+
+VALID_CATALOG_TAGS = list(STORE_MAP.keys())
 PRIVATE_LABEL_BRANDS = ['1937','7666','9127']
 AUTOCOMPLETE_BRAND_BOOST_FACTOR = 1.1
 BLACKLISTED_FACETS = ['old_brand_facet', ]
@@ -66,9 +329,12 @@ class StoreUtils(object):
         row[tag] = 0
     return row
   
-  def get_store_popularity_str(row):
+  def get_store_popularity_str(row, is_brand=False):
     data = {}
+    store = row.get('store', 'nykaa')
     for tag in VALID_CATALOG_TAGS:
       data[tag] = row.get(tag, 0)
+      if not is_brand and store != tag:
+        data[tag] = 0
     return json.dumps(data)
     
