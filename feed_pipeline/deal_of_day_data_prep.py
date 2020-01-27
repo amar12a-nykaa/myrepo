@@ -30,6 +30,8 @@ DECAY_31_60 = 0.95
 DECAY_61_100 = 0.99
 FINAL_SIZE = 100
 WINDOW_SIZE = 6
+DISCOUNT_THRESHOLD = 30
+DISCOUNTED_SIZE = 50
 
 current_pos = 1
 position_map = {}
@@ -431,7 +433,6 @@ def getBestDeals():
   valid_products = valid_products.drop_duplicates('parent_id', keep='first')
   valid_data = get_valid_ids()
   valid_products = pd.merge(valid_products, valid_data, on="product_id")
-  # valid_products = valid_products[:SAMPLE_SIZE]
   prev_products = getPrevDotdProducts()
   valid_products = pd.merge(valid_products, prev_products, on='sku', how='left')
   valid_products.decay = valid_products.decay.fillna(1)
@@ -443,10 +444,19 @@ def getBestDeals():
   valid_products = valid_products.drop_duplicates(['brand', 'category'], keep='first')
   valid_products = valid_products[:SAMPLE_SIZE]
   valid_products = addCategoryInfo(valid_products)
-  valid_products = valid_products.sort_values(by='popularity', ascending=False)
-  valid_products = valid_products[:FINAL_SIZE]
-  valid_products = insertInDatabase(valid_products)
-  print(valid_products.head(5))
+  discounted_products = valid_products[valid_products.discount >= DISCOUNT_THRESHOLD]
+  less_discounted_products = valid_products[valid_products.discount < DISCOUNT_THRESHOLD]
+  discounted_products = discounted_products.sort_values(by='popularity', ascending=False)
+  less_discounted_products = less_discounted_products.sort_values(by='popularity', ascending=False)
+  discounted_products = discounted_products[:DISCOUNTED_SIZE]
+  df_shape = discounted_products.shape
+  remaining = FINAL_SIZE - df_shape[0]
+  less_discounted_products = less_discounted_products[:remaining]
+  final = [discounted_products, less_discounted_products]
+  final_products = pd.concat(final)
+  # valid_products = valid_products[:FINAL_SIZE]
+  final_products = insertInDatabase(final_products)
+  print(final_products.head(5))
   return
 
 getBestDeals()

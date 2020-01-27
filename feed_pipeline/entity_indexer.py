@@ -34,6 +34,7 @@ from disc.v2.utils import Utils as DiscUtils
 sys.path.append("/nykaa/scripts/utils")
 import searchutils as SearchUtils
 
+
 filter_attribute_map = [("656","concern"), ("661","preference"), ("659","formulation"), ("664","finish"), ("658","color"),
                         ("655","gender"), ("657","skin_type"), ("677","hair_type"), ("857","ingredient"),
                         ("665","skin_tone"), ("663","coverage"), ("812","wiring"), ("813","padding"),
@@ -41,93 +42,11 @@ filter_attribute_map = [("656","concern"), ("661","preference"), ("659","formula
 FILTER_WEIGHT = 50
 ASSORTMENT_WEIGHT = 1
 
+
 class EntityIndexer:
   DOCS_BATCH_SIZE = 1000
+
   
-  def fetch_category_information():
-    #TO_DO
-    category_query = """select distinct  l2_ID as category_id,l2_name as category_name  from
-                        (
-                        select * from product_category_mapping
-                        where (l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
-                             and lower(l2_name) not like '%shop by%'
-                             and l3_id not in (4036,3746,3745,3819,1387)
-                             or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
-                        )
-                        where l3_id not in (0) and l2_id not in (735)
-                        Union
-                        (select distinct  l1_ID as category_id,l1_name as category_name
-                            from product_category_mapping
-                            where l1_id in (24,3048,12,9564,671,1390,53,4362,8377,2313,77,59)
-                        )"""
-    nykaa_redshift_connection = PasUtils.redshiftConnection()
-    valid_categories = pd.read_sql(category_query, con=nykaa_redshift_connection)
-    valid_categories = valid_categories.astype({'category_id': str})
-    valid_category_list = list(valid_categories.category_id.values)
-    query = {
-      "size": 0,
-      "aggs": {
-        "category_data": {
-          "terms": {
-            "field": "category_ids.keyword",
-            "include": valid_category_list,
-            "size": 10000
-          },
-          "aggs": SearchUtils.BASE_AGGREGATION_TOP_HITS
-        }
-      }
-    }
-    es = EsUtils.get_connection()
-    results = es.search(index='livecore', body=query, request_timeout=120)
-    category_data = results["aggregations"]["category_data"]["buckets"]
-    data = {}
-    data['category_id'] = []
-    for tag in SearchUtils.VALID_CATALOG_TAGS:
-      data[tag] = []
-      data["valid_" + tag] = []
-
-    for category in category_data:
-      popularity_data = {'category_id': category.get('key', 0)}
-      for bucket in category.get('tags', {}).get('buckets', []):
-        average_popularity = SearchUtils.get_avg_bucket_popularity(bucket)
-        popularity_data[bucket.get('key')] = average_popularity
-  
-      data['category_id'].append(popularity_data.get('category_id'))
-      for tag in SearchUtils.VALID_CATALOG_TAGS:
-        popularity = popularity_data.get(tag, -1)
-        if popularity < 0:
-          data[tag].append(0)
-          data["valid_" + tag].append(False)
-        else:
-          data[tag].append(popularity)
-          data["valid_" + tag].append(True)
-    category_popularity = pd.DataFrame.from_dict(data)
-    for tag in SearchUtils.VALID_CATALOG_TAGS:
-      category_popularity[tag] = 100 * SearchUtils.normalize(category_popularity[tag]) + 100
-    category_popularity = category_popularity.apply(SearchUtils.StoreUtils.check_base_popularity, axis=1)
-    data = pd.merge(category_popularity, valid_categories, on='category_id')
-    print("inserting category data in db")
-    mysql_conn = PasUtils.mysqlConnection('w')
-    cursor = mysql_conn.cursor()
-    PasUtils.mysql_write("delete from all_categories", connection=mysql_conn)
-    query = """REPLACE INTO all_categories(id, name, category_popularity, store_popularity)
-                      VALUES (%s, %s, %s, %s)"""
-    
-    ctr = LoopCounter(name='Writing category popularity to db', total=len(data.index))
-    for id, row in data.iterrows():
-      ctr += 1
-      if ctr.should_print():
-        print(ctr.summary)
-      row = dict(row)
-      values = (
-      row['category_id'], row['category_name'], row['nykaa'], SearchUtils.StoreUtils.get_store_popularity_str(row))
-      cursor.execute(query, values)
-      mysql_conn.commit()
-
-    cursor.close()
-    mysql_conn.close()
-    return
-
   def index_assortment_gap(collection):
     docs = []
     df = pd.read_csv('/nykaa/scripts/feed_pipeline/entity_assortment_gaps_config.csv')
@@ -146,8 +65,12 @@ class EntityIndexer:
         "type": "assortment_gap",
         "id": ctr.count
       }
-
-      docs.append(assortment_doc)
+      for tag in SearchUtils.VALID_CATALOG_TAGS:
+        store_doc = assortment_doc.copy()
+        store_doc['store'] = tag
+        store_doc['_id'] = assortment_doc['_id'] + tag
+        docs.append(store_doc)
+      
       if len(docs) >= 100:
         EsUtils.indexDocs(docs, collection)
         docs = []
@@ -156,6 +79,7 @@ class EntityIndexer:
 
     EsUtils.indexDocs(docs, collection)
 
+  
   def index_brands(collection):
     docs = []
   
@@ -172,7 +96,7 @@ class EntityIndexer:
       "Layer'r": ["Layer"],
     }
     mysql_conn = PasUtils.mysqlConnection()
-    query = "SELECT brand_id, brand, brand_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
+    query = "SELECT brand_id, brand, brand_popularity, store_popularity, brand_url FROM brands ORDER BY brand_popularity DESC"
     results = PasUtils.fetchResults(mysql_conn, query)
     ctr = LoopCounter(name='Brand Indexing')
     for row in results:
@@ -190,8 +114,15 @@ class EntityIndexer:
 
       if row['brand'] in synonyms:
         brand_doc["entity_synonyms"] = synonyms[row['brand']]
- 
-      docs.append(brand_doc)
+      
+      store_popularity = json.loads(row['store_popularity'])
+      for tag, value in store_popularity.items():
+        if value <= 0.0001:
+          continue
+        store_doc = brand_doc.copy()
+        store_doc['store'] = tag
+        store_doc['_id'] = brand_doc['_id'] + tag
+        docs.append(store_doc)
       if len(docs) >= 100:
         EsUtils.indexDocs(docs, collection)
         docs = []
@@ -200,20 +131,24 @@ class EntityIndexer:
 
     EsUtils.indexDocs(docs, collection)
 
+  
   def index_categories(collection):
 
     def getCategoryDoc(row, variant):
+      id = "category_" + str(row['category_id']) + "_" + variant + "_" + row['store']
       doc = {
-        "_id": createId(variant),
+        "_id": createId(id),
         "entity": variant,
         "weight": row['category_popularity'],
         "type": "category",
         "id": row['category_id'],
+        "store": row['store']
       }
       return doc
     docs = []
     mysql_conn = PasUtils.mysqlConnection()
-    query = "SELECT id as category_id, name as category_name, url, category_popularity FROM l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' order by name, category_popularity desc"
+    query = "SELECT id as category_id, name as category_name, url, category_popularity, store FROM l3_categories " \
+              "where url not like '%luxe%' and url not like '%shop-by-concern%' order by store, name, category_popularity desc"
     results = PasUtils.fetchResults(mysql_conn, query)
     ctr = LoopCounter(name='Category Indexing')
     prev_cat = None
@@ -240,22 +175,24 @@ class EntityIndexer:
 
     EsUtils.indexDocs(docs, collection)
 
+  
   def index_all_categories(collection):
 
     def getCategoryDoc(row, variant):
+      id = "category_" + str(row['category_id']) + "_" + variant + "_" + row['store']
       doc = {
-        "_id": createId(variant),
+        "_id": createId(id),
         "entity": variant,
         "weight": row['category_popularity'],
         "type": "l1_category",
         "id": row['category_id'],
+        "store": row['store']
       }
       return doc
     docs = []
-    EntityIndexer.fetch_category_information()
     mysql_conn = PasUtils.mysqlConnection()
-    query = """SELECT id as category_id, name as category_name, category_popularity FROM all_categories
-                order by name, category_popularity desc"""
+    query = """SELECT id as category_id, name as category_name, category_popularity, store FROM all_categories
+                order by store, name, category_popularity desc"""
     results = PasUtils.fetchResults(mysql_conn, query)
     ctr = LoopCounter(name='Category Indexing')
     prev_cat = None
@@ -281,39 +218,8 @@ class EntityIndexer:
         docs = []
 
     EsUtils.indexDocs(docs, collection)
-    
-    
-  def index_brands_categories(collection):
-    docs = []
 
-    mysql_conn = PasUtils.mysqlConnection()
-    query = "SELECT brand_id, brand, category_name, category_id, popularity FROM brand_category"
-    results = PasUtils.fetchResults(mysql_conn, query)
-    ctr = LoopCounter(name='Brand Category Indexing' )
-    for row in results:
-      ctr += 1 
-      if ctr.should_print():
-        print(ctr.summary)
-
-      docs.append({
-        "_id": createId(row['brand'] +"_"+row['category_name']), 
-        "entity": row['brand'] + " " + row['category_name'],  
-        "weight": row['popularity'], 
-        "type": "brand_category",
-        "brand_id": row['brand_id'],
-        "brand_name": row['brand'],
-        "category_id": row['category_id'],
-        "category_name": row['category_name'],
-        "source": "brand_category"
-      })
-      if len(docs) >= 100:
-        EsUtils.indexDocs(docs, collection)
-        docs = []
-
-      print(row['brand'], ctr.count)
-
-    EsUtils.indexDocs(docs, collection)
-
+  
   def index_filters(collection):
     mysql_conn = PasUtils.nykaaMysqlConnection()
     synonyms = {'10777': {'name': 'Acne/Blemishes', 'synonym': ['acne', 'anti acne', 'blemishes', 'anti blemishes']},
@@ -376,7 +282,11 @@ class EntityIndexer:
           filter_doc["_id"] = createId(filter_doc["entity"])
           if 'synonym' in synonyms[filter_doc["id"]]:
             filter_doc["entity_synonyms"] = synonyms[filter_doc["id"]]["synonym"]
-        docs.append(filter_doc)
+        for tag in SearchUtils.VALID_CATALOG_TAGS:
+          store_doc = filter_doc.copy()
+          store_doc['store'] = tag
+          store_doc['_id'] = filter_doc['_id'] + tag
+          docs.append(store_doc)
         if len(docs) >= 100:
           EsUtils.indexDocs(docs, collection)
           docs = []
@@ -384,6 +294,7 @@ class EntityIndexer:
         print(filter, filter_doc["entity"], filter_doc["id"])
       EsUtils.indexDocs(docs, collection)
 
+  
   def index(collection=None, active=None, inactive=None, swap=False, index_categories_arg=False,
                       index_brands_arg=False, index_filters_arg=False, index_all=False):
     index = None
@@ -425,9 +336,9 @@ class EntityIndexer:
       print("Swapping Index")
       indexes = EsUtils.get_active_inactive_indexes('entity')
       EsUtils.switch_index_alias('entity', indexes['active_index'], indexes['inactive_index'])
-      exit()
 
-if __name__ == "__main__": 
+
+if __name__ == "__main__":
   parser = argparse.ArgumentParser()
 
   group = parser.add_argument_group('group')

@@ -22,14 +22,20 @@ STORE_MAP = {
         where l2_id not in (0)
         group by l2_name, l2_id""",
     
-    "non_leaf_query": """select distinct l1_id as category_id, l1_name as category_name
-                  FROM product_category_mapping
-                  WHERE l1_id not in (77,194,9564,7287,3048,5926,11723, 12390)
-                    and lower(l2_name) not like '%shop by%'
-                UNION
-                select distinct l2_id as category_id, l2_name as category_name
-                  FROM product_category_mapping
-                  WHERE l2_id not in (3024,1448,1402,1384,1385,1403,6916,672,1286,3053,3049,3054,3057,3052,3056,9113,9112)"""
+    "non_leaf_query": """select distinct  l2_ID as category_id,l2_name as category_name
+        from(
+          select * from product_category_mapping
+          where (l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
+             and lower(l2_name) not like '%shop by%'
+             and l3_id not in (4036,3746,3745,3819,1387)
+             or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
+        )
+        where l3_id not in (0) and l2_id not in (735)
+        union
+        (select distinct  l1_ID as category_id,l1_name as category_name
+            from product_category_mapping
+            where l1_id in (24,3048,12,9564,671,1390,53,4362,8377,2313,77,59)
+        )"""
   },
   
   "men": {
