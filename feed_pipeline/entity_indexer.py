@@ -148,7 +148,7 @@ class EntityIndexer:
     docs = []
     mysql_conn = PasUtils.mysqlConnection()
     query = "SELECT id as category_id, name as category_name, url, category_popularity, store FROM l3_categories " \
-              "where url not like '%luxe%' and url not like '%shop-by-concern%' order by store, name, category_popularity desc"
+              "where url not like '%shop-by-concern%' order by store, name, category_popularity desc"
     results = PasUtils.fetchResults(mysql_conn, query)
     ctr = LoopCounter(name='Category Indexing')
     prev_cat = None
