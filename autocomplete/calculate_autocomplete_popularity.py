@@ -114,6 +114,10 @@ def process_category_facet_popularity(valid_category_list, category_info, store)
   data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "color_facet"), data)
   
   facet_popularity = pd.DataFrame.from_dict(data)
+  if facet_popularity.empty:
+    print("No category data found for %s" % (store))
+    return
+
   for tag in SearchUtils.VALID_CATALOG_TAGS:
     facet_popularity[tag] = 100 * SearchUtils.normalize(facet_popularity[tag])
   # facet_popularity.to_csv('facet_pop.csv', index=False)
