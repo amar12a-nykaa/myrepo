@@ -18,6 +18,7 @@ import json
 sys.path.append("/home/ubuntu/nykaa_scripts/")
 from utils.priceUpdateLogUtils import PriceUpdateLogUtils
 import uuid
+import boto3
 
 total = 0
 CHUNK_SIZE = 200
@@ -65,6 +66,26 @@ def getCurrentDateTime():
     return current_datetime
 
 print("=" * 30 + " %s ======= " % getCurrentDateTime())
+
+def insert_in_varnish_purging_sqs(docs):
+    SQS_ENDPOINT, SQS_REGION = PipelineUtils.getDiscoveryVarnishPurgeSQSDetails()
+    for doc in docs:
+        purge_doc = {}
+        purge_doc['sku'] = doc.get('sku')
+        purge_doc['purge_trigger'] = "discount_scheduler"
+        purge_doc['doc'] = doc
+        try:
+            sqs = boto3.client("sqs", region_name=SQS_REGION)
+            queue_url = SQS_ENDPOINT
+            response = sqs.send_message(
+                QueueUrl = queue_url,
+                DelaySeconds=0,
+                MessageAttributes={},
+                MessageBody=(json.dumps(purge_doc, default=str))
+            )
+        except:
+            print(traceback.format_exc())
+            print("Insertion in SQS failed")
 
 def getCount():
     return int(subprocess.check_output(
@@ -127,6 +148,7 @@ class ScheduledPriceUpdater:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit = True)
             if update_docs:
                 DiscUtils.updateESCatalog(update_docs)
+                insert_in_varnish_purging_sqs(update_docs)
                 for single_doc in update_docs:
                     print("sku : %s" % single_doc['sku'])
                     if single_doc['sku'] in priceChangeData:
@@ -216,6 +238,7 @@ class ScheduledPriceUpdater:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit=True)
             if update_docs:
                 DiscUtils.updateESCatalog(update_docs)
+                insert_in_varnish_purging_sqs(update_docs)
                 for singleBundle in update_docs:
                     print("bundle sku: %s" % singleBundle['sku'])
         except Exception as e:
