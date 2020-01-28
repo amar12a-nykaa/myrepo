@@ -1,25 +1,9 @@
 #!/usr/bin/python
 import argparse
-import csv
 import json
 import pandas as pd
-from pprint import pprint
-import re
 import sys
-import traceback
-
-import arrow
-import editdistance
-import elasticsearch
-import IPython
-import mysql.connector
-import numpy
 import os
-import requests
-from furl import furl
-from IPython import embed
-
-from stemming.porter2 import stem
 from nltk.stem import PorterStemmer
 
 sys.path.append('/nykaa/scripts/sharedutils/')
@@ -30,8 +14,6 @@ from categoryutils import getVariants
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
-sys.path.append("/var/www/discovery_api")
-from disc.v2.utils import Utils as DiscUtils
 sys.path.append("/nykaa/scripts/utils")
 import searchutils as SearchUtils
 
@@ -135,7 +117,7 @@ class EntityIndexer:
 
   def index_categories(collection):
     query = """SELECT id as category_id, name as category_name, url, category_popularity, store FROM l3_categories
-      where url not like '%luxe%' and url not like '%shop-by-concern%' order by store, name, category_popularity desc"""
+      where url not like '%shop-by-concern%' order by store, name, category_popularity desc"""
     EntityIndexer.index_category(collection, 'category', query)
   
 
