@@ -118,17 +118,55 @@ class EntityIndexer:
   def index_categories(collection):
     query = """SELECT id as category_id, name as category_name, url, category_popularity, store FROM l3_categories
       where url not like '%shop-by-concern%' order by store, name, category_popularity desc"""
-    EntityIndexer.index_category(collection, 'category', query)
+    df_cat = EntityIndexer.get_category('category', query)
+    
+    query = """SELECT id as category_id, name as category_name, category_popularity, store FROM all_categories
+                        order by store, name, category_popularity desc"""
+    df_l1_cat = EntityIndexer.get_category('l1_category', query)
+    df = df_cat.append([df_l1_cat])
+    
+    #TODO adding priority to category from external source
+    
+    df = df.sort_values(by='weight', ascending=False)
+    primary_cat = df.drop_duplicates(subset=['store', 'name_id'], keep='first', inplace=False)
+    df.id = df.id.astype(str)
+    secondary_cat = df.groupby(['store', 'name_id']).id.agg([('id', ','.join)]).reset_index()
+    secondary_cat.rename(columns={'id': 'secondary_ids'}, inplace=True)
+    secondary_cat_types = df.groupby(['store', 'name_id']).type.agg([('type', ','.join)]).reset_index()
+    secondary_cat_types.rename(columns={'type': 'category_types'}, inplace=True)
+    secondary_cat = pd.merge(secondary_cat, secondary_cat_types, on=['store', 'name_id'])
+    data = pd.merge(primary_cat, secondary_cat, on=['store', 'name_id'])
+
+    ctr = LoopCounter(name='Category Indexing')
+    docs = []
+    final = pd.DataFrame()
+    for id, row in data.iterrows():
+      row = dict(row)
+      ctr += 1
+      if ctr.should_print():
+        print(ctr.summary)
+      types = row.pop('category_types')
+      types = set(types.split(','))
+      for type in types:
+        id = type + "_" + str(row['id']) + "_" + row['entity'] + "_" + row['store']
+        secondary_ids = ','.join(list(set(row['secondary_ids'].split(','))))
+        docs.append({"_id": createId(id), "entity": row['entity'], "weight": row['weight'],
+                     "type": type, "id": row['id'],"store": row['store'], 'secondary_ids': secondary_ids})
+      if len(docs) >= 100:
+        EsUtils.indexDocs(docs, collection)
+        final = final.append(docs, ignore_index=True)
+        docs = []
+    final = final.append(docs, ignore_index=True)
+    EsUtils.indexDocs(docs, collection)
   
 
-  def index_category(collection, type, query):
+  def get_category(type, query):
     stemmer = PorterStemmer()
 
     def getCategoryDoc(row, variant):
       variant = variant.strip()
-      id = "category_" + str(row['category_id']) + "_" + variant + "_" + row['store']
+      
       doc = {
-        "_id": createId(id),
         "entity": variant,
         "weight": row['category_popularity'],
         "type": type,
@@ -138,7 +176,6 @@ class EntityIndexer:
       }
       return doc
     
-    docs = []
     mysql_conn = PasUtils.mysqlConnection()
     results = PasUtils.fetchResults(mysql_conn, query)
     final_list = []
@@ -152,32 +189,7 @@ class EntityIndexer:
         final_list.append(getCategoryDoc(row, row['category_name']))
     df = pd.DataFrame()
     df = df.append(final_list, ignore_index=True)
-    df = df.sort_values(by='weight', ascending=False)
-    primary_cat = df.drop_duplicates(subset=['store', 'name_id'], keep='first', inplace=False)
-    df.id = df.id.astype(str)
-    secondary_cat = df.groupby(['store', 'name_id']).id.agg([('id',','.join)]).reset_index()
-    secondary_cat.rename(columns={'id': 'secondary_ids'}, inplace=True)
-    data = pd.merge(primary_cat, secondary_cat, on=['store', 'name_id'])
-    
-    name = type + ' Indexing'
-    ctr = LoopCounter(name=name)
-    for id, row in data.iterrows():
-      row = dict(row)
-      ctr += 1
-      if ctr.should_print():
-        print(ctr.summary)
-      docs.append(row)
-      if len(docs) >= 100:
-        EsUtils.indexDocs(docs, collection)
-        docs = []
-
-    EsUtils.indexDocs(docs, collection)
-
-  
-  def index_all_categories(collection):
-    query = """SELECT id as category_id, name as category_name, category_popularity, store FROM all_categories
-                    order by store, name, category_popularity desc"""
-    EntityIndexer.index_category(collection, 'l1_category', query)
+    return df
 
   
   def index_filters(collection):
@@ -287,7 +299,6 @@ class EntityIndexer:
       if index_filters_arg:
         EntityIndexer.index_filters(index)
       if index_categories_arg:
-        EntityIndexer.index_all_categories(index)
         EntityIndexer.index_categories(index)
       if index_brands_arg:
         EntityIndexer.index_brands(index)
