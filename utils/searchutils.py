@@ -4,14 +4,14 @@ import json
 STORE_MAP = {
   "nykaa": {
     "leaf_query": """(
-      select distinct l4_name as category_name,l4_id as category_id,count(*) from
+      select distinct l4_name as category_name,l4_id as category_id from
       ( select * from product_category_mapping
           where l4_id <> 0 and l1_id not in (7287,5926,11723,12390)
       )
       )
       union
       (
-      select distinct l3_name as category_name,l3_id as category_id,count(*) from
+      select distinct l3_name as category_name,l3_id as category_id from
       ( select * from product_category_mapping
           where l4_id = 0 and l1_id not in (7287,5926,11723,12390) and l3_id <> 0
           and l3_id not in (select distinct l3_id from product_category_mapping where l4_id <>0 )
@@ -19,7 +19,7 @@ STORE_MAP = {
       )
       union
       (
-      select distinct l2_name as category_name,l2_id as category_id,count(*) from
+      select distinct l2_name as category_name,l2_id as category_id from
       ( select * from product_category_mapping
       where l2_id <>0 and l3_id =0 and l1_id not in (7287,5926,11723,12390) and
       l2_id not in
