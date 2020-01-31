@@ -437,7 +437,7 @@ def handleColdStart(df):
     return data
 
   result = result.groupby('parent_id', as_index=False).apply(remove_child_products)
-  brand_popularity = brand_popularity.astype({'brand_code': str})
+  brand_popularity = brand_popularity.astype({'brand_id': str})
   result = result.astype({'brand_code': str})
   result = pd.merge(result, product_category_mapping, on='product_id')
   brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
