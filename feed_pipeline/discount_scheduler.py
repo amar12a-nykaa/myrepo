@@ -1,7 +1,6 @@
 #!/usr/bin/python
 import sys
 from dateutil import tz
-from pipelineUtils import PipelineUtils
 from datetime import datetime, timedelta
 
 sys.path.append('/var/www/pds_api/')
@@ -17,6 +16,8 @@ import traceback
 import json
 sys.path.append("/home/ubuntu/nykaa_scripts/")
 from utils.priceUpdateLogUtils import PriceUpdateLogUtils
+from feed_pipeline.pipelineUtils import PipelineUtils
+
 import uuid
 import boto3
 

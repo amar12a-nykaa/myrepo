@@ -12,14 +12,15 @@ import traceback
 from dateutil import tz
 from datetime import datetime, timedelta
 
+sys.path.append("/home/ubuntu/nykaa_scripts/")
+from feed_pipeline.pipelineUtils import PipelineUtils
+
 sys.path.append("/var/www/pds_api/")
 from pas.v2.utils import Utils as PasUtils
 from nykaa.settings import DISCOVERY_SQS_ENDPOINT
 
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
-
-from feed_pipeline.pipelineUtils import PipelineUtils
 
 total = 0
 CHUNK_SIZE = 200
@@ -44,7 +45,7 @@ def insert_in_varnish_purging_sqs(docs):
             sqs = boto3.client("sqs", region_name=SQS_REGION)
             queue_url = SQS_ENDPOINT
             response = sqs.send_message(
-                QueueUrl = queue_url,
+                QueueUrl=queue_url,
                 DelaySeconds=0,
                 MessageAttributes={},
                 MessageBody=(json.dumps(purge_doc, default=str))
@@ -164,7 +165,7 @@ class SQSConsumer:
     @classmethod
     def __init__(self):
         self.q = queue.Queue(maxsize=0)
-        self.sqs = boto3.client("sqs")
+        self.sqs = boto3.client("sqs", region_name='ap-south-1')
 
         self.thread_manager = ThreadManager(self.q, callback=self.upload_one_chunk)
         self.thread_manager.start_threads(NUMBER_OF_THREADS)

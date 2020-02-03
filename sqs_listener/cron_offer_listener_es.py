@@ -19,6 +19,7 @@ from dateutil import parser
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
+sys.path.append("/home/ubuntu/nykaa_scripts/")
 from feed_pipeline.pipelineUtils import PipelineUtils
 
 total = 0
@@ -50,7 +51,7 @@ def insert_in_varnish_purging_sqs(docs):
             sqs = boto3.client("sqs", region_name=SQS_REGION)
             queue_url = SQS_ENDPOINT
             response = sqs.send_message(
-                QueueUrl = queue_url,
+                QueueUrl=queue_url,
                 DelaySeconds=0,
                 MessageAttributes={},
                 MessageBody=(json.dumps(purge_doc, default=str))
