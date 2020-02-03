@@ -45,7 +45,7 @@ def insert_in_varnish_purging_sqs(docs):
     for doc in docs:
         purge_doc = {}
         purge_doc['sku'] = doc.get('sku')
-        purge_doc['purge_trigger'] = "pas"
+        purge_doc['purge_trigger'] = "offer"
         purge_doc['doc'] = doc
         try:
             sqs = boto3.client("sqs", region_name=SQS_REGION)
