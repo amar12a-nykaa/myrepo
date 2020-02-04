@@ -37,6 +37,8 @@ from pas.v2.utils import Utils as PasUtils
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 from disc.v2.utils import MemcacheUtils
+sys.path.append("/nykaa/scripts/utils")
+import searchutils as SearchUtils
 
 from ensure_mongo_indexes import ensure_mongo_indices_now
 ensure_mongo_indices_now()
@@ -50,7 +52,7 @@ top_queries = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = DiscUtils.esConn()
 
-STORE_LIST = ['men', 'pro', 'luxe', 'nykaa', 'ultra_lux']
+STORE_LIST = SearchUtils.VALID_CATALOG_TAGS
 GLOBAL_FAST_INDEXING = False
 
 MIN_COUNTS = {
@@ -58,10 +60,10 @@ MIN_COUNTS = {
   "brand": 1000,
   "category": 200,
   "brand_category": 10000,
-  "search_query": 40000,
+  "search_query": 20000,
   "category_facet": 200,
 }
-PasUtils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%luxe%' and url not like '%shop-by-concern%' and category_popularity>0;")
+PasUtils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%shop-by-concern%' and category_popularity>0;")
 
 brandLandingMap = {"herm" : "/hermes?ptype=lst&id=7917"}
 
@@ -219,6 +221,7 @@ def create_map_search_product():
 def index_search_queries(collection, searchengine):
   map_search_product = create_map_search_product()
   df = pd.read_csv('/nykaa/scripts/low_ctr_queries.csv', encoding="ISO-8859-1", sep='\t', header=0)
+  df['names'] = df['names'].str.lower()
   low_ctr_query_list = list(df['names'].values)
 
   docs = []
@@ -263,6 +266,7 @@ def index_search_queries(collection, searchengine):
         "is_nykaa": True,
         "weight_nykaa": row['popularity'],
         "is_visible": False if entity in low_ctr_query_list else True,
+        "nz_query": row.get("nz_query", True),
         "source": "search_query"
       })
 
@@ -311,12 +315,13 @@ def index_brands(collection, searchengine):
 
   index_docs(searchengine, docs, collection)
 
-def index_categories(collection, searchengine):
 
-  def getCategoryDoc(row, variant):
+def index_category(params):
+  def getCategoryDoc(row, variant, type):
     category_url = row['url']
     category_men_url = row['men_url']
-    id = "category_" + str(row['category_id']) + "_" + variant
+    store = row.get('store', 'nykaa')
+    id = type + "_" + str(row['category_id']) + "_" + variant + "_" + store
     
     url = "/search/result/?" + str(urllib.parse.urlencode({'q': variant}))
     men_url = "/search/result/?" + str(urllib.parse.urlencode({'q': variant}))
@@ -325,7 +330,7 @@ def index_categories(collection, searchengine):
       "_id": createId(id),
       "entity": variant,
       "weight": row['category_popularity'],
-      "type": "category",
+      "type": type,
       "data": json.dumps({"url": url, "type": "category", "id": row['category_id'], "category_url": category_url,
                           "men_url": men_url, "category_men_url": category_men_url}),
       "id": row['category_id'],
@@ -334,45 +339,69 @@ def index_categories(collection, searchengine):
     }
     doc = add_store_popularity(doc, row)
     return doc
-
+  
   docs = []
-
+  tablename = params.get('table')
+  type = params.get('type')
+  searchengine = params.get('searchengine')
+  collection = params.get('collection')
+  
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, store_popularity FROM l3_categories_clean order by name, category_popularity desc"
+  query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, store_popularity, store " \
+          "FROM %s order by name, category_popularity desc" % tablename
   results = DiscUtils.fetchResults(mysql_conn, query)
-  ctr = LoopCounter(name='Category Indexing - ' + searchengine)
-  # prev_cat = None
+  name = type + 'Indexing - ' + searchengine
+  ctr = LoopCounter(name=name)
+  
   for row in results:
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
-
-    # if prev_cat == row['category_name']:
-    #   continue
-    # prev_cat = row['category_name']
-
+    
     variants = getVariants(row['category_id'])
     if variants:
       for variant in variants:
-        categoryDoc = getCategoryDoc(row, variant)
+        categoryDoc = getCategoryDoc(row, variant, type)
         docs.append(categoryDoc)
     else:
-      categoryDoc = getCategoryDoc(row, row['category_name'])
+      categoryDoc = getCategoryDoc(row, row['category_name'], type)
       docs.append(categoryDoc)
-
+    
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
       docs = []
-
+  
   index_docs(searchengine, docs, collection)
+
+
+def index_categories(collection, searchengine):
+  params = {
+    'collection': collection,
+    'searchengine': searchengine,
+    'table': 'l3_categories_clean',
+    'type': 'category'
+  }
+  index_category(params)
+  
+
+def index_l1_categories(collection, searchengine):
+  params = {
+    'collection': collection,
+    'searchengine': searchengine,
+    'table': 'all_categories',
+    'type': 'l1_category'
+  }
+  index_category(params)
+  
 
 def index_brands_categories(collection, searchengine):
 
   def getBrandCategoryDoc(row, variant):
+    store = row.get('store', 'nykaa')
     brand_category = row['brand'] + " " + variant
     url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
     men_url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
-    id = row['brand'] + "_" + variant + "_" + str(row['category_id'])
+    id = row['brand'] + "_" + variant + "_" + str(row['category_id']) + "_" + store
     doc = {"_id": createId(id),
            "entity": row['brand'] + " " + variant,
            "weight": row['popularity'],
@@ -390,7 +419,7 @@ def index_brands_categories(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT brand_id, brand, category_name, category_id, popularity, store_popularity FROM brand_category"
+  query = "SELECT brand_id, brand, category_name, category_id, popularity, store_popularity, store FROM brand_category"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
   for row in results:
@@ -416,7 +445,7 @@ def index_category_facets(collection, searchengine):
   docs = []
 
   mysql_conn = DiscUtils.mysqlConnection()
-  query = "SELECT category_name, category_id, facet_val, popularity, store_popularity FROM category_facets"
+  query = "SELECT category_name, category_id, facet_val, popularity, store_popularity, store FROM category_facets"
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Facet Indexing - ' + searchengine)
   for row in results:
@@ -427,7 +456,7 @@ def index_category_facets(collection, searchengine):
     category_facet = row['facet_val'] + " " + row['category_name']
     url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': category_facet}))
     men_url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': category_facet}))
-    id = row['facet_val'] + "_" + row['category_name'] + "_" + str(row['category_id'])
+    id = row['facet_val'] + "_" + row['category_name'] + "_" + str(row['category_id']) + "_" + row['store']
     doc = {"_id": createId(id),
         "entity": row['facet_val'] + " " + row['category_name'],
         "weight": row['popularity'],
@@ -676,6 +705,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_brands_categories_arg= True
       index_category_facets_arg = True
       index_custom_queries_arg = True
+      index_l1_categories_arg = True
 
     print(locals())
     assert engine == 'elasticsearch'
@@ -722,6 +752,7 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_parallel(['search_queries'], **kwargs)
       index_parallel(['category_facets'], **kwargs)
       index_parallel(['products'], **kwargs)
+      index_parallel(['l1_categories'], **kwargs)
       index_parallel(['categories', 'brands', 'brands_categories'], **kwargs)
       index_parallel(['custom_queries'], **kwargs)
     

@@ -44,7 +44,7 @@
         "number_of_replicas" : 9,
         "number_of_shards": 2,
         "index.search.slowlog.level": "debug",
-        "index.search.slowlog.threshold.query.debug": "10ms"
+        "index.search.slowlog.threshold.query.debug": "300ms"
   },
   "mappings": {
 
@@ -72,7 +72,9 @@
             "search_analyzer": "default_search"
           },
           "entity_synonyms" : {
-             "type": "text"
+           "type": "text",
+           "analyzer": "default",
+           "search_analyzer": "default_search"
           },
           "id": {
             "type": "keyword"

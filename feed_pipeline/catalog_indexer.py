@@ -234,7 +234,9 @@ class CatalogIndexer:
         "lingerie": "lingerie women women's ladies girls female girl",
         "dresses": "dresses women women's ladies girls female girl",
         "kay beauty": "kay beauty katrina kaif by k",
-        "twenty dresses": "twenty dresses 20dresses 20"
+        "twenty dresses": "twenty dresses 20dresses 20",
+        "mcaffeine": "mcaffeine m caffeine",
+        "unisex": "unisex men women"
     }
 
     folderpath = "/nykaa/product_metadata/"
@@ -594,6 +596,55 @@ class CatalogIndexer:
         val = '-'.join(value_array).replace(' ', '')
         return val
 
+    def update_sku_product_mapping(rows):
+
+        sku_list = []
+        try:
+            data_map = {}
+            for row in rows:
+                data_map[row['sku']] = {
+                    "product_id": str(row['product_id']).strip(),
+                    "parent_id": str(row['parent_id']).strip() if row['type_id'].strip() == 'simple' and row['parent_id'] and row['parent_id'] != 'NULL' else str(
+                        row['product_id']).strip()
+                }
+            query = "UPDATE products SET "
+
+            parent_set_query = "parent_id = (case "
+            product_set_query = "product_id = (case "
+
+            parent_id_found = False
+            product_id_found = False
+
+            for sku in data_map:
+                sku_list.append(sku)
+                product_id = data_map[sku]['product_id']
+                parent_id = data_map[sku]['parent_id']
+
+                if parent_id:
+                    parent_id_found = True
+                    parent_set_query += " when sku = '" + sku + "' then " + parent_id + " "
+                if product_id:
+                    product_id_found = True
+                    product_set_query += " when sku = '" + sku + "' then " + product_id + " "
+
+            parent_set_query += " end) "
+            product_set_query += " end) "
+
+            if parent_id_found and product_id_found:
+                query += parent_set_query + ", " + product_set_query
+            elif parent_id_found:
+                query += parent_set_query
+            elif product_id_found:
+                query += product_set_query
+
+            query += " WHERE sku in ( " + ','.join("'{}'".format(sku) for sku in sku_list) + ") "
+
+            if parent_id_found or product_id_found:
+                DiscUtils.mysql_write(query)
+        except:
+            print(traceback.format_exc())
+            print("[ERROR] Failed to update product_id and parent_id for sku: {}".format(sku_list))
+
     def formatESDoc(doc):
         for key, value in doc.items():
             if isinstance(value, list) and value == ['']:
@@ -607,6 +658,9 @@ class CatalogIndexer:
         csvfile = open(cls.filepath, 'a')
         bestsellers = get_bestseller_products()
         # index_start = timeit.default_timer()
+        if update_productids:
+            CatalogIndexer.update_sku_product_mapping(records)
+
         for index, row in enumerate(records):
             try:
                 CatalogIndexer.validate_catalog_feed_row(row)
@@ -687,7 +741,7 @@ class CatalogIndexer:
                 doc['vendor_sku'] = row['vendor_sku']
                 doc['catalog_tag'] = row['catalog_tag'].split('|')
                 try:
-                    if update_productids:
+                    if False:
                         set_clause_arr = []
                         if doc.get('parent_id'):
                             set_clause_arr.append("parent_id='%s'" % doc.get('parent_id'))
@@ -1010,7 +1064,7 @@ class CatalogIndexer:
                     # elif len(facet_ids) != len(facet_values):
                     #  with open("/data/inconsistent_facet.txt", "a") as f:
                     #    f.write("%s  %s\n"%(doc['sku'], field))
-
+ 
                 doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
                 if not doc['brand_facet_searchable']:
                     doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
@@ -1073,16 +1127,18 @@ class CatalogIndexer:
                     print(traceback.format_exc())
                     print("product_id: %s " % doc['product_id'])
 
-                for key, value in CatalogIndexer.final_replace_dict.items():
-                    pattern = '\\b' + key + '\\b'
-                    doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'].lower())
                     
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet', 'benefits_facet', 'skin_tone_facet', 'spf_facet',
-                        'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet']:
+                        'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet',
+                        'ingredient_v1_facet', 'wiring_facet', 'padding_facet', 'fabric_facet', 'rise_facet', 'pattern_facet']:
                     try:
                         doc['title_brand_category'] += " " + " ".join([x['name'] for x in doc[facet]]) 
                     except:
                         pass
+                
+                for key, value in CatalogIndexer.final_replace_dict.items():
+                    pattern = '\\b' + key + '\\b'
+                    doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'].lower())
 
                 product_id = doc['product_id']
                 if product_history and (product_id in product_history) and product_history[product_id]:

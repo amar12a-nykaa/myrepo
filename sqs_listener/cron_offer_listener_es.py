@@ -42,7 +42,7 @@ def getCurrentDateTime():
 
 def getOfferConsumerCount():
     return int(subprocess.check_output(
-        "ps aux | grep python | grep cron_offer_listener_es.py | grep -vE 'vim|grep|/bin/sh' | wc -l ",
+        "ps aux | grep python | grep cron_offer_listener_es.py | grep -vE 'vim|grep|/bin/sh|bash' | wc -l ",
         shell=True).strip())
 
 def getPipelineCount():
@@ -168,7 +168,7 @@ class OfferSQSConsumer:
             doc['nykaaman_offer_ids'].append(offer['id'])
 
         nykaa_pro_offers = [] # offers_data.get('nykaa_pro', [])
-        for offer in nykaa_pro_offers:
+        for offer in offers_data.get('nykaa_pro', []):
             if not offer.get('offer_start_date'):
                 offer['offer_start_date'] = ""
             else:

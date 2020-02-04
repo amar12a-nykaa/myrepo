@@ -3,6 +3,7 @@ import pandas as pd
 import arrow
 import numpy
 import datetime
+import json
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
@@ -61,22 +62,6 @@ def get_brand_popularity():
   print(data.head(5))
   return data
 
-def get_product_validity():
-  print('get product validity')
-
-  query = """select product_id, parent_id, is_in_stock, mrp, disabled
-                from products"""
-  mysql_conn = PasUtils.mysqlConnection()
-  data = pd.read_sql(query, con=mysql_conn)
-  mysql_conn.close()
-  data.mrp = data.mrp.fillna(0)
-  data = data[(data.is_in_stock == 0) | (data.disabled == 1) | (data.mrp < 1)]
-  data['valid'] = 0
-  data = data.astype({'product_id': str, 'parent_id': str})
-  data.drop(['is_in_stock', 'mrp', 'disabled'], axis=1, inplace=True)
-  print(data.columns)
-  return data
-  
 
 def create_child_parent_map():
   print("create child parent map")
@@ -173,7 +158,6 @@ def normalize(a):
 
 def get_bucket_results(date_bucket=None):
   global child_parent_map
-  global product_validity
   
   if date_bucket:
     startday = date_bucket[1] * -1
@@ -193,14 +177,11 @@ def get_bucket_results(date_bucket=None):
   if not valid:
     print("Skipping bucket:", date_bucket)
     return None
-  order_data = get_order_data(startdate, enddate)
   
-  #remove oos products
-  order_data = pd.merge(order_data, product_validity, how='left', on=['product_id', 'parent_id'])
-  order_data.valid = order_data.valid.fillna(1)
-  order_data.orders = order_data.apply(lambda x: 0 if not x['valid'] else x['orders'], axis=1)
-  order_data.revenue = order_data.apply(lambda x: 0 if not x['valid'] else x['revenue'], axis=1)
-  order_data.units = order_data.apply(lambda x: 0 if not x['valid'] else x['units'], axis=1)
+  order_data = get_order_data(startdate, enddate)
+  order_data.orders = order_data.orders.fillna(0)
+  order_data.revenue = order_data.revenue.fillna(0)
+  order_data.units = order_data.units.fillna(0)
   
   # create_parent_matrix
   parent_order_data = order_data.groupby('parent_id').agg({'orders': 'sum', 'revenue': 'sum', 'units': 'sum'}).reset_index()
@@ -285,24 +266,30 @@ def calculate_new_popularity():
     final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
   final_df.popularity = final_df.popularity.fillna(0)
   final_df.popularity_new = final_df.popularity_new.fillna(0)
-
-  final_df['popularity_bucket'] = 100 * normalize(final_df['popularity'])
-  final_df['popularity_new_bucket'] = 100 * normalize(final_df['popularity_new'])
-  final_df.drop(['popularity', 'popularity_new'], axis=1, inplace=True)
   
   #get_total_popularity
-  df = get_bucket_results()
-  df['popularity_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_ORDERS * df['orders'] + WEIGHT_UNITS * df['units'] +
-                              WEIGHT_CART_ADDITIONS * df['cart_additions'] + WEIGHT_REVENUE * df['revenue'])) * 100
-  df['popularity_new_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_ORDERS_NEW * df['orders'] + WEIGHT_UNITS_NEW * df['units'] +
-                              WEIGHT_CART_ADDITIONS_NEW * df['cart_additions'] + WEIGHT_REVENUE_NEW * df['revenue'])) * 100
-  df = df.set_index("id")
-
-  a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
-  a['popularity'] = 100 * normalize(
-    POPULARITY_TOTAL_RATIO * a['popularity_total'] + POPULARITY_BUCKET_RATIO * a['popularity_bucket'])
-  a['popularity_new'] = 100 * normalize(
-    POPULARITY_TOTAL_RATIO_NEW * a['popularity_new_total'] + POPULARITY_BUCKET_RATIO_NEW * a['popularity_new_bucket'])
+  if POPULARITY_TOTAL_RATIO > 0:
+    final_df['popularity_bucket'] = 100 * normalize(final_df['popularity'])
+    final_df['popularity_new_bucket'] = 100 * normalize(final_df['popularity_new'])
+    final_df.drop(['popularity', 'popularity_new'], axis=1, inplace=True)
+    
+    df = get_bucket_results()
+    df['popularity_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_ORDERS * df['orders'] + WEIGHT_UNITS * df['units'] +
+                                WEIGHT_CART_ADDITIONS * df['cart_additions'] + WEIGHT_REVENUE * df['revenue'])) * 100
+    df['popularity_new_total'] = normalize(numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_ORDERS_NEW * df['orders'] + WEIGHT_UNITS_NEW * df['units'] +
+                                WEIGHT_CART_ADDITIONS_NEW * df['cart_additions'] + WEIGHT_REVENUE_NEW * df['revenue'])) * 100
+    df = df.set_index("id")
+  
+    a = pd.merge(df, final_df, how='outer', left_index=True, right_index=True).reset_index()
+    a['popularity'] = 100 * normalize(
+      POPULARITY_TOTAL_RATIO * a['popularity_total'] + POPULARITY_BUCKET_RATIO * a['popularity_bucket'])
+    a['popularity_new'] = 100 * normalize(
+      POPULARITY_TOTAL_RATIO_NEW * a['popularity_new_total'] + POPULARITY_BUCKET_RATIO_NEW * a['popularity_new_bucket'])
+  else:
+    a = final_df.reset_index()
+    a['popularity'] = 100 * normalize(a['popularity'])
+    a['popularity_new'] = 100 * normalize(a['popularity_new'])
+  
   a.popularity = a.popularity.fillna(0)
   a.popularity_new = a.popularity_new.fillna(0)
   # business_logic
@@ -310,8 +297,24 @@ def calculate_new_popularity():
   a = handleColdStart(a)
   a.rename(columns={'popularity_new': 'popularity_recent'}, inplace=True)
   a = a.sort_values(by='popularity', ascending=True)
+  try:
+    a.views = a.views.fillna(0)
+  except:
+    a['views'] = 0
   a.views = a.views.fillna(0)
   a.to_csv('a.csv', index=False)
+  
+  try:
+    ids = list(a['id'])
+    ids = ids[-50:]
+    ids.reverse()
+    ids = ','.join(ids)
+    query = """replace into static_product_widget(type, data) values('BESTSELLERS', '%s')""" %ids
+    PasUtils.mysql_write(query)
+  except Exception as ex:
+    print(ex)
+    print('Could not write in mysql')
+    pass
   
   ctr = LoopCounter(name='Writing popularity to db', total=len(a.index))
   for i, row in a.iterrows():
@@ -364,43 +367,53 @@ def applyBoost(df):
   return temp_df
 
 def get_product_creation():
-  required_field_list = [
-    "product_id",
-    "parent_id",
-    "brand_ids",
-    "product_enable_time"
-  ]
-  querydsl={}
-  querydsl['_source'] = required_field_list
-  querydsl['query'] = {}
-  must=[]
-  must_not=[]
+  query = """select product_id, brands_v1 as brand_code, generic_attributes from solr_dump_4"""
+  df = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
+  df['product_enable_time'] = None
   today = datetime.datetime.combine(datetime.datetime.today(), datetime.time.min)
   startdate = today - datetime.timedelta(days=30)
-  must_not.append({"term": {"type":"bundle"}})
-  must.append({"range":{
-            "product_enable_time":{
-              "gte": str(startdate),
-              "lte": str(today)
-            }
-          }})
-  querydsl["query"]["bool"] = {"must": must, "must_not": must_not}
-  querydsl['size'] = 10000
-  print (querydsl)
-  response = DiscUtils.makeESRequest(querydsl, index="livecore")
-  hits = response['hits']['hits']
-  product_list = []
-  for product in hits:
-    if product['_source'].get('brand_ids', 0):
-      product['_source']['brand_code'] = product['_source'].pop('brand_ids')[0]
-      product_list.append(product['_source'])
-  df = pd.DataFrame(product_list)
-  print(len(df.index))
+  
+  def extract_product_enable_time(row):
+    try:
+      if row.get('generic_attributes'):
+        generic_attributes_raw = '{' + row.get('generic_attributes') + '}'
+        ga = json.loads(generic_attributes_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').
+                        replace('\\r', '').replace('\\\\"', '\\"'))
+        if ga.get('product_enable_time'):
+          enable_time = ga.get('product_enable_time').get('value')
+          enable_time = datetime.datetime.strptime(enable_time, "%Y-%m-%d %H:%M:%S")
+          if enable_time >= startdate and enable_time <= today:
+            row['product_enable_time'] = enable_time
+      if row.get('brand_code'):
+        row['brand_code'] = row['brand_code'].split('|')[0]
+      else:
+        row['product_enable_time'] = None
+    except Exception as ex:
+      print(ex)
+      pass
+    return row
+  
+  df = df.apply(extract_product_enable_time, axis=1)
+  df = df.dropna()
+  df.drop(['generic_attributes'], axis=1, inplace=True)
+  query = """select product_id, parent_id, type_id from solr_dump_3 where type_id != 'bundle'"""
+  df2 = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
+  
+  def extract_parent_id(row):
+    if row['type_id'].strip() == 'simple' and row['parent_id'] and row['parent_id'] != 'NULL':
+      return row
+    else:
+      row['parent_id'] = row['product_id']
+      return row
 
+  df2 = df2.apply(extract_parent_id, axis=1)
+  df = pd.merge(df, df2, on="product_id", how="inner")
   return df
+
 
 def handleColdStart(df):
   global child_parent_map
+  global brand_popularity
   temp_df = df[['id', 'popularity', 'popularity_new', 'kits_combo']]
 
   temp_df = temp_df.astype({'id': int, 'popularity': float, 'popularity_new': float})
@@ -415,6 +428,7 @@ def handleColdStart(df):
 
   result = pd.merge(temp_df, product_creation, left_on='id', right_on='product_id', how='right')
   result.fillna(0, inplace=True)
+  result = result.astype({'parent_id': int, 'brand_code': int})
   #remove child products if its parent is in the bucket
   def remove_child_products(data):
     df = data[data.parent_id == data.product_id]
@@ -423,6 +437,8 @@ def handleColdStart(df):
     return data
 
   result = result.groupby('parent_id', as_index=False).apply(remove_child_products)
+  brand_popularity = brand_popularity.astype({'brand_id': str})
+  result = result.astype({'brand_code': str})
   result = pd.merge(result, product_category_mapping, on='product_id')
   brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
   result = pd.merge(result, brand_popularity, on='brand_code', how='left')
@@ -440,7 +456,7 @@ def handleColdStart(df):
       if count==3:
         break
       date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['product_enable_time']).astype(datetime.datetime))).days
-      if date_diff > 0 and row.get('kits_combo','No') == 'No':
+      if date_diff >= 0 and (row.get('kits_combo','No') == 'No' or str(row.get('kits_combo', "0")) == "0"):
           percentile_value = row['brand_popularity']
           if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
             percentile_value = BRAND_PROMOTION_SCORE
@@ -450,15 +466,29 @@ def handleColdStart(df):
           calculated_popularity_new = row['popularity_new'] + (0.9**count)*med_popularity_new*(percentile_value ** date_diff)
           data.at[index, 'calculated_popularity'] = calculated_popularity
           data.at[index, 'calculated_popularity_new'] = calculated_popularity_new
+          data.at[index, 'cold_start_value'] = calculated_popularity - row['popularity']
           count += 1
     return data
 
   result['calculated_popularity'] = result['popularity']
   result['calculated_popularity_new'] = result['popularity_new']
+  result['cold_start_value'] = -1
   result = result.groupby('parent_id', as_index=False).apply(update_popularity)
 
-  result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new']]
-  result = result.groupby('product_id').agg({'calculated_popularity': 'max', 'calculated_popularity_new': 'max'}).reset_index()
+  result = result[['product_id', 'calculated_popularity', 'calculated_popularity_new', 'cold_start_value']]
+  result = result.groupby('product_id').agg({'calculated_popularity': 'max', 'calculated_popularity_new': 'max', 'cold_start_value': 'max'}).reset_index()
+  try:
+    cold_start = result.sort_values(by='cold_start_value', ascending=False)
+    ids = list(cold_start['product_id'])
+    ids = ids[:50]
+    ids = ','.join(map(str, ids))
+    query = """replace into static_product_widget(type, data) values('NEW_LAUNCHES', '%s')"""%ids
+    PasUtils.mysql_write(query)
+  except Exception as ex:
+    print(ex)
+    print('Could not write in mysql')
+    pass
+  
   final_df = pd.merge(df.astype({'id': int}),  result.astype({'product_id': int}), left_on='id', right_on='product_id', how='outer')
   final_df['id'] = numpy.where(final_df.id.notnull(), final_df.id, final_df.product_id)
   final_df = final_df[final_df.id.notnull()]
@@ -470,7 +500,6 @@ def handleColdStart(df):
   return final_df
 
 child_parent_map = create_child_parent_map()
-product_validity = get_product_validity()
 brand_popularity = get_brand_popularity()
 
 if __name__ == '__main__':

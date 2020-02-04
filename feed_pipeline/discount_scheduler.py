@@ -17,13 +17,15 @@ import json
 sys.path.append("/home/ubuntu/nykaa_scripts/")
 from utils.priceUpdateLogUtils import PriceUpdateLogUtils
 from utils.discovery_varnish_purge_utils import *
-
+from feed_pipeline.pipelineUtils import PipelineUtils
+from utils.mailutils import Mail
 import uuid
-import boto3
+import time
 
 total = 0
 CHUNK_SIZE = 200
 NUMBER_OF_THREADS = 4
+MAIL_RECEIPIENTS = "discovery-tech@nykaa.com"
 
 def synchronized(func):
     func.__lock__ = threading.Lock()
@@ -49,12 +51,15 @@ class Worker(threading.Thread):
         super().__init__()
 
     def run(self):
+        DELAY_FOR_THREADS_IN_SEC = argv['delay']
         while True:
             try:
                 product_chunk = self.q.get(timeout=3)  # 3s timeout
                 ScheduledPriceUpdater.updateChunkPrice(product_chunk,self.schedule_start,self.schedule_end)
             except queue.Empty:
                 return
+            if DELAY_FOR_THREADS_IN_SEC:
+                time.sleep(DELAY_FOR_THREADS_IN_SEC)
             self.q.task_done()
 
 
@@ -135,6 +140,7 @@ class ScheduledPriceUpdater:
                     if single_doc['sku'] in priceChangeData:
                       priceChangeData[single_doc['sku']]['new_price'] = single_doc['price']
         except Exception as e:
+            Mail.send(MAIL_RECEIPIENTS,"noreply@nykaa.com","Alert : Discount Scheduler Failed" , str(getCurrentDateTime()) +"\n"+ str(e))
             print(traceback.format_exc())
 
         total_count = incrementGlobalCounter(len(update_docs))
@@ -216,13 +222,17 @@ class ScheduledPriceUpdater:
                 print("[%s] Update progress: %s products updated" % (getCurrentDateTime(), product_updated_count))
 
         try:
-            update_docs = PipelineUtils.getProductsToIndex(products, add_limit=True)
-            if update_docs:
-                DiscUtils.updateESCatalog(update_docs)
-                insert_in_varnish_purging_sqs(update_docs,"discount_scheduler")
-                for singleBundle in update_docs:
-                    print("bundle sku: %s" % singleBundle['sku'])
+            bundle_chunks = list(ScheduledPriceUpdater.getChunks(products, 100))
+            for bundle_products in bundle_chunks:
+                update_docs = PipelineUtils.getProductsToIndex(bundle_products, add_limit=True)
+                if update_docs:
+                    DiscUtils.updateESCatalog(update_docs)
+                    insert_in_varnish_purging_sqs(update_docs, "discount_scheduler")
+                    for singleBundle in update_docs:
+                        print("bundle sku: %s" % singleBundle['sku'])
         except Exception as e:
+            Mail.send(MAIL_RECEIPIENTS, "noreply@nykaa.com", "Alert : Discount Scheduler Failed",
+                      str(getCurrentDateTime()) + "\n" + str(e))
             print(traceback.format_exc())
 
         print("\n[%s] Total %s products updated." % (getCurrentDateTime(), product_updated_count))
@@ -234,5 +244,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, help='number of records in single index request')
     parser.add_argument("--threads", type=int, help='number of records in single index request')
+    parser.add_argument("--delay", type=int, help='number of seconds of delay in each thread')
     argv = vars(parser.parse_args())
     ScheduledPriceUpdater.update()
