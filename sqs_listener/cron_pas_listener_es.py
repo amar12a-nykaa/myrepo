@@ -13,7 +13,7 @@ from dateutil import tz
 from datetime import datetime, timedelta
 
 sys.path.append("/home/ubuntu/nykaa_scripts/")
-from feed_pipeline.pipelineUtils import PipelineUtils
+from utils.discovery_varnish_purge_utils import *
 
 sys.path.append("/var/www/pds_api/")
 from pas.v2.utils import Utils as PasUtils
@@ -33,27 +33,6 @@ def getCurrentDateTime():
     current_datetime = current_datetime.replace(tzinfo=from_zone)
     current_datetime = current_datetime.astimezone(to_zone)
     return current_datetime
-
-def insert_in_varnish_purging_sqs(docs):
-    SQS_ENDPOINT, SQS_REGION = PipelineUtils.getDiscoveryVarnishPurgeSQSDetails()
-    for doc in docs:
-        purge_doc = {}
-        purge_doc['sku'] = doc.get('sku')
-        purge_doc['purge_trigger'] = "pas"
-        purge_doc['doc'] = doc
-        try:
-            sqs = boto3.client("sqs", region_name=SQS_REGION)
-            queue_url = SQS_ENDPOINT
-            response = sqs.send_message(
-                QueueUrl=queue_url,
-                DelaySeconds=0,
-                MessageAttributes={},
-                MessageBody=(json.dumps(purge_doc, default=str))
-            )
-        except:
-            print(traceback.format_exc())
-            print("Insertion in SQS failed")
-
 
 def getCount():
     return int(subprocess.check_output(
@@ -222,7 +201,7 @@ class SQSConsumer:
             #print(chunk)
             print(threadname + ": Sending %s docs to bulk upload" % len(update_docs))
             response = DiscUtils.updateESCatalog(update_docs, refresh=True, raise_on_error=False)
-            insert_in_varnish_purging_sqs(update_docs)
+            insert_in_varnish_purging_sqs(update_docs,"pas")
             print("response: ", response)
             print(threadname + ": Done with one batch of bulk upload")
         except elasticsearch.helpers.BulkIndexError as e:
