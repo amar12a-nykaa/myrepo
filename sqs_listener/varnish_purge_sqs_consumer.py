@@ -62,9 +62,9 @@ class SQSConsumer:
             response = self.sqs.receive_message(
                 QueueUrl=self.sqs_endpoint,
                 AttributeNames=["SentTimestamp"],
-                MaxNumberOfMessages=10,
+                MaxNumberOfMessages=1,
                 MessageAttributeNames=["All"],
-                VisibilityTimeout=30,
+                VisibilityTimeout=1,
                 WaitTimeSeconds=0,
             )
             from IPython import embed
@@ -73,20 +73,21 @@ class SQSConsumer:
                 for message in response["Messages"]:
                     receipt_handle = message["ReceiptHandle"]
                     body = json.loads(message["Body"])
-                    update_docs += body.get("sku", "")
+                    update_docs.append(body.get("sku", ""))
                     print(update_docs)
-                    self.sqs.delete_message(QueueUrl=self.sqs_endpoint, ReceiptHandle=receipt_handle)
+                    # self.sqs.delete_message(QueueUrl=self.sqs_endpoint, ReceiptHandle=receipt_handle)
             else:
                 is_sqs_empty = True
                 print("Main Thread: SQS is empty!")
 
-            if len(update_docs) <= 10 or (len(update_docs) >= 1 and is_sqs_empty):
+            if len(update_docs) == 10 or (len(update_docs) >= 1 and is_sqs_empty):
                 print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
                 sku_ids = "|".join(update_docs)
+                update_docs = []
                 self.purge_varnish_for_product(sku_ids)
                 # self.q.put_nowait(update_docs)
                 # num_products_processed += len(update_docs)
-                # update_docs = []
+                #
 
 
 
@@ -100,7 +101,6 @@ class SQSConsumer:
 
     @classmethod
     def purge_varnish_for_product(sku_ids):
-        print(sku_ids)
         h = httplib2.Http(".cache")
         varnish_hosts = ["172.26.17.250:80"]
         headers = {"X-depends-on": sku_ids}
