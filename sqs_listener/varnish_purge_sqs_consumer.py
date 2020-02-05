@@ -89,7 +89,7 @@ class SQSConsumer:
 
     @classmethod
     def __init__(self):
-        # self.q = queue.Queue(maxsize=0)
+        self.q = queue.Queue(maxsize=0)
         self.sqs = boto3.client("sqs", region_name='ap-south-1')
         self.sqs_endpoint, self.sqs_region = PipelineUtils.getDiscoveryVarnishPurgeSQSDetails()
         self.thread_manager = ThreadManager(self.q, callback=self.purge_varnish_for_product)
@@ -144,7 +144,7 @@ class SQSConsumer:
         print("Main Thread: Number of products processed: %s @ %s products/sec" % (num_products_processed, speed))
 
     @classmethod
-    def purge_varnish_for_product(sku_ids):
+    def purge_varnish_for_product(self, sku_ids):
         h = httplib2.Http(".cache")
         varnish_hosts = ["172.26.17.250:80"]
         headers = {"X-depends-on": sku_ids}
