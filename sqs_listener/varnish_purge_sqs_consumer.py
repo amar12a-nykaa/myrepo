@@ -1,7 +1,6 @@
 import httplib2
 import argparse
 import boto3
-import elasticsearch
 import json
 import queue
 import subprocess
@@ -16,24 +15,70 @@ sys.path.append("/home/ubuntu/nykaa_scripts/")
 from feed_pipeline.pipelineUtils import PipelineUtils
 
 
+NUMBER_OF_THREADS = 1
+
+class ThreadManager:
+    """
+        A generic class for running multithreaded applications.
+        We can resuse this class for other purpose too.
+        This is to be used along with WorkerThread class
+    """
+
+    def __init__(self, q, callback):
+        self.threads = []
+        self.q = q
+        self.callback = callback
+
+    def start_threads(self, number_of_threads):
+        for i, _ in enumerate(range(number_of_threads)):
+            name = "T" + str(i)
+            thread = WorkerThread(self.q, callback=self.callback, name=name)
+            thread.start()
+            self.threads.append(thread)
+
+    def stop_workers(self):
+        for _ in range(NUMBER_OF_THREADS):
+            print("Main Thread: Adding None to queue")
+            self.q.put(None)
+
+    def join(self):
+        print("Main Thread: Waiting for threads to finish .. ")
+        for thread in self.threads:
+            thread.join()
+
+
+class WorkerThread(threading.Thread):
+    """
+        A generic class for running multithreaded applications.
+        We can resuse this class for other purpose too.
+        This is best used along with ThreadManager class
+    """
+
+    def __init__(self, q, callback, name):
+        self.q = q
+        self.callback = callback
+        super().__init__(name=name)
+
+    def run(self):
+        while True:
+            try:
+                chunk = self.q.get(timeout=3)  # 3s timeout
+                if chunk is None:
+                    print(self.name + " Dying now.")
+                    self.q.task_done()
+                    break
+                else:
+                    self.callback(sku_ids=chunk)
+                    self.q.task_done()
+            except queue.Empty:
+                print(self.name + " zz..")
+                time.sleep(15)
+                continue
 
 
 
-    # !/usr/bin/python
 
-
-    # from utils.discovery_varnish_purge_utils import *
-    #
-    # sys.path.append("/var/www/pds_api/")
-    # from pas.v2.utils import Utils as PasUtils
-    # from nykaa.settings import DISCOVERY_SQS_ENDPOINT
-    #
-    # sys.path.append("/var/www/discovery_api")
-    # from disc.v2.utils import Utils as DiscUtils
-    #
-    # total = 0
-    # CHUNK_SIZE = 200
-
+# print("=" * 30 + " %s ======= " % getCurrentDateTime())
 
 
 class SQSConsumer:
@@ -47,8 +92,8 @@ class SQSConsumer:
         # self.q = queue.Queue(maxsize=0)
         self.sqs = boto3.client("sqs", region_name='ap-south-1')
         self.sqs_endpoint, self.sqs_region = PipelineUtils.getDiscoveryVarnishPurgeSQSDetails()
-        # self.thread_manager = ThreadManager(self.q, callback=self.upload_one_chunk)
-        # self.thread_manager.start_threads(NUMBER_OF_THREADS)
+        self.thread_manager = ThreadManager(self.q, callback=self.purge_varnish_for_product)
+        self.thread_manager.start_threads(NUMBER_OF_THREADS)
 
     def start(self, ):
         # Receive message from SQS queue
@@ -64,7 +109,7 @@ class SQSConsumer:
                 AttributeNames=["SentTimestamp"],
                 MaxNumberOfMessages=1,
                 MessageAttributeNames=["All"],
-                VisibilityTimeout=1,
+                VisibilityTimeout=30,
                 WaitTimeSeconds=0,
             )
             from IPython import embed
@@ -73,31 +118,30 @@ class SQSConsumer:
                 for message in response["Messages"]:
                     receipt_handle = message["ReceiptHandle"]
                     body = json.loads(message["Body"])
-                    update_docs.append(body.get("sku", ""))
-                    print(update_docs)
-                    # self.sqs.delete_message(QueueUrl=self.sqs_endpoint, ReceiptHandle=receipt_handle)
+                    update_docs.append(body.get("sku_ids", ""))
+                    self.sqs.delete_message(QueueUrl=self.sqs_endpoint, ReceiptHandle=receipt_handle)
             else:
                 is_sqs_empty = True
                 print("Main Thread: SQS is empty!")
 
-            if len(update_docs) == 10 or (len(update_docs) >= 1 and is_sqs_empty):
+            if len(update_docs) >= 1 or (len(update_docs) >= 1 and is_sqs_empty):
                 print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
                 sku_ids = "|".join(update_docs)
+                # self.purge_varnish_for_product(sku_ids)
+                self.q.put_nowait(sku_ids)
+                num_products_processed += len(update_docs)
                 update_docs = []
-                self.purge_varnish_for_product(sku_ids)
-                # self.q.put_nowait(update_docs)
-                # num_products_processed += len(update_docs)
                 #
 
 
 
-        # self.thread_manager.stop_workers()
-        # self.thread_manager.join()
-        #
-        # print("Main Thread: All threads finished")
-        # time_taken = time.time() - startts
-        # speed = round(num_products_processed / time_taken * 1.0)
-        # print("Main Thread: Number of products processed: %s @ %s products/sec" % (num_products_processed, speed))
+        self.thread_manager.stop_workers()
+        self.thread_manager.join()
+
+        print("Main Thread: All threads finished")
+        time_taken = time.time() - startts
+        speed = round(num_products_processed / time_taken * 1.0)
+        print("Main Thread: Number of products processed: %s @ %s products/sec" % (num_products_processed, speed))
 
     @classmethod
     def purge_varnish_for_product(sku_ids):
@@ -112,39 +156,14 @@ class SQSConsumer:
             except Exception as e:
                 print(e)
                 # logger.info(type(e))
-    # def upload_one_chunk(cls, chunk, threadname):
-    #     """
-    #     Callback function called by a thread to bulk upload the products
-    #     """
-    #     try:
-    #         update_docs = chunk
-    #         # print(chunk)
-    #         print(threadname + ": Sending %s docs to bulk upload" % len(update_docs))
-    #         response = DiscUtils.updateESCatalog(update_docs, refresh=True, raise_on_error=False)
-    #         # insert_in_varnish_purging_sqs(update_docs, "pas")
-    #         print("response: ", response)
-    #         print(threadname + ": Done with one batch of bulk upload")
-    #     except elasticsearch.helpers.BulkIndexError as e:
-    #         missing_skus = []
-    #         for error in e.errors:
-    #             if error["update"]["error"]["type"] == "document_missing_exception":
-    #                 missing_skus.append(error["update"]["data"]["doc"]["sku"])
-    #             else:
-    #                 print(
-    #                         "Unhandled Error for sku '%s' - %s"
-    #                         % (error["update"]["data"]["doc"]["sku"], error["update"]["error"]["type"])
-    #                 )
-    #         print("Missing Skus count", len(missing_skus))
-    #         print("Missing Skus", missing_skus)
-    #     except:
-    #         raise
+
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--threads", type=int, help="number of records in single index request")
-    # argv = vars(parser.parse_args())
-    # if argv["threads"]:
-    #     NUMBER_OF_THREADS = argv["threads"]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--threads", type=int, help="number of records in single index request")
+    argv = vars(parser.parse_args())
+    if argv["threads"]:
+        NUMBER_OF_THREADS = argv["threads"]
 
     consumer = SQSConsumer()
     consumer.start()
