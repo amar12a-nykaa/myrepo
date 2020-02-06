@@ -33,3 +33,6 @@ def insert_in_varnish_purging_sqs(docs,source):
         except:
             print(traceback.format_exc())
             print("Insertion in SQS failed for skus %s and source %s" % (purge_doc['sku_ids'], purge_doc['source']))
+            with open('/var/log/discovery_purge_sqs_error.log','a') as the_file:
+                the_file.write(traceback.format_exc())
+                the_file.write("Insertion in SQS failed for skus %s and source %s" % (purge_doc['sku_ids'], purge_doc['source']))
