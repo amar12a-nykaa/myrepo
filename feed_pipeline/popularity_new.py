@@ -370,7 +370,7 @@ def get_product_creation():
   query = """select product_id, brands_v1 as brand_code, generic_attributes from solr_dump_4"""
   df = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
   df['product_enable_time'] = None
-  today = datetime.datetime.combine(datetime.datetime.today(), datetime.time.min)
+  today = datetime.datetime.now()
   startdate = today - datetime.timedelta(days=30)
   
   def extract_product_enable_time(row):
