@@ -19,10 +19,10 @@ def chunkify(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
-def log_info(purge_doc,status,exception):
+def log_info(purge_doc,status,exception=None):
     logger = logging.getLogger()
     create_log_file()
-    file_logger = RotatingFileHandler(filename, maxBytes=50000, backupCount=5)
+    file_logger = RotatingFileHandler(filename, maxBytes=5000000, backupCount=5)
     SIMPLE_LOG_FORMAT = {
         "status": "%(status)s",
         "msg": "%(message)s",
@@ -38,7 +38,7 @@ def log_info(purge_doc,status,exception):
     file_logger.setLevel(logging.ERROR)
     file_logger.setLevel(logging.INFO)
     logger.addHandler(file_logger)
-    logger.info("Discovery Varnish Purge Sqs insertion", extra=extra)
+    logger.error("Discovery Varnish Purge Sqs insertion", extra=extra)
 
 def insert_in_varnish_purging_sqs(docs,source):
     sku_list = [doc.get('sku',"") for doc in docs]
