@@ -370,7 +370,7 @@ def get_product_creation():
   query = """select product_id, brands_v1 as brand_code, generic_attributes from solr_dump_4"""
   df = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
   df['product_enable_time'] = None
-  today = datetime.datetime.combine(datetime.datetime.today(), datetime.time.min)
+  today = datetime.datetime.now()
   startdate = today - datetime.timedelta(days=30)
   
   def extract_product_enable_time(row):
@@ -386,6 +386,8 @@ def get_product_creation():
             row['product_enable_time'] = enable_time
       if row.get('brand_code'):
         row['brand_code'] = row['brand_code'].split('|')[0]
+      else:
+        row['product_enable_time'] = None
     except Exception as ex:
       print(ex)
       pass
@@ -411,6 +413,7 @@ def get_product_creation():
 
 def handleColdStart(df):
   global child_parent_map
+  global brand_popularity
   temp_df = df[['id', 'popularity', 'popularity_new', 'kits_combo']]
 
   temp_df = temp_df.astype({'id': int, 'popularity': float, 'popularity_new': float})
@@ -425,6 +428,7 @@ def handleColdStart(df):
 
   result = pd.merge(temp_df, product_creation, left_on='id', right_on='product_id', how='right')
   result.fillna(0, inplace=True)
+  result = result.astype({'parent_id': int, 'brand_code': int})
   #remove child products if its parent is in the bucket
   def remove_child_products(data):
     df = data[data.parent_id == data.product_id]
@@ -433,6 +437,8 @@ def handleColdStart(df):
     return data
 
   result = result.groupby('parent_id', as_index=False).apply(remove_child_products)
+  brand_popularity = brand_popularity.astype({'brand_id': str})
+  result = result.astype({'brand_code': str})
   result = pd.merge(result, product_category_mapping, on='product_id')
   brand_popularity.rename(columns={'brand_id': 'brand_code'}, inplace=True)
   result = pd.merge(result, brand_popularity, on='brand_code', how='left')
@@ -450,7 +456,7 @@ def handleColdStart(df):
       if count==3:
         break
       date_diff = abs(datetime.datetime.utcnow() - (numpy.datetime64(row['product_enable_time']).astype(datetime.datetime))).days
-      if date_diff > 0 and (row.get('kits_combo','No') == 'No' or not row.get('kits_combo')):
+      if date_diff >= 0 and (row.get('kits_combo','No') == 'No' or str(row.get('kits_combo', "0")) == "0"):
           percentile_value = row['brand_popularity']
           if row['brand_code'] in COLDSTART_BRAND_PROMOTION_LIST:
             percentile_value = BRAND_PROMOTION_SCORE
