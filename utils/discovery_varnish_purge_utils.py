@@ -30,14 +30,15 @@ def log_info(purge_doc,status,exception=None):
         "sku_ids": "%(sku_ids)s",
         "source": "%(source)s",
     }
-    extra = {'source': purge_doc['source'],'sku_ids': purge_doc['sku_ids'], 'status': status}
+    extra = {'source': purge_doc['source'], 'sku_ids': purge_doc['sku_ids'], 'status': status}
     if exception:
         SIMPLE_LOG_FORMAT["exception"] = "%(exception)s"
         extra['exception'] = type(exception).__name__
     file_logger.setFormatter(logging.Formatter(json.dumps(SIMPLE_LOG_FORMAT)))
     file_logger.setLevel(logging.ERROR)
     file_logger.setLevel(logging.INFO)
-    logger.addHandler(file_logger)
+    if not logger.hasHandlers():
+        logger.addHandler(file_logger)
     logger.error("Discovery Varnish Purge Sqs insertion", extra=extra)
 
 def insert_in_varnish_purging_sqs(docs,source):
