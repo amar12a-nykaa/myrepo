@@ -1,25 +1,10 @@
 #!/usr/bin/python
 import argparse
-import csv
 import json
 import pandas as pd
-from pprint import pprint
-import re
 import sys
-import traceback
-
-import arrow
-import editdistance
-import elasticsearch
-import IPython
-import mysql.connector
-import numpy
 import os
-import requests
-from furl import furl
-from IPython import embed
-
-from stemming.porter2 import stem
+from nltk.stem import PorterStemmer
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from loopcounter import LoopCounter
@@ -29,8 +14,6 @@ from categoryutils import getVariants
 
 sys.path.append("/var/www/pds_api")
 from pas.v2.utils import Utils as PasUtils
-sys.path.append("/var/www/discovery_api")
-from disc.v2.utils import Utils as DiscUtils
 sys.path.append("/nykaa/scripts/utils")
 import searchutils as SearchUtils
 
@@ -131,93 +114,82 @@ class EntityIndexer:
 
     EsUtils.indexDocs(docs, collection)
 
-  
+
   def index_categories(collection):
-
-    def getCategoryDoc(row, variant):
-      id = "category_" + str(row['category_id']) + "_" + variant + "_" + row['store']
-      doc = {
-        "_id": createId(id),
-        "entity": variant,
-        "weight": row['category_popularity'],
-        "type": "category",
-        "id": row['category_id'],
-        "store": row['store']
-      }
-      return doc
-    docs = []
-    mysql_conn = PasUtils.mysqlConnection()
-    query = "SELECT id as category_id, name as category_name, url, category_popularity, store FROM l3_categories " \
-              "where url not like '%shop-by-concern%' order by store, name, category_popularity desc"
-    results = PasUtils.fetchResults(mysql_conn, query)
-    ctr = LoopCounter(name='Category Indexing')
-    prev_cat = None
-    for row in results:
-      ctr += 1
-      if ctr.should_print():
-        print(ctr.summary)
-
-      if prev_cat == row['category_name']:
-        continue
-      prev_cat = row['category_name']
-      variants = getVariants(row['category_id'])
-      if variants:
-        for variant in variants:
-          categoryDoc = getCategoryDoc(row, variant)
-          docs.append(categoryDoc)
-      else:
-        categoryDoc = getCategoryDoc(row, prev_cat)
-        docs.append(categoryDoc)
-
-      if len(docs) >= 100:
-        EsUtils.indexDocs(docs, collection)
-        docs = []
-
-    EsUtils.indexDocs(docs, collection)
-
-  
-  def index_all_categories(collection):
-
-    def getCategoryDoc(row, variant):
-      id = "category_" + str(row['category_id']) + "_" + variant + "_" + row['store']
-      doc = {
-        "_id": createId(id),
-        "entity": variant,
-        "weight": row['category_popularity'],
-        "type": "l1_category",
-        "id": row['category_id'],
-        "store": row['store']
-      }
-      return doc
-    docs = []
-    mysql_conn = PasUtils.mysqlConnection()
+    query = """SELECT id as category_id, name as category_name, url, category_popularity, store FROM l3_categories
+      where url not like '%shop-by-concern%' order by store, name, category_popularity desc"""
+    df_cat = EntityIndexer.get_category('category', query)
+    
     query = """SELECT id as category_id, name as category_name, category_popularity, store FROM all_categories
-                order by store, name, category_popularity desc"""
-    results = PasUtils.fetchResults(mysql_conn, query)
+                        order by store, name, category_popularity desc"""
+    df_l1_cat = EntityIndexer.get_category('l1_category', query)
+    df = df_cat.append([df_l1_cat])
+    
+    #TODO adding priority to category from external source
+    
+    df = df.sort_values(by='weight', ascending=False)
+    primary_cat = df.drop_duplicates(subset=['store', 'name_id'], keep='first', inplace=False)
+    df.id = df.id.astype(str)
+    secondary_cat = df.groupby(['store', 'name_id']).id.agg([('id', ','.join)]).reset_index()
+    secondary_cat.rename(columns={'id': 'secondary_ids'}, inplace=True)
+    secondary_cat_types = df.groupby(['store', 'name_id']).type.agg([('type', ','.join)]).reset_index()
+    secondary_cat_types.rename(columns={'type': 'category_types'}, inplace=True)
+    secondary_cat = pd.merge(secondary_cat, secondary_cat_types, on=['store', 'name_id'])
+    data = pd.merge(primary_cat, secondary_cat, on=['store', 'name_id'])
+
     ctr = LoopCounter(name='Category Indexing')
-    prev_cat = None
-    for row in results:
+    docs = []
+    final = pd.DataFrame()
+    for id, row in data.iterrows():
+      row = dict(row)
       ctr += 1
       if ctr.should_print():
         print(ctr.summary)
+      types = row.pop('category_types')
+      types = set(types.split(','))
+      for type in types:
+        id = type + "_" + str(row['id']) + "_" + row['entity'] + "_" + row['store']
+        secondary_ids = ','.join(list(set(row['secondary_ids'].split(','))))
+        docs.append({"_id": createId(id), "entity": row['entity'], "weight": row['weight'],
+                     "type": type, "id": row['id'],"store": row['store'], 'secondary_ids': secondary_ids})
+      if len(docs) >= 100:
+        EsUtils.indexDocs(docs, collection)
+        final = final.append(docs, ignore_index=True)
+        docs = []
+    final = final.append(docs, ignore_index=True)
+    EsUtils.indexDocs(docs, collection)
+  
 
-      if prev_cat == row['category_name']:
-        continue
-      prev_cat = row['category_name']
+  def get_category(type, query):
+    stemmer = PorterStemmer()
+
+    def getCategoryDoc(row, variant):
+      variant = variant.strip()
+      
+      doc = {
+        "entity": variant,
+        "weight": row['category_popularity'],
+        "type": type,
+        "id": row['category_id'],
+        "name_id": stemmer.stem(variant),
+        "store": row['store']
+      }
+      return doc
+    
+    mysql_conn = PasUtils.mysqlConnection()
+    results = PasUtils.fetchResults(mysql_conn, query)
+    final_list = []
+    
+    for row in results:
       variants = getVariants(row['category_id'])
       if variants:
         for variant in variants:
-          categoryDoc = getCategoryDoc(row, variant)
-          docs.append(categoryDoc)
+          final_list.append(getCategoryDoc(row, variant))
       else:
-        categoryDoc = getCategoryDoc(row, prev_cat)
-        docs.append(categoryDoc)
-
-      if len(docs) >= 100:
-        EsUtils.indexDocs(docs, collection)
-        docs = []
-
-    EsUtils.indexDocs(docs, collection)
+        final_list.append(getCategoryDoc(row, row['category_name']))
+    df = pd.DataFrame()
+    df = df.append(final_list, ignore_index=True)
+    return df
 
   
   def index_filters(collection):
@@ -327,7 +299,6 @@ class EntityIndexer:
       if index_filters_arg:
         EntityIndexer.index_filters(index)
       if index_categories_arg:
-        EntityIndexer.index_all_categories(index)
         EntityIndexer.index_categories(index)
       if index_brands_arg:
         EntityIndexer.index_brands(index)
