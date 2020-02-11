@@ -10,10 +10,17 @@ import time
 import traceback
 from dateutil import tz
 from datetime import datetime, timedelta
+import logging
+from logging.handlers import RotatingFileHandler
+import os
 
 sys.path.append("/home/ubuntu/nykaa_scripts/")
 from feed_pipeline.pipelineUtils import PipelineUtils
 
+
+filename = "/var/log/sqs_consumer/sqs_consumer.log"
+def create_log_file():
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
 
 NUMBER_OF_THREADS = 1
 
@@ -151,11 +158,36 @@ class SQSConsumer:
         for varnish_host in varnish_hosts:
             try:
                 (resp, content) = h.request("http://%s/" % varnish_host, "BAN", body="", headers=headers)
-                print(resp)
-                # logger.info(content)
+                if resp.status == 200:
+                    self.log_info(sku_ids, "success 200")
+                else:
+                    self.log_info(sku_ids, "failure %s".format(resp.status))
             except Exception as e:
-                print(e)
-                # logger.info(type(e))
+                self.log_info(sku_ids, "failure exception", e)
+
+    @classmethod
+    def log_info(self, sku_ids, status, exception=None):
+        sku_ids = sku_ids.replace("|", ",")
+        logger = logging.getLogger()
+        create_log_file()
+        file_logger = RotatingFileHandler(filename, maxBytes=5000000, backupCount=5)
+        SIMPLE_LOG_FORMAT = {
+            "status": "%(status)s",
+            "msg": "%(message)s",
+            "ts": "%(asctime)s",
+            "sku_ids": "%(sku_ids)s",
+            "source": "%(source)s",
+        }
+        extra = {'source': 'sqs_varnish_consumer', 'sku_ids':sku_ids, 'status': status}
+        if exception:
+            SIMPLE_LOG_FORMAT["exception"] = "%(exception)s"
+            extra['exception'] = type(exception).__name__
+        file_logger.setFormatter(logging.Formatter(json.dumps(SIMPLE_LOG_FORMAT)))
+        file_logger.setLevel(logging.ERROR)
+        file_logger.setLevel(logging.INFO)
+        if not logger.hasHandlers():
+            logger.addHandler(file_logger)
+        logger.error("Discovery Varnish Purge Sqs consumer", extra=extra)
 
 
 if __name__ == "__main__":
