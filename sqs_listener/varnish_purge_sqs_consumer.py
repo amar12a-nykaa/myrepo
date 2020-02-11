@@ -24,6 +24,13 @@ def create_log_file():
 
 NUMBER_OF_THREADS = 1
 
+
+def get_consumer_count():
+    return int(subprocess.check_output(
+        "ps aux | grep python | grep varnish_purge_sqs_consumer.py | grep -vE 'vim|grep|/bin/sh|bash' | wc -l ",
+        shell=True).strip())
+
+
 class ThreadManager:
     """
         A generic class for running multithreaded applications.
@@ -191,6 +198,10 @@ class SQSConsumer:
 
 
 if __name__ == "__main__":
+    if get_consumer_count() > 1:
+        print("getPipelineCount(): %r" % get_consumer_count())
+        print("[%s] Catalog pipeline running. Exiting without doing anything" % datetime.now())
+        exit()
     parser = argparse.ArgumentParser()
     parser.add_argument("--threads", type=int, help="number of records in single index request")
     argv = vars(parser.parse_args())
