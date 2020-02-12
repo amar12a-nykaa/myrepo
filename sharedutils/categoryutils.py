@@ -118,6 +118,8 @@ multicategoryList = {
     "3081": {"variant": ["Lace Underwear"], "name": "Lace"},
     "3082": {"variant": ["Seamless Underwear"], "name": "Seamless"},
     "3090": {"variant": ["Sexy Underwear"], "name": "Sexy"},
+    "8379": {"variant": ["Facewash"], "name": "Face Wash"},
+    "9566": {"variant": ["Facewash"], "name": "Face Wash"},
     "3056": {"variant": ["Sleepwear","Loungewear"], "name": "Sleep & Lounge"}
   }
 
