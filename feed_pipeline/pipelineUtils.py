@@ -5,6 +5,7 @@ import requests
 import urllib.parse
 import urllib.request
 from datetime import datetime
+import boto3
 sys.path.append('/var/www/pds_api/')
 from pas.v2.utils import Utils as PasUtils
 sys.path.append("/var/www/discovery_api")
@@ -38,6 +39,41 @@ class PipelineUtils:
     if socket.gethostname().startswith('admin'):
       SQS_ENDPOINT = 'https://sqs.ap-south-1.amazonaws.com/268361018769/failedOfferUpdate'
     return SQS_ENDPOINT, SQS_REGION
+
+  def getVarnishDetails():
+    TARGET_GROUP_ARNS = [{
+      'region': 'ap-south-1',
+      'tg': 'arn:aws:elasticloadbalancing:ap-south-1:911609873560:loadbalancer/app/preprod-cd-pna-alb/bed27c8ebc814607'
+    }]
+    if socket.gethostname().startswith('admin'):
+      TARGET_GROUP_ARNS = []
+    varnish_hosts = {}
+    for target_group_arn in TARGET_GROUP_ARNS:
+      varnish_hosts_current_tg = {}
+      elbv2_client = boto3.client('elbv2', region_name=target_group_arn['region'])
+      ec2_client = boto3.client('ec2', region_name=target_group_arn['region'])
+      health_response = elbv2_client.describe_target_health(TargetGroupArn=target_group_arn['tg'])
+      if health_response.get('TargetHealthDescriptions'):
+        for instance in health_response.get('TargetHealthDescriptions', []):
+          if instance.get('TargetHealth', {}).get('State') == 'healthy':
+            varnish_hosts_current_tg[instance.get('Target', {}).get('Id')] = {
+              'id': instance.get('Target', {}).get('Id'), 'port': instance.get('Target', {}).get('Port')}
+      if varnish_hosts_current_tg:
+        instances_response = ec2_client.describe_instances(InstanceIds=list(varnish_hosts_current_tg.keys()))
+        if instances_response:
+          reservations = instances_response.get('Reservations')
+          for reservation in reservations:
+            for instance in reservation.get('Instances', [{}]):
+              instance_id = instance.get('InstanceId')
+              private_ip = instance.get('PrivateIpAddress')
+              if varnish_hosts_current_tg.get(instance_id):
+                varnish_hosts_current_tg.get(instance_id).update({'ip': private_ip})
+      varnish_hosts.update(varnish_hosts_current_tg)
+    hosts = []
+    for instance_id in varnish_hosts:
+      varnish_host = varnish_hosts[instance_id]
+      hosts.append("{}:{}".format(varnish_host.get('ip'), varnish_host.get('port')))
+    return hosts
 
   def getAdPlatformEndPoint():
     host = 'nykaa-widgets-staging.nykaa.com'

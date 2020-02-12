@@ -7,9 +7,7 @@ import subprocess
 import sys
 import threading
 import time
-import traceback
-from dateutil import tz
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
 import os
@@ -108,6 +106,7 @@ class SQSConsumer:
         self.sqs_endpoint, self.sqs_region = PipelineUtils.getDiscoveryVarnishPurgeSQSDetails()
         self.thread_manager = ThreadManager(self.q, callback=self.purge_varnish_for_product)
         self.thread_manager.start_threads(NUMBER_OF_THREADS)
+        self.varnish_hosts = PipelineUtils.getVarnishDetails()
 
     def start(self, ):
         # Receive message from SQS queue
@@ -160,9 +159,8 @@ class SQSConsumer:
     @classmethod
     def purge_varnish_for_product(self, sku_ids):
         h = httplib2.Http(".cache")
-        varnish_hosts = ["172.26.17.250:80"]
         headers = {"X-depends-on": sku_ids}
-        for varnish_host in varnish_hosts:
+        for varnish_host in self.varnish_hosts:
             try:
                 (resp, content) = h.request("http://%s/" % varnish_host, "BAN", body="", headers=headers)
                 if resp.status == 200:
