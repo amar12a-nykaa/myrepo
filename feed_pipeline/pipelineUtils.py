@@ -43,7 +43,7 @@ class PipelineUtils:
   def getVarnishDetails():
     TARGET_GROUP_ARNS = [{
       'region': 'ap-south-1',
-      'tg': 'arn:aws:elasticloadbalancing:ap-south-1:911609873560:loadbalancer/app/preprod-cd-pna-alb/bed27c8ebc814607'
+      'tg': 'arn:aws:elasticloadbalancing:ap-south-1:911609873560:targetgroup/preprod-cd-discovery-v6-tg/4a3a670e6e8928dc'
     }]
     if socket.gethostname().startswith('admin'):
       TARGET_GROUP_ARNS = []
