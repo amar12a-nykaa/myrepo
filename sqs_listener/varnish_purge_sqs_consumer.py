@@ -131,7 +131,7 @@ class SQSConsumer:
                 for message in response["Messages"]:
                     receipt_handle = message["ReceiptHandle"]
                     body = json.loads(message["Body"])
-                    update_docs.append(body.get("sku_ids", ""))
+                    update_docs.extend(body.get("sku_ids", ""))
                     self.sqs.delete_message(QueueUrl=self.sqs_endpoint, ReceiptHandle=receipt_handle)
             else:
                 is_sqs_empty = True
@@ -166,7 +166,7 @@ class SQSConsumer:
                 if resp.status == 200:
                     self.log_info(sku_ids, "success 200")
                 else:
-                    self.log_info(sku_ids, "failure %s".format(resp.status))
+                    self.log_info(sku_ids, "failure {}".format(resp.status))
             except Exception as e:
                 self.log_info(sku_ids, "failure exception", e)
 
