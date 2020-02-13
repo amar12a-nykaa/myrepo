@@ -125,8 +125,8 @@ class EntityIndexer:
     df_l1_cat = EntityIndexer.get_category('l1_category', query)
     df = df_cat.append([df_l1_cat])
     
-    #TODO adding priority to category from external source
     category_priority = pd.read_csv('primary_category.csv')
+    category_priority.id = category_priority.id.astype(str)
     category_priority["factor"] = 100
     df = pd.merge(df, category_priority, how="left", on="id")
     df.factor = df.factor.fillna(1)
