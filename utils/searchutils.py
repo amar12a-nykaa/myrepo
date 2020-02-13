@@ -19,7 +19,7 @@ STORE_MAP = {
         where l4_id = 0 and l3_id <> 0 and ( l1_id not in (194,7287,5926,11723,12390)
         and lower(l2_name) not like '%shop by%'
         and lower(l2_name) not like '%trending%'
-        and l3_id not in (4036,3746,3745,3819)) and l3_id not in (44,3104,3055,3110,1415,328,6790,7010,8437,8404,1546,1306) and l2_id <>9633 
+        and l3_id not in (4036,3746,3745,3819)) and l3_id not in (44,3104,3055,3110,1415,328,6790,7010,8437,8404,1546,1306,3749) and l2_id <>9633 
         and l3_id not in (select distinct l3_id from product_category_mapping where l4_id <>0 )
     ))
     union
@@ -224,7 +224,7 @@ STORE_MAP = {
         (
         select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping 
         where l1_id = '11723'
-        and l2_id in (11817,11819,11818)
+        and l2_id in (11817,11819)
         and lower(l2_name)  not like '%tren%'
         group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
         ))""",
