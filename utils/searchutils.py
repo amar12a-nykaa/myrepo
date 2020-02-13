@@ -3,38 +3,39 @@ import json
 # STORE_MAP = {'nykaa': {}, 'men': {'l1_id': 7287}, 'pro': {'l1_id': 5926}, 'ultra_lux': {'l1_id': 11723}, 'ngs': {'l1_id': 12390}}
 STORE_MAP = {
   "nykaa": {
-    "leaf_query": """(
-    select distinct l4_name as category_name,l4_id as category_id from
-    (select * from product_category_mapping
-        where l4_id <> 0 and ( l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
-and lower(l2_name) not like '%shop by%'
-and l3_id not in (4036,3746,3745,3819)
-or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
-    )
-    )
+    "leaf_query": """(select distinct l4_name as category_name,l4_id as category_id from
+      (select * from product_category_mapping
+        where l4_id <> 0 and 
+          (l1_id not in (194,7287,5926,11723,12390)
+            and lower(l2_name) not like '%shop by%'
+            and lower(l2_name) not like '%trending%'
+            and l3_id not in (4036,3746,3745,3819) 
+          )
+          and l3_id <> 1597
+      ))
     union
-    (
-    select distinct l3_name as category_name,l3_id as category_id from
-    ( select * from product_category_mapping
-        where l4_id = 0 and l3_id <> 0 and ( l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
-and lower(l2_name) not like '%shop by%'
-and l3_id not in (4036,3746,3745,3819)
-or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
+    (select  distinct l3_name as category_name,l3_id as category_id from
+      (select * from product_category_mapping
+        where l4_id = 0 and l3_id <> 0 and ( l1_id not in (194,7287,5926,11723,12390)
+          and lower(l2_name) not like '%shop by%'
+          and lower(l2_name) not like '%trending%'
+          and l3_id not in (4036,3746,3745,3819)
+        ) 
+        and l3_id not in (44,3104,3055,3110,1415,328,6790,7010,8437,8404,1546,1306) and l2_id <>9633 
         and l3_id not in (select distinct l3_id from product_category_mapping where l4_id <>0 )
-    )
-    )
+    ))
     union
-    (
-    select distinct l2_name as category_name,l2_id as category_id from
-    ( select * from product_category_mapping
-    where l2_id <>0 and l3_id =0 and( l1_id not in (77,194,9564,7287,3048,5926,11723,12390)
-and lower(l2_name) not like '%shop by%'
-and l3_id not in (4036,3746,3745,3819)
-or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921)) and
-    l2_id not in
-    (select distinct l2_id from product_category_mapping
-    where l3_id <> 0
-     ))
+    (select  distinct l2_name as category_name,l2_id as category_id from
+      (select *from product_category_mapping
+        where l2_id <>0 and l3_id =0 and 
+          (l1_id not in (194,7287,5926,11723,12390)
+            and lower(l2_name) not like '%shop by%'
+            and lower(l2_name) not like '%trending%'
+            and l3_id not in (4036,3746,3745,3819)
+          )
+          and l2_id not in (11111,9640,9639,9638)
+         and l2_id not in (select distinct l2_id from product_category_mapping where l3_id <> 0)
+      )
     )""",
     
     "non_leaf_query": """select distinct  l2_ID as category_id,l2_name as category_name
