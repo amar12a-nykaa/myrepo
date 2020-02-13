@@ -33,7 +33,7 @@ multicategoryList = {
     "529": {"variant": ["Face Masks","Masks & Peels"], "name": "Masks & Peels"},
     "8400": {"variant": ["Face Masks","Masks & Peels"], "name": "Masks & Peels"},
     "8394": {"variant": ["Face Moisturizer","Day Cream"], "name": "Face Moisturizer & Day Cream"},
-    "8397": {"variant": ["Face Serum","Serums & Essence"], "name": "Serums & Essence"},
+    "8397": {"variant": ["Face Serum","Serums"], "name": "Serums & Essence"},
     "290": {"variant": ["Floss","Tongue Cleaners"], "name": "Floss & Tongue Cleaners"},
     "4386": {"variant": ["Gift Bags","Gift Boxes"], "name": "Gift Bags and Boxes"},
     "2041": {"variant": ["Hair Creams","Hair Masks"], "name": "Hair Creams & Masks"},
@@ -125,6 +125,9 @@ multicategoryList = {
     "3090": {"variant": ["Sexy Underwear"], "name": "Sexy"},
     "8379": {"variant": ["Facewash"], "name": "Face Wash"},
     "9566": {"variant": ["Facewash"], "name": "Face Wash"},
+    "1654": {"variant": ["Intimate Care"], "name": "Intimate Hygiene"},
+    "9598": {"variant": ["Shampoo"], "name": "Shampoo & Cleanser"},
+    "9579": {"variant": ["Face Serum","Serums"], "name": "Serums"},
     "3056": {"variant": ["Sleepwear","Loungewear"], "name": "Sleep & Lounge"}
   }
 
