@@ -197,7 +197,7 @@ STORE_MAP = {
   },
   
   "ultra_lux": {
-    "leaf_query": """((
+    "leaf_query": """(
         select distinct l3_ID as category_id,l3_name as category_name from
         (
         select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping 
