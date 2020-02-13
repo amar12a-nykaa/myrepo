@@ -19,6 +19,8 @@ from dateutil import parser
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
 
+sys.path.append("/home/ubuntu/nykaa_scripts/")
+from utils.discovery_varnish_purge_utils import *
 
 total = 0
 CHUNK_SIZE = 200
@@ -37,7 +39,6 @@ def getCurrentDateTime():
     current_datetime = current_datetime.replace(tzinfo=from_zone)
     current_datetime = current_datetime.astimezone(to_zone)
     return current_datetime
-
 
 def getOfferConsumerCount():
     return int(subprocess.check_output(
@@ -210,6 +211,7 @@ class OfferSQSConsumer:
             print(threadname + ": Sending %s docs to bulk upload" % len(process_docs))
             response = DiscUtils.updateESCatalog(process_docs, refresh=True, raise_on_error=False)
             # print("response: ", response)
+            insert_in_varnish_purging_sqs(process_docs,"offer")
             print(threadname + ": Done with one batch of bulk upload")
         except elasticsearch.helpers.BulkIndexError as e:
             missing_skus = []

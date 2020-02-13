@@ -1,7 +1,6 @@
 #!/usr/bin/python
 import sys
 from dateutil import tz
-from pipelineUtils import PipelineUtils
 from datetime import datetime, timedelta
 
 sys.path.append('/var/www/pds_api/')
@@ -17,6 +16,8 @@ import traceback
 import json
 sys.path.append("/home/ubuntu/nykaa_scripts/")
 from utils.priceUpdateLogUtils import PriceUpdateLogUtils
+from utils.discovery_varnish_purge_utils import *
+from feed_pipeline.pipelineUtils import PipelineUtils
 from utils.mailutils import Mail
 import uuid
 import time
@@ -133,6 +134,7 @@ class ScheduledPriceUpdater:
             update_docs = PipelineUtils.getProductsToIndex(products, add_limit = True)
             if update_docs:
                 DiscUtils.updateESCatalog(update_docs)
+                #insert_in_varnish_purging_sqs(update_docs,"discount_scheduler")
                 for single_doc in update_docs:
                     print("sku : %s" % single_doc['sku'])
                     if single_doc['sku'] in priceChangeData:
@@ -225,6 +227,7 @@ class ScheduledPriceUpdater:
                 update_docs = PipelineUtils.getProductsToIndex(bundle_products, add_limit=True)
                 if update_docs:
                     DiscUtils.updateESCatalog(update_docs)
+                    #insert_in_varnish_purging_sqs(update_docs, "discount_scheduler")
                     for singleBundle in update_docs:
                         print("bundle sku: %s" % singleBundle['sku'])
         except Exception as e:
