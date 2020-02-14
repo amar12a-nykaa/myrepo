@@ -70,6 +70,7 @@ STORE_MAP = {
         and lower(l3_name)  not like '%shop%'
         and lower(l2_name)  not like '%luxe%'
         and l4_id = 0
+        and l3_id not in (select distinct l3_id from product_category_mapping where l4_id <>0 )
         group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
         ))
         union
@@ -122,6 +123,7 @@ STORE_MAP = {
         where l1_id = '5926'
         and l4_id = 0
         and l3_id<>0
+        and l3_id not in (select distinct l3_id from product_category_mapping where l1_id = '5926' and l4_id <> 0)
         group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
         ))
         union
@@ -212,6 +214,7 @@ STORE_MAP = {
         and lower(l2_name)  not like '%tren%'
         and l4_id = 0
         and l3_id<>0
+        and l3_id not in (select distinct l3_id from product_category_mapping where l4_id <>0 )
         group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
         ))
         union
