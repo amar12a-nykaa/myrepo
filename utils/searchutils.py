@@ -62,27 +62,33 @@ STORE_MAP = {
   },
   
   "men": {
-    "leaf_query": """select distinct  l2_ID as category_id,l2_name as category_name  from
+    "leaf_query": """(
+        select distinct l3_ID as category_id,l3_name as category_name from
         (
-        select * from product_category_mapping
-        where (l1_id not in (77,194,9564,7287,3048,5926,11723,12390) 
-              and lower(l2_name) not like '%shop by%' 
-              and l3_id not in (4036,3746,3745,3819,1387)
-              or l2_id in (9614,1286,6619,3053,3049,3050,9788,3054,3057,3052,1921))
-        )
-        where l3_id not in (0) and l2_id not in (735)
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping 
+        where l1_id = '7287'
+        and lower(l3_name)  not like '%shop%'
+        and lower(l2_name)  not like '%luxe%'
+        and l4_id = 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
         union
-        select distinct  l1_ID as category_id,l1_name as category_name  from
+        ( select distinct l4_ID as category_id,l4_name as category_name from
         (
-        select * from product_category_mapping
-        where l1_id in (24,3048,12,9564,671,1390,53,4362,8377,2313,77,59)
-        )
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping 
+        where l1_id = '7287'
+        and lower(l3_name)  not like '%shop%'
+        and lower(l2_name)  not like '%luxe%'
+        and l4_id <> 0
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ))
         union
-        select distinct  l3_ID as category_id,l3_name as category_name  from
+        (select distinct l2_ID as category_id,l2_name as category_name from
         (
-        select * from product_category_mapping
-        where l3_id in (1597)
-        )""",
+        select L1_NAME,L2_NAME,l3_name,l4_name,L1_ID,L2_ID,l3_ID,l4_ID,count(*) from product_category_mapping 
+        where l2_id in ('7340','7320')
+        group by L1_ID,L2_ID,l3_ID,l4_ID,L1_NAME,L2_NAME,l3_name,l4_name
+        ));""",
     
     "non_leaf_query": """(
         select distinct l2_ID as category_id,l2_name as category_name from
