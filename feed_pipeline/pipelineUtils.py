@@ -46,7 +46,10 @@ class PipelineUtils:
       'tg': 'arn:aws:elasticloadbalancing:ap-south-1:911609873560:targetgroup/preprod-cd-discovery-v6-tg/4a3a670e6e8928dc'
     }]
     if socket.gethostname().startswith('admin'):
-      TARGET_GROUP_ARNS = []
+      TARGET_GROUP_ARNS = [{
+        'region': 'ap-south-1',
+        'tg': 'arn:aws:elasticloadbalancing:ap-south-1:268361018769:targetgroup/prod-cd-discoveryapi-varnish-tg/b2b5ad1d30230ef0'
+      }]
     varnish_hosts = {}
     for target_group_arn in TARGET_GROUP_ARNS:
       varnish_hosts_current_tg = {}
