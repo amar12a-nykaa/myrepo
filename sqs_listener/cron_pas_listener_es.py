@@ -12,13 +12,15 @@ import traceback
 from dateutil import tz
 from datetime import datetime, timedelta
 
+sys.path.append("/home/ubuntu/nykaa_scripts/")
+from utils.discovery_varnish_purge_utils import *
+
 sys.path.append("/var/www/pds_api/")
 from pas.v2.utils import Utils as PasUtils
 from nykaa.settings import DISCOVERY_SQS_ENDPOINT
 
 sys.path.append("/var/www/discovery_api")
 from disc.v2.utils import Utils as DiscUtils
-
 
 total = 0
 CHUNK_SIZE = 200
@@ -31,7 +33,6 @@ def getCurrentDateTime():
     current_datetime = current_datetime.replace(tzinfo=from_zone)
     current_datetime = current_datetime.astimezone(to_zone)
     return current_datetime
-
 
 def getCount():
     return int(subprocess.check_output(
@@ -143,7 +144,7 @@ class SQSConsumer:
     @classmethod
     def __init__(self):
         self.q = queue.Queue(maxsize=0)
-        self.sqs = boto3.client("sqs")
+        self.sqs = boto3.client("sqs", region_name='ap-south-1')
 
         self.thread_manager = ThreadManager(self.q, callback=self.upload_one_chunk)
         self.thread_manager.start_threads(NUMBER_OF_THREADS)
@@ -200,6 +201,7 @@ class SQSConsumer:
             #print(chunk)
             print(threadname + ": Sending %s docs to bulk upload" % len(update_docs))
             response = DiscUtils.updateESCatalog(update_docs, refresh=True, raise_on_error=False)
+            insert_in_varnish_purging_sqs(update_docs,"pas")
             print("response: ", response)
             print(threadname + ": Done with one batch of bulk upload")
         except elasticsearch.helpers.BulkIndexError as e:
