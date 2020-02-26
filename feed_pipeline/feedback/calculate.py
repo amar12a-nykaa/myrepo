@@ -44,9 +44,10 @@ def calculate_feedback(days=7, verbose=False):
 
         #normalize revenue on search_term
         def normalize(a):
-            return ((a - min(a)) / (max(a) - min(a)))*100
+            return ((a - min(a)) / (max(a) - min(a)))*99 + 1
 
-        final_df['normalized_revenue'] = final_df.groupby('search_term', as_index=False).revenue.apply(normalize)
+        normalized_revenue = final_df.groupby('search_term', as_index=False).revenue.apply(normalize)
+        final_df['normalized_revenue'] = normalized_revenue.reset_index(level=0, drop=True)
         final_df.normalized_revenue = final_df.normalized_revenue.fillna(100)
         outputfile = 'feedback_final.csv'
         final_df.to_csv(outputfile, index=False)
@@ -63,3 +64,4 @@ if __name__ == "__main__":
     verbose = argv['verbose']
     days = argv['days']
     filename = calculate_feedback(days=days, verbose=verbose)
+    print(filename)
