@@ -1,0 +1,92 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "bigramAnalyzer": {
+          "tokenizer": "whitespace",
+          "filter": [
+            "lowercase",
+            "asciifolding",
+            "stop_english",
+            "stop_custom",
+            "custom_shingle"
+          ]
+        },
+        "default": {
+          "tokenizer": "whitespace",
+          "filter": [
+            "lowercase",
+            "asciifolding",
+            "stop_english",
+            "stop_custom"
+          ]
+        }
+      },
+      "normalizer":{
+        "case_insensitive_sort": {
+          "type": "custom",
+          "filter": ["lowercase", "asciifolding"]
+        }
+      },
+      "filter": {
+        "stop_english": {
+            "type": "stop",
+            "stopwords": "_english_"
+        },
+        "stop_custom": {
+          "type": "stop",
+          "stopwords": ["product", "products", "&", "best", "cheap"]
+        },
+        "custom_shingle": {
+            "type": "shingle",
+            "min_shingle_size": "2",
+            "max_shingle_size": "2",
+            "output_unigrams": "false"
+        }
+      }
+    },
+    "number_of_replicas" : 9,
+    "number_of_shards": 1
+  },
+  "mappings": {
+    "feedback": {
+      "properties": {
+        "query": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "normalizer": "case_insensitive_sort",
+              "ignore_above": 256
+            },
+            "unigram": {
+              "type": "text",
+              "analyzer": "default",
+              "search_analyzer": "default"
+            },
+            "bigram": {
+              "type": "text",
+              "analyzer": "bigramAnalyzer",
+              "search_analyzer": "bigramAnalyzer"
+            }
+          }
+        },
+        "f_id": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "weight": {
+          "type": "float"
+        },
+        "f_length": {
+          "type": "long"
+        }
+      }
+    }
+  }
+}

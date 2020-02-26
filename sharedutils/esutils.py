@@ -47,6 +47,13 @@ index_alias_config = {
       "config": "guide",
       "unique_field": "_id",
       "type": "entity"
+    },
+  "feedback":
+    {
+      "collections": ["feedback_yin", "feedback_yang"],
+      "config": "feedback",
+      "unique_field": "_id",
+      "type": "feedback_data"
     }
 }
 
@@ -95,16 +102,20 @@ class EsUtils:
                 schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/catalog_schema.json'))
                 es.indices.create(index = index, body = schema)
                 es.indices.put_alias(index= index, name = alias)
-              if index in ['autocomplete_yin', 'autocomplete_yang']:
+              elif index in ['autocomplete_yin', 'autocomplete_yang']:
                 schema = json.load(open('/home/ubuntu/nykaa_scripts/autocomplete/schema.json'))
                 es.indices.create(index = index, body = schema)
                 es.indices.put_alias(index= index, name = alias)
-              if index in ['entity_yin', 'entity_yang']:
+              elif index in ['entity_yin', 'entity_yang']:
                 schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/entity_schema.json'))
                 es.indices.create(index = index, body = schema)
                 es.indices.put_alias(index= index, name = alias)
-              if index in ['guide_yin', 'guide_yang']:
+              elif index in ['guide_yin', 'guide_yang']:
                 schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/guide_schema.json'))
+                es.indices.create(index = index, body = schema)
+                es.indices.put_alias(index= index, name = alias)
+              elif index in ['feedback_yin', 'feedback_yang']:
+                schema = json.load(open('/home/ubuntu/nykaa_scripts/feed_pipeline/feedback/schema.json'))
                 es.indices.create(index = index, body = schema)
                 es.indices.put_alias(index= index, name = alias)
             else:
