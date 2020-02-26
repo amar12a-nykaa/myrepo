@@ -99,7 +99,4 @@ if __name__ == '__main__':
     parser.add_argument("--days", type=int, default=1)
     argv = vars(parser.parse_args())
     days = -1 * argv['days']
-    os.remove("test1.csv")
-    print("removed")
-    os.remove("test1.csv")
     uploadFile(days)
