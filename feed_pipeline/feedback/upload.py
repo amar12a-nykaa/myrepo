@@ -16,10 +16,12 @@ COUNT_THRESHOLD = 3
 
 def process_chunk(df):
     df["valid"] = 0
+    df.dropna(subset=['search_term'], inplace=True)
+
     def process_queryterm(row):
-        if row["search_term"].startswith("App:Search:"):
+        if str(row["search_term"]).startswith("App:Search:"):
             terms = row["search_term"].split(":")
-            if len(terms) >= 3 and row["product_id"].isdigit():
+            if len(terms) >= 3 and str(row["product_id"]).isdigit():
                 term = terms[2]
                 term = term.lower()
                 row["search_term"] = term
@@ -36,13 +38,13 @@ def process_chunk(df):
 
     df.drop(['valid', 'instance_count'], axis=1, inplace=True)
     df = df.fillna(0)
-    df = df.astype({'product_id': 'int32', 'views': 'int32', 'cart_adds': 'int32', 'revenue': 'float16', 'order': 'int32'})
+    df = df.astype({'search_term': str, 'product_id': 'int32', 'views': 'int32', 'cart_adds': 'int32', 'revenue': 'float32', 'order': 'int32'})
 
     return df
 
 
 def process_data(filename):
-    data_iterator = pd.read_csv(filename, chunksize=100000)
+    data_iterator = pd.read_csv(filename, chunksize=10000)
     chunk_list = []
 
     for data_chunk in data_iterator:
