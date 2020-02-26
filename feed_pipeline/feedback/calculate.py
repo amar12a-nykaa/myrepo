@@ -25,7 +25,7 @@ def calculate_feedback(days=7, verbose=False):
             df = pd.read_csv(io.BytesIO(obj['Body'].read()), encoding='utf8')
             df = df[['search_term', 'product_id', 'revenue']]
             df = df[df.revenue >= 1]
-            df = df.astype({'product_id': 'int32', 'revenue': 'float16'})
+            df = df.astype({'product_id': 'int32', 'revenue': 'float32'})
             if not df.empty:
                 print("appending for %s" % filename)
                 dfs.append(df)
