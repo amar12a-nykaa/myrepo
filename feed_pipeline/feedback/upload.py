@@ -12,6 +12,7 @@ from pipelineUtils import PipelineUtils
 
 pipeline = boto3.session.Session(profile_name='datapipeline')
 bucket_name = PipelineUtils.getBucketNameForFeedback()
+COUNT_THRESHOLD = 3
 
 def process_chunk(df):
     df["valid"] = 0
@@ -26,9 +27,17 @@ def process_chunk(df):
         return row
     df = df.apply(process_queryterm, axis=1)
     df = df[df.valid == 1]
-    df.drop(['valid'], axis=1, inplace=True)
+
+    #remove spelling mistakes
+    search_count = df.groupby("search_term").product_id.count().reset_index()
+    search_count.rename(columns={'product_id': 'instance_count'}, inplace=True)
+    search_count = search_count[search_count.instance_count >= COUNT_THRESHOLD]
+    df = pd.merge(df, search_count, on='search_term')
+
+    df.drop(['valid', 'instance_count'], axis=1, inplace=True)
     df = df.fillna(0)
-    df = df.astype({'product_id':'int32', 'views':'int32', 'cart_adds':'int32', 'revenue':'float16', 'order':'int32'})
+    df = df.astype({'product_id': 'int32', 'views': 'int32', 'cart_adds': 'int32', 'revenue': 'float16', 'order': 'int32'})
+
     return df
 
 
