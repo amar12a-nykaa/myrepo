@@ -80,7 +80,7 @@ class WorkerThread(threading.Thread):
                     self.q.task_done()
                     break
                 else:
-                    self.callback(sku_ids=chunk)
+                    self.callback(update_docs=chunk)
                     self.q.task_done()
             except queue.Empty:
                 print(self.name + " zz..")
@@ -145,6 +145,7 @@ class SQSConsumer:
                 # self.purge_varnish_for_product(sku_ids)
                 self.q.put_nowait(update_docs)
                 num_products_processed += len(update_docs)
+                docs = []
                 update_docs = []
                 #
 
@@ -189,7 +190,7 @@ class SQSConsumer:
             "sku_ids": "%(sku_ids)s",
             "source": "%(source)s",
         }
-        extra = {'source': 'sqs_varnish_consumer', 'sku_ids':sku_ids, 'status': status}
+        extra = {'source': source, 'sku_ids': sku_ids, 'status': status}
         if exception:
             SIMPLE_LOG_FORMAT["exception"] = "%(exception)s"
             extra['exception'] = type(exception).__name__
