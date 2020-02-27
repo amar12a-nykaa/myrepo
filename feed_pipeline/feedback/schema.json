@@ -49,7 +49,7 @@
     "number_of_shards": 1
   },
   "mappings": {
-    "feedback": {
+    "feedback_data": {
       "properties": {
         "query": {
           "type": "text",

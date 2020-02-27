@@ -11,6 +11,9 @@ from loopcounter import LoopCounter
 from esutils import EsUtils
 from idutils import createId
 
+sys.path.append("/var/www/discovery_api")
+from disc.v2.utils import Utils as DiscUtils
+
 feedback_collection = 'feedback'
 ES_SCHEMA = json.load(open(os.path.join(os.path.dirname(__file__), 'schema.json')))
 
@@ -53,6 +56,7 @@ def index_engine(collection=None, active=None, inactive=None, swap=False, filena
 
     print("Index: %s" % index)
 
+    es = DiscUtils.esConn()
     index_client = elasticsearch.client.IndicesClient(es)
     if index_client.exists(index=index):
         print("Deleting index: %s" % index)
