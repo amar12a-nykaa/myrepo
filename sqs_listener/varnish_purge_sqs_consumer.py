@@ -171,14 +171,14 @@ class SQSConsumer:
                 try:
                     (resp, content) = h.request("http://%s/" % varnish_host, "BAN", body="", headers=headers)
                     if resp.status == 200:
-                        self.log_info(sku_ids, source, "success 200")
+                        self.log_info(sku_ids, source, varnish_host, "success 200")
                     else:
-                        self.log_info(sku_ids, source, "failure {}".format(resp.status))
+                        self.log_info(sku_ids, source, varnish_host, "failure {}".format(resp.status))
                 except Exception as e:
-                    self.log_info(sku_ids, source, "failure exception", e)
+                    self.log_info(sku_ids, source, varnish_host, "failure exception", e)
 
     @classmethod
-    def log_info(self, sku_ids, source, status, exception=None):
+    def log_info(self, sku_ids, source, host, status, exception=None):
         sku_ids = sku_ids.replace("|", ",")
         logger = logging.getLogger()
         create_log_file()
@@ -189,8 +189,9 @@ class SQSConsumer:
             "ts": "%(asctime)s",
             "sku_ids": "%(sku_ids)s",
             "source": "%(source)s",
+            "host": "%(host)s"
         }
-        extra = {'source': source, 'sku_ids': sku_ids, 'status': status}
+        extra = {'source': source, 'sku_ids': sku_ids, 'status': status, 'host': host}
         if exception:
             SIMPLE_LOG_FORMAT["exception"] = "%(exception)s"
             extra['exception'] = type(exception).__name__
