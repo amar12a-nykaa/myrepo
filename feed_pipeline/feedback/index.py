@@ -29,8 +29,9 @@ def index_data(collection, filename):
                 print(ctr.summary)
             row = dict(row)
             doc = {
-                "_id": createId(row['search_term']+str(row['product_id'])),
-                "weight": row["normalized_revenue"],
+                "_id": createId(str(ctr)),
+                "weight": row["score_rev"],
+                "weight_view": row["score_view_rev"],
                 "query": row["search_term"],
                 "f_id": row["product_id"],
                 "f_length": len(row["search_term"].split()),
