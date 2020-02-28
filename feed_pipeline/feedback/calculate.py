@@ -4,6 +4,7 @@ import argparse
 import io
 import sys
 import pandas as pd
+import numpy as np
 
 sys.path.append("/nykaa/scripts/feed_pipeline")
 from pipelineUtils import PipelineUtils
@@ -23,9 +24,9 @@ def calculate_feedback(days=7, verbose=False):
         try:
             obj = s3.get_object(Bucket=bucket, Key=filename)
             df = pd.read_csv(io.BytesIO(obj['Body'].read()), encoding='utf8')
-            df = df[['search_term', 'product_id', 'revenue']]
+            df = df[['search_term', 'product_id', 'revenue', 'views']]
             df = df[df.revenue >= 1]
-            df = df.astype({'product_id': 'int32', 'revenue': 'float32'})
+            df = df.astype({'product_id': 'int32', 'revenue': 'float32', 'views': 'int32'})
             if not df.empty:
                 print("appending for %s" % filename)
                 dfs.append(df)
@@ -38,7 +39,7 @@ def calculate_feedback(days=7, verbose=False):
             print("Rows count: " + str(final_df.shape[0]))
 
         print("Taking distinct pair of search_term and product_id")
-        final_df = final_df.groupby(['search_term', 'product_id']).agg({'revenue': 'sum'}).reset_index()
+        final_df = final_df.groupby(['search_term', 'product_id']).agg({'revenue': 'sum', 'views': 'sum'}).reset_index()
         if verbose:
             print("Rows count: " + str(final_df.shape[0]))
 
@@ -49,6 +50,22 @@ def calculate_feedback(days=7, verbose=False):
         normalized_revenue = final_df.groupby('search_term', as_index=False).revenue.apply(normalize)
         final_df['normalized_revenue'] = normalized_revenue.reset_index(level=0, drop=True)
         final_df.normalized_revenue = final_df.normalized_revenue.fillna(100)
+
+        normalized_views = final_df.groupby('search_term', as_index=False).views.apply(normalize)
+        final_df['normalized_views'] = normalized_views.reset_index(level=0, drop=True)
+
+        def populateNullViews(row):
+            if np.isnan(row['normalized_views']):
+                if row["views"] == 0:
+                    row['normalized_views'] = 0
+                else:
+                    row['normalized_views'] = 100
+            return row
+        final_df = final_df.apply(populateNullViews, axis=1)
+
+        final_df.rename(columns={'normalized_revenue': 'score_rev'}, inplace=True)
+        final_df['score_view_rev'] = final_df['normalized_views'] + final_df['score_rev']
+        final_df = final_df[['search_term', 'product_id', 'score_view_rev', 'score_rev']]
         outputfile = 'feedback_final.csv'
         final_df.to_csv(outputfile, index=False)
         print("feedback calculation done")
