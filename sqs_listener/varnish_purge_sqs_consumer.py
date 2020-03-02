@@ -80,7 +80,7 @@ class WorkerThread(threading.Thread):
                     self.q.task_done()
                     break
                 else:
-                    self.callback(sku_ids=chunk)
+                    self.callback(update_docs=chunk)
                     self.q.task_done()
             except queue.Empty:
                 print(self.name + " zz..")
@@ -111,6 +111,7 @@ class SQSConsumer:
     def start(self, ):
         # Receive message from SQS queue
         startts = time.time()
+        docs = []
         update_docs = []
         is_sqs_empty = False
         num_consecutive_empty_checks = 0
@@ -131,7 +132,8 @@ class SQSConsumer:
                 for message in response["Messages"]:
                     receipt_handle = message["ReceiptHandle"]
                     body = json.loads(message["Body"])
-                    update_docs.extend(body.get("sku_ids", ""))
+                    docs.extend(body.get("sku_ids", ""))
+                    update_docs.append({"sku_ids": docs, "source": body.get("source", "")})
                     self.sqs.delete_message(QueueUrl=self.sqs_endpoint, ReceiptHandle=receipt_handle)
             else:
                 is_sqs_empty = True
@@ -139,10 +141,11 @@ class SQSConsumer:
 
             if len(update_docs) >= 1 or (len(update_docs) >= 1 and is_sqs_empty):
                 print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
-                sku_ids = "|".join(update_docs)
+                #sku_ids = "|".join(update_docs)
                 # self.purge_varnish_for_product(sku_ids)
-                self.q.put_nowait(sku_ids)
+                self.q.put_nowait(update_docs)
                 num_products_processed += len(update_docs)
+                docs = []
                 update_docs = []
                 #
 
@@ -157,21 +160,25 @@ class SQSConsumer:
         print("Main Thread: Number of products processed: %s @ %s products/sec" % (num_products_processed, speed))
 
     @classmethod
-    def purge_varnish_for_product(self, sku_ids):
+    def purge_varnish_for_product(self, update_docs):
         h = httplib2.Http(".cache")
-        headers = {"X-depends-on": sku_ids}
-        for varnish_host in self.varnish_hosts:
-            try:
-                (resp, content) = h.request("http://%s/" % varnish_host, "BAN", body="", headers=headers)
-                if resp.status == 200:
-                    self.log_info(sku_ids, "success 200")
-                else:
-                    self.log_info(sku_ids, "failure {}".format(resp.status))
-            except Exception as e:
-                self.log_info(sku_ids, "failure exception", e)
+        for doc in update_docs:
+            sku_ids_list = doc.get("sku_ids", [])
+            source = doc.get("source", "")
+            sku_ids = "|".join(sku_ids_list)
+            headers = {"X-depends-on": sku_ids}
+            for varnish_host in self.varnish_hosts:
+                try:
+                    (resp, content) = h.request("http://%s/" % varnish_host, "BAN", body="", headers=headers)
+                    if resp.status == 200:
+                        self.log_info(sku_ids, source, varnish_host, "success 200")
+                    else:
+                        self.log_info(sku_ids, source, varnish_host, "failure {}".format(resp.status))
+                except Exception as e:
+                    self.log_info(sku_ids, source, varnish_host, "failure exception", e)
 
     @classmethod
-    def log_info(self, sku_ids, status, exception=None):
+    def log_info(self, sku_ids, source, host, status, exception=None):
         sku_ids = sku_ids.replace("|", ",")
         logger = logging.getLogger()
         create_log_file()
@@ -182,8 +189,9 @@ class SQSConsumer:
             "ts": "%(asctime)s",
             "sku_ids": "%(sku_ids)s",
             "source": "%(source)s",
+            "host": "%(host)s"
         }
-        extra = {'source': 'sqs_varnish_consumer', 'sku_ids':sku_ids, 'status': status}
+        extra = {'source': source, 'sku_ids': sku_ids, 'status': status, 'host': host}
         if exception:
             SIMPLE_LOG_FORMAT["exception"] = "%(exception)s"
             extra['exception'] = type(exception).__name__
