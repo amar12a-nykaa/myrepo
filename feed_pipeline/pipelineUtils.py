@@ -43,12 +43,12 @@ class PipelineUtils:
   def getVarnishDetails():
     TARGET_GROUP_ARNS = [{
       'region': 'ap-south-1',
-      'tg': 'arn:aws:elasticloadbalancing:ap-south-1:911609873560:targetgroup/preprod-cd-discovery-v6-tg/4a3a670e6e8928dc'
+      'tg': 'arn:aws:elasticloadbalancing:ap-south-1:911609873560:targetgroup/preprod-cd-pdp-varnish-tg/b4df51ce8c2ffc49'
     }]
     if socket.gethostname().startswith('admin'):
       TARGET_GROUP_ARNS = [{
         'region': 'ap-south-1',
-        'tg': 'arn:aws:elasticloadbalancing:ap-south-1:268361018769:targetgroup/prod-cd-discoveryapi-varnish-tg/b2b5ad1d30230ef0'
+        'tg': 'arn:aws:elasticloadbalancing:ap-south-1:268361018769:targetgroup/prod-cd-pdp-varnish-tg/90762f691b35b2e6'
       }]
     varnish_hosts = {}
     for target_group_arn in TARGET_GROUP_ARNS:
