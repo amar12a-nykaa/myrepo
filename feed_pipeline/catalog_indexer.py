@@ -143,6 +143,10 @@ class CatalogIndexer:
         "faces": "faces canada"
     }
 
+    category_exclusion_list = ["Candles and Diffusers", "Shavers & Trimmers", "Shower Gels and Body Wash", "Foundation & Concealer",
+                               "Blush & Highlighter", "Shampoo & Cleanser", "Loofahs & Sponges", "Manicure & Pedicure Kits",
+                               "Bags & Footwear"]
+
     final_replace_dict = {
         "makeup": "makeup make up",
         "make up": "makeup make up",
@@ -790,7 +794,8 @@ class CatalogIndexer:
                                         'position']:
                                 cat_facet[key] = str(info.get(key))
                             doc['category_facet'].append(cat_facet)
-                    doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if 'nykaa' not in x['name'].lower()]) or ""
+                    doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if (
+                            'nykaa' not in x['name'].lower() and x['name'] not in CatalogIndexer.category_exclusion_list)]) or ""
                     valid_category_value_list = ["parcos", "the men universe", "the women universe", "the art of living"]
                     doc['category_facet_searchable'] += " " + " ".join(
                         [x for x in doc['category_values'] if any(word in x.lower() for word in valid_category_value_list)])
