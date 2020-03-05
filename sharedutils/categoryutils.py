@@ -76,6 +76,10 @@ multicategoryList = {
     "1484": {"variant": ["Shopping Bags","Shopping Totes"], "name": "Shopping Bags and Totes"},
     "368": {"variant": ["Shower Gels","Body Wash"], "name": "Shower Gels & Body Wash"},
     "8426": {"variant": ["Shower Gels","Body Wash"], "name": "Shower Gels & Body Wash"},
+    "9606": {"variant": ["Shower Gels","Body Wash"], "name": "Shower Gels & Body Wash"},
+    "9592": {"variant": ["Foundation","Concealer"], "name": "Foundation & Concealer"},
+    "9593": {"variant": ["Blush","Highlighter"], "name": "Blush & Highlighter"},
+    "2313": {"variant": ["Bags","Footwear"], "name": "Bags & Footwear"},
     "8427": {"variant": ["Bath Scrubs","Body Scrubs"], "name": "Bath Scrubs"},
     "271": {"variant": ["Sponges","Applicators"], "name": "Sponges & Applicators"},
     "746": {"variant": ["Teeth Care","Dental Care"], "name": "Teeth & Dental Care"},
@@ -126,7 +130,7 @@ multicategoryList = {
     "8379": {"variant": ["Facewash"], "name": "Face Wash"},
     "9566": {"variant": ["Facewash"], "name": "Face Wash"},
     "1654": {"variant": ["Intimate Care"], "name": "Intimate Hygiene"},
-    "9598": {"variant": ["Shampoo"], "name": "Shampoo & Cleanser"},
+    "9598": {"variant": ["Shampoo", "Hair Cleanser"], "name": "Shampoo & Cleanser"},
     "9579": {"variant": ["Face Serum","Serums"], "name": "Serums"},
     "3056": {"variant": ["Sleepwear","Loungewear"], "name": "Sleep & Lounge"}
   }
