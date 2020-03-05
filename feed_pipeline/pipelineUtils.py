@@ -53,6 +53,9 @@ class PipelineUtils:
       TARGET_GROUP_ARNS = [{
         'region': 'ap-south-1',
         'tg': 'arn:aws:elasticloadbalancing:ap-south-1:268361018769:targetgroup/prod-cd-pdp-varnish-tg/90762f691b35b2e6'
+      },{
+        'region': 'ap-south-1',
+        'tg': 'arn:aws:elasticloadbalancing:ap-south-1:268361018769:targetgroup/prod-cd-main-varnish-tg/8c91dae2f815b6e8'
       }]
     varnish_hosts = {}
     for target_group_arn in TARGET_GROUP_ARNS:
