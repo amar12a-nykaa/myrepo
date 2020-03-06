@@ -42,7 +42,7 @@ def getCurrentDateTime():
 
 def getOfferConsumerCount():
     return int(subprocess.check_output(
-        "ps aux | grep python | grep cron_offer_listener_es.py | grep -vE 'vim|grep|/bin/sh|bash' | wc -l ",
+        "ps aux | grep python | grep cron_offer_listener_es.py | grep -vE 'vim|grep|/bin/sh|bash|sudo' | wc -l ",
         shell=True).strip())
 
 def getPipelineCount():
