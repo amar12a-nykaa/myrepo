@@ -79,7 +79,7 @@ multicategoryList = {
     "9606": {"variant": ["Shower Gels","Body Wash"], "name": "Shower Gels & Body Wash"},
     "9592": {"variant": ["Foundation","Concealer"], "name": "Foundation & Concealer"},
     "9593": {"variant": ["Blush","Highlighter"], "name": "Blush & Highlighter"},
-    "2313": {"variant": ["Bags","Footwear"], "name": "Bags & Footwear"},
+    "9591": {"variant": ["Lip Balm","Lip Gloss"], "name": "Lip Balm & Gloss"},
     "8427": {"variant": ["Bath Scrubs","Body Scrubs"], "name": "Bath Scrubs"},
     "271": {"variant": ["Sponges","Applicators"], "name": "Sponges & Applicators"},
     "746": {"variant": ["Teeth Care","Dental Care"], "name": "Teeth & Dental Care"},
