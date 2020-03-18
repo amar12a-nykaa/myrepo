@@ -16,6 +16,11 @@
           "tokenizer": "whitespace",
           "filter": ["lowercase", "my_word_delimiter_search", "asciifolding"],
           "char_filter": [ "strip_special_chars" ]
+        },
+        "autocomplete_shingle_search": {
+          "tokenizer": "whitespace",
+          "filter": ["lowercase", "my_word_delimiter_search", "asciifolding", "shingle_filter"],
+          "char_filter": [ "strip_special_chars" ]
         }
       },
       "char_filter":{
@@ -75,18 +80,25 @@
           "type": "text",
           "analyzer": "autocomplete_simple",
           "search_analyzer": "autocomplete_search",
+          "copy_to": "entity_shingle",
           "norms": { "enabled": false }
         },
-    "data": {
+        "entity_shingle": {
+          "type": "text",
+          "analyzer": "autocomplete_ngram",
+          "search_analyzer": "autocomplete_shingle_search",
+          "norms": { "enabled": false }
+        },
+        "data": {
       "type": "text"
     },
-    "id": {
+        "id": {
       "type": "keyword"
     },
-    "type": {
+        "type": {
       "type": "keyword"
     },
-    "weight": {
+        "weight": {
       "type" : "float"
     }
       }
