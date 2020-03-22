@@ -278,6 +278,9 @@ def process_brand(brand_data):
         data[tag].append(0)
         data["valid_" + tag].append(False)
       else:
+        #TODO remove later just a quick fix
+        if popularity_data.get('brand_id') in ["9256"]:
+            popularity = 120
         data[tag].append(popularity)
         data["valid_" + tag].append(True)
   
