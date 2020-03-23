@@ -278,9 +278,6 @@ def process_brand(brand_data):
         data[tag].append(0)
         data["valid_" + tag].append(False)
       else:
-        #TODO remove later just a quick fix
-        if popularity_data.get('brand_id') in ["9256"]:
-            popularity = 120
         data[tag].append(popularity)
         data["valid_" + tag].append(True)
   
@@ -388,6 +385,9 @@ def db_insert_brand(brand_popularity, top_category):
     if row['brand_id'] not in brand_info:
       print("Skipping brand %s" % row['brand_id'])
       continue
+    #TODO just a quick fix
+    if row['brand_id'] in ["9256"]:
+      row["nykaa"] = 120
     
     values = (brand_info[row['brand_id']]['brand_name'], row['brand_id'], brand_info[row['brand_id']]['brands_v1'], row["nykaa"],
               SearchUtils.StoreUtils.get_store_popularity_str(row, is_brand=True), json.dumps(top_category_brand.get(row['brand_id'], [])), brand_info[row['brand_id']]['brand_url'])
