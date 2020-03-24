@@ -44,18 +44,11 @@ class PipelineUtils:
     TARGET_GROUP_ARNS = [{
       'region': 'ap-south-1',
       'tg': 'arn:aws:elasticloadbalancing:ap-south-1:911609873560:targetgroup/preprod-cd-pdp-varnish-tg/b4df51ce8c2ffc49'
-    },{
-      'region': 'ap-south-1',
-      'tg': 'arn:aws:elasticloadbalancing:ap-south-1:911609873560:targetgroup/preprod-cd-main-varnish-tg/e93af2b86500a118'
-    }
-    ]
+    }]
     if socket.gethostname().startswith('admin'):
       TARGET_GROUP_ARNS = [{
         'region': 'ap-south-1',
         'tg': 'arn:aws:elasticloadbalancing:ap-south-1:268361018769:targetgroup/prod-cd-pdp-varnish-tg/90762f691b35b2e6'
-      },{
-        'region': 'ap-south-1',
-        'tg': 'arn:aws:elasticloadbalancing:ap-south-1:268361018769:targetgroup/prod-cd-main-varnish-tg/8c91dae2f815b6e8'
       }]
     varnish_hosts = {}
     for target_group_arn in TARGET_GROUP_ARNS:
