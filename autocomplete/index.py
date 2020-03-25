@@ -682,7 +682,8 @@ def fetch_products_from_es(size):
           ],
           "must_not": [
             {"term": {"category_ids": "2413"}},
-            {"term": {"type": "bundle"}}
+            {"term": {"type": "bundle"}},
+            {"term": {"disabled": True}}
           ]
         }
     },
