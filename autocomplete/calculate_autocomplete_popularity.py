@@ -49,6 +49,7 @@ def get_brand_data():
 def get_popularity_data_from_es(valid_category_list):
   query = {
     "size": 0,
+    "query": {"term": {"disabled": "false"}},
     "aggs": {
       "category_data": {
         "terms": {
@@ -86,6 +87,7 @@ def get_popularity_data_from_es(valid_category_list):
 def get_popularity_data_for_brand():
   query = {
     "size": 0,
+    "query": {"term": {"disabled": "false"}},
     "aggs": {
       "brand_data": {
         "terms": {
