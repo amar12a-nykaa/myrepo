@@ -45,7 +45,7 @@
         }
       }
     },
-    "number_of_replicas" : 9,
+    "number_of_replicas" : 7,
     "number_of_shards": 1
   },
   "mappings": {
