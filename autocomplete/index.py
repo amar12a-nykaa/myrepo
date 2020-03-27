@@ -56,12 +56,12 @@ STORE_LIST = SearchUtils.VALID_CATALOG_TAGS
 GLOBAL_FAST_INDEXING = False
 
 MIN_COUNTS = {
-  "product": 30000,
-  "brand": 1000,
-  "category": 200,
-  "brand_category": 10000,
-  "search_query": 20000,
-  "category_facet": 200,
+  "product": 1000,
+  "brand": 10,
+  "category": 20,
+  "brand_category": 100,
+  "search_query": 2000,
+  "category_facet": 20,
 }
 PasUtils.mysql_write("create or replace view l3_categories_clean as select * from l3_categories where url not like '%shop-by-concern%' and category_popularity>0;")
 
