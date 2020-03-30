@@ -145,7 +145,8 @@ class CatalogIndexer:
 
     category_exclusion_list = ["Candles and Diffusers", "Shavers & Trimmers", "Shower Gels and Body Wash", "Foundation & Concealer",
                                "Blush & Highlighter", "Shampoo & Cleanser", "Loofahs & Sponges", "Manicure & Pedicure Kits",
-                               "Bags & Footwear"]
+                               "Bags & Footwear", "Lingerie & More", "Jewellery & Accessories", "Clothing & More", "Bath Salts & Bath Bombs",
+                               "Lip Balm & Gloss", "Heels & Wedges", "Blush & Highlighter"]
 
     final_replace_dict = {
         "makeup": "makeup make up",
