@@ -21,6 +21,7 @@ def create_log_file():
     os.makedirs(os.path.dirname(filename), exist_ok=True)
 
 NUMBER_OF_THREADS = 1
+MAX_CONSUMPTION_LIMIT = 100
 
 
 def get_consumer_count():
@@ -116,8 +117,8 @@ class SQSConsumer:
         is_sqs_empty = False
         num_consecutive_empty_checks = 0
         num_products_processed = 0
-
-        while not is_sqs_empty:
+        counter = 0
+        while (not is_sqs_empty and counter < MAX_CONSUMPTION_LIMIT):
             response = self.sqs.receive_message(
                 QueueUrl=self.sqs_endpoint,
                 AttributeNames=["SentTimestamp"],
@@ -130,12 +131,14 @@ class SQSConsumer:
 
             if "Messages" in response:
                 for message in response["Messages"]:
+                    counter += 1
                     receipt_handle = message["ReceiptHandle"]
                     body = json.loads(message["Body"])
                     docs.extend(body.get("sku_ids", ""))
                     update_docs.append({"sku_ids": docs, "source": body.get("source", "")})
                     self.sqs.delete_message(QueueUrl=self.sqs_endpoint, ReceiptHandle=receipt_handle)
             else:
+                counter = MAX_CONSUMPTION_LIMIT
                 is_sqs_empty = True
                 print("Main Thread: SQS is empty!")
 
@@ -210,9 +213,11 @@ if __name__ == "__main__":
         exit()
     parser = argparse.ArgumentParser()
     parser.add_argument("--threads", type=int, help="number of records in single index request")
+    parser.add_argument("--max_limit", type=int, help="maximum no. of messages consumed from sqs in one run")
     argv = vars(parser.parse_args())
     if argv["threads"]:
         NUMBER_OF_THREADS = argv["threads"]
-
+    if argv["max_limit"]:
+        MAX_CONSUMPTION_LIMIT = argv["max_limit"]
     consumer = SQSConsumer()
     consumer.start()
