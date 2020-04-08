@@ -24,7 +24,7 @@
         }
       }
     },
-    "number_of_replicas" : 7,
+    "number_of_replicas" : 4,
     "number_of_shards": 2,
     "index.search.slowlog.level": "debug",
     "index.search.slowlog.threshold.query.debug": "300ms"
