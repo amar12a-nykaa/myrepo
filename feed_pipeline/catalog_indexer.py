@@ -1051,6 +1051,15 @@ class CatalogIndexer:
                         doc[field_prefix + '_ids'] = facet_ids
                         doc[field_prefix + '_values'] = facet_values
                         facets = []
+                        all_facets = []
+                        for i, value in enumerate(facet_ids):
+                            facet_dict = OrderedDict()
+                            facet_dict['id'] = value
+                            facet_dict['name'] = facet_values[i]
+                            all_facets.append(facet_dict)
+                        print(all_facets)
+                        with open('all_facets.txt', 'w') as outfile:
+                            json.dump(all_facets, outfile)
                         if field_prefix in ['brand', 'old_brand', 'size']:
                             for i, brand_id in enumerate(facet_ids):
                                 brand_facet = OrderedDict()
@@ -1066,6 +1075,9 @@ class CatalogIndexer:
                                 if attrs.get('color_code'):
                                     other_facet['color_code'] = attrs['color_code']
                                 facets.append(other_facet)
+                        print(facets)
+                        with open('facets.txt', 'w') as outfile:
+                            json.dump(facets, outfile)
                         doc[field_prefix + '_facet'] = facets
                     # elif len(facet_ids) != len(facet_values):
                     #  with open("/data/inconsistent_facet.txt", "a") as f:
