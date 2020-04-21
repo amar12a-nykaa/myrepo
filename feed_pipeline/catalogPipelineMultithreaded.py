@@ -11,6 +11,12 @@ import traceback
 import subprocess
 import urllib.request
 import csv
+import boto3
+from pipelineUtils import PipelineUtils
+sys.path.append("/home/ubuntu/nykaa_scripts/")
+from utils.mailutils import Mail
+
+
 sys.path.append('/nykaa/scripts/sharedutils/')
 from esutils import EsUtils
 
@@ -38,6 +44,7 @@ from disc.v2.utils import Utils as DiscUtils
 FEED_URL_PREPROD = "http://preprod-2012758952.ap-southeast-1.elb.amazonaws.com/media/feed/master_feed_gludo.csv"
 FEED_URL = "http://adminpanel.nykaa.com/media/feed/master_feed_gludo.csv"
 FEED_LOCATION = '/data/nykaa/master_feed_gludo.csv'
+MAIL_RECEIPIENTS = "discovery-tech@nykaa.com"
 hostname = socket.gethostname()
 
 myname = os.path.basename(__file__)
@@ -64,7 +71,7 @@ if getCount() > 1:
     raise Exception("Pipeline is already running. Exiting without doing anything")
 
 
-def indexESData(file_path, force_run, offerbatchsize, offerswitch, instockswitch):
+def indexESData(file_path, force_run, offerbatchsize, offerswitch, instockswitch, reviewswitch, review_file_path):
     indexes = EsUtils.get_active_inactive_indexes("livecore")
     active_index = indexes['active_index']
     inactive_index = indexes['inactive_index']
@@ -86,7 +93,7 @@ def indexESData(file_path, force_run, offerbatchsize, offerswitch, instockswitch
 
     print("\n\nES: Indexing documents from csv file '%s' to index '%s'." % (file_path, inactive_index))
     CatalogIndexer.index(search_engine='elasticsearch', file_path=file_path, collection=inactive_index,
-                         limit=argv['limit'], update_productids=True, offerbatchsize=offerbatchsize, offerswitch=offerswitch)
+                         limit=argv['limit'], update_productids=True, offerbatchsize=offerbatchsize, offerswitch=offerswitch, reviewswitch=reviewswitch, review_file_path= review_file_path)
 
     if instockswitch:
       print("Adding in_stock size value")
@@ -146,6 +153,7 @@ if __name__ == "__main__":
     parser.add_argument("--bestsellerupdate", default=True, type=bool)
     parser.add_argument("-b", "--offerbatchsize", default=1000, help='size of offer docs batch', type=int)
     parser.add_argument("-w", "--offerswitch", default=False, help='switch for fetch_offers function', type=bool)
+    parser.add_argument("-r", "--reviewswitch", default=True, help='switch for fetch_reviews function', type=bool)
     parser.add_argument("-o", "--oos-size-switch", default=False, help='switch for fetch_offers function', type=bool)
     
     argv = vars(parser.parse_args())
@@ -206,9 +214,24 @@ if __name__ == "__main__":
     offerbatchsize = argv['offerbatchsize']
     offerswitch = argv['offerswitch']
     instockswitch = argv['oos_size_switch']
+    reviewswitch = argv['reviewswitch']
+
+    review_file_path = None
+    # Download review.csv file
+    if reviewswitch:
+        review_bucket, review_file = PipelineUtils.getReviewsFileDetails()
+        try:
+            s3 = boto3.client('s3')
+            s3.download_file(review_bucket, review_file, review_file)
+        except:
+            # mail that previous file is used in case of failure
+            Mail.send(MAIL_RECEIPIENTS, "noreply@nykaa.com", "Reviews.csv Download Failed","Reviews.csv file Download Failed. Using previous day reviews.csv file for catalog indexing.")
+            print(traceback.format_exc())
+
+        review_file_path = review_file
     # Index Elastic Search Data
     if argv['search_engine'] in ['elasticsearch', None]:
-        indexESData(file_path, force_run, offerbatchsize, offerswitch,instockswitch)
+        indexESData(file_path, force_run, offerbatchsize, offerswitch, instockswitch, reviewswitch, review_file_path)
 
     if argv['bestsellerupdate']:
         update_bestseller_data(100)

@@ -92,6 +92,13 @@ class PipelineUtils:
       SQS_ENDPOINT = 'https://sqs.ap-south-1.amazonaws.com/268361018769/DiscoveryVarnishPurgeQueue'
     return SQS_ENDPOINT, SQS_REGION
 
+  def getReviewsFileDetails():
+    review_bucket = 'nka-nonprod-rating-review'
+    review_file = 'reviews.csv'
+    if socket.gethostname().startswith('admin'):
+      review_bucket = ''
+    return review_bucket, review_file
+
   def getAdPlatformEndPoint():
     host = 'nykaa-widgets-staging.nykaa.com'
     if socket.gethostname().startswith('admin'):
