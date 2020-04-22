@@ -1,16 +1,16 @@
 keyword	filter_name	filter_value	freq	keyword_type
-default	guide_tag	NEW	100000	guide
-default	guide_tag	BESTSELLER	90000	guide
-default	guide_tag	OFFER	95000	guide
-default	guide_tag	LUXE	96000	guide
-default	guide_tag	MEN	80000	guide
-default	guide_tag	NATURAL	91000	guide
-lakme	guide_tag	NEW	100000	guide
-lakme	guide_tag	BESTSELLER	90000	guide
-lakme	guide_tag	OFFER	95000	guide
-lakme	guide_tag	LUXE	96000	guide
-lakme	guide_tag	MEN	80000	guide
-lakme	guide_tag	NATURAL	91000	guide
+default	guide_tag	NEW	100000	keyword
+default	guide_tag	BESTSELLER	90000	keyword
+default	guide_tag	OFFER	95000	keyword
+default	guide_tag	LUXE	96000	keyword
+default	guide_tag	MEN	80000	keyword
+default	guide_tag	NATURAL	91000	keyword
+lakme	guide_tag	NEW	100000	keyword
+lakme	guide_tag	BESTSELLER	90000	keyword
+lakme	guide_tag	OFFER	95000	keyword
+lakme	guide_tag	LUXE	96000	keyword
+lakme	guide_tag	MEN	80000	keyword
+lakme	guide_tag	NATURAL	91000	keyword
 about huda	category	267	3	keyword
 about huda	skin_tone	10888	6	keyword
 about huda	category	269	3	keyword

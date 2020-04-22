@@ -55,11 +55,6 @@ def process_guides(filename='guide.csv'):
     for keyword in keyword_list:
         temp_df = df[df['keyword'] == keyword]
         keyword_type = temp_df.iloc[0]['keyword_type']
-        if keyword_type == 'guide':
-            temp_df = temp_df.sort_values(by='freq', ascending=False)
-            temp_df = temp_df.reset_index()
-            guide_list.append(temp_df)
-            continue
         # remove filters present in keyword itself
         if keyword_type == 'keyword':
             entities, coverage = EntityUtils.get_matched_entities(keyword)
