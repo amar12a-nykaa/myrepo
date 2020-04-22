@@ -55,6 +55,11 @@ def process_guides(filename='guide.csv'):
     for keyword in keyword_list:
         temp_df = df[df['keyword'] == keyword]
         keyword_type = temp_df.iloc[0]['keyword_type']
+        if keyword_type == 'guide':
+            temp_df = temp_df.sort_values(by='freq', ascending=False)
+            temp_df = temp_df.reset_index()
+            guide_list.append(temp_df)
+            continue
         # remove filters present in keyword itself
         if keyword_type == 'keyword':
             entities, coverage = EntityUtils.get_matched_entities(keyword)
@@ -121,8 +126,15 @@ def get_filters():
                              ['1', 'Rating>1', 'star_rating'], ['2', 'Rating>2', 'star_rating'],
                              ['3', 'Rating>3', 'star_rating'], ['4', 'Rating>4', 'star_rating']])
     rating_data = pd.DataFrame(data=star_ratings[1:, :], columns=star_ratings[0, :])
-    
-    filters = pd.concat([filters, brands, categories, price_data, discount_data, rating_data])
+
+    smart_guides = np.array([['filter_id', 'filter_value', 'filter_name'],
+                                    ['BESTSELLER', 'Bestsellers', 'guide_tag'],['NEW', 'New Launches', 'guide_tag'],
+                                    ['OFFER', 'On Offer', 'guide_tag'],['MEN', 'For Men', 'guide_tag'],
+                                    ['LUXE', 'Premium Brands', 'guide_tag'],['NATURAL', 'Natural Collection', 'guide_tag']
+                                    ])
+    smart_guide_data = pd.DataFrame(data=smart_guides[1:, :], columns=smart_guides[0, :])
+
+    filters = pd.concat([filters, brands, categories, price_data, discount_data, rating_data, smart_guide_data])
     return filters
 
 
