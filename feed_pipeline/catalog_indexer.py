@@ -665,7 +665,24 @@ class CatalogIndexer:
         # index_start = timeit.default_timer()
         if update_productids:
             CatalogIndexer.update_sku_product_mapping(records)
-
+        all_facets = []
+        facet_fields = [field for field in required_fields_from_csv if
+                        field.endswith("_v1") or (field == 'size_id' and size_filter_flag == 1)]
+        print(facet_fields)
+        for index, row in enumerate(records):
+            facet_fields = [field for field in required_fields_from_csv if
+                            field.endswith("_v1") or (field == 'size_id' and size_filter_flag == 1)]
+            for field in facet_fields:
+                field_prefix = field.rsplit('_', 1)[0]
+                facet_ids = (row[field] or "").split('|') if row[field] else []
+                facet_values = (row[field_prefix] or "").split('|') if row[field_prefix] else []
+                if facet_ids and len(facet_ids) == len(facet_values):
+                    for i, value in enumerate(facet_ids):
+                        facet_dict = OrderedDict()
+                        facet_dict['id'] = value
+                        facet_dict['name'] = facet_values[i]
+                        if facet_dict not in all_facets:
+                            all_facets.append(facet_dict)
         for index, row in enumerate(records):
             try:
                 CatalogIndexer.validate_catalog_feed_row(row)
@@ -1043,6 +1060,7 @@ class CatalogIndexer:
 
                 # facets: dynamic fields
                 facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1") or (field == 'size_id' and size_filter_flag == 1)]
+                missing_facets = []
                 for field in facet_fields:
                     field_prefix = field.rsplit('_', 1)[0]
                     facet_ids = (row[field] or "").split('|') if row[field] else []
@@ -1051,15 +1069,7 @@ class CatalogIndexer:
                         doc[field_prefix + '_ids'] = facet_ids
                         doc[field_prefix + '_values'] = facet_values
                         facets = []
-                        all_facets = []
-                        for i, value in enumerate(facet_ids):
-                            facet_dict = OrderedDict()
-                            facet_dict['id'] = value
-                            facet_dict['name'] = facet_values[i]
-                            all_facets.append(facet_dict)
-                        print(all_facets)
-                        with open('all_facets.txt', 'w+') as outfile:
-                            json.dump(all_facets, outfile)
+                        # print(all_facets)
                         if field_prefix in ['brand', 'old_brand', 'size']:
                             for i, brand_id in enumerate(facet_ids):
                                 brand_facet = OrderedDict()
@@ -1074,15 +1084,16 @@ class CatalogIndexer:
                                 other_facet['name'] = attrs['name']
                                 if attrs.get('color_code'):
                                     other_facet['color_code'] = attrs['color_code']
+                                if other_facet not in all_facets:
+                                    missing_facets.append(other_facet)
                                 facets.append(other_facet)
-                        print(facets)
-                        with open('facets.txt', 'w+') as outfile:
-                            json.dump(facets, outfile)
                         doc[field_prefix + '_facet'] = facets
                     # elif len(facet_ids) != len(facet_values):
                     #  with open("/data/inconsistent_facet.txt", "a") as f:
                     #    f.write("%s  %s\n"%(doc['sku'], field))
- 
+
+                doc['missing_facets'] = missing_facets
+                doc['all_facets'] = all_facets
                 doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
                 if not doc['brand_facet_searchable']:
                     doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
