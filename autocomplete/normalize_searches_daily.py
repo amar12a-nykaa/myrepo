@@ -71,9 +71,9 @@ def create_missing_indices():
 create_missing_indices()
 
 def get_corrections_map():
-    url = "https://nyk-aggregator-api.nykaa.com/api/getRedisData?key_type=query_replace&nested=true"
-    response = json.loads(urllib.request.urlopen(url).read().decode('utf-8'))
-
+    # url = "https://nyk-aggregator-api.nykaa.com/api/getRedisData?key_type=query_replace&nested=true"
+    # response = json.loads(urllib.request.urlopen(url).read().decode('utf-8'))
+    response = {}
     df = pd.read_csv("correction_file.csv")
     for i, row in df.iterrows():
         row = dict(row)
