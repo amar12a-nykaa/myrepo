@@ -110,7 +110,7 @@ def is_result_present(query):
 def getQuerySuggestion(query_id, query, algo):
     global CORRECTIONS_MAP
     if query in CORRECTIONS_MAP:
-        modified_query = CORRECTIONS_MAP.get('query')
+        modified_query = CORRECTIONS_MAP.get(query)
         return modified_query
     for term in corrected_search_query.find({"_id": query_id, "query" : query}):
         modified_query = term["suggested_query"]
