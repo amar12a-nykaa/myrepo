@@ -7,6 +7,7 @@ import pprint
 import re
 import sys
 import traceback
+import urllib.request
 from collections import OrderedDict
 from contextlib import closing
 
@@ -69,6 +70,13 @@ def create_missing_indices():
 
 create_missing_indices()
 
+def get_corrections_map():
+    url = "https://nyk-aggregator-api.nykaa.com/api/getRedisData?key_type=query_replace&nested=true"
+    response = json.loads(urllib.request.urlopen(url).read().decode('utf-8'))
+    return response
+
+CORRECTIONS_MAP = get_corrections_map()
+
 def is_result_present(query):
     must_not = []
     must = []
@@ -95,6 +103,10 @@ def is_result_present(query):
     return False
 
 def getQuerySuggestion(query_id, query, algo):
+    global CORRECTIONS_MAP
+    if query in CORRECTIONS_MAP:
+        modified_query = CORRECTIONS_MAP.get('query')
+        return modified_query
     for term in corrected_search_query.find({"_id": query_id, "query" : query}):
         modified_query = term["suggested_query"]
         return modified_query
