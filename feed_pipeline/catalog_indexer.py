@@ -454,7 +454,7 @@ class CatalogIndexer:
                         doc['review_count'] = reviews_data[3]
                         doc['star_rating_count'] = int(reviews_data[4])
                         doc['star_rating'] = reviews_data[5]
-                        doc['star_rating_percentage'] = int(doc['star_rating'] * 20)
+                        doc['star_rating_percentage'] = int(float(doc['star_rating']) * 20)
                     else:
                         doc['top_reviews'] = ''
                         doc['review_splitup'] = ''
