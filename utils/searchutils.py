@@ -451,7 +451,7 @@ STORE_MAP = {
       )"""
   },
 
-  "store_south": {
+  "nonEssential": {
     "leaf_query": """(select distinct l4_name as category_name,l4_id as category_id 
     from ( 
       select * from product_category_mapping
