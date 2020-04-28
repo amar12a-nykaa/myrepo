@@ -29,7 +29,7 @@ class GenerateDailyDiscountCsv:
     def getBundleDiscounts(self):
         query = """SELECT sku,discount as current_discount,scheduled_discount as next_discount,schedule_start as next_discount_start,schedule_end as next_discount_end FROM bundles"""
         results = PasUtils.fetchResults(self.mysql_conn, query)
-        with open('daily_discounts.csv', 'w+') as csvfile:
+        with open('daily_discounts.csv', 'a+') as csvfile:
             csv_writer = csv.DictWriter(csvfile, fieldnames=self.file_header)
             for index, product in enumerate(results):
                 product["type"] = 'bundle'
@@ -60,9 +60,9 @@ class GenerateDailyDiscountCsv:
 
     def uploadToS3(self):
         s3 = boto3.resource('s3')
-        response = s3.meta.client.upload_file('daily_discounts.csv', self.bucket_name, 'daily_dicount_{}.csv'.format(datetime.date.today().strftime('%Y-%m-%d')))
+        response = s3.meta.client.upload_file('daily_discounts.csv', self.bucket_name, 'daily_discounts_{}.csv'.format(datetime.date.today().strftime('%Y-%m-%d')))
         response = s3.meta.client.upload_file('daily_discounts.csv', self.bucket_name,
-                                  'daily_dicounts.csv')
+                                  'daily_discounts.csv')
 
 
 if __name__ == "__main__":
