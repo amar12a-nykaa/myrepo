@@ -42,26 +42,26 @@ class GenerateDailyDiscountCsv:
         schedule_start = product["next_discount_start"]
         schedule_end = product["next_discount_end"]
         discount = product["current_discount"]
-        current_datetime = datetime.utcnow()
+        current_datetime = datetime.datetime.utcnow()
         from_zone = tz.gettz("UTC")
         to_zone = tz.gettz("Asia/Kolkata")
         current_datetime = current_datetime.replace(tzinfo=from_zone)
         current_datetime = current_datetime.astimezone(to_zone)
-        if current_datetime >= schedule_start.replace(
+        if schedule_start and schedule_end:
+            if current_datetime >= schedule_start.replace(
                 tzinfo=to_zone
         ) and current_datetime < schedule_end.replace(tzinfo=to_zone):
-            product["current_discount"] = scheduled_discount
-            product["next_discount"] = discount
-            product["next_discount_start"] = schedule_end
-            product["next_discount_end"] = None
+                product["current_discount"] = scheduled_discount
+                product["next_discount"] = discount
+                product["next_discount_start"] = schedule_end
+                product["next_discount_end"] = None
         return product
 
 
     def uploadToS3(self):
-        pipeline = boto3.session.Session(profile_name='datapipeline')
-        s3 = pipeline.resource('s3')
-        response = s3.upload_file('daily_discounts.csv', self.bucket_name, 'daily_dicount_{}.csv'.format(datetime.date.today().strftime('%Y-%m-%d')))
-        response = s3.upload_file('daily_discounts.csv', self.bucket_name,
+        s3 = boto3.resource('s3')
+        response = s3.meta.client.upload_file('daily_discounts.csv', self.bucket_name, 'daily_dicount_{}.csv'.format(datetime.date.today().strftime('%Y-%m-%d')))
+        response = s3.meta.client.upload_file('daily_discounts.csv', self.bucket_name,
                                   'daily_dicounts.csv')
 
 
