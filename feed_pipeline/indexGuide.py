@@ -125,7 +125,8 @@ def get_filters():
     smart_guides = np.array([['filter_id', 'filter_value', 'filter_name'],
                                     ['BESTSELLER', 'Bestsellers', 'guide_tag'],['NEW', 'New Launches', 'guide_tag'],
                                     ['OFFER', 'On Offer', 'guide_tag'],['MEN', 'For Men', 'guide_tag'],
-                                    ['LUXE', 'Premium Brands', 'guide_tag'],['NATURAL', 'Natural Collection', 'guide_tag']
+                                    ['LUXE', 'Premium Brands', 'guide_tag'],['NATURAL', 'Natural Collection', 'guide_tag'],
+                                    ['DISCOUNT', 'On Discount', 'guide_tag'], ['TOPRATED', 'Top Rated', 'guide_tag']
                                     ])
     smart_guide_data = pd.DataFrame(data=smart_guides[1:, :], columns=smart_guides[0, :])
 

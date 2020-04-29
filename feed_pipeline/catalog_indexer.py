@@ -1191,6 +1191,13 @@ class CatalogIndexer:
                 if "luxe" in doc.get("catalog_tag"):
                     doc["guide_tag"].append("LUXE")
                     doc["guide_tag_facet"].append(OrderedDict({"id": "LUXE", "name": "Luxe"}))
+                if doc.get('discount', 0) > 0:
+                    doc["guide_tag"].append("DISCOUNT")
+                    doc["guide_tag_facet"].append(OrderedDict({"id": "DISCOUNT", "name": "Discount"}))
+                if doc.get('star_rating_percentage', 0) > 90:
+                    doc["guide_tag"].append("TOPRATED")
+                    doc["guide_tag_facet"].append(OrderedDict({"id": "TOPRATED", "name": "TopRated"}))
+
                     
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
