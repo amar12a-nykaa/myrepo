@@ -23,7 +23,8 @@ class GenerateDailyDiscountCsv:
             csv_writer.writeheader()
             for index, product in enumerate(results):
                 product = self.processDiscountForSku(product)
-                csv_writer.writerow(product)
+                if product['current_discount'] > 0 or product['next_discount'] > 0:
+                    csv_writer.writerow(product)
             csvfile.close()
 
     def getBundleDiscounts(self):
@@ -34,10 +35,15 @@ class GenerateDailyDiscountCsv:
             for index, product in enumerate(results):
                 product["type"] = 'bundle'
                 product = self.processDiscountForSku(product)
-                csv_writer.writerow(product)
+                if product['current_discount'] > 0  or product['next_discount'] > 0:
+                    csv_writer.writerow(product)
         csvfile.close()
 
     def processDiscountForSku(self, product):
+        if not product['next_discount']:
+            product['next_discount'] = 0.0
+        if not product['current_discount']:
+            product['current_discount'] = 0.0
         scheduled_discount = product["next_discount"]
         schedule_start = product["next_discount_start"]
         schedule_end = product["next_discount_end"]
