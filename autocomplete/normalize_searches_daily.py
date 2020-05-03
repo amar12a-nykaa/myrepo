@@ -150,14 +150,22 @@ def normalize_search_terms():
 
     date_buckets = [(0,15),(16,30),(31,45),(46,60),(61,75),(76,90),(91,105),(106,120),(121,135),(136,150),(151,165),(165,180)]
     dfs = []
-
+    ignore_window_start = arrow.get('2020-04-01', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
+    ignore_window_end = arrow.get('2020-05-01', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
     bucket_results = []
     for bucket_id, date_bucket in enumerate(date_buckets):
         startday = date_bucket[1] * -1 
         endday = date_bucket[0] * -1 
         startdate = arrow.now().replace(days=startday, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(tzinfo=None) 
         enddate = arrow.now().replace(days=endday, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(tzinfo=None)
-        print(startdate, enddate) 
+        print(startdate, enddate)
+        if startdate >= ignore_window_start and enddate < ignore_window_end:
+            continue
+        if startdate < ignore_window_start and enddate < ignore_window_end:
+            enddate = ignore_window_start
+        elif startdate < ignore_window_end and enddate > ignore_window_end:
+            startdate = ignore_window_end
+        print("calculating for %s %s"%(startdate, enddate))
         bucket_results = []
         # TODO need to set count sum to count
 
