@@ -1194,7 +1194,7 @@ class CatalogIndexer:
                 if doc.get('discount', 0) > 0:
                     doc["guide_tag"].append("DISCOUNT")
                     doc["guide_tag_facet"].append(OrderedDict({"id": "DISCOUNT", "name": "Discount"}))
-                if doc.get('star_rating_percentage', 0) > 90:
+                if doc.get('star_rating_percentage', 0) > 90 and doc.get('star_rating_count') > 10:
                     doc["guide_tag"].append("TOPRATED")
                     doc["guide_tag_facet"].append(OrderedDict({"id": "TOPRATED", "name": "TopRated"}))
 
