@@ -11,7 +11,7 @@ sys.path.append("/var/www/pds_api/")
 from nykaa.settings import DISCOVERY_SQS_ENDPOINT
 from nykaa.settings import DISCOVERY_SQS_REGION
 
-GLUDO_FILE_NAME = 'gludo_forced.csv'
+GLUDO_FILE_NAME = 'gludo_catalog_upload.csv'
 
 valid_fields = {
 	"sku": "str",
