@@ -1054,7 +1054,8 @@ class CatalogIndexer:
                 #             facet_dict['name'] = facet_values[i]
                 #             if facet_dict not in all_facets:
                 #                 all_facets.append(facet_dict)
-                # missing_facets = []
+                missing_facets = []
+                missing_facets_names = []
                 for field in facet_fields:
                     field_prefix = field.rsplit('_', 1)[0]
                     facet_ids = (row[field] or "").split('|') if row[field] else []
@@ -1064,13 +1065,14 @@ class CatalogIndexer:
                         doc[field_prefix + '_values'] = facet_values
                         facets = []
                         all_facets = []
-                        missing_facets = []
+                        # missing_facets = []
                         for i, value in enumerate(facet_ids):
                             facet_dict = OrderedDict()
                             facet_dict['id'] = value
                             facet_dict['name'] = facet_values[i]
                             if facet_dict not in all_facets:
                                 all_facets.append(facet_dict)
+                        # print(all_facets)
                         print(all_facets)
                         if field_prefix in ['brand', 'old_brand', 'size']:
                             for i, brand_id in enumerate(facet_ids):
@@ -1088,14 +1090,17 @@ class CatalogIndexer:
                                     other_facet['color_code'] = attrs['color_code']
                                 if other_facet not in all_facets:
                                     missing_facets.append(other_facet)
+                                    if field_prefix not in missing_facets_names:
+                                        missing_facets_names.append(field_prefix)
                                 facets.append(other_facet)
                         doc[field_prefix + '_facet'] = facets
-                    # elif len(facet_ids) != len(facet_values):
-                    #  with open("/data/inconsistent_facet.txt", "a") as f:
-                    #    f.write("%s  %s\n"%(doc['sku'], field))
-
-                        doc[field_prefix + '_missing_facets'] = missing_facets
+                        # elif len(facet_ids) != len(facet_values):
+                        #  with open("/data/inconsistent_facet.txt", "a") as f:
+                        #    f.write("%s  %s\n"%(doc['sku'], field))
+                        #     doc[field_prefix + '_missing_facets'] = missing_facets
                         doc[field_prefix + '_all_facets'] = all_facets
+                    doc['missing_facets'] = missing_facets
+                    doc['missing_facets_names'] = missing_facets_names
                 doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
                 if not doc['brand_facet_searchable']:
                     doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
