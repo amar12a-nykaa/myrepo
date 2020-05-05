@@ -60,7 +60,7 @@ class GenerateDailyDiscountCsv:
                 product["next_discount_start"] = schedule_end
                 product["next_discount_end"] = None
             if current_datetime >= schedule_end(tzinfo=to_zone):
-                product["next_discount"] = 0.0
+                product["next_discount"] = None
                 product["next_discount_start"] = None
                 product["next_discount_end"] = None
         return product
