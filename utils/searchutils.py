@@ -333,7 +333,7 @@ STORE_MAP = {
       )"""
   },
 
-  "store_west": {
+  "store_essential": {
     "leaf_query": """(select distinct l4_name as category_name,l4_id as category_id 
     from ( 
       select * from product_category_mapping
@@ -392,7 +392,7 @@ STORE_MAP = {
       )"""
   },
 
-  "store_north": {
+  "store_WB": {
     "leaf_query": """(select distinct l4_name as category_name,l4_id as category_id 
     from ( 
       select * from product_category_mapping
