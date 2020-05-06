@@ -161,7 +161,7 @@ def normalize_search_terms():
         print(startdate, enddate)
         if startdate >= ignore_window_start and enddate < ignore_window_end:
             continue
-        if startdate < ignore_window_start and enddate < ignore_window_end:
+        if enddate > ignore_window_start and enddate < ignore_window_end:
             enddate = ignore_window_start
         elif startdate < ignore_window_end and enddate > ignore_window_end:
             startdate = ignore_window_end

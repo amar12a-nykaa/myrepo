@@ -171,7 +171,7 @@ def get_bucket_results(date_bucket=None):
     if startdate >= ignore_window_start and enddate < ignore_window_end:
       print("Skipping bucket:", date_bucket)
       return None
-    if startdate < ignore_window_start and enddate < ignore_window_end:
+    if enddate > ignore_window_start and enddate < ignore_window_end:
       enddate = ignore_window_start
     elif startdate < ignore_window_end and enddate > ignore_window_end:
       startdate = ignore_window_end
