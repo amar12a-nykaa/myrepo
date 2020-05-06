@@ -166,8 +166,8 @@ def get_bucket_results(date_bucket=None):
                                     tzinfo=None).datetime.replace(tzinfo=None)
     enddate = arrow.now().replace(days=endday, hour=0, minute=0, second=0, microsecond=0,
                                   tzinfo=None).datetime.replace(tzinfo=None)
-    ignore_window_start = arrow.get('2020-04-01', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
-    ignore_window_end = arrow.get('2020-05-01', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
+    ignore_window_start = arrow.get('2020-03-24', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
+    ignore_window_end = arrow.get('2020-05-03', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
     if startdate >= ignore_window_start and enddate < ignore_window_end:
       print("Skipping bucket:", date_bucket)
       return None

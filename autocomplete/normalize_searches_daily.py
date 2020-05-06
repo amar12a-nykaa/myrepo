@@ -150,8 +150,8 @@ def normalize_search_terms():
 
     date_buckets = [(0,15),(16,30),(31,45),(46,60),(61,75),(76,90),(91,105),(106,120),(121,135),(136,150),(151,165),(165,180)]
     dfs = []
-    ignore_window_start = arrow.get('2020-04-01', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
-    ignore_window_end = arrow.get('2020-05-01', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
+    ignore_window_start = arrow.get('2020-03-24', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
+    ignore_window_end = arrow.get('2020-05-03', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
     bucket_results = []
     for bucket_id, date_bucket in enumerate(date_buckets):
         startday = date_bucket[1] * -1 
