@@ -127,7 +127,7 @@ def send_to_discovery_service(docs, env):
 		sqs = boto3.client("sqs", region_name=DISCOVERY_SQS_REGION)
 
 		queue_url = DISCOVERY_SQS_ENDPOINT
-		if len(update_docs) == 2 or processed_docs == number_of_docs:
+		if len(update_docs) == 100 or processed_docs == number_of_docs:
 			response = sqs.send_message(
 				QueueUrl=queue_url,
 				DelaySeconds=0,
