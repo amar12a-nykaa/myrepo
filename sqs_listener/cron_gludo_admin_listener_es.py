@@ -136,7 +136,7 @@ def send_to_discovery_service(docs, env):
 				MessageGroupId="1",
 				MessageDeduplicationId=str(time.time()),
 			)
-			print("Sending %s proucts to SQS" % len(update_docs))
+			print("Total %s products sent to SQS" % processed_docs)
 			update_docs.clear()
 
 	return True, "{} Products Updated".format(processed_docs)
