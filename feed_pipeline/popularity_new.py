@@ -172,12 +172,12 @@ def get_product_creation_data():
         if ga.get('product_enable_time'):
           enable_time = ga.get('product_enable_time').get('value')
           enable_time = datetime.datetime.strptime(enable_time, "%Y-%m-%d %H:%M:%S")
-          if enable_time <= min_enable_time and row.get('created_at'):
-            row['product_enable_time'] = datetime.datetime.strptime(row.get('created_at'), "%Y-%m-%d %H:%M:%S")
+          if enable_time <= min_enable_time:
+            row['product_enable_time'] = row.get('created_at')
           else:
             row['product_enable_time'] = enable_time
       else:
-        row['product_enable_time'] = datetime.datetime.strptime(row.get('created_at'), "%Y-%m-%d %H:%M:%S")
+        row['product_enable_time'] = row.get('created_at')
       if not row.get('product_enable_time'):
         row['product_enable_time'] = min_create_time
       row['days_count'] = abs(today - row['product_enable_time']).days + 1
@@ -188,8 +188,8 @@ def get_product_creation_data():
     return row
 
   df = df.apply(extract_product_enable_time, axis=1)
-  df = df.dropna()
   df.drop(['generic_attributes', 'created_at'], axis=1, inplace=True)
+  df = df.astype({'product_id': str})
   return df
 
 
@@ -269,7 +269,7 @@ def get_bucket_results(date_bucket=None):
                              'revenue': 'max'}).reset_index()
   creation = product_creation_data[['product_id', 'days']]
   creation.rename(columns={'product_id': 'id'}, inplace=True)
-  df = pd.merge(df, product_creation_data, on="id", how="right")
+  df = pd.merge(df, creation, on="id", how="right")
   df.views = df.views.fillna(0)
   df.cart_additions = df.cart_additions.fillna(0)
   df.orders = df.orders.fillna(0)
