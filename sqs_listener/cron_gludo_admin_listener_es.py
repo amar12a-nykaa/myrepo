@@ -121,6 +121,7 @@ def send_to_discovery_service(docs, env):
 	number_of_docs = len(docs)
 	processed_docs = 0
 	update_docs = []
+	print(DISCOVERY_SQS_ENDPOINT)
 	for update_doc in docs:
 		update_docs.append(update_doc)
 		processed_docs += 1
@@ -136,6 +137,7 @@ def send_to_discovery_service(docs, env):
 				MessageGroupId="1",
 				MessageDeduplicationId=str(time.time()),
 			)
+			print(response)
 			print("Total %s products sent to SQS" % processed_docs)
 			update_docs.clear()
 
