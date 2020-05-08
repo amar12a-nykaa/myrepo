@@ -154,8 +154,9 @@ if __name__ == "__main__":
 	valid, msg_docs = validate_data()
 	if valid:
 		success, msg = send_to_discovery_service(msg_docs, env)
-		send_email(success, msg)
+		# send_email(success, msg)
 	else:
-		send_email(valid, msg_docs)
+		exit(1)
+		# send_email(valid, msg_docs)
 
 	delete_gludo_file()
