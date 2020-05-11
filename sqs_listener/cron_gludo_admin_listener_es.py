@@ -15,9 +15,9 @@ GLUDO_FILE_NAME = 'gludo_catalog_upload.csv'
 
 valid_fields = {
 	"sku": "str",
-	"catalog_tag": "array_of_str",
-	"quantity": "integer",
-	"disabled": "bool"
+	"catalog_tag": "array_of_str"
+	# "quantity": "integer",
+	# "disabled": "bool"
 }
 
 
