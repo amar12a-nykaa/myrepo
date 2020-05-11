@@ -189,6 +189,8 @@ def get_product_creation_data():
 
   df = df.apply(extract_product_enable_time, axis=1)
   df.drop(['generic_attributes', 'created_at'], axis=1, inplace=True)
+  df = df.astype({'product_id': float})
+  df = df.astype({'product_id': int})
   df = df.astype({'product_id': str})
   return df
 
