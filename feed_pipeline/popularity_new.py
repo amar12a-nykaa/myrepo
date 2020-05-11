@@ -270,6 +270,8 @@ def get_bucket_results(date_bucket=None):
   creation = product_creation_data[['product_id', 'days']]
   creation.rename(columns={'product_id': 'id'}, inplace=True)
   df = pd.merge(df, creation, on="id", how="right")
+  df = df.astype({'id': float})
+  df = df.astype({'id': int})
   df.views = df.views.fillna(0)
   df.cart_additions = df.cart_additions.fillna(0)
   df.orders = df.orders.fillna(0)
