@@ -121,8 +121,16 @@ def get_filters():
                              ['1', 'Rating>1', 'star_rating'], ['2', 'Rating>2', 'star_rating'],
                              ['3', 'Rating>3', 'star_rating'], ['4', 'Rating>4', 'star_rating']])
     rating_data = pd.DataFrame(data=star_ratings[1:, :], columns=star_ratings[0, :])
-    
-    filters = pd.concat([filters, brands, categories, price_data, discount_data, rating_data])
+
+    smart_guides = np.array([['filter_id', 'filter_value', 'filter_name'],
+                                    ['BESTSELLER', 'Bestsellers', 'guide_tag'],['NEW', 'New Launches', 'guide_tag'],
+                                    ['OFFER', 'On Offer', 'guide_tag'],['MEN', 'For Men', 'guide_tag'],
+                                    ['LUXE', 'Premium Brands', 'guide_tag'],['NATURAL', 'Natural Collection', 'guide_tag'],
+                                    ['DISCOUNT', 'On Discount', 'guide_tag'], ['TOPRATED', 'Top Rated', 'guide_tag']
+                                    ])
+    smart_guide_data = pd.DataFrame(data=smart_guides[1:, :], columns=smart_guides[0, :])
+
+    filters = pd.concat([filters, brands, categories, price_data, discount_data, rating_data, smart_guide_data])
     return filters
 
 

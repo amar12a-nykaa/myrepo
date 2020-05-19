@@ -34,7 +34,7 @@ def query_athena(params):
 
 def pollForStatus(execution_id, max_execution=10):
     state = 'RUNNING'
-    while (max_execution > 0 and state in ['RUNNING']):
+    while (max_execution > 0 and state in ['RUNNING', 'QUEUED']):
         max_execution = max_execution - 1
         response = client.get_query_execution(QueryExecutionId=execution_id)
         

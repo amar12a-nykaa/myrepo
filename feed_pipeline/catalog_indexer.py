@@ -512,6 +512,28 @@ class CatalogIndexer:
                     error = offers_data.get('error')
                     print("Product_id {},Error {}".format(product_id,error))
 
+    def add_guide_tags(input_docs):
+        for doc in input_docs:
+            if doc.get("offer_count", 0) > 0:
+                doc["guide_tag"].append("OFFER")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "OFFER", "name": "Offer"}))
+            if "men" in doc.get("catalog_tag"):
+                doc["guide_tag"].append("MEN")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "MEN", "name": "Men"}))
+            if "natural" in doc.get("catalog_tag"):
+                doc["guide_tag"].append("NATURAL")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "NATURAL", "name": "Natural"}))
+            if "luxe" in doc.get("catalog_tag"):
+                doc["guide_tag"].append("LUXE")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "LUXE", "name": "Luxe"}))
+            if doc.get('discount', 0) > 0:
+                doc["guide_tag"].append("DISCOUNT")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "DISCOUNT", "name": "Discount"}))
+            if doc.get('star_rating_percentage', 0) > 90 and doc.get('star_rating_count') > 10:
+                doc["guide_tag"].append("TOPRATED")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "TOPRATED", "name": "TopRated"}))
+
+
     def indexES(docs, index):
         if not index:
             indexes = EsUtils.get_active_inactive_indexes("livecore")
@@ -1159,14 +1181,22 @@ class CatalogIndexer:
                 elif doc.get('type', '') != 'simple':
                     doc['visible_after_color_filter_i'] = 0
                 doc['custom_tags'] = []
+                doc["guide_tag"] = []
+                doc["guide_tag_facet"] = []
+
                 if doc['product_id'] in bestsellers:
                     doc['custom_tags'].append('BESTSELLER')
+                    doc["guide_tag"].append('BESTSELLER')
+                    doc["guide_tag_facet"].append(OrderedDict({"id": "BESTSELLER", "name": "Bestseller"}))
                 golive_time = doc.get('product_enable_time', 0)
                 today = dt.datetime.combine(dt.datetime.today(), dt.time.min)
                 startdate = today - dt.timedelta(days=30)
                 if golive_time and (str(golive_time) >= str(startdate)):
                     doc['custom_tags'].append('NEW')
-                
+                    doc["guide_tag"].append('NEW')
+                    doc["guide_tag_facet"].append(OrderedDict({"id": "NEW", "name": "New"}))
+
+                    
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
 
@@ -1196,6 +1226,8 @@ class CatalogIndexer:
             #     time.strftime("%M min %S seconds", time.gmtime(index_duration))))
             if offerswitch:
                 CatalogIndexer.fetch_offers(input_docs, offerbatchsize)
+
+            CatalogIndexer.add_guide_tags(input_docs)
             # index elastic search
             if search_engine == 'elasticsearch':
                 # index_start = timeit.default_timer()
