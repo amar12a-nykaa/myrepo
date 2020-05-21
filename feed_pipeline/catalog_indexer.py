@@ -1073,7 +1073,7 @@ class CatalogIndexer:
                         doc[field_prefix + '_ids'] = facet_ids
                         doc[field_prefix + '_values'] = facet_values
                         color_codes = []
-                        if field_prefix == 'color':
+                        if field_prefix == 'color' and 'color_code' in row:
                             color_codes = (row['color_code'] or "").split('|') if row[field_prefix] and row['color_code'] else []
                         if facet_ids and len(facet_ids) == len(facet_values):
                             facets = []
