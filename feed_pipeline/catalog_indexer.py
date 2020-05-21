@@ -1081,7 +1081,7 @@ class CatalogIndexer:
                                 facet = OrderedDict()
                                 facet['id'] = brand_id
                                 facet['name'] = facet_values[i]
-                                if field_prefix == 'color' and len(color_codes) >= i and color_codes[i]:
+                                if field_prefix == 'color' and len(color_codes) > i and color_codes[i]:
                                     facet['color_code'] = color_codes[i]
                                 facets.append(facet)
                         doc[field_prefix + '_facet'] = facets
