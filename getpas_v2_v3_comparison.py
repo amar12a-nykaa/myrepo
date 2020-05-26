@@ -36,6 +36,10 @@ def compare_results(dict1={}, dict2={}):
         diff_dict = {}
         value2 = dict2.get(key1, {})
 
+        # ignore from_inventory_service flag for result from v3
+        if value2:
+            value2.pop("from_inventory_service", None)
+
         dict1_dict2 = {k+'_v2': v for k, v in value1.items() if value1[k] != value2.get(k)}
         dict2_dict1 = {k+'_v3': v for k, v in value2.items() if value2[k] != value1.get(k)}
         if dict1_dict2 or dict2_dict1:
