@@ -47,21 +47,24 @@ def insert_in_varnish_purging_sqs(docs,source):
     sku_list = [doc.get('sku',"") for doc in docs]
     chunks = chunkify(sku_list,CHUNK_SIZE)
     SQS_ENDPOINT, SQS_REGION = PipelineUtils.getDiscoveryVarnishPurgeSQSDetails()
-    config = Config(connect_timeout=5, retries={'max_attempts': 0})
-    sqs = boto3.client("sqs", region_name=SQS_REGION, config=config)
-    queue_url = SQS_ENDPOINT
-    for chunk in chunks:
-        purge_doc = {}
-        purge_doc['sku_ids'] = chunk
-        purge_doc['source'] = source
-        try:
-            response = sqs.send_message(
-                QueueUrl=queue_url,
-                DelaySeconds=0,
-                MessageAttributes={},
-                MessageBody=(json.dumps(purge_doc, default=str))
-            )
-            log_info(purge_doc, "success")
-        except Exception as e:
-            print(traceback.format_exc())
-            print("Insertion in SQS failed for skus %s and source %s" % (purge_doc['sku_ids'], purge_doc['source']))
+    try:
+        config = Config(connect_timeout=5, retries={'max_attempts': 0})
+        sqs = boto3.client("sqs", region_name=SQS_REGION, config=config)
+        queue_url = SQS_ENDPOINT
+        for chunk in chunks:
+            purge_doc = {}
+            purge_doc['sku_ids'] = chunk
+            purge_doc['source'] = source
+            try:
+                response = sqs.send_message(
+                    QueueUrl=queue_url,
+                    DelaySeconds=0,
+                    MessageAttributes={},
+                    MessageBody=(json.dumps(purge_doc, default=str))
+                )
+                log_info(purge_doc, "success")
+            except Exception as e:
+                print(traceback.format_exc())
+                print("Insertion in SQS failed for skus %s and source %s" % (purge_doc['sku_ids'], purge_doc['source']))
+    except Exception as e:
+        print(traceback.format_exc())
