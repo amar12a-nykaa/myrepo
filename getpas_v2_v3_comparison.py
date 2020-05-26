@@ -6,12 +6,18 @@ import csv
 sys.path.append("/var/www/pds_api")
 from pas.v3.utils import Utils as PasUtils
 
+from utils.mailutils import Mail
+
+
 CHUNK_SIZE = 100
 pas_url_v2 = "http://preprod-priceapi.nyk00-int.network/apis/v2/pas.get"
 pas_url_v3 = "http://preprod-priceapi.nyk00-int.network/apis/v3/pas.get"
 diff_csv_headers = ["sku", "quantity_v2", "quantity_v3", "backorders_v2", "backorders_v3", "msp_v2", "msp_v3", "expdt_v2",
            "expdt_v3", "mrp_v2", "mrp_v3", "is_in_stock_v2", "is_in_stock_v3", "sp_v2", "sp_v3"]
 diff_csv_filename = "diff_v2_v3.csv"
+MAIL_RECEIPIENTS = "discovery-tech@nykaa.com"
+diff_exist = False
+number_of_rows = 0
 
 def chunkify(l, n):
     """Yield successive n-sized chunks from l."""
@@ -23,11 +29,6 @@ def compare_results(dict1={}, dict2={}):
     for key1, value1 in dict1.items():
         diff_dict = {}
         value2 = dict2.get(key1, {})
-
-        #ignore jit_eretail flag
-        value1.pop("jit_eretail", None)
-        if value2:
-            value2.pop("jit_eretail", None)
 
         dict1_dict2 = {k+'_v2': v for k, v in value1.items() if value1[k] != value2.get(k)}
         dict2_dict1 = {k+'_v3': v for k, v in value2.items() if value2[k] != value1.get(k)}
@@ -86,6 +87,18 @@ for chunk in chunks:
     #insert into csv file
     if diff_list:
         write_to_csv_file(diff_list)
+
+with open(diff_csv_filename, 'r') as csvfile:
+    reader = csv.reader(csvfile)
+    next(reader)
+    for row in reader:
+        diff_exist = True
+        number_of_rows = number_of_rows+1
+
+if diff_exist:
+    Mail.send(MAIL_RECEIPIENTS, "noreply@nykaa.com", "GetPAS v2 and v3 comparison", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
+else:
+    Mail.send(MAIL_RECEIPIENTS, "noreply@nykaa.com", "GetPAS v2 and v3 comparison", "GetPAS v2 and v3 comparison contains no diff.")
 
 
 
