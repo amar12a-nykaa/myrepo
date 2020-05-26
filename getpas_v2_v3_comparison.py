@@ -2,6 +2,7 @@ import sys
 import requests
 import json
 import csv
+import socket
 
 sys.path.append("/var/www/pds_api")
 from pas.v3.utils import Utils as PasUtils
@@ -10,14 +11,19 @@ from utils.mailutils import Mail
 
 
 CHUNK_SIZE = 100
-pas_url_v2 = "http://preprod-priceapi.nyk00-int.network/apis/v2/pas.get"
-pas_url_v3 = "http://preprod-priceapi.nyk00-int.network/apis/v3/pas.get"
 diff_csv_headers = ["sku", "quantity_v2", "quantity_v3", "backorders_v2", "backorders_v3", "msp_v2", "msp_v3", "expdt_v2",
            "expdt_v3", "mrp_v2", "mrp_v3", "is_in_stock_v2", "is_in_stock_v3", "sp_v2", "sp_v3"]
 diff_csv_filename = "diff_v2_v3.csv"
 MAIL_RECEIPIENTS = "discovery-tech@nykaa.com"
 diff_exist = False
 number_of_rows = 0
+
+pas_url_v2 = "http://preprod-priceapi.nyk00-int.network/apis/v2/pas.get"
+pas_url_v3 = "http://preprod-priceapi.nyk00-int.network/apis/v3/pas.get"
+if socket.gethostname().startswith('admin'):
+    pas_url_v2 = "http://prod-priceapi.nyk00-int.network/apis/v2/pas.get"
+    pas_url_v3 = "http://prod-priceapi.nyk00-int.network/apis/v3/pas.get"
+
 
 def chunkify(l, n):
     """Yield successive n-sized chunks from l."""
