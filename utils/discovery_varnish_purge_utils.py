@@ -5,11 +5,13 @@ import traceback
 import os
 import logging
 from logging.handlers import RotatingFileHandler
+from botocore.client import Config
+
 
 sys.path.append("/home/ubuntu/nykaa_scripts/")
 from feed_pipeline.pipelineUtils import PipelineUtils
 
-CHUNK_SIZE = 20
+CHUNK_SIZE = 1
 filename = "/var/log/discovery_purge_sqs/discovery_purge_sqs.log"
 def create_log_file():
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -45,7 +47,8 @@ def insert_in_varnish_purging_sqs(docs,source):
     sku_list = [doc.get('sku',"") for doc in docs]
     chunks = chunkify(sku_list,CHUNK_SIZE)
     SQS_ENDPOINT, SQS_REGION = PipelineUtils.getDiscoveryVarnishPurgeSQSDetails()
-    sqs = boto3.client("sqs", region_name=SQS_REGION)
+    config = Config(connect_timeout=5, retries={'max_attempts': 0})
+    sqs = boto3.client("sqs", region_name=SQS_REGION, config=config)
     queue_url = SQS_ENDPOINT
     for chunk in chunks:
         purge_doc = {}
