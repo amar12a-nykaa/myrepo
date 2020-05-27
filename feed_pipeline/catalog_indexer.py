@@ -1165,7 +1165,7 @@ class CatalogIndexer:
                         pass
 
                 if doc['type'] == 'configurable':
-                    doc["title_brand_category"] += " " + " ".join((row["size"] or "").split('|')) if row.get(variant_type) == 'size' and row.get("size") else ""
+                    doc["title_brand_category"] += " " + " ".join((row["size"] or "").split('|')) if row.get('variant_type') == 'size' and row.get("size") else ""
                 elif doc['type'] == 'simple':
                     doc["title_brand_category"] += " " + (row.get("pack_size", "") or "")
 
