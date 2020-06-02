@@ -1178,6 +1178,7 @@ class CatalogIndexer:
                 
                 if doc.get('type', '') == 'bundle':
                     doc['title_brand_category'] += " " + "combo"
+                doc['title_brand_category'] += " " + doc['sku']
 
                 doc['visible_after_color_filter_i'] = 1
                 if doc.get('color_facet', '') and doc.get('size_facet', ''):
