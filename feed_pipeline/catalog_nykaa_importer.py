@@ -23,7 +23,7 @@ class NykaaImporter:
     NykaaImporter.pws_mysql_conn = PasUtils.mysqlConnection('w')
     NykaaImporter.pws_cursor = NykaaImporter.pws_mysql_conn.cursor()
 
-    NykaaImporter.importAttributes()
+    #NykaaImporter.importAttributes()
     NykaaImporter.importBrandCategoryAttributes()
     NykaaImporter.importOfferAttributes()
     NykaaImporter.importMetaInformation()
