@@ -3,7 +3,7 @@ multicategoryList = {
     "1676": {"variant": ["Baby Creams","Baby Lotions","Baby Oils"], "name": "Creams, Lotions & Oils"},
     "1466": {"variant": ["Badges","Clothing Pins"], "name": "Badges and Clothing Pins"},
     "1386": {"variant": ["Bath Brushes","Body Scrubbers"], "name": "Body Scrubbers & Brushes"},
-    "1311": {"variant": ["Bath Gels","Shower Gels"], "name": "Bath / Shower Gels"},
+    "1311": {"variant": ["Bath Gels","Shower Gels", "Body Wash"], "name": "Bath / Shower Gels"},
     "232": {"variant": ["BB Creams","CC Creams"], "name": "BB & CC Cream"},
     "8398": {"variant": ["BB Creams","CC Creams"], "name": "BB & CC Creams"},
     "2086": {"variant": ["Beard Care","Moustache Care"], "name": "Beard & Moustache Care"},
