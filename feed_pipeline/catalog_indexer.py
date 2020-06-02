@@ -244,6 +244,8 @@ class CatalogIndexer:
         "unisex": "unisex men women"
     }
 
+    category_synonyms = {"13820": "covid"}
+
     folderpath = "/nykaa/product_metadata/"
 
     filepath = folderpath +"data.csv"
@@ -1173,6 +1175,10 @@ class CatalogIndexer:
                 
                 if doc.get('type', '') == 'bundle':
                     doc['title_brand_category'] += " " + "combo"
+
+                for cid, synonym in CatalogIndexer.category_synonyms.items():
+                    if cid in doc.get('category_ids', []):
+                        doc['title_brand_category'] += " " + synonym
 
                 doc['visible_after_color_filter_i'] = 1
                 if doc.get('color_facet', '') and doc.get('size_facet', ''):
