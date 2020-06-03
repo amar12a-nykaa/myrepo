@@ -134,8 +134,7 @@ class SQSConsumer:
                     counter += 1
                     receipt_handle = message["ReceiptHandle"]
                     body = json.loads(message["Body"])
-                    docs.extend(body.get("sku_ids", ""))
-                    update_docs.append({"sku_ids": docs, "source": body.get("source", "")})
+                    update_docs.extend(body.get("sku_ids", ""))
                     self.sqs.delete_message(QueueUrl=self.sqs_endpoint, ReceiptHandle=receipt_handle)
             else:
                 counter = MAX_CONSUMPTION_LIMIT
@@ -146,9 +145,8 @@ class SQSConsumer:
                 print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
                 #sku_ids = "|".join(update_docs)
                 # self.purge_varnish_for_product(sku_ids)
-                self.q.put_nowait(update_docs)
+                self.q.put_nowait("|".join(update_docs))
                 num_products_processed += len(update_docs)
-                docs = []
                 update_docs = []
                 #
 
@@ -163,22 +161,18 @@ class SQSConsumer:
         print("Main Thread: Number of products processed: %s @ %s products/sec" % (num_products_processed, speed))
 
     @classmethod
-    def purge_varnish_for_product(self, update_docs):
+    def purge_varnish_for_product(self, sku_ids):
         h = httplib2.Http(".cache")
-        for doc in update_docs:
-            sku_ids_list = doc.get("sku_ids", [])
-            source = doc.get("source", "")
-            sku_ids = "|".join(sku_ids_list)
-            headers = {"X-depends-on": sku_ids}
-            for varnish_host in self.varnish_hosts:
-                try:
-                    (resp, content) = h.request("http://%s/" % varnish_host, "BAN", body="", headers=headers)
-                    if resp.status == 200:
-                        self.log_info(sku_ids, source, varnish_host, "success 200")
-                    else:
-                        self.log_info(sku_ids, source, varnish_host, "failure {}".format(resp.status))
-                except Exception as e:
-                    self.log_info(sku_ids, source, varnish_host, "failure exception", e)
+        headers = {"X-depends-on": sku_ids}
+        for varnish_host in self.varnish_hosts:
+            try:
+                (resp, content) = h.request("http://%s/" % varnish_host, "BAN", body="", headers=headers)
+                if resp.status == 200:
+                    self.log_info(sku_ids, varnish_host, "success 200")
+                else:
+                    self.log_info(sku_ids, varnish_host, "failure {}".format(resp.status))
+            except Exception as e:
+                self.log_info(sku_ids, varnish_host, "failure exception", e)
 
     @classmethod
     def log_info(self, sku_ids, source, host, status, exception=None):

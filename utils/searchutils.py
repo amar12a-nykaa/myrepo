@@ -274,7 +274,7 @@ STORE_MAP = {
     
   },
 
-  "store_east": {
+  "store_limited": {
     "leaf_query": """(select distinct l4_name as category_name,l4_id as category_id 
     from ( 
       select * from product_category_mapping

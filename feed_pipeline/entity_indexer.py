@@ -73,6 +73,9 @@ class EntityIndexer:
       "Make Up Forever": ["Makeup Forever"],
       "Maybelline New York": ["Maybelline"],
       "NYX Professional Makeup": ["NYX"],
+      "Twenty Dresses By Nykaa Fashion": ["Twenty Dresses"],
+      "Mondano By Nykaa Fashion": ["Mondano"],
+      "RSVP By Nykaa Fashion": ["RSVP"],
       "Huda Beauty": ["Huda"],
       "Vaadi Herbals": ["Vaadi"],
       "Kama Ayurveda": ["Kama"],
@@ -158,9 +161,8 @@ class EntityIndexer:
                      "type": type, "id": row['id'],"store": row['store'], 'secondary_ids': secondary_ids})
       if len(docs) >= 100:
         EsUtils.indexDocs(docs, collection)
-        final = final.append(docs, ignore_index=True)
         docs = []
-    final = final.append(docs, ignore_index=True)
+
     EsUtils.indexDocs(docs, collection)
   
 
