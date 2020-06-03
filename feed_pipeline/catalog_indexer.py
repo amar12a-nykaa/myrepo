@@ -234,6 +234,9 @@ class CatalogIndexer:
         "youthmud": "youthmud youth mud",
         "waxing": "waxing wax",
         "wax": "wax waxing",
+        "face": "face facial",
+        "facial": "face facial",
+        "female": "women women's ladies girls female girl",
         "bags": "bags women women's ladies girls female girl",
         "jewellery": "jewellery women women's ladies girls female girl",
         "lingerie": "lingerie women women's ladies girls female girl",
@@ -244,7 +247,7 @@ class CatalogIndexer:
         "unisex": "unisex men women"
     }
 
-    category_synonyms = {"13820": "covid"}
+    category_synonyms = {"13820": "covid", "1515": "combos", "1154": "gifts"}
 
     folderpath = "/nykaa/product_metadata/"
 
