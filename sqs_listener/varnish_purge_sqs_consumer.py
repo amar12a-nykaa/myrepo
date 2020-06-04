@@ -81,7 +81,7 @@ class WorkerThread(threading.Thread):
                     self.q.task_done()
                     break
                 else:
-                    self.callback(update_docs=chunk)
+                    self.callback(sku_ids=chunk)
                     self.q.task_done()
             except queue.Empty:
                 print(self.name + " zz..")
@@ -168,11 +168,11 @@ class SQSConsumer:
             try:
                 (resp, content) = h.request("http://%s/" % varnish_host, "BAN", body="", headers=headers)
                 if resp.status == 200:
-                    self.log_info(sku_ids, varnish_host, "success 200")
+                    self.log_info(sku_ids, "source", varnish_host, "success 200")
                 else:
-                    self.log_info(sku_ids, varnish_host, "failure {}".format(resp.status))
+                    self.log_info(sku_ids, "source", varnish_host, "failure {}".format(resp.status))
             except Exception as e:
-                self.log_info(sku_ids, varnish_host, "failure exception", e)
+                print(e)
 
     @classmethod
     def log_info(self, sku_ids, source, host, status, exception=None):
