@@ -81,7 +81,7 @@ class WorkerThread(threading.Thread):
                     self.q.task_done()
                     break
                 else:
-                    self.callback(update_docs=chunk)
+                    self.callback(sku_ids=chunk)
                     self.q.task_done()
             except queue.Empty:
                 print(self.name + " zz..")
