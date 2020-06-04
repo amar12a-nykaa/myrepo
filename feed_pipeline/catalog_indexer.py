@@ -247,7 +247,7 @@ class CatalogIndexer:
         "unisex": "unisex men women"
     }
 
-    category_synonyms = {"13820": "covid", "1515": "combos", "1154": "gifts"}
+    category_synonyms = {"13820": "covid corona virus", "1515": "combos combo", "1154": "gifts gift"}
 
     folderpath = "/nykaa/product_metadata/"
 
