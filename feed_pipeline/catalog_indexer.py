@@ -234,6 +234,9 @@ class CatalogIndexer:
         "youthmud": "youthmud youth mud",
         "waxing": "waxing wax",
         "wax": "wax waxing",
+        "face": "face facial",
+        "facial": "face facial",
+        "female": "women women's ladies girls female girl",
         "bags": "bags women women's ladies girls female girl",
         "jewellery": "jewellery women women's ladies girls female girl",
         "lingerie": "lingerie women women's ladies girls female girl",
@@ -243,6 +246,8 @@ class CatalogIndexer:
         "mcaffeine": "mcaffeine m caffeine",
         "unisex": "unisex men women"
     }
+
+    category_synonyms = {"13820": "covid corona virus", "1515": "combos combo", "1154": "gifts gift"}
 
     folderpath = "/nykaa/product_metadata/"
 
@@ -1173,6 +1178,10 @@ class CatalogIndexer:
                 
                 if doc.get('type', '') == 'bundle':
                     doc['title_brand_category'] += " " + "combo"
+
+                for cid, synonym in CatalogIndexer.category_synonyms.items():
+                    if cid in doc.get('category_ids', []):
+                        doc['title_brand_category'] += " " + synonym
 
                 doc['visible_after_color_filter_i'] = 1
                 if doc.get('color_facet', '') and doc.get('size_facet', ''):
