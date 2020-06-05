@@ -1088,7 +1088,7 @@ class CatalogIndexer:
                         if field_prefix == 'color' and 'color_code' in row:
                             color_codes = (row['color_code'] or "").split('|') if row[field_prefix] and row['color_code'] else []
                             if len(color_codes):
-                                color_codes_d = {x[1]: x[0] for x in map(lambda x: x.split('-'), color_codes.split('|'))}
+                                color_codes_d = {x[1]: x[0] for x in map(lambda x: x.split('-'), color_codes)}
                             else:
                                 color_codes_d = {}
                         if facet_ids and len(facet_ids) == len(facet_values):
