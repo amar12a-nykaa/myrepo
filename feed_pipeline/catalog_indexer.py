@@ -520,6 +520,7 @@ class CatalogIndexer:
     def add_guide_tags(input_docs):
         for doc in input_docs:
             if doc.get("offer_count", 0) > 0:
+                doc["title_brand_category"] += " " + "OFFER"
                 doc["guide_tag"].append("OFFER")
                 doc["guide_tag_facet"].append(OrderedDict({"id": "OFFER", "name": "Offer"}))
             if "men" in doc.get("catalog_tag"):
@@ -1194,6 +1195,7 @@ class CatalogIndexer:
                 doc["guide_tag_facet"] = []
 
                 if doc['product_id'] in bestsellers:
+                    doc["title_brand_category"] += " " + "BESTSELLER"
                     doc['custom_tags'].append('BESTSELLER')
                     doc["guide_tag"].append('BESTSELLER')
                     doc["guide_tag_facet"].append(OrderedDict({"id": "BESTSELLER", "name": "Bestseller"}))
@@ -1201,6 +1203,7 @@ class CatalogIndexer:
                 today = dt.datetime.combine(dt.datetime.today(), dt.time.min)
                 startdate = today - dt.timedelta(days=30)
                 if golive_time and (str(golive_time) >= str(startdate)):
+                    doc["title_brand_category"] += " " + "NEW"
                     doc['custom_tags'].append('NEW')
                     doc["guide_tag"].append('NEW')
                     doc["guide_tag_facet"].append(OrderedDict({"id": "NEW", "name": "New"}))
