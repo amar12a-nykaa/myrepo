@@ -38,6 +38,7 @@ from esutils import EsUtils
 from loopcounter import LoopCounter
 from mongoutils import MongoUtils
 from offerutils import OfferUtils
+from categoryutils import getVariants
 
 sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
 from generate_user_product_vectors import get_vectors_from_mysql_for_es
@@ -234,6 +235,9 @@ class CatalogIndexer:
         "youthmud": "youthmud youth mud",
         "waxing": "waxing wax",
         "wax": "wax waxing",
+        "face": "face facial",
+        "facial": "face facial",
+        "female": "women women's ladies girls female girl",
         "bags": "bags women women's ladies girls female girl",
         "jewellery": "jewellery women women's ladies girls female girl",
         "lingerie": "lingerie women women's ladies girls female girl",
@@ -243,6 +247,8 @@ class CatalogIndexer:
         "mcaffeine": "mcaffeine m caffeine",
         "unisex": "unisex men women"
     }
+
+    category_synonyms = {"13820": "covid corona virus", "1515": "combos combo", "1154": "gifts gift"}
 
     folderpath = "/nykaa/product_metadata/"
 
@@ -515,6 +521,7 @@ class CatalogIndexer:
     def add_guide_tags(input_docs):
         for doc in input_docs:
             if doc.get("offer_count", 0) > 0:
+                doc["title_brand_category"] += " " + "OFFER"
                 doc["guide_tag"].append("OFFER")
                 doc["guide_tag_facet"].append(OrderedDict({"id": "OFFER", "name": "Offer"}))
             if "men" in doc.get("catalog_tag"):
@@ -808,6 +815,7 @@ class CatalogIndexer:
                     doc['category_ids'] = category_ids
                     doc['category_values'] = category_names
                     doc['category_facet'] = []
+                    category_breakup_list = []
                     for category_id in category_ids:
                         info = categoryFacetAttributesInfoMap.get(str(category_id))
                         if info:
@@ -816,11 +824,15 @@ class CatalogIndexer:
                                         'position']:
                                 cat_facet[key] = str(info.get(key))
                             doc['category_facet'].append(cat_facet)
+                            cat_breakups = getVariants(str(category_id))
+                            if cat_breakups:
+                                category_breakup_list += cat_breakups
                     doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if (
                             'nykaa' not in x['name'].lower() and x['name'] not in CatalogIndexer.category_exclusion_list)]) or ""
                     valid_category_value_list = ["parcos", "the men universe", "the women universe", "the art of living"]
                     doc['category_facet_searchable'] += " " + " ".join(
                         [x for x in doc['category_values'] if any(word in x.lower() for word in valid_category_value_list)])
+                    doc['category_facet_searchable'] += " " + " ".join(x for x in category_breakup_list)
 
                 elif len(category_ids) != len(category_names):
                     # with open("/data/inconsistent_cat.txt", "a") as f:
@@ -1174,6 +1186,10 @@ class CatalogIndexer:
                 if doc.get('type', '') == 'bundle':
                     doc['title_brand_category'] += " " + "combo"
 
+                for cid, synonym in CatalogIndexer.category_synonyms.items():
+                    if cid in doc.get('category_ids', []):
+                        doc['title_brand_category'] += " " + synonym
+
                 doc['visible_after_color_filter_i'] = 1
                 if doc.get('color_facet', '') and doc.get('size_facet', ''):
                     if doc.get('type', '') != 'configurable':
@@ -1185,6 +1201,7 @@ class CatalogIndexer:
                 doc["guide_tag_facet"] = []
 
                 if doc['product_id'] in bestsellers:
+                    doc["title_brand_category"] += " " + "BESTSELLER"
                     doc['custom_tags'].append('BESTSELLER')
                     doc["guide_tag"].append('BESTSELLER')
                     doc["guide_tag_facet"].append(OrderedDict({"id": "BESTSELLER", "name": "Bestseller"}))
@@ -1192,6 +1209,7 @@ class CatalogIndexer:
                 today = dt.datetime.combine(dt.datetime.today(), dt.time.min)
                 startdate = today - dt.timedelta(days=30)
                 if golive_time and (str(golive_time) >= str(startdate)):
+                    doc["title_brand_category"] += " " + "NEW"
                     doc['custom_tags'].append('NEW')
                     doc["guide_tag"].append('NEW')
                     doc["guide_tag_facet"].append(OrderedDict({"id": "NEW", "name": "New"}))
