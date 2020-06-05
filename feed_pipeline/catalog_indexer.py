@@ -38,6 +38,7 @@ from esutils import EsUtils
 from loopcounter import LoopCounter
 from mongoutils import MongoUtils
 from offerutils import OfferUtils
+from categoryutils import getVariants
 
 sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
 from generate_user_product_vectors import get_vectors_from_mysql_for_es
@@ -814,6 +815,7 @@ class CatalogIndexer:
                     doc['category_ids'] = category_ids
                     doc['category_values'] = category_names
                     doc['category_facet'] = []
+                    category_breakup_list = []
                     for category_id in category_ids:
                         info = categoryFacetAttributesInfoMap.get(str(category_id))
                         if info:
@@ -822,11 +824,15 @@ class CatalogIndexer:
                                         'position']:
                                 cat_facet[key] = str(info.get(key))
                             doc['category_facet'].append(cat_facet)
+                            cat_breakups = getVariants(str(category_id))
+                            if cat_breakups:
+                                category_breakup_list += cat_breakups
                     doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if (
                             'nykaa' not in x['name'].lower() and x['name'] not in CatalogIndexer.category_exclusion_list)]) or ""
                     valid_category_value_list = ["parcos", "the men universe", "the women universe", "the art of living"]
                     doc['category_facet_searchable'] += " " + " ".join(
                         [x for x in doc['category_values'] if any(word in x.lower() for word in valid_category_value_list)])
+                    doc['category_facet_searchable'] += " " + " ".join(x for x in category_breakup_list)
 
                 elif len(category_ids) != len(category_names):
                     # with open("/data/inconsistent_cat.txt", "a") as f:
