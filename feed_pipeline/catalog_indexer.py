@@ -1087,14 +1087,18 @@ class CatalogIndexer:
                         color_codes = []
                         if field_prefix == 'color' and 'color_code' in row:
                             color_codes = (row['color_code'] or "").split('|') if row[field_prefix] and row['color_code'] else []
+                            if len(color_codes):
+                                color_codes_d = {x[1]: x[0] for x in map(lambda x: x.split('-'), color_codes)}
+                            else:
+                                color_codes_d = {}
                         if facet_ids and len(facet_ids) == len(facet_values):
                             facets = []
                             for i, brand_id in enumerate(facet_ids):
                                 facet = OrderedDict()
                                 facet['id'] = brand_id
                                 facet['name'] = facet_values[i]
-                                if field_prefix == 'color' and len(color_codes) > i and color_codes[i]:
-                                    facet['color_code'] = color_codes[i]
+                                if field_prefix == 'color' and color_codes_d and brand_id in color_codes_d:
+                                    facet['color_code'] = color_codes_d[brand_id]
                                 facets.append(facet)
                         doc[field_prefix + '_facet'] = facets
                         # elif len(facet_ids) != len(facet_values):
