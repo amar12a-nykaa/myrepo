@@ -109,9 +109,9 @@ with open(diff_csv_filename, 'r') as csvfile:
         number_of_rows = number_of_rows+1
 
 if diff_exist:
-    Mail.send(MAIL_RECEIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
+    Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
 else:
-    Mail.send(MAIL_RECEIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch", "GetPAS v2 and v3 comparison contains no diff.")
+    Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch", "GetPAS v2 and v3 comparison contains no diff.")
 
 
 
