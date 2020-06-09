@@ -244,10 +244,10 @@ if __name__ == "__main__":
     if argv['cpu_limit']:
         MAX_CPU_LIMIT = argv['cpu_limit']
     varnish_details = PipelineUtils.getVarnishDetails()
-    cpu_usage = find_cpu_utilisation(varnish_details.keys())
+    cpu_usage = find_cpu_utilisation(list(varnish_details.keys()))
     is_limit_exceed = [cpu>MAX_CPU_LIMIT for cpu in cpu_usage]
     if True in is_limit_exceed:
         print("cpu usage exceeding limit. cant run catalog pipeline [%s]" % datetime.now())
         exit()
-    consumer = SQSConsumer(varnish_details.values())
+    consumer = SQSConsumer(list(varnish_details.values()))
     consumer.start()
