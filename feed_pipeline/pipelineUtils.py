@@ -82,7 +82,8 @@ class PipelineUtils:
     hosts = []
     for instance_id in varnish_hosts:
       varnish_host = varnish_hosts[instance_id]
-      hosts.append("{}:{}".format(varnish_host.get('ip'), varnish_host.get('port')))
+      hosts.append({instance_id: "{}:{}".format(varnish_host.get('ip'), varnish_host.get('port'))})
+      # hosts.append("{}:{}_{}".format(varnish_host.get('ip'), varnish_host.get('port'),instance_id))
     return hosts
 
   def getDiscoveryVarnishPurgeSQSDetails():
