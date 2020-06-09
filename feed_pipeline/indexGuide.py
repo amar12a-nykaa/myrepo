@@ -83,7 +83,7 @@ def get_filters():
                   join eav_attribute_option eo on e.attribute_id = eo.attribute_id
                   join eav_attribute_option_value eov on eo.option_id = eov.option_id and eov.store_id = 0
                where attribute_code like '%_v1' 
-                  and e.attribute_id not in (654, 668, 722, 725, 732, 773, 821, 828, 829, 830)"""
+                  and e.attribute_id not in (654, 668, 722, 725, 732, 773, 828, 829, 830)"""
     filters = pd.read_sql(query, con=mysql_conn)
     mysql_conn.close()
 
