@@ -89,6 +89,8 @@ multicategoryList = {
     "8427": {"variant": ["Bath Scrubs","Body Scrubs", "Scrubs"], "name": "Bath Scrubs"},
     "9409": {"variant": ["Body Scrubs", "Scrubs"], "name": "Body Scrubs"},
     "1313": {"variant": ["Body Scrubs", "Scrubs"], "name": "Body Scrubs"},
+    "8429": {"variant": ["Face Sunscreen", "Sunscreen"], "name": "Face Sunscreen"},
+    "8430": {"variant": ["Body Sunscreen", "Sunscreen"], "name": "Body Sunscreen"},
     "271": {"variant": ["Sponges","Applicators"], "name": "Sponges & Applicators"},
     "10134": {"variant": ["Heels","Wedges"], "name": "Heels & Wedges"},
     "746": {"variant": ["Teeth Care","Dental Care"], "name": "Teeth & Dental Care"},
