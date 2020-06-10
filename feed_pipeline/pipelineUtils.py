@@ -96,7 +96,7 @@ class PipelineUtils:
     review_bucket = 'nka-nonprod-rating-review'
     review_file = 'reviews.csv'
     if socket.gethostname().startswith('admin'):
-      review_bucket = ''
+      review_bucket = 'nka-prod-rating-review'
     return review_bucket, review_file
 
   def getAdPlatformEndPoint():
