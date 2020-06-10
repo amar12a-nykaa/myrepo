@@ -26,22 +26,25 @@ WEIGHT_ORDERS = 40
 WEIGHT_CART_ADDITIONS = 10
 WEIGHT_REVENUE = 50
 WEIGHT_ASP = 0
+WEIGHT_CREATION = 0
 POPULARITY_TOTAL_RATIO = 0
 POPULARITY_BUCKET_RATIO = 1
 PUNISH_FACTOR=0.7
 BOOST_FACTOR=1.1
 PRODUCT_PUNISH_FACTOR = 0.5
 COLD_START_DECAY_FACTOR = 0.99
+CREATION_DECAY_FACTOR = 0.999
 
 POPULARITY_DECAY_FACTOR_NEW = 0.5
 WEIGHT_VIEWS_NEW = 10
 WEIGHT_UNITS_NEW = 0
-WEIGHT_ORDERS_NEW = 10
+WEIGHT_ORDERS_NEW = 40
 WEIGHT_CART_ADDITIONS_NEW = 10
-WEIGHT_REVENUE_NEW = 80
-WEIGHT_ASP_NEW = 40
-POPULARITY_TOTAL_RATIO_NEW = 0.1
-POPULARITY_BUCKET_RATIO_NEW = 0.9
+WEIGHT_REVENUE_NEW = 50
+WEIGHT_ASP_NEW = 0
+WEIGHT_CREATION_NEW = 5
+POPULARITY_TOTAL_RATIO_NEW = 0
+POPULARITY_BUCKET_RATIO_NEW = 1
 PUNISH_FACTOR_NEW=0.7
 BOOST_FACTOR_NEW=1.1
 PRODUCT_PUNISH_FACTOR_NEW = 0.5
@@ -152,12 +155,53 @@ def get_order_data(startdate, enddate):
   return data
 
 
+def get_product_creation_data():
+  query = """select product_id, created_at, generic_attributes from solr_dump_4"""
+  df = pd.read_sql(query, con=DiscUtils.nykaaMysqlConnection())
+  df['product_enable_time'] = None
+  today = datetime.datetime.now()
+  min_enable_time = datetime.datetime.strptime("2019-06-30 00:00:00", "%Y-%m-%d %H:%M:%S")
+  min_create_time = datetime.datetime.strptime("2012-02-07 00:00:00", "%Y-%m-%d %H:%M:%S")
+
+  def extract_product_enable_time(row):
+    try:
+      if row.get('generic_attributes'):
+        generic_attributes_raw = '{' + row.get('generic_attributes') + '}'
+        ga = json.loads(generic_attributes_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').
+                        replace('\\r', '').replace('\\\\"', '\\"'))
+        if ga.get('product_enable_time'):
+          enable_time = ga.get('product_enable_time').get('value')
+          enable_time = datetime.datetime.strptime(enable_time, "%Y-%m-%d %H:%M:%S")
+          if enable_time <= min_enable_time:
+            row['product_enable_time'] = row.get('created_at')
+          else:
+            row['product_enable_time'] = enable_time
+      else:
+        row['product_enable_time'] = row.get('created_at')
+      if not row.get('product_enable_time'):
+        row['product_enable_time'] = min_create_time
+      row['days_count'] = abs(today - row['product_enable_time']).days + 1
+      row['days'] = (CREATION_DECAY_FACTOR)**row['days_count']
+    except Exception as ex:
+      print(ex)
+      pass
+    return row
+
+  df = df.apply(extract_product_enable_time, axis=1)
+  df.drop(['generic_attributes', 'created_at'], axis=1, inplace=True)
+  df = df.astype({'product_id': float})
+  df = df.astype({'product_id': int})
+  df = df.astype({'product_id': str})
+  return df
+
+
 def normalize(a):
   return (a-min(a))/(max(a)-min(a))
 
 
 def get_bucket_results(date_bucket=None):
   global child_parent_map
+  global product_creation_data
   
   if date_bucket:
     startday = date_bucket[1] * -1
@@ -166,6 +210,15 @@ def get_bucket_results(date_bucket=None):
                                     tzinfo=None).datetime.replace(tzinfo=None)
     enddate = arrow.now().replace(days=endday, hour=0, minute=0, second=0, microsecond=0,
                                   tzinfo=None).datetime.replace(tzinfo=None)
+    ignore_window_start = arrow.get('2020-03-24', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
+    ignore_window_end = arrow.get('2020-05-03', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
+    if startdate >= ignore_window_start and enddate < ignore_window_end:
+      print("Skipping bucket:", date_bucket)
+      return None
+    if enddate > ignore_window_start and enddate < ignore_window_end:
+      enddate = ignore_window_start
+    elif startdate < ignore_window_end and enddate > ignore_window_end:
+      startdate = ignore_window_end
   
   else:
     startdate = arrow.get('2011-01-01', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
@@ -216,11 +269,22 @@ def get_bucket_results(date_bucket=None):
                              'orders': 'max',
                              'units': 'max',
                              'revenue': 'max'}).reset_index()
+  creation = product_creation_data[['product_id', 'days']]
+  creation.rename(columns={'product_id': 'id'}, inplace=True)
+  df = pd.merge(df, creation, on="id", how="right")
+  df = df.astype({'id': float})
+  df = df.astype({'id': int})
+  df.views = df.views.fillna(0)
+  df.cart_additions = df.cart_additions.fillna(0)
+  df.orders = df.orders.fillna(0)
+  df.units = df.units.fillna(0)
+  df.revenue = df.revenue.fillna(0)
   df['views'] = normalize(df['views'])
   df['cart_additions'] = normalize(df['cart_additions'])
   df['orders'] = normalize(df['orders'])
   df['units'] = normalize(df['units'])
   df['revenue'] = normalize(df['revenue'])
+  df['days'] = normalize(df['days'])
   print(df.columns)
   return df
   
@@ -251,13 +315,15 @@ def calculate_new_popularity():
     print("date_bucket: %s bucket_id: %s multiplication_factor: %s" %(str(date_bucket),bucket_id,multiplication_factor))
     df['asp'] = df.apply(lambda y: (y['revenue']/y['units']) if y['units'] > 0 else 0, axis=1)
     df['popularity'] = multiplication_factor * normalize(
-                        numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_ORDERS * df['orders'] + WEIGHT_UNITS * df['units'] +
-                          WEIGHT_CART_ADDITIONS * df['cart_additions'] + WEIGHT_REVENUE * df['revenue'] + WEIGHT_ASP * df['asp'])) * 100
+                        numpy.log(1 + WEIGHT_VIEWS * df['views'] + WEIGHT_ORDERS * df['orders'] +
+                          WEIGHT_UNITS * df['units'] + WEIGHT_CART_ADDITIONS * df['cart_additions'] +
+                          WEIGHT_REVENUE * df['revenue'] + WEIGHT_ASP * df['asp'] + WEIGHT_CREATION * df['days'])) * 100
 
     multiplication_factor_new = POPULARITY_DECAY_FACTOR_NEW ** (bucket_id + 1)
     df['popularity_new'] = multiplication_factor_new * normalize(
-                            numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_ORDERS_NEW * df['orders'] + WEIGHT_UNITS_NEW * df['units'] +
-                              WEIGHT_CART_ADDITIONS_NEW * df['cart_additions'] + WEIGHT_REVENUE_NEW * df['revenue'] + WEIGHT_ASP_NEW * df['asp'])) * 100
+                            numpy.log(1 + WEIGHT_VIEWS_NEW * df['views'] + WEIGHT_ORDERS_NEW * df['orders'] +
+                              WEIGHT_UNITS_NEW * df['units'] + WEIGHT_CART_ADDITIONS_NEW * df['cart_additions'] +
+                              WEIGHT_REVENUE_NEW * df['revenue'] + WEIGHT_ASP_NEW * df['asp'] + WEIGHT_CREATION_NEW * df['days'])) * 100
 
     dfs.append(df.loc[:, ['id', 'popularity', 'popularity_new']].set_index('id'))
 
@@ -501,6 +567,7 @@ def handleColdStart(df):
 
 child_parent_map = create_child_parent_map()
 brand_popularity = get_brand_popularity()
+product_creation_data = get_product_creation_data()
 
 if __name__ == '__main__':
   print("popularity start: %s" % arrow.now())
