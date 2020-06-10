@@ -38,6 +38,7 @@ from esutils import EsUtils
 from loopcounter import LoopCounter
 from mongoutils import MongoUtils
 from offerutils import OfferUtils
+from categoryutils import getVariants
 
 sys.path.append('/nykaa/scripts/recommendations/scripts/personalized_search/')
 from generate_user_product_vectors import get_vectors_from_mysql_for_es
@@ -236,6 +237,9 @@ class CatalogIndexer:
         "youthmud": "youthmud youth mud",
         "waxing": "waxing wax",
         "wax": "wax waxing",
+        "face": "face facial",
+        "facial": "face facial",
+        "female": "women women's ladies girls female girl",
         "bags": "bags women women's ladies girls female girl",
         "jewellery": "jewellery women women's ladies girls female girl",
         "lingerie": "lingerie women women's ladies girls female girl",
@@ -245,6 +249,10 @@ class CatalogIndexer:
         "mcaffeine": "mcaffeine m caffeine",
         "unisex": "unisex men women"
     }
+
+    category_synonyms = {"13820": "covid corona virus", "1515": "combos combo", "1154": "gifts gift", "9639": "combos combo",
+                            "8437": "combos combo", "175": "combos combo", "591": "combos combo", "927": "combos combo",
+                            "2039": "combos combo"}
 
     folderpath = "/nykaa/product_metadata/"
 
@@ -534,6 +542,29 @@ class CatalogIndexer:
                     error = offers_data.get('error')
                     print("Product_id {},Error {}".format(product_id,error))
 
+    def add_guide_tags(input_docs):
+        for doc in input_docs:
+            if doc.get("offer_count", 0) > 0:
+                doc["title_brand_category"] += " " + "OFFER"
+                doc["guide_tag"].append("OFFER")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "OFFER", "name": "Offer"}))
+            if "men" in doc.get("catalog_tag"):
+                doc["guide_tag"].append("MEN")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "MEN", "name": "Men"}))
+            if "natural" in doc.get("catalog_tag"):
+                doc["guide_tag"].append("NATURAL")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "NATURAL", "name": "Natural"}))
+            if "luxe" in doc.get("catalog_tag"):
+                doc["guide_tag"].append("LUXE")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "LUXE", "name": "Luxe"}))
+            if doc.get('discount', 0) > 0:
+                doc["guide_tag"].append("DISCOUNT")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "DISCOUNT", "name": "Discount"}))
+            if doc.get('star_rating_percentage', 0) > 90 and doc.get('star_rating_count') > 10:
+                doc["guide_tag"].append("TOPRATED")
+                doc["guide_tag_facet"].append(OrderedDict({"id": "TOPRATED", "name": "TopRated"}))
+
+
     def indexES(docs, index):
         if not index:
             indexes = EsUtils.get_active_inactive_indexes("livecore")
@@ -687,7 +718,6 @@ class CatalogIndexer:
         # index_start = timeit.default_timer()
         if update_productids:
             CatalogIndexer.update_sku_product_mapping(records)
-
         for index, row in enumerate(records):
             try:
                 CatalogIndexer.validate_catalog_feed_row(row)
@@ -809,6 +839,7 @@ class CatalogIndexer:
                     doc['category_ids'] = category_ids
                     doc['category_values'] = category_names
                     doc['category_facet'] = []
+                    category_breakup_list = []
                     for category_id in category_ids:
                         info = categoryFacetAttributesInfoMap.get(str(category_id))
                         if info:
@@ -817,11 +848,15 @@ class CatalogIndexer:
                                         'position']:
                                 cat_facet[key] = str(info.get(key))
                             doc['category_facet'].append(cat_facet)
+                            cat_breakups = getVariants(str(category_id))
+                            if cat_breakups:
+                                category_breakup_list += cat_breakups
                     doc['category_facet_searchable'] = " ".join([x['name'] for x in doc['category_facet'] if (
                             'nykaa' not in x['name'].lower() and x['name'] not in CatalogIndexer.category_exclusion_list)]) or ""
                     valid_category_value_list = ["parcos", "the men universe", "the women universe", "the art of living"]
                     doc['category_facet_searchable'] += " " + " ".join(
                         [x for x in doc['category_values'] if any(word in x.lower() for word in valid_category_value_list)])
+                    doc['category_facet_searchable'] += " " + " ".join(x for x in category_breakup_list)
 
                 elif len(category_ids) != len(category_names):
                     # with open("/data/inconsistent_cat.txt", "a") as f:
@@ -1065,6 +1100,7 @@ class CatalogIndexer:
 
                 # facets: dynamic fields
                 facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1") or (field == 'size_id' and size_filter_flag == 1)]
+
                 for field in facet_fields:
                     field_prefix = field.rsplit('_', 1)[0]
                     facet_ids = (row[field] or "").split('|') if row[field] else []
@@ -1072,27 +1108,26 @@ class CatalogIndexer:
                     if facet_ids and len(facet_ids) == len(facet_values):
                         doc[field_prefix + '_ids'] = facet_ids
                         doc[field_prefix + '_values'] = facet_values
-                        facets = []
-                        if field_prefix in ['brand', 'old_brand', 'size']:
+                        color_codes = []
+                        if field_prefix == 'color' and 'color_code' in row:
+                            color_codes = (row['color_code'] or "").split('|') if row[field_prefix] and row['color_code'] else []
+                            if len(color_codes):
+                                color_codes_d = {x[1]: x[0] for x in map(lambda x: x.split('-'), color_codes)}
+                            else:
+                                color_codes_d = {}
+                        if facet_ids and len(facet_ids) == len(facet_values):
+                            facets = []
                             for i, brand_id in enumerate(facet_ids):
-                                brand_facet = OrderedDict()
-                                brand_facet['id'] = brand_id
-                                brand_facet['name'] = facet_values[i]
-                                facets.append(brand_facet)
-                        else:
-                            option_attrs = PipelineUtils.getOptionAttributes(facet_ids)
-                            for attr_id, attrs in option_attrs.items():
-                                other_facet = OrderedDict()
-                                other_facet['id'] = attrs['id']
-                                other_facet['name'] = attrs['name']
-                                if attrs.get('color_code'):
-                                    other_facet['color_code'] = attrs['color_code']
-                                facets.append(other_facet)
+                                facet = OrderedDict()
+                                facet['id'] = brand_id
+                                facet['name'] = facet_values[i]
+                                if field_prefix == 'color' and color_codes_d and brand_id in color_codes_d:
+                                    facet['color_code'] = color_codes_d[brand_id]
+                                facets.append(facet)
                         doc[field_prefix + '_facet'] = facets
-                    # elif len(facet_ids) != len(facet_values):
-                    #  with open("/data/inconsistent_facet.txt", "a") as f:
-                    #    f.write("%s  %s\n"%(doc['sku'], field))
- 
+                        # elif len(facet_ids) != len(facet_values):
+                        #  with open("/data/inconsistent_facet.txt", "a") as f:
+                        #    f.write("%s  %s\n"%(doc['sku'], field))
                 doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('brand_facet', [])]) or ""
                 if not doc['brand_facet_searchable']:
                     doc['brand_facet_searchable'] = " ".join([x['name'] for x in doc.get('old_brand_facet', [])]) or ""
@@ -1179,6 +1214,10 @@ class CatalogIndexer:
                 if doc.get('type', '') == 'bundle':
                     doc['title_brand_category'] += " " + "combo"
 
+                for cid, synonym in CatalogIndexer.category_synonyms.items():
+                    if cid in doc.get('category_ids', []):
+                        doc['title_brand_category'] += " " + synonym
+
                 doc['visible_after_color_filter_i'] = 1
                 if doc.get('color_facet', '') and doc.get('size_facet', ''):
                     if doc.get('type', '') != 'configurable':
@@ -1186,14 +1225,24 @@ class CatalogIndexer:
                 elif doc.get('type', '') != 'simple':
                     doc['visible_after_color_filter_i'] = 0
                 doc['custom_tags'] = []
+                doc["guide_tag"] = []
+                doc["guide_tag_facet"] = []
+
                 if doc['product_id'] in bestsellers:
+                    doc["title_brand_category"] += " " + "BESTSELLER"
                     doc['custom_tags'].append('BESTSELLER')
+                    doc["guide_tag"].append('BESTSELLER')
+                    doc["guide_tag_facet"].append(OrderedDict({"id": "BESTSELLER", "name": "Bestseller"}))
                 golive_time = doc.get('product_enable_time', 0)
                 today = dt.datetime.combine(dt.datetime.today(), dt.time.min)
                 startdate = today - dt.timedelta(days=30)
                 if golive_time and (str(golive_time) >= str(startdate)):
+                    doc["title_brand_category"] += " " + "NEW"
                     doc['custom_tags'].append('NEW')
-                
+                    doc["guide_tag"].append('NEW')
+                    doc["guide_tag_facet"].append(OrderedDict({"id": "NEW", "name": "New"}))
+
+                    
                 if search_engine == 'elasticsearch':
                     CatalogIndexer.formatESDoc(doc)
 
@@ -1226,6 +1275,9 @@ class CatalogIndexer:
 
             if reviewswitch:
                 CatalogIndexer.fetch_reviews(input_docs, all_reviews_dict)
+
+            CatalogIndexer.add_guide_tags(input_docs)
+
             # index elastic search
             if search_engine == 'elasticsearch':
                 # index_start = timeit.default_timer()

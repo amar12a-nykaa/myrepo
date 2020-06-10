@@ -111,6 +111,12 @@ class PipelineUtils:
       bucket_name = 'nykaa-prod-autocomplete-feedback'
     return bucket_name
 
+  def getBucketNameForDailyDiscounts():
+      bucket_name = 'nonprod-gludo'
+      if socket.gethostname().startswith('admin'):
+          bucket_name = 'prod-gludo'
+      return bucket_name
+
   def getOptionAttributes(option_ids):
     option_attrs = {}
     missing_option_ids = []

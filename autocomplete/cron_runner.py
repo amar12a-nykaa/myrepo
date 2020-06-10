@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 from read_past_searches_data import read_file_by_date
+from pipeline import run_pipeline
 
 sys.path.append('/nykaa/scripts/sharedutils/')
 from dateutils import enumerate_dates
@@ -53,9 +54,7 @@ for date in recent_missing_dates:
 
 
 if recent_missing_dates:
-  cmd="/usr/bin/python /nykaa/scripts/autocomplete/pipeline.py"
-  print(cmd)
-  os.system(cmd)
+  run_pipeline()
 else:
   print("Everything is up to date. Doing nothing.")
 

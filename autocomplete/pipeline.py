@@ -29,43 +29,46 @@ from normalize_searches_daily import normalize_search_terms
 
 AUTOCOMPLETE = 'autocomplete'
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--force-run", action='store_true')
-argv = vars(parser.parse_args())
+def run_pipeline():
+    script_start = timeit.default_timer()
+    normalize_search_terms()
+    calculate_popularity_autocomplete()
 
-force_run = argv['force_run']
-script_start = timeit.default_timer()
+    try:
+        print("uploading feedback file")
+        uploadFile()
+        print("calculating feedback")
+        calculate_feedback()
+        print("inserting in mongodb")
+        insertFeedBackDataInMongo()
+    except Exception as ex:
+        print(ex)
 
-normalize_search_terms()
-calculate_popularity_autocomplete()
-try:
-    print("uploading feedback file")
-    uploadFile()
-    print("calculating feedback")
-    calculate_feedback()
-    print("inserting in mongodb")
-    insertFeedBackDataInMongo()
-except Exception as ex:
-    print(ex)
+    indexes = EsUtils.get_active_inactive_indexes(AUTOCOMPLETE)
+    print(indexes)
+    active_index = indexes['active_index']
+    inactive_index = indexes['inactive_index']
+    print("Old Active index: %s" % active_index)
+    print("Old Inactive index: %s" % inactive_index)
 
-indexes = EsUtils.get_active_inactive_indexes(AUTOCOMPLETE)
-print(indexes)
-active_index = indexes['active_index']
-inactive_index = indexes['inactive_index']
-print("Old Active index: %s"%active_index)
-print("Old Inactive index: %s"%inactive_index)
+    # clear inactive index
+    resp = EsUtils.clear_index_data(inactive_index)
 
-#clear inactive index
-resp = EsUtils.clear_index_data(inactive_index)
-
-index_start = timeit.default_timer()
-index_engine(engine='elasticsearch', collection=inactive_index, swap=True, index_all=True)
-index_duration = timeit.default_timer() - index_start
+    index_start = timeit.default_timer()
+    index_engine(engine='elasticsearch', collection=inactive_index, swap=True, index_all=True)
+    index_duration = timeit.default_timer() - index_start
+    script_stop = timeit.default_timer()
+    script_duration = script_stop - script_start
+    print("\n\nFinished running catalog pipeline. NEW ACTIVE COLLECTION: %s\n\n" % inactive_index)
+    print(
+        "Time taken to index data to ES: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
+    print("Total time taken for the script to run: %s seconds" % time.strftime("%M min %S seconds",
+                                                                               time.gmtime(script_duration)))
 
 
-script_stop = timeit.default_timer()
-script_duration = script_stop - script_start
-
-print("\n\nFinished running catalog pipeline. NEW ACTIVE COLLECTION: %s\n\n"%inactive_index)
-print("Time taken to index data to ES: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
-print("Total time taken for the script to run: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(script_duration)))
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force-run", action='store_true')
+    argv = vars(parser.parse_args())
+    force_run = argv['force_run']
+    run_pipeline()
