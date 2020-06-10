@@ -65,7 +65,7 @@ def write_to_csv_file(diff_list=[]):
             print("I/O error")
 
 mysql_conn = PasUtils.mysqlConnection("r")
-query = "SELECT sku,type from products where disabled = 0"
+query = "SELECT sku,type from products"
 results = PasUtils.fetchResults(mysql_conn, query)
 
 chunks = chunkify(results, CHUNK_SIZE)
