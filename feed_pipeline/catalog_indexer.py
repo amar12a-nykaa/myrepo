@@ -1168,7 +1168,7 @@ class CatalogIndexer:
                     print(traceback.format_exc())
                     print("product_id: %s " % doc['product_id'])
 
-                doc['title_brand_category'] += "default "
+                doc['title_brand_category'] += " default "
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet', 'benefits_facet', 'skin_tone_facet', 'spf_facet',
                         'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet',
                         'ingredient_v1_facet', 'wiring_facet', 'padding_facet', 'fabric_facet', 'rise_facet', 'pattern_facet']:
