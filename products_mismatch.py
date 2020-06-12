@@ -13,6 +13,7 @@ from email.mime.text import MIMEText
 class ProductsMismatch():
     bundle_mismatched_skus = []
     configurable_mismatched_skus = []
+    mail_list = ['cataloging@nykaa.com','rahil.khan@nykaa.com','discovery-tech@nykaa.com']
 
     def getMismatchedProducts(self):
         url = "http://adminpanel.nyk00-int.network/media/feed/master_feed_gludo.csv"
@@ -47,7 +48,6 @@ class ProductsMismatch():
         pas_object = response.json()
         pas_object = pas_object.get('skus')
         for sku in pas_object:
-            print(sku)
             sku_obj = pas_object.get(sku,{})
             if sku_obj.get('mrp',0) == 0 or sku_obj.get('sp',0) == 0:
                 self.configurable_mismatched_skus.append(sku)
