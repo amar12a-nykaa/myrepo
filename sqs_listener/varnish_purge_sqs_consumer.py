@@ -236,6 +236,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--threads", type=int, help="number of records in single index request")
     parser.add_argument("--max_limit", type=int, help="maximum no. of messages consumed from sqs in one run")
+    parser.add_argument("--cpu_limit", type=int, help="max cpu usage")
     argv = vars(parser.parse_args())
     if argv["threads"]:
         NUMBER_OF_THREADS = argv["threads"]
