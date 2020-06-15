@@ -7,7 +7,7 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from logging.handlers import RotatingFileHandler
 import os
@@ -22,6 +22,7 @@ def create_log_file():
 
 NUMBER_OF_THREADS = 1
 MAX_CONSUMPTION_LIMIT = 100
+MAX_CPU_LIMIT = 50
 
 
 def get_consumer_count():
@@ -101,13 +102,14 @@ class SQSConsumer:
     """
 
     @classmethod
-    def __init__(self):
+    def __init__(self, varnish_hosts):
         self.q = queue.Queue(maxsize=0)
         self.sqs = boto3.client("sqs", region_name='ap-south-1')
         self.sqs_endpoint, self.sqs_region = PipelineUtils.getDiscoveryVarnishPurgeSQSDetails()
         self.thread_manager = ThreadManager(self.q, callback=self.purge_varnish_for_product)
         self.thread_manager.start_threads(NUMBER_OF_THREADS)
-        self.varnish_hosts = PipelineUtils.getVarnishDetails()
+        self.varnish_hosts = varnish_hosts
+
 
     def start(self, ):
         # Receive message from SQS queue
@@ -200,6 +202,32 @@ class SQSConsumer:
         logger.error("Discovery Varnish Purge Sqs consumer", extra=extra)
 
 
+def find_cpu_utilisation(instance_ids):
+    client = boto3.client('cloudwatch', region_name='ap-south-1')
+    cpu_usage = []
+    for instance_id in instance_ids:
+        response = client.get_metric_statistics(
+            Namespace='AWS/EC2',
+            MetricName='CPUUtilization',
+            Dimensions=[
+                {
+                    'Name': 'InstanceId',
+                    'Value': instance_id
+                },
+            ],
+            StartTime=datetime.utcnow() - timedelta(seconds=300),
+            EndTime=datetime.utcnow(),
+            Period=300,
+            Statistics=[
+                'Average',
+            ],
+            Unit='Percent'
+        )
+        for cpu in response['Datapoints']:
+            if 'Average' in cpu:
+                cpu_usage.append(cpu['Average'])
+    return cpu_usage
+
 if __name__ == "__main__":
     if get_consumer_count() > 1:
         print("getPipelineCount(): %r" % get_consumer_count())
@@ -208,10 +236,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--threads", type=int, help="number of records in single index request")
     parser.add_argument("--max_limit", type=int, help="maximum no. of messages consumed from sqs in one run")
+    parser.add_argument("--cpu_limit", type=int, help="max cpu usage")
     argv = vars(parser.parse_args())
     if argv["threads"]:
         NUMBER_OF_THREADS = argv["threads"]
     if argv["max_limit"]:
         MAX_CONSUMPTION_LIMIT = argv["max_limit"]
-    consumer = SQSConsumer()
+    if argv['cpu_limit']:
+        MAX_CPU_LIMIT = argv['cpu_limit']
+    varnish_details = PipelineUtils.getVarnishDetails()
+    cpu_usage = find_cpu_utilisation(list(varnish_details.keys()))
+    is_limit_exceed = [cpu>MAX_CPU_LIMIT for cpu in cpu_usage]
+    if True in is_limit_exceed:
+        print("cpu usage exceeding limit. cant run catalog pipeline [%s]" % datetime.now())
+        exit()
+    consumer = SQSConsumer(list(varnish_details.values()))
     consumer.start()
