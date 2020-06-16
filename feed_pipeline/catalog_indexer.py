@@ -88,14 +88,14 @@ def getCurrentDateTime():
     return current_datetime
 
 class Worker(threading.Thread):
-    def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
+    def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv,
                  update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch):
         self.q = q
         self.search_engine = search_engine
         self.collection = collection
         self.skus = [x for x in skus if x]
         self.categoryFacetAttributesInfoMap = categoryFacetAttributesInfoMap
-        self.offersApiConfig = offersApiConfig
+        # self.offersApiConfig = offersApiConfig
         self.required_fields_from_csv = required_fields_from_csv
         self.update_productids = update_productids
         self.product_2_vector_lsi_100 = product_2_vector_lsi_100 
@@ -121,7 +121,7 @@ class Worker(threading.Thread):
                 db_result = product_history_table.find({"_id": {"$in": product_ids}})
                 for row in db_result:
                   product_history[row['_id']] = row
-                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history,self.offerbatchsize,self.offerswitch)
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history,self.offerbatchsize,self.offerswitch)
                 is_first=False
             except queue.Empty:
                 return
@@ -686,7 +686,7 @@ class CatalogIndexer:
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
     @classmethod
-    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history,offerbatchsize,offerswitch):
+    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history,offerbatchsize,offerswitch):
         start_time = int(round(time.time() * 1000))
         input_docs = []
         pws_fetch_products = []
@@ -1346,7 +1346,7 @@ class CatalogIndexer:
             q.put_nowait(row)
 
         for _ in range(NUMBER_OF_THREADS):
-            Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
+            Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv,
                    update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch).start()
         q.join()
         print("Index Catalog Finished!")
