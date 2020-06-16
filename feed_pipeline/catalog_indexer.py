@@ -1191,6 +1191,7 @@ class CatalogIndexer:
                 
                 if doc.get('type', '') == 'bundle':
                     doc['title_brand_category'] += " " + "combo"
+                doc['title_brand_category'] += " " + doc['sku']
 
                 for cid, synonym in CatalogIndexer.category_synonyms.items():
                     if cid in doc.get('category_ids', []):
