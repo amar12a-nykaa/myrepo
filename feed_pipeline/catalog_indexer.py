@@ -506,6 +506,19 @@ class CatalogIndexer:
                 except:
                     print(traceback.format_exc())
                     print("Insertion in SQS failed")
+
+                doc['offers'] = []
+                doc['offer_ids'] = []
+                doc['offer_facet'] = []
+                doc['nykaaman_offers'] = []
+                doc['nykaaman_offer_ids'] = []
+                doc['nykaaman_offer_facet'] = []
+                doc['nykaa_pro_offers'] = []
+                doc['nykaa_pro_offer_ids'] = []
+                doc['nykaa_pro_offer_facet'] = []
+                doc['offer_count'] = len(doc['offers'])
+                doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
+                doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
                 continue
             #update in input docs
             response_data = result.get('data',{})
