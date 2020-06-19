@@ -121,13 +121,13 @@ if diff_exist:
     if disabled_switch:
         Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Disabled Products)", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
     else:
-        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Non-Disabled Products)", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
+        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Enabled Products)", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
 
 else:
     if disabled_switch:
         Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Disabled Products)", "GetPAS v2 and v3 comparison contains no diff.")
     else:
-        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Non-Disabled Products)", "GetPAS v2 and v3 comparison contains no diff.")
+        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Enabled Products)", "GetPAS v2 and v3 comparison contains no diff.")
 
 
 
