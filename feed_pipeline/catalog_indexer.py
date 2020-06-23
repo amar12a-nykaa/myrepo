@@ -553,6 +553,7 @@ class CatalogIndexer:
         generic_attributes_raw = row.get('generic_attributes', '')
         generic_multiselect_attributes_raw = row.get('generic_multiselect_attributes', '')
         generic_filters_raw = row.get('generic_filters', '')
+        generic_int_filters_raw = row.get('generic_int_filters', '')
         try:
             generic_attributes_raw = '{' + generic_attributes_raw + '}'
             generic_attributes = json.loads(generic_attributes_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
@@ -572,6 +573,28 @@ class CatalogIndexer:
             generic_filters = json.loads(generic_filters_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace('\\\\"', '\\"'))
 
             for attribute_key, facets_data in generic_filters.items():
+
+                facets = []
+                facet_ids = []
+                facet_values = []
+
+                for facet_data in facets_data:
+                    id = facet_data.get('id')
+                    value = facet_data.get('value')
+                    facet_ids.append(id)
+                    facet_values.append(value)
+                    facets.append({"id": id, "name": value})
+
+                doc[attribute_key + '_ids'] = facet_ids
+                doc[attribute_key + '_values'] = facet_values
+                doc[attribute_key + '_facet'] = facets
+
+            generic_int_filters_raw = '{' + generic_int_filters_raw + '}'
+            generic_int_filters = json.loads(
+                generic_int_filters_raw.replace('\n', ' ').replace('\\n', ' ').replace('\r', '').replace('\\r', '').replace(
+                    '\\\\"', '\\"'))
+
+            for attribute_key, facets_data in generic_int_filters.items():
 
                 facets = []
                 facet_ids = []
