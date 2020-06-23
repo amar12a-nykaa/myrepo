@@ -245,6 +245,9 @@ class CatalogIndexer:
         "kay beauty": "kay beauty katrina kaif by k",
         "twenty dresses": "twenty dresses 20dresses 20",
         "mcaffeine": "mcaffeine m caffeine",
+        "kn95": "kn95 n95",
+        "yd95": "yd95 n95",
+        "w95": "w95 n95",
         "unisex": "unisex men women"
     }
 
