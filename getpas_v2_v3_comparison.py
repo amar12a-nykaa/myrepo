@@ -25,6 +25,7 @@ MAIL_RECIPIENTS = "gaurav.sharma@nykaa.com, charu.sharma@nykaa.com, sandeep@eule
 diff_exist = False
 number_of_rows = 0
 
+diff_map = {"backorders": 0, "msp": 0, "expdt": 0, "mrp": 0, "is_in_stock": 0, "sp": 0, "jit_eretail": 0 }
 pas_url_v2 = "http://preprod-priceapi.nyk00-int.network/apis/v2/pas.get"
 pas_url_v3 = "http://preprod-priceapi.nyk00-int.network/apis/v3/pas.get"
 if socket.gethostname().startswith('admin'):
@@ -48,6 +49,7 @@ def compare_results(dict1={}, dict2={}):
 
         for field in fields_to_check:
             if value1.get(field) != value2.get(field):
+                diff_map[field] +=1
                 diff_added = True
                 diff_dict[field + '_v2'] = value1.get(field)
                 diff_dict[field + '_v3'] = value2.get(field)
@@ -119,9 +121,9 @@ with open(diff_csv_filename, 'r') as csvfile:
 
 if diff_exist:
     if disabled_switch == 1:
-        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Disabled Products)", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
+        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Disabled Products)", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s, \n map : %s " % (number_of_rows, str(diff_map)), diff_csv_filename, diff_csv_filename)
     else:
-        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Enabled Products)", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
+        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Enabled Products)", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s, \n map : %s " % (number_of_rows, str(diff_map)), diff_csv_filename, diff_csv_filename)
 
 else:
     if disabled_switch == 1:
