@@ -24,8 +24,8 @@ fields_to_check = ["backorders", "msp", "expdt", "mrp", "is_in_stock", "sp", "ji
 MAIL_RECIPIENTS = "gaurav.sharma@nykaa.com, charu.sharma@nykaa.com, sandeep@euler-systems.com, kangkan@gludo.com, raman@gludo.com, kedar.pagdhare@nykaa.com, rishi.kataria@nykaa.com, saurav.goyal@nykaa.com"
 diff_exist = False
 number_of_rows = 0
-
-diff_map = {"backorders": 0, "msp": 0, "expdt": 0, "mrp": 0, "is_in_stock": 0, "sp": 0, "jit_eretail": 0 }
+margin = 1
+diff_map = {"backorders": 0, "msp": 0, "expdt": 0, "mrp": 0, "margin_in_stock": 0, "is_in_stock": 0, "sp": 0, "jit_eretail": 0 }
 pas_url_v2 = "http://preprod-priceapi.nyk00-int.network/apis/v2/pas.get"
 pas_url_v3 = "http://preprod-priceapi.nyk00-int.network/apis/v3/pas.get"
 if socket.gethostname().startswith('admin'):
@@ -53,6 +53,13 @@ def compare_results(dict1={}, dict2={}):
                 diff_added = True
                 diff_dict[field + '_v2'] = value1.get(field)
                 diff_dict[field + '_v3'] = value2.get(field)
+                if field == 'is_in_stock':
+                    v2_quantity = int(value1.get('quantity'))
+                    v3_quantity = int(value2.get('quantity'))
+                    diff_dict['quantity_v2'] = v2_quantity
+                    diff_dict['quantity_v3'] = v3_quantity
+                    if abs(v2_quantity - v3_quantity) > margin:
+                        diff_map['margin_in_stock'] += 1
         if diff_added:
             diff_list.append(diff_dict)
     return diff_list
