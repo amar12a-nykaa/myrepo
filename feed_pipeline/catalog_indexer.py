@@ -396,6 +396,9 @@ class CatalogIndexer:
                         else:
                             doc[swap_keys[key]] = pas[key]
 
+                    if pas.get('from_inventory_service') is not None:
+                        doc['from_inventory_service'] = pas.get('from_inventory_service')
+
                     if pas.get('quantity') is not None:
                         doc['quantity'] = pas.get('quantity')
 
