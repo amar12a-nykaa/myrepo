@@ -3,12 +3,18 @@ import requests
 import json
 import csv
 import socket
+import argparse
 
 sys.path.append("/var/www/pds_api")
 from pas.v3.utils import Utils as PasUtils
 
 from utils.mailutils import Mail
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--disabledswitch", default=0, help='switch for disabled products', type=int)
+argv = vars(parser.parse_args())
+disabled_switch = argv['disabledswitch']
 
 CHUNK_SIZE = 100
 diff_csv_headers = ["sku", "type", "backorders_v2", "backorders_v3", "msp_v2", "msp_v3", "expdt_v2",
@@ -65,7 +71,10 @@ def write_to_csv_file(diff_list=[]):
             print("I/O error")
 
 mysql_conn = PasUtils.mysqlConnection("r")
-query = "SELECT sku,type from products where disabled = 0"
+if disabled_switch == 1:
+    query = "SELECT sku,type from products where disabled=1"
+else:
+    query = "SELECT sku,type from products where disabled=0"
 results = PasUtils.fetchResults(mysql_conn, query)
 
 chunks = chunkify(results, CHUNK_SIZE)
@@ -109,9 +118,16 @@ with open(diff_csv_filename, 'r') as csvfile:
         number_of_rows = number_of_rows+1
 
 if diff_exist:
-    Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
+    if disabled_switch == 1:
+        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Disabled Products)", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
+    else:
+        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Enabled Products)", "GetPAS v2 and v3 comparison contains diff.\nNo. of rows %s" % number_of_rows, diff_csv_filename, diff_csv_filename)
+
 else:
-    Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch", "GetPAS v2 and v3 comparison contains no diff.")
+    if disabled_switch == 1:
+        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Disabled Products)", "GetPAS v2 and v3 comparison contains no diff.")
+    else:
+        Mail.send(MAIL_RECIPIENTS, "noreply@nykaa.com", "GetPAS v2 vs v3 Mismatch(Enabled Products)", "GetPAS v2 and v3 comparison contains no diff.")
 
 
 

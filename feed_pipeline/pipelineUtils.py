@@ -79,10 +79,10 @@ class PipelineUtils:
               if varnish_hosts_current_tg.get(instance_id):
                 varnish_hosts_current_tg.get(instance_id).update({'ip': private_ip})
       varnish_hosts.update(varnish_hosts_current_tg)
-    hosts = []
+    hosts = {}
     for instance_id in varnish_hosts:
       varnish_host = varnish_hosts[instance_id]
-      hosts.append("{}:{}".format(varnish_host.get('ip'), varnish_host.get('port')))
+      hosts[instance_id] = "{}:{}".format(varnish_host.get('ip'), varnish_host.get('port'))
     return hosts
 
   def getDiscoveryVarnishPurgeSQSDetails():
