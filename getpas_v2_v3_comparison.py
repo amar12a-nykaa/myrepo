@@ -18,7 +18,7 @@ disabled_switch = argv['disabledswitch']
 
 CHUNK_SIZE = 100
 diff_csv_headers = ["sku", "type", "backorders_v2", "backorders_v3", "msp_v2", "msp_v3", "expdt_v2",
-           "expdt_v3", "mrp_v2", "mrp_v3", "is_in_stock_v2", "is_in_stock_v3", "sp_v2", "sp_v3", "jit_eretail_v2", "jit_eretail_v3"]
+           "expdt_v3", "mrp_v2", "mrp_v3", "is_in_stock_v2", "is_in_stock_v3", "quantity_v2", "quantity_v3", "sp_v2", "sp_v3", "jit_eretail_v2", "jit_eretail_v3"]
 diff_csv_filename = "diff_v2_v3.csv"
 fields_to_check = ["backorders", "msp", "expdt", "mrp", "is_in_stock", "sp", "jit_eretail"]
 MAIL_RECIPIENTS = "gaurav.sharma@nykaa.com, charu.sharma@nykaa.com, sandeep@euler-systems.com, kangkan@gludo.com, raman@gludo.com, kedar.pagdhare@nykaa.com, rishi.kataria@nykaa.com, saurav.goyal@nykaa.com"
