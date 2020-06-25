@@ -13,8 +13,11 @@ from utils.mailutils import Mail
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--disabledswitch", default=0, help='switch for disabled products', type=int)
+parser.add_argument("-m", "--margin", default=1, help='margin for in_stock', type=int)
+
 argv = vars(parser.parse_args())
 disabled_switch = argv['disabledswitch']
+margin = argv['margin']
 
 CHUNK_SIZE = 100
 diff_csv_headers = ["sku", "type", "backorders_v2", "backorders_v3", "msp_v2", "msp_v3", "expdt_v2",
@@ -24,7 +27,6 @@ fields_to_check = ["backorders", "msp", "expdt", "mrp", "is_in_stock", "sp", "ji
 MAIL_RECIPIENTS = "gaurav.sharma@nykaa.com, charu.sharma@nykaa.com, sandeep@euler-systems.com, kangkan@gludo.com, raman@gludo.com, kedar.pagdhare@nykaa.com, rishi.kataria@nykaa.com, saurav.goyal@nykaa.com"
 diff_exist = False
 number_of_rows = 0
-margin = 1
 diff_map = {"backorders": 0, "msp": 0, "expdt": 0, "mrp": 0, "margin_in_stock": 0, "is_in_stock": 0, "sp": 0, "jit_eretail": 0 }
 pas_url_v2 = "http://preprod-priceapi.nyk00-int.network/apis/v2/pas.get"
 pas_url_v3 = "http://preprod-priceapi.nyk00-int.network/apis/v3/pas.get"
