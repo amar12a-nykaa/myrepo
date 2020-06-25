@@ -13,19 +13,21 @@ from utils.mailutils import Mail
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--disabledswitch", default=0, help='switch for disabled products', type=int)
+parser.add_argument("-m", "--margin", default=1, help='margin for in_stock', type=int)
+
 argv = vars(parser.parse_args())
 disabled_switch = argv['disabledswitch']
+margin = argv['margin']
 
 CHUNK_SIZE = 100
 diff_csv_headers = ["sku", "type", "backorders_v2", "backorders_v3", "msp_v2", "msp_v3", "expdt_v2",
-           "expdt_v3", "mrp_v2", "mrp_v3", "is_in_stock_v2", "is_in_stock_v3", "sp_v2", "sp_v3", "jit_eretail_v2", "jit_eretail_v3"]
+           "expdt_v3", "mrp_v2", "mrp_v3", "is_in_stock_v2", "is_in_stock_v3", "quantity_v2", "quantity_v3", "sp_v2", "sp_v3", "jit_eretail_v2", "jit_eretail_v3"]
 diff_csv_filename = "diff_v2_v3.csv"
 fields_to_check = ["backorders", "msp", "expdt", "mrp", "is_in_stock", "sp", "jit_eretail"]
 MAIL_RECIPIENTS = "gaurav.sharma@nykaa.com, charu.sharma@nykaa.com, sandeep@euler-systems.com, kangkan@gludo.com, raman@gludo.com, kedar.pagdhare@nykaa.com, rishi.kataria@nykaa.com, saurav.goyal@nykaa.com"
 diff_exist = False
 number_of_rows = 0
-
-diff_map = {"backorders": 0, "msp": 0, "expdt": 0, "mrp": 0, "is_in_stock": 0, "sp": 0, "jit_eretail": 0 }
+diff_map = {"backorders": 0, "msp": 0, "expdt": 0, "mrp": 0, "margin_in_stock": 0, "is_in_stock": 0, "sp": 0, "jit_eretail": 0 }
 pas_url_v2 = "http://preprod-priceapi.nyk00-int.network/apis/v2/pas.get"
 pas_url_v3 = "http://preprod-priceapi.nyk00-int.network/apis/v3/pas.get"
 if socket.gethostname().startswith('admin'):
@@ -53,6 +55,13 @@ def compare_results(dict1={}, dict2={}):
                 diff_added = True
                 diff_dict[field + '_v2'] = value1.get(field)
                 diff_dict[field + '_v3'] = value2.get(field)
+                if field == 'is_in_stock':
+                    v2_quantity = int(value1.get('quantity'))
+                    v3_quantity = int(value2.get('quantity'))
+                    diff_dict['quantity_v2'] = v2_quantity
+                    diff_dict['quantity_v3'] = v3_quantity
+                    if abs(v2_quantity - v3_quantity) > margin:
+                        diff_map['margin_in_stock'] += 1
         if diff_added:
             diff_list.append(diff_dict)
     return diff_list
