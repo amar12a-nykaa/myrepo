@@ -51,6 +51,9 @@ def compare_results(dict1={}, dict2={}):
 
         for field in fields_to_check:
             if value1.get(field) != value2.get(field):
+                if field == 'expdt':
+                    if not value1.get('expdt'):
+                        continue
                 diff_map[field] +=1
                 diff_added = True
                 diff_dict[field + '_v2'] = value1.get(field)
