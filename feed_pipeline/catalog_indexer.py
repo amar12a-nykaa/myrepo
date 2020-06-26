@@ -1202,7 +1202,12 @@ class CatalogIndexer:
                         doc['title_brand_category'] += " " + " ".join([x['name'] for x in doc[facet]]) 
                     except:
                         pass
-                
+
+                if doc['type'] == 'configurable':
+                    doc["title_brand_category"] += " " + " ".join((row["size"] or "").split('|')) if row.get('variant_type') == 'size' and row.get("size") else ""
+                elif doc['type'] == 'simple':
+                    doc["title_brand_category"] += " " + (row.get("pack_size", "") or "")
+
                 for key, value in CatalogIndexer.final_replace_dict.items():
                     pattern = '\\b' + key + '\\b'
                     doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'].lower())
