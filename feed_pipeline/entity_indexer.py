@@ -210,7 +210,7 @@ class EntityIndexer:
                 '91638': {'name': 'Dry & Frizzy Hair', 'synonym': ['dry hair', 'frizzy hair']},
                 '10755': {'name': 'Dandruff', 'synonym': ['anti dandruff']},
                 '80231': {'name': 'Tan Removal', 'synonym': ['tan', 'anti tan', 'de tan']},
-                '12089': {'name': 'Lotion/Body Butter', 'synonym': ['lotion', 'body butter']},
+                '12089': {'name': 'Lotion/Body Butter', 'synonym': ['lotion']},
                 '10711': {'name': 'Female', 'synonym': ['women', 'woman', 'ladies']},
                 '10710': {'name': 'Male', 'synonym': ['men', 'man']},
                 '67293': {'name': 'Solid/Plain', 'synonym': ['solid', 'plain']},
