@@ -7,6 +7,7 @@ import pprint
 import re
 import sys
 import traceback
+import re
 import urllib.request
 from collections import OrderedDict
 from contextlib import closing
@@ -79,6 +80,15 @@ def get_corrections_map():
         row = dict(row)
         response[row["query"]] = row["corrected_query"]
     return response
+
+def special_chars_present(query):
+    try:
+        if re.search(r'%2[0-9A-F]', query):
+            return True
+    except:
+        pass
+    return False
+
 
 CORRECTIONS_MAP = get_corrections_map()
 
@@ -255,6 +265,8 @@ def normalize_search_terms():
     for i, row in a.iterrows():
         query = row['id'].lower()
         if ps.stem(query) in cats_brands_stemmed:
+            a.drop(i, inplace=True)
+        elif special_chars_present(query):
             a.drop(i, inplace=True)
     
     a['popularity'] = 50 * normalize(a['popularity'])
