@@ -1,6 +1,7 @@
 from contextlib import closing
 import requests
 import csv
+import socket
 import json
 import mimetypes
 import smtplib
@@ -13,11 +14,14 @@ from email.mime.text import MIMEText
 class ProductsMismatch():
     bundle_mismatched_skus = []
     configurable_mismatched_skus = []
-    mail_list = ['cataloging@nykaa.com','rahil.khan@nykaa.com','discovery-tech@nykaa.com']
+
+    def __init__(self, url, mail_list, price_api_url):
+        self.mail_list = mail_list
+        self.url = url
+        self.price_api_url = price_api_url
 
     def getMismatchedProducts(self):
-        url = "http://adminpanel.nyk00-int.network/media/feed/master_feed_gludo.csv"
-        with closing(requests.get(url, stream=True)) as r:
+        with closing(requests.get(self.url, stream=True)) as r:
             f = (line.decode('utf-8') for line in r.iter_lines())
             reader = csv.DictReader(f, delimiter=',', quotechar='"')
             count = 0
@@ -43,8 +47,7 @@ class ProductsMismatch():
         self.sendMail()
 
     def findGludoConfigurableProducts(self,products):
-        request_url = "http://priceapi.nyk00-int.network/apis/v2/pas.get"
-        response = requests.post(request_url,data=json.dumps({"products":products}))
+        response = requests.post(self.price_api_url,data=json.dumps({"products":products}))
         pas_object = response.json()
         pas_object = pas_object.get('skus')
         for sku in pas_object:
@@ -53,7 +56,7 @@ class ProductsMismatch():
                 self.configurable_mismatched_skus.append(sku)
 
     def findGludoBundleProducts(self, sku_id, product_skus):
-        request_url = "http://priceapi.nyk00-int.network/apis/v2/pas.get?type=bundle&sku={}".format(sku_id)
+        request_url = "{}?type=bundle&sku={}".format(self.price_api_url, sku_id)
         response = requests.get(request_url)
         pas_object = response.json()
         pas_object = pas_object.get('skus')
@@ -122,5 +125,12 @@ class Mail(object):
 
 
 if __name__ == "__main__":
-    product_mismatch = ProductsMismatch()
+    if socket.gethostname().startswith('admin'):
+        product_mismatch = ProductsMismatch(url = "http://adminpanel.nyk00-int.network/media/feed/master_feed_gludo.csv",
+                                            mail_list=['cataloging@nykaa.com','rahil.khan@nykaa.com','discovery-tech@nykaa.com'],
+                                            price_api_url='http://priceapi.nyk00-int.network/apis/v2/pas.get')
+    else:
+        product_mismatch = ProductsMismatch(url='http://172.26.17.227:8080/media/feed/master_feed_gludo.csv',
+                                            mail_list=['rishi.kataria@nykaa.com','honey.lakhani@nykaa.com'],
+                                            price_api_url='http://preprod-priceapi.nyk00-int.network/apis/v2/pas.get')
     product_mismatch.getMismatchedProducts()
