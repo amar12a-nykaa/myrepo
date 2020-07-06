@@ -1216,7 +1216,7 @@ class CatalogIndexer:
                     print(traceback.format_exc())
                     print("product_id: %s " % doc['product_id'])
 
-                    
+                doc['title_brand_category'] += " default "
                 for facet in ['color_facet', 'finish_facet', 'formulation_facet', 'benefits_facet', 'skin_tone_facet', 'spf_facet',
                         'concern_facet', 'coverage_facet', 'gender_facet', 'skin_type_facet', 'hair_type_facet', 'preference_facet',
                         'ingredient_v1_facet', 'wiring_facet', 'padding_facet', 'fabric_facet', 'rise_facet', 'pattern_facet']:
@@ -1224,7 +1224,12 @@ class CatalogIndexer:
                         doc['title_brand_category'] += " " + " ".join([x['name'] for x in doc[facet]]) 
                     except:
                         pass
-                
+
+                if doc['type'] == 'configurable':
+                    doc["title_brand_category"] += " " + " ".join((row["size"] or "").split('|')) if row.get('variant_type') == 'size' and row.get("size") else ""
+                elif doc['type'] == 'simple':
+                    doc["title_brand_category"] += " " + (row.get("pack_size", "") or "")
+
                 for key, value in CatalogIndexer.final_replace_dict.items():
                     pattern = '\\b' + key + '\\b'
                     doc['title_brand_category'] = re.sub(pattern, value, doc['title_brand_category'].lower())

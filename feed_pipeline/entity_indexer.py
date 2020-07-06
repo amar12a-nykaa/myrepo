@@ -32,21 +32,26 @@ class EntityIndexer:
   
   def index_assortment_gap(collection):
     docs = []
-    df = pd.read_csv('/nykaa/scripts/feed_pipeline/entity_assortment_gaps_config.csv')
+    df = pd.read_csv('/nykaa/scripts/feed_pipeline/entity_assortment_gaps_config_v2.csv')
     brand_list = list(df['Brands'])
 
     ctr = LoopCounter(name='Assortment Gap Indexing')
-    for row in brand_list:
+    for id, row in df.iterrows():
+      row = dict(row)
       ctr += 1
       if ctr.should_print():
         print(ctr.summary)
 
+      data = {}
+      data["similar_brands"] = row.get("Similar_brands")
+      data["dominant_category"] = row.get("Dominant_category")
       assortment_doc = {
-        "_id": createId(row),
-        "entity": row,
+        "_id": createId(row["Brands"]),
+        "entity": row["Brands"],
         "weight": ASSORTMENT_WEIGHT,
         "type": "assortment_gap",
-        "id": ctr.count
+        "id": ctr.count,
+        "data": data
       }
       for tag in SearchUtils.VALID_CATALOG_TAGS:
         store_doc = assortment_doc.copy()
@@ -210,7 +215,7 @@ class EntityIndexer:
                 '91638': {'name': 'Dry & Frizzy Hair', 'synonym': ['dry hair', 'frizzy hair']},
                 '10755': {'name': 'Dandruff', 'synonym': ['anti dandruff']},
                 '80231': {'name': 'Tan Removal', 'synonym': ['tan', 'anti tan', 'de tan']},
-                '12089': {'name': 'Lotion/Body Butter', 'synonym': ['lotion', 'body butter']},
+                '12089': {'name': 'Lotion/Body Butter', 'synonym': ['lotion']},
                 '10711': {'name': 'Female', 'synonym': ['women', 'woman', 'ladies']},
                 '10710': {'name': 'Male', 'synonym': ['men', 'man']},
                 '67293': {'name': 'Solid/Plain', 'synonym': ['solid', 'plain']},

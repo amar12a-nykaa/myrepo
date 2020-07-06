@@ -28,7 +28,7 @@ class PipelineUtils:
     return host
 
   def getOffersAPIHost():
-    host = 'preprod-api.nykaa.com/offer'
+    host = 'preprod-offer.nyk00-int.network/offer'
     if socket.gethostname().startswith('admin'):
       host = 'prod-offer.nyk00-int.network/offer'
     return host
