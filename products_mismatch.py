@@ -42,8 +42,6 @@ class ProductsMismatch():
                     self.findGludoConfigurableProducts(products)
                     products = []
                     count =0
-        print(self.bundle_mismatched_skus)
-        print(self.configurable_mismatched_skus)
         self.sendMail()
 
     def findGludoConfigurableProducts(self,products):
@@ -86,7 +84,7 @@ class ProductsMismatch():
                     csv_writer.writerow(product)
             files_to_send.append('mismatched_configurable_products.csv')
         if files_to_send:
-            Mail.send('honey.lakhani@nykaa.com', "noreply@nykaa.com", "Bundle Products Mismatch", '',
+            Mail.send(self.mail_list, "noreply@nykaa.com", "Product Mismatch in Gludo and Magento", '',
                       files_to_send,files_to_send)
 
 
@@ -127,10 +125,10 @@ class Mail(object):
 if __name__ == "__main__":
     if socket.gethostname().startswith('admin'):
         product_mismatch = ProductsMismatch(url = "http://adminpanel.nyk00-int.network/media/feed/master_feed_gludo.csv",
-                                            mail_list=['cataloging@nykaa.com','rahil.khan@nykaa.com','discovery-tech@nykaa.com'],
+                                            mail_list="cataloging@nykaa.com,rahil.khan@nykaa.com,discovery-tech@nykaa.com",
                                             price_api_url='http://priceapi.nyk00-int.network/apis/v2/pas.get')
     else:
         product_mismatch = ProductsMismatch(url='http://172.26.17.227:8080/media/feed/master_feed_gludo.csv',
-                                            mail_list=['rishi.kataria@nykaa.com','honey.lakhani@nykaa.com'],
+                                            mail_list="rishi.kataria@nykaa.com,honey.lakhani@nykaa.com",
                                             price_api_url='http://preprod-priceapi.nyk00-int.network/apis/v2/pas.get')
     product_mismatch.getMismatchedProducts()
