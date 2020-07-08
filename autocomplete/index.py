@@ -67,6 +67,14 @@ PasUtils.mysql_write("create or replace view l3_categories_clean as select * fro
 
 brandLandingMap = {"herm" : "/hermes?ptype=lst&id=7917"}
 
+def get_brand_formatted(brand_name):
+  brand_name_lower = brand_name.lower()
+  if 'bynykaafashion' in ''.join(brand_name_lower.split()):
+    brand_name_lower = brand_name_lower.replace('by nykaafashion', '')
+    brand_name_lower = brand_name_lower.replace('by nykaa fashion', '')
+    brand_name = brand_name_lower.title().strip()
+  return brand_name
+
 def add_store_popularity(doc, row):
   store_popularity = row.get('store_popularity', "{}")
   if not store_popularity:
@@ -292,8 +300,8 @@ def index_brands(collection, searchengine):
     ctr += 1 
     if ctr.should_print():
       print(ctr.summary)
-    
 
+    row['brand'] = get_brand_formatted(row['brand'])
     id = createId(row['brand'])
     url = row['brand_url']
     if id in brandLandingMap.keys():
@@ -399,11 +407,12 @@ def index_brands_categories(collection, searchengine):
   def getBrandCategoryDoc(row, variant):
     store = row.get('store', 'nykaa')
     brand_category = row['brand'] + " " + variant
+    brand_category_formatted = get_brand_formatted(brand_category)
     url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
     men_url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
     id = row['brand'] + "_" + variant + "_" + str(row['category_id']) + "_" + store
     doc = {"_id": createId(id),
-           "entity": row['brand'] + " " + variant,
+           "entity": brand_category_formatted,
            "weight": row['popularity'],
            "type": "brand_category",
            "data": json.dumps({"url": url, "type": "brand_category", "men_url": men_url}),
