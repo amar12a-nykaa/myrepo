@@ -301,7 +301,6 @@ def index_brands(collection, searchengine):
     if ctr.should_print():
       print(ctr.summary)
 
-    row['brand'] = get_brand_formatted(row['brand'])
     id = createId(row['brand'])
     url = row['brand_url']
     if id in brandLandingMap.keys():
@@ -406,8 +405,9 @@ def index_brands_categories(collection, searchengine):
 
   def getBrandCategoryDoc(row, variant):
     store = row.get('store', 'nykaa')
+    brand_name_formatted = row['brand'].replace('By Nykaa Fashion', '')
     brand_category = row['brand'] + " " + variant
-    brand_category_formatted = get_brand_formatted(brand_category)
+    brand_category_formatted = brand_name_formatted + " " + variant
     url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
     men_url = "/search/result/?ptype=search&" + str(urllib.parse.urlencode({'q': brand_category}))
     id = row['brand'] + "_" + variant + "_" + str(row['category_id']) + "_" + store
