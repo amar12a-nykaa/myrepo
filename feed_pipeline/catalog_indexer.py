@@ -905,6 +905,8 @@ class CatalogIndexer:
                 if video:
                     doc['media'].append({'type': 'video', 'url': video})
 
+                doc["new_image_url"] = row.get('large_media_image', "")
+
                 # Primary Categories
                 doc['primary_categories'] = []
                 l1 = {}
