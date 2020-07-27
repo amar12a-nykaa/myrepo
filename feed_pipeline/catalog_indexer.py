@@ -88,14 +88,15 @@ def getCurrentDateTime():
     return current_datetime
 
 class Worker(threading.Thread):
-    def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
+
+    def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv,
                  update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch,reviewswitch, all_reviews_dict):
         self.q = q
         self.search_engine = search_engine
         self.collection = collection
         self.skus = [x for x in skus if x]
         self.categoryFacetAttributesInfoMap = categoryFacetAttributesInfoMap
-        self.offersApiConfig = offersApiConfig
+        # self.offersApiConfig = offersApiConfig
         self.required_fields_from_csv = required_fields_from_csv
         self.update_productids = update_productids
         self.product_2_vector_lsi_100 = product_2_vector_lsi_100 
@@ -123,7 +124,8 @@ class Worker(threading.Thread):
                 db_result = product_history_table.find({"_id": {"$in": product_ids}})
                 for row in db_result:
                   product_history[row['_id']] = row
-                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.offersApiConfig, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history,self.offerbatchsize,self.offerswitch,self.reviewswitch,self.all_reviews_dict)
+
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history,self.offerbatchsize,self.offerswitch,self.reviewswitch,self.all_reviews_dict)
                 is_first=False
             except queue.Empty:
                 return
@@ -398,6 +400,9 @@ class CatalogIndexer:
                         else:
                             doc[swap_keys[key]] = pas[key]
 
+                    if pas.get('from_inventory_service') is not None:
+                        doc['from_inventory_service'] = pas.get('from_inventory_service')
+
                     if pas.get('quantity') is not None:
                         doc['quantity'] = pas.get('quantity')
 
@@ -531,6 +536,19 @@ class CatalogIndexer:
                 except:
                     print(traceback.format_exc())
                     print("Insertion in SQS failed")
+
+                doc['offers'] = []
+                doc['offer_ids'] = []
+                doc['offer_facet'] = []
+                doc['nykaaman_offers'] = []
+                doc['nykaaman_offer_ids'] = []
+                doc['nykaaman_offer_facet'] = []
+                doc['nykaa_pro_offers'] = []
+                doc['nykaa_pro_offer_ids'] = []
+                doc['nykaa_pro_offer_facet'] = []
+                doc['offer_count'] = len(doc['offers'])
+                doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
+                doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
                 continue
             #update in input docs
             response_data = result.get('data',{})
@@ -734,7 +752,7 @@ class CatalogIndexer:
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
     @classmethod
-    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history,offerbatchsize,offerswitch,reviewswitch,all_reviews_dict):
+    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history,offerbatchsize,offerswitch,reviewswitch,all_reviews_dict):
         start_time = int(round(time.time() * 1000))
         input_docs = []
         pws_fetch_products = []
@@ -1040,89 +1058,89 @@ class CatalogIndexer:
                     params = {'sku': doc['sku'], 'type': doc['type']}
                     pws_fetch_products.append(params)
 
-                # offers stuff
-                offer_ids = row['offer_id'].split("|") if row['offer_id'] else []
-                offer_names = row['offer_name'].split("|") if row['offer_name'] else []
-                offer_descriptions = row['offer_description'].split("|") if row['offer_description'] else []
-                doc['offers'] = []
-                if offer_ids and len(offer_ids) == len(offer_names) and len(offer_ids) == len(offer_descriptions):
-                    doc['offer_ids'] = offer_ids
-                    doc['offer_facet'] = []
-                    for i, offer_id in enumerate(offer_ids):
-                        doc['offers'].append(
-                            {'id': offer_ids[i], 'name': offer_names[i], 'description': offer_descriptions[i]})
-                        offer_facet = OrderedDict()
-                        offer_facet['id'] = offer_ids[i]
-                        offer_facet['name'] = offer_names[i]
-                        doc['offer_facet'].append(offer_facet)
-                # elif offer_ids:
-                # with open("/data/inconsistent_offers.txt", "a") as f:
-                #  f.write("%s\n"%doc['sku'])
-                # print('inconsistent offer values for %s'%doc['sku'])
-                doc['offer_count'] = len(doc['offers'])
-                # print(doc['offers'])
-                new_offer_status = 0
-                if offersApiConfig and offersApiConfig['status']:
-                    if offersApiConfig['status'] == 1 and offersApiConfig['product_ids'] and len(
-                            offersApiConfig['product_ids']) > 0:
-                        if doc['product_id'] in offersApiConfig['product_ids']:
-                            new_offer_status = 1
-                    elif offersApiConfig['status'] == 2:
-                        new_offer_status = 1
-                    else:
-                        new_offer_status = 0
-                else:
-                    new_offer_status = 0
-
-                if new_offer_status == 1:
-                    # New offer Json
-                    doc['offers'] = []
-                    doc['offer_ids'] = []
-                    doc['offer_facet'] = []
-                    doc['nykaaman_offers'] = []
-                    doc['nykaaman_offer_ids'] = []
-                    doc['nykaaman_offer_facet'] = []
-                    doc['nykaa_pro_offers'] = []
-                    doc['nykaa_pro_offer_ids'] = []
-                    doc['nykaa_pro_offer_facet'] = []
-
-                    try:
-                        if row['offers']:
-                            product_offers = row['offers'].replace("\\\\", "\\")
-                            product = {}
-                            product['offers'] = ast.literal_eval(product_offers)
-                            for i in product['offers']:
-                                prefix = i
-                                if product['offers'][prefix]:
-                                    for i in product['offers'][prefix]:
-                                        if prefix == 'nykaa':
-                                            key = 'offer_facet'
-                                        else:
-                                            key = prefix + '_offer_facet'
-                                        doc['key'] = []
-                                        key = OrderedDict()
-                                        key['id'] = i['id']
-                                        key['name'] = i['name']
-                                        key['offer_start_date'] = i['offer_start_date']
-                                        key['offer_end_date'] = i['offer_end_date']
-                                        if 'customer_group' in i:
-                                          key['customer_group'] = i['customer_group']
-                                        doc['key'].append(key)
-                                        if prefix == 'nykaa':
-                                            doc['offer_ids'].append(i['id'])
-                                        else:
-                                            doc.setdefault(prefix + '_offer_ids', []).append(i['id'])
-
-                                    product['offers'][prefix] = sorted(product['offers'][prefix], key=itemgetter('priority'), reverse=True)
-                                    if prefix == 'nykaa':
-                                        doc['offers'] = product['offers'][prefix]
-                                    else:
-                                        doc[prefix + '_offers'] = product['offers'][prefix]
-                    except Exception as e:
-                        print(traceback.format_exc())
-                    doc['offer_count'] = len(doc['offers'])
-                    doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
-                    doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
+                # # offers stuff
+                # offer_ids = row['offer_id'].split("|") if row['offer_id'] else []
+                # offer_names = row['offer_name'].split("|") if row['offer_name'] else []
+                # offer_descriptions = row['offer_description'].split("|") if row['offer_description'] else []
+                # doc['offers'] = []
+                # if offer_ids and len(offer_ids) == len(offer_names) and len(offer_ids) == len(offer_descriptions):
+                #     doc['offer_ids'] = offer_ids
+                #     doc['offer_facet'] = []
+                #     for i, offer_id in enumerate(offer_ids):
+                #         doc['offers'].append(
+                #             {'id': offer_ids[i], 'name': offer_names[i], 'description': offer_descriptions[i]})
+                #         offer_facet = OrderedDict()
+                #         offer_facet['id'] = offer_ids[i]
+                #         offer_facet['name'] = offer_names[i]
+                #         doc['offer_facet'].append(offer_facet)
+                # # elif offer_ids:
+                # # with open("/data/inconsistent_offers.txt", "a") as f:
+                # #  f.write("%s\n"%doc['sku'])
+                # # print('inconsistent offer values for %s'%doc['sku'])
+                # doc['offer_count'] = len(doc['offers'])
+                # # print(doc['offers'])
+                # new_offer_status = 0
+                # if offersApiConfig and offersApiConfig['status']:
+                #     if offersApiConfig['status'] == 1 and offersApiConfig['product_ids'] and len(
+                #             offersApiConfig['product_ids']) > 0:
+                #         if doc['product_id'] in offersApiConfig['product_ids']:
+                #             new_offer_status = 1
+                #     elif offersApiConfig['status'] == 2:
+                #         new_offer_status = 1
+                #     else:
+                #         new_offer_status = 0
+                # else:
+                #     new_offer_status = 0
+                #
+                # if new_offer_status == 1:
+                #     # New offer Json
+                #     doc['offers'] = []
+                #     doc['offer_ids'] = []
+                #     doc['offer_facet'] = []
+                #     doc['nykaaman_offers'] = []
+                #     doc['nykaaman_offer_ids'] = []
+                #     doc['nykaaman_offer_facet'] = []
+                #     doc['nykaa_pro_offers'] = []
+                #     doc['nykaa_pro_offer_ids'] = []
+                #     doc['nykaa_pro_offer_facet'] = []
+                #
+                #     try:
+                #         if row['offers']:
+                #             product_offers = row['offers'].replace("\\\\", "\\")
+                #             product = {}
+                #             product['offers'] = ast.literal_eval(product_offers)
+                #             for i in product['offers']:
+                #                 prefix = i
+                #                 if product['offers'][prefix]:
+                #                     for i in product['offers'][prefix]:
+                #                         if prefix == 'nykaa':
+                #                             key = 'offer_facet'
+                #                         else:
+                #                             key = prefix + '_offer_facet'
+                #                         doc['key'] = []
+                #                         key = OrderedDict()
+                #                         key['id'] = i['id']
+                #                         key['name'] = i['name']
+                #                         key['offer_start_date'] = i['offer_start_date']
+                #                         key['offer_end_date'] = i['offer_end_date']
+                #                         if 'customer_group' in i:
+                #                           key['customer_group'] = i['customer_group']
+                #                         doc['key'].append(key)
+                #                         if prefix == 'nykaa':
+                #                             doc['offer_ids'].append(i['id'])
+                #                         else:
+                #                             doc.setdefault(prefix + '_offer_ids', []).append(i['id'])
+                #
+                #                     product['offers'][prefix] = sorted(product['offers'][prefix], key=itemgetter('priority'), reverse=True)
+                #                     if prefix == 'nykaa':
+                #                         doc['offers'] = product['offers'][prefix]
+                #                     else:
+                #                         doc[prefix + '_offers'] = product['offers'][prefix]
+                #     except Exception as e:
+                #         print(traceback.format_exc())
+                #     doc['offer_count'] = len(doc['offers'])
+                #     doc['nykaaman_offer_count'] = len(doc['nykaaman_offers'])
+                #     doc['nykaa_pro_offer_count'] = len(doc['nykaa_pro_offers'])
 
                 # facets: dynamic fields
                 facet_fields = [field for field in required_fields_from_csv if field.endswith("_v1") or (field == 'size_id' and size_filter_flag == 1)]
@@ -1352,7 +1370,7 @@ class CatalogIndexer:
         input_docs = []
         pws_fetch_products = []
         categoryFacetAttributesInfoMap = CatalogIndexer.getCategoryFacetAttributesMap()
-        offersApiConfig = CatalogIndexer.getOffersApiConfig()
+        # offersApiConfig = CatalogIndexer.getOffersApiConfig()
 
         size_filter = CatalogIndexer.getSizeFilterConfig()
 
@@ -1413,7 +1431,7 @@ class CatalogIndexer:
                         all_reviews_dict[row[0]] = row
 
         for _ in range(NUMBER_OF_THREADS):
-            Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, offersApiConfig, required_fields_from_csv,
+            Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv,
                    update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch,reviewswitch,all_reviews_dict).start()
         q.join()
         print("Index Catalog Finished!")
