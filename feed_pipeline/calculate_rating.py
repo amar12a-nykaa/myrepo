@@ -55,11 +55,10 @@ def get_avg_review(reviews):
     ratio = i*((vote_i+1)/total_count)
     param1 += ratio
     param2 += i*ratio
-    param3 += pow(ratio, 2)
 
   #print(param1, param2, param3, total_count)
-  #rating_value = param1 - z * pow((param2-pow(param1,2))/(total_count+1), 0.5)
-  rating_value = param1 - z * pow((param2-param3)/(total_count+1), 0.5)
+  rating_value = param1 - z * pow((param2-pow(param1,2))/(total_count+1), 0.5)
+  #rating_value = param1 - z * pow((param2-param3)/(total_count+1), 0.5)
   #print(rating_value)
   return rating_value
 
