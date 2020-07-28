@@ -1262,7 +1262,7 @@ class CatalogIndexer:
                 golive_time = doc.get('product_enable_time', 0)
                 today = dt.datetime.combine(dt.datetime.today(), dt.time.min)
                 startdate = today - dt.timedelta(days=30)
-                new_valid = False if 705 in row.get('brand_ids', []) else True #special handling for bath and body works
+                new_valid = False if "705" in doc.get('brand_ids', []) else True #special handling for bath and body works
                 if golive_time and (str(golive_time) >= str(startdate)) and new_valid:
                     doc["title_brand_category"] += " " + "NEW"
                     doc['custom_tags'].append('NEW')
