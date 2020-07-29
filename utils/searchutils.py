@@ -553,6 +553,8 @@ BASE_AGGREGATION_TOP_HITS = {
 def normalize(a):
   if max(a) == 0:
     return a
+  if max(a) == min(a):
+    return a
   return (a - min(a)) / (max(a) - min(a))
 
 
