@@ -567,7 +567,8 @@ def index_products(collection, searchengine):
     cnt_missing_keys = 0
     uniqueList = []
     for product in products_list:
-      id = product.get('product_id',0)
+      id = product.get('product_id', 0)
+      parent_id = product.get('parent_id', 0)
 
       if not id:
         continue
@@ -589,7 +590,8 @@ def index_products(collection, searchengine):
       men_url = None
       if 'men' in product['catalog_tag']:
         men_url = url.replace(".nykaa.com", ".nykaaman.com")
-      data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": id, "men_url": men_url})
+      data = json.dumps({"type": _type, "url": url, "image": image, 'image_base': image_base,  "id": id,
+                         "men_url": men_url, "parent_id": parent_id})
       unique_id = createId(product['title'])
       if unique_id in uniqueList:
         continue
