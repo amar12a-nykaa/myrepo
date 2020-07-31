@@ -144,6 +144,16 @@ multicategoryList = {
     "1654": {"variant": ["Intimate Care"], "name": "Intimate Hygiene"},
     "9598": {"variant": ["Shampoo", "Hair Cleanser"], "name": "Shampoo & Cleanser"},
     "9579": {"variant": ["Face Serum","Serums"], "name": "Serums"},
+    "14175": {"variant": ["Bhaiya Bhabi Rakhis","Rakhis"], "name": "Bhaiya Bhabi Rakhis"},
+    "14029": {"variant": ["Bluetooth Headphones"], "name": "Bluetooth"},
+    "14181": {"variant": ["Bracelet Rakhis","Rakhis"], "name": "Bracelet Rakhis"},
+    "6046": {"variant": ["Brief Sets","Brief"], "name": "Brief Sets"},
+    "1464": {"variant": ["Jewellery Sets","Jewellery"], "name": "Jewellery Sets"},
+    "14191": {"variant": ["Quirky Rakhis","Rakhis"], "name": "Quirky Rakhis"},
+    "14174": {"variant": ["Rakhi Sets","Rakhi"], "name": "Rakhi Sets"},
+    "1408": {"variant": ["Hair Straighteners"], "name": "Straighteners"},
+    "13791": {"variant": ["Bra Value Packs"], "name": "Value Packs"},
+    "14028": {"variant": ["Wired Headphones"], "name": "Wired"},
     "3056": {"variant": ["Sleepwear","Loungewear"], "name": "Sleep & Lounge"}
   }
 
