@@ -82,9 +82,15 @@ def get_corrections_map():
     return response
 
 def special_chars_present(query):
+    blacklisted_terms = ["fairness", "fair", "whitening", "lightening"]
     try:
         if re.search(r'%2[0-9A-F]', query):
             return True
+        for term in blacklisted_terms:
+            pattern = '\\b' + term + '\\b'
+            match = re.search(pattern, query)
+            if match:
+                return True
     except:
         pass
     return False
