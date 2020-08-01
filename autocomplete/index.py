@@ -693,6 +693,7 @@ def fetch_products_from_es(size):
           ],
           "must_not": [
             {"term": {"category_ids": "2413"}},
+            {"terms": {"brand_ids": SearchUtils.BRAND_EXCLUDE_LIST}},
             {"term": {"type": "bundle"}},
             {"term": {"disabled": True}}
           ]
