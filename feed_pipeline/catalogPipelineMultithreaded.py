@@ -153,7 +153,7 @@ if __name__ == "__main__":
     parser.add_argument("--bestsellerupdate", default=True, type=bool)
     parser.add_argument("-b", "--offerbatchsize", default=1000, help='size of offer docs batch', type=int)
     parser.add_argument("-w", "--offerswitch", default=False, help='switch for fetch_offers function', type=bool)
-    parser.add_argument("-r", "--reviewswitch", default=True, help='switch for fetch_reviews function', type=bool)
+    parser.add_argument("-r", "--reviewswitch", default=False, help='switch for fetch_reviews function', type=bool)
     parser.add_argument("-o", "--oos-size-switch", default=False, help='switch for fetch_offers function', type=bool)
     
     argv = vars(parser.parse_args())
