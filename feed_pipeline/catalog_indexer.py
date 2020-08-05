@@ -88,8 +88,9 @@ def getCurrentDateTime():
     return current_datetime
 
 class Worker(threading.Thread):
+
     def __init__(self, q, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv,
-                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch):
+                 update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch,reviewswitch, all_reviews_dict):
         self.q = q
         self.search_engine = search_engine
         self.collection = collection
@@ -104,6 +105,8 @@ class Worker(threading.Thread):
         self.size_filter = size_filter
         self.offerbatchsize = offerbatchsize
         self.offerswitch = offerswitch
+        self.reviewswitch = reviewswitch
+        self.all_reviews_dict = all_reviews_dict
 
         super().__init__()
 
@@ -121,7 +124,8 @@ class Worker(threading.Thread):
                 db_result = product_history_table.find({"_id": {"$in": product_ids}})
                 for row in db_result:
                   product_history[row['_id']] = row
-                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history,self.offerbatchsize,self.offerswitch)
+
+                CatalogIndexer.indexRecords(rows, self.search_engine, self.collection, self.skus, self.categoryFacetAttributesInfoMap, self.required_fields_from_csv, self.update_productids, self.product_2_vector_lsi_100, self.product_2_vector_lsi_200, self.product_2_vector_lsi_300,self.size_filter,is_first,product_history,self.offerbatchsize,self.offerswitch,self.reviewswitch,self.all_reviews_dict)
                 is_first=False
             except queue.Empty:
                 return
@@ -456,6 +460,26 @@ class CatalogIndexer:
             pws_input_docs.append(doc)
         return pws_input_docs, errors
 
+    def fetch_reviews(input_docs, all_reviews_dict={}):
+        if all_reviews_dict:
+            for doc in input_docs:
+                product_id = doc.get('product_id')
+                if product_id:
+                    reviews_data = all_reviews_dict.get(product_id,[])
+                    if reviews_data:
+                        doc['top_reviews'] = reviews_data[1]
+                        doc['review_splitup'] = reviews_data[2]
+                        doc['review_count'] = int(reviews_data[3])
+                        doc['star_rating_count'] = int(reviews_data[4])
+                        doc['star_rating'] = float(reviews_data[5])
+                        doc['star_rating_percentage'] = int(float(doc['star_rating']) * 20)
+                    else:
+                        doc['top_reviews'] = None
+                        doc['review_splitup'] = None
+                        doc['review_count'] = 0
+                        doc['star_rating_count'] = 0
+                    doc['ReviewSwitchEnable'] = True
+
     def fetch_offers(input_docs, offerbatchsize=1000):
 
         request_url = "http://" + PipelineUtils.getOffersAPIHost() + "/api/v1/catalog/products/offer"
@@ -730,7 +754,7 @@ class CatalogIndexer:
             if isinstance(value, list) and value == ['']:
                 doc[key] = []
     @classmethod
-    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history,offerbatchsize,offerswitch):
+    def indexRecords(cls,records, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv, update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,is_first,product_history,offerbatchsize,offerswitch,reviewswitch,all_reviews_dict):
         start_time = int(round(time.time() * 1000))
         input_docs = []
         pws_fetch_products = []
@@ -1302,7 +1326,11 @@ class CatalogIndexer:
             if offerswitch:
                 CatalogIndexer.fetch_offers(input_docs, offerbatchsize)
 
+            if reviewswitch:
+                CatalogIndexer.fetch_reviews(input_docs, all_reviews_dict)
+
             CatalogIndexer.add_guide_tags(input_docs)
+
             # index elastic search
             if search_engine == 'elasticsearch':
                 # index_start = timeit.default_timer()
@@ -1316,7 +1344,7 @@ class CatalogIndexer:
         end_time = int(round(time.time() * 1000))
         print("index record sync time : {} ms".format(end_time - start_time))
 
-    def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None, offerbatchsize=1000, offerswitch=False):
+    def index(search_engine, file_path, collection, update_productids=False, limit=0, skus=None, offerbatchsize=1000, offerswitch=False, reviewswitch=False, review_file_path=None):
         skus = skus or []
         skus = [x for x in skus if x]
         if skus:
@@ -1396,9 +1424,18 @@ class CatalogIndexer:
             #     print(ctr.summary)
             q.put_nowait(row)
 
+        # read review.csv file to generate dictionary
+        all_reviews_dict = {}
+        if reviewswitch and review_file_path:
+            with open(review_file_path) as the_file:
+                reader = csv.reader(the_file)
+                for row in reader:
+                    if row:
+                        all_reviews_dict[row[0]] = row
+
         for _ in range(NUMBER_OF_THREADS):
             Worker(q, search_engine, collection, skus, categoryFacetAttributesInfoMap, required_fields_from_csv,
-                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch).start()
+                   update_productids, product_2_vector_lsi_100, product_2_vector_lsi_200, product_2_vector_lsi_300,size_filter,offerbatchsize,offerswitch,reviewswitch,all_reviews_dict).start()
         q.join()
         print("Index Catalog Finished!")
 
