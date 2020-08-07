@@ -587,4 +587,7 @@ class StoreUtils(object):
       if not is_brand and store != tag:
         data[tag] = 0
     return json.dumps(data)
-    
+
+
+ICON_MAP = {"default": "https://images-static.nykaa.com/media/catalog/product/tr:h-20,w-20,cm-pad_resize/v/l/vlsnsn041bylw_1.jpg",
+            "search_query": "https://images-static.nykaa.com/media/catalog/product/tr:h-20,w-20,cm-pad_resize/v/l/vlsnsn041bylw_1.jpg"}

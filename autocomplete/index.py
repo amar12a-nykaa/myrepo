@@ -112,6 +112,11 @@ def index_docs(searchengine, docs, collection):
   for doc in docs:
     doc['typed_terms'] = get_feedback_data(doc['entity'])
     doc['entity'] += " s" # This is a trick to hnadle sideeffect of combining shingles and edge ngram token filters
+    icon = SearchUtils.ICON_MAP.get('default')
+    if SearchUtils.ICON_MAP.get(doc.get('type')):
+      icon = SearchUtils.ICON_MAP.get(doc.get('type'))
+    doc['icon'] = icon
+
   assert searchengine == 'elasticsearch'
   EsUtils.indexDocs(docs, collection)
 
