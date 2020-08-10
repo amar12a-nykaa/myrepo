@@ -252,6 +252,8 @@ class CatalogIndexer:
         "kn95": "kn95 n95",
         "yd95": "yd95 n95",
         "w95": "w95 n95",
+        "disinfectants": "disinfectants sanitizer sanitizing",
+        "sanitizer": "sanitizer sanitizing disinfectants",
         "rose water": "rose water gulab jal",
         "gulab jal": "gulab jal rose water",
         "unisex": "unisex men women"
