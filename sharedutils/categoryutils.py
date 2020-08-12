@@ -32,7 +32,7 @@ multicategoryList = {
     "1303": {"variant": ["Face Masks","Masks & Peels"], "name": "Masks & Peels"},
     "529": {"variant": ["Face Masks","Masks & Peels"], "name": "Masks & Peels"},
     "8400": {"variant": ["Face Masks","Masks & Peels"], "name": "Masks & Peels"},
-    "13561": {"variant": ["Face Masks"], "name": "Face Mask"},
+    "13561": {"variant": ["Face Masks", "Face Masks for Covid"], "name": "Face Mask"},
     "8394": {"variant": ["Face Moisturizer","Day Cream"], "name": "Face Moisturizer & Day Cream"},
     "8397": {"variant": ["Face Serum","Serums"], "name": "Serums & Essence"},
     "290": {"variant": ["Floss","Tongue Cleaners"], "name": "Floss & Tongue Cleaners"},
