@@ -695,11 +695,14 @@ class CatalogIndexer:
 
     def unit_conversion(attribute_value, factor):
         value_array = attribute_value.split('-')
+        output_value_array = []
         for key, value in enumerate(value_array):
-            if value.isdigit():
-                value_array[key] = str(round(float(value) * factor))
+            try:
+                output_value_array.append(str(round(float(value) * factor)))
+            except:
+                pass
 
-        val = '-'.join(value_array).replace(' ', '')
+        val = '-'.join(output_value_array)
         return val
 
     def update_sku_product_mapping(rows):
