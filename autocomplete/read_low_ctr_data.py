@@ -85,14 +85,15 @@ def read_file(filepath, date):
     filepath = csvfilepath 
 
   print(filepath)
+  os.system('sed -i "s/\\"//g" %s' % filepath)
   nrows = int(subprocess.check_output('wc -l ' + filepath, shell=True).decode().split()[0])
   ctr = LoopCounter("Reading CSV: ", total=nrows)
   first_row = True
   headers = None
-  with open(filepath, newline='') as csvfile:
+  with open(filepath, newline='', encoding='utf-8-sig') as csvfile:
     for r in csvfile:
       r=r.strip().split(",")
-      row = [r[0] , ",".join(r[1:-1]) ]  + r[-1]
+      row = [r[0] , ",".join(r[1:-1]) ]  + r[-1:]
       if first_row:
         first_row = False
         headers = row
