@@ -45,6 +45,7 @@ client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
 corrected_search_query = client['search']['corrected_search_query']
+search_click_data = client['search']['search_click_data']
 search_terms_normalized.remove({})
 ensure_mongo_indices_now()
 
@@ -94,6 +95,35 @@ def special_chars_present(query):
     except:
         pass
     return False
+
+
+def get_low_ctr_terms():
+    DAYS = -15
+    startdate = arrow.now().datetime.replace(tzinfo=None)
+    enddate = arrow.now().replace(days=DAYS, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
+        tzinfo=None)
+    bucket_results = []
+
+    # remove data older than DAYS days
+    search_click_data.remove({"datet": {"$lt": startdate}})
+
+    for term in search_click_data.aggregate([
+        {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
+        {"$project": {"query": {"$toLower": "$query"},
+                      "search_count": "$search_count",
+                      "click_count": "$click_count"}},
+        {"$group": {"_id": "$query",
+                    "search_count": {"$sum": "$search_instance"},
+                    "click_count": {"$sum": "$click_instance"}}}
+    ], allowDiskUse=True):
+        term['id'] = term.pop("_id")
+        bucket_results.append(term)
+
+    df = pd.DataFrame(bucket_results)
+    df['ctr'] = df.apply(lambda x: (100*float(x['click_count']))/ x['search_count'], axis=1)
+    df = df[df.ctr < 15]
+    return df
+
 
 
 CORRECTIONS_MAP = get_corrections_map()
@@ -227,7 +257,11 @@ def normalize_search_terms():
         for i in range(1, len(dfs)):
             final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
         final_df.popularity = final_df.popularity.fillna(0)
-
+        low_ctr_terms = get_low_ctr_terms()
+        final_df = pd.merge(final_df, low_ctr_terms, how='left', on='id')
+        final_df.ctr = final_df.ctr.fillna(100)
+        final_df = final_df[final_df.ctr == 100]
+        final_df = final_df[['id', 'popularity']]
         # final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
         # final_df.drop(['popularity'], axis=1, inplace=True)
         #print(final_df)
