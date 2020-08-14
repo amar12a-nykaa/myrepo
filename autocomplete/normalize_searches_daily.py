@@ -110,11 +110,11 @@ def get_low_ctr_terms():
     for term in search_click_data.aggregate([
         {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
         {"$project": {"query": {"$toLower": "$query"},
-                      "search_count": "$search_count",
-                      "click_count": "$click_count"}},
+                      "search_count": "$search_instance",
+                      "click_count": "$click_instance"}},
         {"$group": {"_id": "$query",
-                    "search_count": {"$sum": "$search_instance"},
-                    "click_count": {"$sum": "$click_instance"}}}
+                    "search_count": {"$sum": "$search_count"},
+                    "click_count": {"$sum": "$click_count"}}}
     ], allowDiskUse=True):
         term['id'] = term.pop("_id")
         bucket_results.append(term)
