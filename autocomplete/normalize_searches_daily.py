@@ -257,6 +257,7 @@ def normalize_search_terms():
         for i in range(1, len(dfs)):
             final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
         final_df.popularity = final_df.popularity.fillna(0)
+        final_df = final_df.reset_index()
         low_ctr_terms = get_low_ctr_terms()
         final_df = pd.merge(final_df, low_ctr_terms, how='left', on='id')
         final_df.ctr = final_df.ctr.fillna(100)
