@@ -120,7 +120,7 @@ def get_low_ctr_terms():
         bucket_results.append(term)
 
     df = pd.DataFrame(bucket_results)
-    df['ctr'] = df.apply(lambda x: (100*float(x['click_count']))/ x['search_count'], axis=1)
+    df['ctr'] = df.apply(lambda x: (100*float(x['click_count']))/ x['search_count'] if x['search_count'] else 0, axis=1)
     df = df[df.ctr < 15]
     return df
 
