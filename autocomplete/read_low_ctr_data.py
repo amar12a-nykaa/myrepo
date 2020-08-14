@@ -117,6 +117,18 @@ def read_file(filepath, date):
       d['search_instance'] = d.pop("Internal Search Term (Conversion) Instance (Instance of evar6)")
       d['click_instance'] = d.pop("Click Interaction Instance (Instance of evar78)")
 
+      is_data_good = True
+      for k in ['search_instance', 'click_instance']:
+          try:
+              if not d[k]:
+                  d[k] = 0
+              d[k] = int(d[k])
+          except:
+              print("Error in processing: %s" % d)
+              is_data_good = False
+      if not is_data_good:
+          continue
+
       terms  = d['query'].split("|")
       try:
         if len(terms) == 2:
