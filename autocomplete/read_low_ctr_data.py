@@ -90,10 +90,11 @@ def read_file(filepath, date):
   ctr = LoopCounter("Reading CSV: ", total=nrows)
   first_row = True
   headers = None
+  date = datetime.datetime.combine(date, datetime.datetime.min.time())
   with open(filepath, newline='', encoding='utf-8-sig') as csvfile:
     for r in csvfile:
       r=r.strip().split(",")
-      row = [r[0] , ",".join(r[1:-1]) ]  + r[-1:]
+      row = [",".join(r[0:-2])] + r[-2:]
       if first_row:
         first_row = False
         headers = row

@@ -99,13 +99,13 @@ def special_chars_present(query):
 
 def get_low_ctr_terms():
     DAYS = -15
-    startdate = arrow.now().datetime.replace(tzinfo=None)
-    enddate = arrow.now().replace(days=DAYS, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
+    enddate = arrow.now().datetime.replace(tzinfo=None)
+    startdate = arrow.now().replace(days=DAYS, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
         tzinfo=None)
     bucket_results = []
 
     # remove data older than DAYS days
-    search_click_data.remove({"datet": {"$lt": startdate}})
+    search_click_data.remove({"date": {"$lt": startdate}})
 
     for term in search_click_data.aggregate([
         {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
