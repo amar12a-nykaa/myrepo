@@ -32,6 +32,7 @@ from urllib.request import Request, urlopen
 
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health, get_bestseller_products
+from calculate_rating import get_avg_review
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
@@ -1276,6 +1277,15 @@ class CatalogIndexer:
                 for cid, synonym in CatalogIndexer.category_synonyms.items():
                     if cid in doc.get('category_ids', []):
                         doc['title_brand_category'] += " " + synonym
+
+                #add new rating
+                doc['star_rating_avg'] = 0
+                if row.get('review_splitup'):
+                    try:
+                        doc['star_rating_avg'] = get_avg_review(row['review_splitup'])
+                    except Exception as ex:
+                        print(ex)
+
 
                 doc['visible_after_color_filter_i'] = 1
                 if doc.get('color_facet', '') and doc.get('size_facet', ''):
