@@ -272,6 +272,7 @@ def index_search_queries(collection, searchengine):
         "type": _type,
         "data": data,
         "is_nykaa": True,
+        "is_structured": False,
         "weight_nykaa": row['popularity'],
         "is_visible": False if entity in low_ctr_query_list else True,
         "nz_query": row.get("nz_query", True),
