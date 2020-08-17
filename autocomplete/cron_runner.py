@@ -57,7 +57,7 @@ missing_dates_ctr = get_missing_dates('search_click_data')
 recent_missing_dates_ctr = missing_dates_ctr & last_5_dates
 print("ctr recent_missing_dates: %s" % recent_missing_dates_ctr)
 
-for date in recent_missing_dates:
+for date in recent_missing_dates_ctr:
   print("\n\n\n")
   print("=== READING CSV FOR CTR: %s ====" % date)
   read_low_ctr_data.read_file_by_date(date)
