@@ -71,7 +71,7 @@ def uploadFile(days=-1):
         #process file
         filepath = '/nykaa/adminftp/Site_sub_pid_funn%s.csv' % dateStr
         if not os.path.exists(filepath):
-            filepath = '/nykaa/adminftp/search_metrics_%s.zip' % dateStr
+            filepath = '/nykaa/adminftp/Site_sub_pid_funn%s.zip' % dateStr
         if not os.path.isfile(filepath):
             print("[ERROR] File does not exist: %s" % filepath)
             continue
