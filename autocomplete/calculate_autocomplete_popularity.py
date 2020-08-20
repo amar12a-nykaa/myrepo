@@ -46,10 +46,10 @@ def get_brand_data():
   return brand_info
 
 
-def get_popularity_data_from_es(valid_category_list):
+def get_popularity_data_from_es(valid_category_list, store):
   query = {
     "size": 0,
-    "query": {"term": {"disabled": "false"}},
+    "query": {"bool": {"must": [{"term": {"disabled": False}}, {"terms": {"catalog_tag.keyword": [store]}}]}},
     "aggs": {
       "category_data": {
         "terms": {
@@ -95,7 +95,7 @@ def get_popularity_data_for_brand():
           "exclude": SearchUtils.BRAND_EXCLUDE_LIST,
           "size": 10000
         },
-        "aggs": SearchUtils.BASE_AGGREGATION_TOP_HITS
+        "aggs": SearchUtils.BASE_AGGREGATION_BRAND_TOP_HITS
       }
     }
 }
@@ -113,7 +113,7 @@ def process_category_facet_popularity(valid_category_list, category_info, store)
   for tag in SearchUtils.VALID_CATALOG_TAGS:
     data[tag] = []
   
-  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "color_facet"), data)
+  data = getFacetPopularityArray(getAggQueryResult(valid_category_list, "color_facet", store), data, store)
   
   facet_popularity = pd.DataFrame.from_dict(data)
   if facet_popularity.empty:
@@ -163,18 +163,15 @@ def process_category(category_data, category_info, store):
   
   for category in category_data:
     popularity_data = {'category_id': category.get('key', 0)}
-    for bucket in category.get('tags', {}).get('buckets', []):
-      average_popularity = SearchUtils.get_avg_bucket_popularity(bucket)
-      popularity_data[bucket.get('key')] = average_popularity
-    
+    average_popularity = SearchUtils.get_avg_bucket_popularity(category)
+
     data['category_id'].append(popularity_data.get('category_id'))
     for tag in SearchUtils.VALID_CATALOG_TAGS:
-      popularity = popularity_data.get(tag, -1)
-      if popularity < 0:
+      if tag != store:
         data[tag].append(0)
         data["valid_"+tag].append(False)
       else:
-        data[tag].append(popularity)
+        data[tag].append(average_popularity)
         data["valid_" + tag].append(True)
   category_popularity = pd.DataFrame.from_dict(data)
   for tag in SearchUtils.VALID_CATALOG_TAGS:
@@ -209,10 +206,11 @@ def process_category(category_data, category_info, store):
   return
 
 
-def getAggQueryResult(valid_category_list, facet1):
+def getAggQueryResult(valid_category_list, facet1, store):
   key1 = facet1 + ".keyword"
 
   query = {
+    "query": {"bool": {"must": [{"term": {"disabled": False}}, {"terms": {"catalog_tag.keyword": [store]}}]}},
     "aggs": {
       "categories": {
         "terms": {
@@ -232,7 +230,7 @@ def getAggQueryResult(valid_category_list, facet1):
   return results['aggregations']['categories']['buckets']
 
 
-def getFacetPopularityArray(results, data):
+def getFacetPopularityArray(results, data, store):
   is_good_facet = False
   for catbucket in results:
     facet_names = [x for x in catbucket.keys() if '_facet' in x]
@@ -248,8 +246,7 @@ def getFacetPopularityArray(results, data):
           is_good_facet = True
         name = facet_bucket['key']['name']
         popularity_data = {}
-        for bucket in facet_bucket.get('tags', {}).get('buckets', []):
-          popularity_data[bucket.get('key')] = round(bucket.get('popularity_sum', {}).get('value', 0), 4)
+        popularity_data[store] = round(facet_bucket.get('popularity_sum', {}).get('value', 0), 4)
         
         if is_good_facet:
           data['category_id'].append(catbucket['key'])
@@ -301,26 +298,25 @@ def process_brand_category(brand_category_data, category_info, store):
   for category in brand_category_data:
     for brand in category.get('brands', {}).get('buckets', []):
       popularity_data = {'category_id': category.get('key', 0), 'brand_id': brand.get('key', 0)}
-      for bucket in brand.get('tags', {}).get('buckets', []):
-        average_popularity = SearchUtils.get_avg_bucket_popularity(bucket)
-        popularity_data[bucket.get('key')] = average_popularity
+      average_popularity = SearchUtils.get_avg_bucket_popularity(brand)
       data['category_id'].append(popularity_data.get('category_id'))
       data['brand_id'].append(popularity_data.get('brand_id'))
       for tag in SearchUtils.VALID_CATALOG_TAGS:
-        data[tag].append(popularity_data.get(tag, 0))
+        if tag == store:
+          data[tag].append(average_popularity)
+        else:
+          data[tag].append(0)
   
   brand_category_popularity = pd.DataFrame.from_dict(data)
-  for tag in SearchUtils.VALID_CATALOG_TAGS:
-    brand_category_popularity[tag] = (50 * SearchUtils.normalize(brand_category_popularity[tag])) + 50
-    brand_category_popularity[tag] = brand_category_popularity[tag].apply(lambda x: x if x > 50.0 else 0)
-  # brand_category_popularity.to_csv('brand_category_popularity.csv', index=False)
+  brand_category_popularity[store] = (50 * SearchUtils.normalize(brand_category_popularity[tag])) + 50
+  brand_category_popularity[store] = brand_category_popularity[store].apply(lambda x: x if x > 50.0 else 0)
   
   # promote private label
   def boost_brand(row):
     if str(row['brand_id']) in SearchUtils.PRIVATE_LABEL_BRANDS:
-      for tag in SearchUtils.VALID_CATALOG_TAGS:
-        row[tag] = SearchUtils.AUTOCOMPLETE_BRAND_BOOST_FACTOR * row[tag]
+      row[store] = SearchUtils.AUTOCOMPLETE_BRAND_BOOST_FACTOR * row[store]
     return row
+
   brand_category_popularity = brand_category_popularity.apply(boost_brand, axis=1)
   
   print("writing brand category popularity to db")
@@ -408,6 +404,7 @@ def insert_l1_category_information(store):
   valid_category_list = list(valid_categories.category_id.values)
   query = {
     "size": 0,
+    "query": {"bool": {"must": [{"term": {"disabled": False}}, {"terms": {"catalog_tag.keyword": [store]}}]}},
     "aggs": {
       "category_data": {
         "terms": {
@@ -430,18 +427,14 @@ def insert_l1_category_information(store):
 
   for category in category_data:
     popularity_data = {'category_id': category.get('key', 0)}
-    for bucket in category.get('tags', {}).get('buckets', []):
-      average_popularity = SearchUtils.get_avg_bucket_popularity(bucket)
-      popularity_data[bucket.get('key')] = average_popularity
-  
+    average_popularity = SearchUtils.get_avg_bucket_popularity(category)
     data['category_id'].append(popularity_data.get('category_id'))
     for tag in SearchUtils.VALID_CATALOG_TAGS:
-      popularity = popularity_data.get(tag, -1)
-      if popularity < 0:
+      if tag != store:
         data[tag].append(0)
         data["valid_" + tag].append(False)
       else:
-        data[tag].append(popularity)
+        data[tag].append(average_popularity)
         data["valid_" + tag].append(True)
   category_popularity = pd.DataFrame.from_dict(data)
   if category_popularity.empty:
@@ -496,7 +489,7 @@ def calculate_popularity_autocomplete():
     if not valid_category_list:
       continue
     print("getting popularity from es for %s" % tag)
-    category_data, brand_category_data = get_popularity_data_from_es(valid_category_list)
+    category_data, brand_category_data = get_popularity_data_from_es(valid_category_list, tag)
     if not category_data:
       print("no category_info found for %s" % tag)
       continue

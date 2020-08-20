@@ -518,20 +518,22 @@ BLACKLISTED_FACETS = ['old_brand_facet', ]
 BRAND_EXCLUDE_LIST = ['9817', '2789', '7462', '618']
 POPULARITY_THRESHOLD = 0.1
 BASE_AGGREGATION = {
-    "tags": {
-      "terms": {
-        "field": "catalog_tag.keyword",
-        "include": VALID_CATALOG_TAGS,
-        "size": 10
-      },
-      "aggs": {
-        "popularity_sum": {
-          "sum": {"field": "popularity"}
-        }
-      }
+  "popularity_sum": {
+    "sum": {"field": "popularity"}
+  }
+}
+
+BASE_AGGREGATION_TOP_HITS = {
+  "top_popularity": {
+    "top_hits": {
+      "size": 10,
+      "sort": [{"popularity": {"order": "desc"}}],
+      "_source": ["popularity"]
     }
   }
-BASE_AGGREGATION_TOP_HITS = {
+}
+
+BASE_AGGREGATION_BRAND_TOP_HITS = {
   "tags": {
     "terms": {
       "field": "catalog_tag.keyword",
