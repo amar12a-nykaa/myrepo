@@ -22,7 +22,7 @@ def calculate_feedback(days=7, verbose=False):
         date = datetime.now() - timedelta(days=i)
         filename = 'dt=%s/search_metrics.csv' % date.strftime("%Y%m%d")
         try:
-            obj = s3.get_object(Bucket=bucket, Key=filename)
+            obj = s3.Bucket(bucket).Object(filename).get()
             df = pd.read_csv(io.BytesIO(obj['Body'].read()), encoding='utf8')
             df = df[['search_term', 'product_id', 'revenue', 'views']]
             df = df[df.revenue >= 1]
