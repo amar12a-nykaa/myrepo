@@ -326,6 +326,9 @@
         "discount": {
           "type": "float"
         },
+        "star_rating_avg": {
+          "type": "float"
+        },
         "eretailer": {
           "type": "boolean"
         },

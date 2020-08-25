@@ -1282,7 +1282,7 @@ class CatalogIndexer:
                 doc['star_rating_avg'] = 0
                 if row.get('review_splitup'):
                     try:
-                        doc['star_rating_avg'] = get_avg_review(row['review_splitup'])
+                        doc['star_rating_avg'] = float(get_avg_review(row['review_splitup']))
                     except Exception as ex:
                         print(ex)
 
