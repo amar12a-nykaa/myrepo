@@ -174,6 +174,9 @@ def process_category(category_data, category_info, store):
         data[tag].append(average_popularity)
         data["valid_" + tag].append(True)
   category_popularity = pd.DataFrame.from_dict(data)
+  if category_popularity.empty:
+    print("No category data found for %s" % (store))
+    return
   for tag in SearchUtils.VALID_CATALOG_TAGS:
     category_popularity[tag] = 100 * SearchUtils.normalize(category_popularity[tag]) + 100
   category_popularity = category_popularity.apply(SearchUtils.StoreUtils.check_base_popularity, axis=1)
@@ -308,9 +311,12 @@ def process_brand_category(brand_category_data, category_info, store):
           data[tag].append(0)
   
   brand_category_popularity = pd.DataFrame.from_dict(data)
+  if brand_category_popularity.empty:
+    print("No category data found for %s" % (store))
+    return
   brand_category_popularity[store] = (50 * SearchUtils.normalize(brand_category_popularity[tag])) + 50
   brand_category_popularity[store] = brand_category_popularity[store].apply(lambda x: x if x > 50.0 else 0)
-  
+
   # promote private label
   def boost_brand(row):
     if str(row['brand_id']) in SearchUtils.PRIVATE_LABEL_BRANDS:
