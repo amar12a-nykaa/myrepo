@@ -46,7 +46,6 @@ search_terms_daily = client['search']['search_terms_daily']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
 corrected_search_query = client['search']['corrected_search_query']
 search_click_data = client['search']['search_click_data']
-search_terms_normalized.remove({})
 ensure_mongo_indices_now()
 
 correct_term_list = ["correct words","everyuth","kerastase","farsali","krylon","armaf","Cosrx","focallure","ennscloset",
