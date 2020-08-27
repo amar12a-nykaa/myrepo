@@ -144,7 +144,7 @@ class SQSConsumer:
                 print("Main Thread: SQS is empty!")
 
             if len(update_docs) >= 1 or (len(update_docs) >= 1 and is_sqs_empty):
-                print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
+                # print("Main Thread: Putting chunk of size %s in queue " % len(update_docs))
                 #sku_ids = "|".join(update_docs)
                 # self.purge_varnish_for_product(sku_ids)
                 self.q.put_nowait("|".join(update_docs))
@@ -166,6 +166,7 @@ class SQSConsumer:
     def purge_varnish_for_product(self, sku_ids):
         h = httplib2.Http(".cache")
         headers = {"X-depends-on": sku_ids}
+        print(sku_ids)
         for varnish_host in self.varnish_hosts:
             try:
                 (resp, content) = h.request("http://%s/" % varnish_host, "BAN", body="", headers=headers)
