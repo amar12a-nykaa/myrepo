@@ -113,6 +113,7 @@ if __name__ == "__main__":
             os.remove(filename)
     else:
         print("File with filename %s not found."%(filename))
+        sys.exit(1)
     script_stop = timeit.default_timer()
     script_duration = script_stop - script_start
     print("Total time taken for the script to run: %s" % time.strftime("%M min %S seconds", time.gmtime(script_duration)))
