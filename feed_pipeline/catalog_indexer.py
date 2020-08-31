@@ -32,6 +32,7 @@ from urllib.request import Request, urlopen
 
 from pipelineUtils import PipelineUtils
 from popularity_api import get_popularity_for_id, validate_popularity_data_health, get_bestseller_products
+from calculate_rating import get_avg_review
 
 sys.path.append("/nykaa/scripts/sharedutils")
 from esutils import EsUtils
@@ -252,6 +253,8 @@ class CatalogIndexer:
         "kn95": "kn95 n95",
         "yd95": "yd95 n95",
         "w95": "w95 n95",
+        "disinfectants": "disinfectants sanitizer sanitizing",
+        "sanitizer": "sanitizer sanitizing disinfectants",
         "rose water": "rose water gulab jal",
         "gulab jal": "gulab jal rose water",
         "unisex": "unisex men women"
@@ -693,11 +696,14 @@ class CatalogIndexer:
 
     def unit_conversion(attribute_value, factor):
         value_array = attribute_value.split('-')
+        output_value_array = []
         for key, value in enumerate(value_array):
-            if value.isdigit():
-                value_array[key] = str(round(float(value) * factor))
+            try:
+                output_value_array.append(str(round(float(value) * factor)))
+            except:
+                pass
 
-        val = '-'.join(value_array).replace(' ', '')
+        val = '-'.join(output_value_array)
         return val
 
     def update_sku_product_mapping(rows):
@@ -930,6 +936,8 @@ class CatalogIndexer:
                 video = row.get('video')
                 if video:
                     doc['media'].append({'type': 'video', 'url': video})
+
+                doc["new_image_url"] = row.get('large_media_image', "")
 
                 # Primary Categories
                 doc['primary_categories'] = []
@@ -1269,6 +1277,15 @@ class CatalogIndexer:
                 for cid, synonym in CatalogIndexer.category_synonyms.items():
                     if cid in doc.get('category_ids', []):
                         doc['title_brand_category'] += " " + synonym
+
+                #add new rating
+                doc['star_rating_avg'] = 0
+                if row.get('review_splitup'):
+                    try:
+                        doc['star_rating_avg'] = float(get_avg_review(row['review_splitup']))
+                    except Exception as ex:
+                        print(ex)
+
 
                 doc['visible_after_color_filter_i'] = 1
                 if doc.get('color_facet', '') and doc.get('size_facet', ''):

@@ -34,18 +34,18 @@ def get_gludo_url():
     return gludo_base_url + '/pas.get'
 
 
-def upload_special_price_to_s3(batch_size = 1000):
+def upload_special_price_to_s3(batch_size = 1000, scheduled_offset=0):
   tz = pytz.timezone('Asia/Kolkata')
   local_date = datetime.datetime.now(tz=tz).strftime('%d-%m-%Y')
   file_name = 'special_price_{}.csv'.format(local_date)
   f = open(file_name, "w")
 
   query1 = "SELECT sku, type FROM products;"
-  write_to_result_to_file(query=query1, file=f, batch_size=batchsize)
+  write_to_result_to_file(query=query1, file=f, batch_size=batchsize, scheduled_offset=scheduled_offset)
   print('----Query1-----')
 
   query2 = "SELECT sku, 'bundle' FROM nykaa.bundles;"
-  write_to_result_to_file(query=query2, file=f, batch_size=batchsize)
+  write_to_result_to_file(query=query2, file=f, batch_size=batchsize, scheduled_offset=scheduled_offset)
   print('----Query2-----')
 
   f.close()
@@ -54,7 +54,7 @@ def upload_special_price_to_s3(batch_size = 1000):
 
 
 
-def write_to_result_to_file(query, file, batch_size):
+def write_to_result_to_file(query, file, batch_size, scheduled_offset):
   gludo_url = get_gludo_url()
   print('gludo_url', gludo_url)
   connection = PasUtils.mysqlConnection()
@@ -74,7 +74,7 @@ def write_to_result_to_file(query, file, batch_size):
       products_array.append(products)
 
     for products in products_array:
-      request_data = {"products": products}
+      request_data = {"products": products, "scheduled_offset": scheduled_offset}
 
       for attempt in range(1, 4):
         try:
@@ -99,6 +99,8 @@ def write_to_result_to_file(query, file, batch_size):
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("-b", "--batchsize", default=1000)
+  parser.add_argument("-o", "--scheduled_offset", default=0)
   argv = vars(parser.parse_args())
   batchsize = int(argv['batchsize'])
-  upload_special_price_to_s3(batchsize)
+  scheduled_offset = int(argv['scheduled_offset'])
+  upload_special_price_to_s3(batchsize, scheduled_offset)
