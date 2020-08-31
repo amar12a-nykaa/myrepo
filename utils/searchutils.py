@@ -589,4 +589,6 @@ class StoreUtils(object):
       if not is_brand and store != tag:
         data[tag] = 0
     return json.dumps(data)
-    
+
+
+ICON_MAP = {"default": "search"}
