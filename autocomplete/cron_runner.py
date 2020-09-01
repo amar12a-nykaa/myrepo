@@ -60,7 +60,6 @@ for store in all_store:
     read_file_by_date(date, 'web', store)
     read_file_by_date(date, 'app', store)
     print("THE END")
-
 if recent_missing_dates:
   print("===> Running pipeline")
   run_pipeline()
