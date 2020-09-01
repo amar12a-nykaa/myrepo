@@ -31,8 +31,10 @@ AUTOCOMPLETE = 'autocomplete'
 
 def run_pipeline():
     script_start = timeit.default_timer()
-    normalize_search_terms()
+    for store in ['nykaa', 'men']:
+        normalize_search_terms(store)
     calculate_popularity_autocomplete()
+
 
     try:
         print("uploading feedback file")
@@ -60,10 +62,8 @@ def run_pipeline():
     script_stop = timeit.default_timer()
     script_duration = script_stop - script_start
     print("\n\nFinished running catalog pipeline. NEW ACTIVE COLLECTION: %s\n\n" % inactive_index)
-    print(
-        "Time taken to index data to ES: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
-    print("Total time taken for the script to run: %s seconds" % time.strftime("%M min %S seconds",
-                                                                               time.gmtime(script_duration)))
+    print("Time taken to index data to ES: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(index_duration)))
+    print("Total time taken for the script to run: %s seconds" % time.strftime("%M min %S seconds", time.gmtime(script_duration)))
 
 
 if __name__ == '__main__':

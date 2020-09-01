@@ -45,10 +45,12 @@ ensure_mongo_indices_now()
 
 collection='autocomplete'
 search_terms_normalized_daily = MongoUtils.getClient()['search']['search_terms_normalized_daily']
+search_terms_normalized_daily_men = MongoUtils.getClient()['search']['search_terms_normalized_daily_men']
 query_product_map_table = MongoUtils.getClient()['search']['query_product_map']
 query_product_not_found_table = MongoUtils.getClient()['search']['query_product_not_found']
 feedback_data_autocomplete = MongoUtils.getClient()['search']['feedback_data_autocomplete']
 top_queries = []
+#top_queries_men = []
 ES_SCHEMA =  json.load(open(  os.path.join(os.path.dirname(__file__), 'schema.json')))
 es = DiscUtils.esConn()
 
@@ -112,16 +114,12 @@ def index_docs(searchengine, docs, collection):
   for doc in docs:
     doc['typed_terms'] = get_feedback_data(doc['entity'])
     doc['entity'] += " s" # This is a trick to hnadle sideeffect of combining shingles and edge ngram token filters
-    icon = SearchUtils.ICON_MAP.get('default')
-    if SearchUtils.ICON_MAP.get(doc.get('type')):
-      icon = SearchUtils.ICON_MAP.get(doc.get('type'))
-    doc['icon'] = icon
-
   assert searchengine == 'elasticsearch'
   EsUtils.indexDocs(docs, collection)
 
-def create_map_search_product():
-  DEBUG = False 
+def create_map_search_product(coll_search_normalized):
+
+  DEBUG = False
   map_search_product = {}
   for prod in query_product_map_table.find():
     map_search_product[prod['_id']] = prod
@@ -133,8 +131,11 @@ def create_map_search_product():
   es_index = EsUtils.get_active_inactive_indexes('livecore')['active_index']
   limit = 100000
   ctr = LoopCounter(name='create_map_search_product')
-  for query in (p['query'] for p in search_terms_normalized_daily.find(no_cursor_timeout=True).sort([("popularity", pymongo.DESCENDING)])):
-    if len(query)>50:
+
+  #print("------------->",coll_search_normalized, list(search_terms_normalized_daily.find(no_cursor_timeout=True)))
+  for query in (p['query'] for p in coll_search_normalized.find(no_cursor_timeout=True).sort(
+          [("popularity", pymongo.DESCENDING)])):
+    if len(query) > 50:
       continue
 
     if len(top_queries) == limit:
@@ -157,12 +158,12 @@ def create_map_search_product():
             "bool": {
               "must": {
                 "dis_max": {
-                  "queries": [ { "match": { "title_text_split": { "query": str(query), "minimum_should_match": "-20%" } } } ]
+                  "queries": [{"match": {"title_text_split": {"query": str(query), "minimum_should_match": "-20%"}}}]
                 }
               },
               "filter": [
-                { "terms" : { "type" : ["simple", "configurable"] } },
-                { "range" : { "price" : { "gte" : 1 } } }
+                {"terms": {"type": ["simple", "configurable"]}},
+                {"range": {"price": {"gte": 1}}}
               ]
             }
           },
@@ -176,7 +177,7 @@ def create_map_search_product():
           "boost_mode": "multiply"
         }
       },
-      "_source" : ["title", "score", "media", "product_url", "product_id", "price", "type"]
+      "_source": ["title", "score", "media", "product_url", "product_id", "price", "type"]
     }
 
     response = DiscUtils.makeESRequest(querydsl, es_index)
@@ -188,11 +189,11 @@ def create_map_search_product():
     else:
       max_score = max([x['_score'] for x in docs])
       docs = [x['_source'] for x in docs if x['_score'] == max_score]
-      
+
       for doc in docs:
-        doc['editdistance'] = editdistance.eval(doc['title'].lower(), query.lower()) 
-      docs.sort(key=lambda x:x['editdistance'] )
-     
+        doc['editdistance'] = editdistance.eval(doc['title'].lower(), query.lower())
+      docs.sort(key=lambda x: x['editdistance'])
+
       if not docs:
         top_queries.append(query)
         query_product_not_found_table.update_one({"_id": createId(query)}, {"$set": {"query": query}}, upsert=True)
@@ -218,82 +219,94 @@ def create_map_search_product():
         image = media['url']
         image = re.sub("w-[0-9]*", "w-60", image)
         image = re.sub("h-[0-9]*", "h-60", image)
-        image_base = re.sub("\/tr[^\/]*", "",  image) 
+        image_base = re.sub("\/tr[^\/]*", "", image)
       except:
-        print("[ERROR] Could not index query '%s' as product because image is missing for product_id: %s" % (query, doc['product_id']))
-      doc['image'] = image 
-      doc['image_base'] = image_base 
-      doc = {k:v for k,v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'product_id']}
-      doc['query'] = query 
+        print("[ERROR] Could not index query '%s' as product because image is missing for product_id: %s" % (
+        query, doc['product_id']))
+      doc['image'] = image
+      doc['image_base'] = image_base
+      doc = {k: v for k, v in doc.items() if k in ['image', 'image_base', 'title', 'product_url', 'product_id']}
+      doc['query'] = query
 
       map_search_product[createId(query)] = docs[0]
       query_product_map_table.update_one({"_id": createId(query)}, {"$set": doc}, upsert=True)
 
+
   return map_search_product
 
 def index_search_queries(collection, searchengine):
-  map_search_product = create_map_search_product()
-  df = pd.read_csv('/nykaa/scripts/low_ctr_queries.csv', encoding="ISO-8859-1", sep=',', header=0)
-  df['names'] = df['names'].str.lower()
-  low_ctr_query_list = list(df['names'].values)
+  for store in ['nykaa', 'men']:
+    if store == 'nykaa':
+      coll_search_normalized = search_terms_normalized_daily
+    else:
+      coll_search_normalized = search_terms_normalized_daily_men
+    map_search_product = create_map_search_product(coll_search_normalized)
+    df = pd.read_csv('/nykaa/scripts/low_ctr_queries.csv', encoding="ISO-8859-1", sep=',', header=0)
+    df['names'] = df['names'].str.lower()
+    low_ctr_query_list = list(df['names'].values)
 
-  docs = []
+    docs = []
 
-  cnt_product = 0
-  cnt_search = 0
+    cnt_product = 0
+    cnt_search = 0
 
-  ctr = LoopCounter(name='Search Queries')
-  n = 1000 
-  top_queries.reverse()
-  assert top_queries
-  for queries_1k in  [top_queries[i * n:(i + 1) * n] for i in range((len(top_queries) + n - 1) // n )]: 
-    for row in search_terms_normalized_daily.find({'query' : {"$in": queries_1k}}):
-      if len(row['query'])>50:
-        continue
-      ctr += 1
-      if ctr.should_print():
-        print(ctr.summary)
+    ctr = LoopCounter(name='Search Queries')
+    n = 1000
 
-      query = row['query']
-      corrected_query = row['suggested_query']
-      is_corrected = False
-      if(query != corrected_query):
-        is_corrected = True
-      _type = 'search_query'
-      url = "/search/result/?" + str(urllib.parse.urlencode({'q': corrected_query}))
-      data = json.dumps({"type": _type, "url": url, "corrected_query" : corrected_query})
-      entity = query 
-      cnt_search += 1 
+    def find_top_queries(ctr, cnt_search, docs):
+      top_queries.reverse()
+      assert top_queries
+      for queries_1k in [top_queries[i * n:(i + 1) * n] for i in range((len(top_queries) + n - 1) // n)]:
+        for row in coll_search_normalized.find({'query': {"$in": queries_1k}}):
+          if len(row['query']) > 50:
+            continue
+          ctr += 1
+          if ctr.should_print():
+            print(ctr.summary)
 
-      if entity == "argan oil":
-        row['popularity'] = 201
+          query = row['query']
+          corrected_query = row['suggested_query']
+          is_corrected = False
+          if (query != corrected_query):
+            is_corrected = True
+          _type = 'search_query'
+          url = "/search/result/?" + str(urllib.parse.urlencode({'q': corrected_query}))
+          data = json.dumps({"type": _type, "url": url, "corrected_query": corrected_query})
+          entity = query
+          cnt_search += 1
 
-      docs.append({
-        "_id" : createId(row['_id']),
-        "id": createId(row['_id']),
-        "entity": entity,
-        "is_corrected": is_corrected,
-        "weight": row['popularity'],
-        "type": _type,
-        "data": data,
-        "is_nykaa": True,
-        "is_structured": False,
-        "weight_nykaa": row['popularity'],
-        "is_visible": False if entity in low_ctr_query_list else True,
-        "nz_query": row.get("nz_query", True),
-        "source": "search_query"
-      })
+          if entity == "argan oil":
+            row['popularity'] = 201
 
-      if len(docs) >= 100:
-        index_docs(searchengine, docs, collection)
-        docs = []
+          docs.append({
+            "_id": createId(row['_id'])+store,
+            "id": createId(row['_id']),
+            "entity": entity,
+            "is_corrected": is_corrected,
+            "weight": row['popularity'],
+            "type": _type,
+            "data": data,
+            "is_nykaa": True,
+            "weight_nykaa": row['popularity'],
+            "is_visible": False if entity in low_ctr_query_list else True,
+            "nz_query": row.get("nz_query", True),
+            "source": "search_query"
+          })
+          if len(docs) >= 100:
+            index_docs(searchengine, docs, collection)
+            docs = []
 
-  total_search_queries = search_terms_normalized_daily.count()
+    total_search_queries = coll_search_normalized.count()
 
-  print("cnt_product: %s" % cnt_product)
-  print("cnt_search: %s" % cnt_search)
+    print("cnt_product: %s" % cnt_product)
+    print("cnt_search: %s" % cnt_search)
 
-  index_docs(searchengine, docs, collection)
+    index_docs(searchengine, docs, collection)
+ #--------------------------------------find_top_queries() ends here-------------------------------
+
+    find_top_queries(ctr,cnt_search,docs)
+
+
 
 def index_brands(collection, searchengine):
   docs = []
@@ -303,7 +316,7 @@ def index_brands(collection, searchengine):
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Indexing - ' + searchengine)
   for row in results:
-    ctr += 1 
+    ctr += 1
     if ctr.should_print():
       print(ctr.summary)
 
@@ -335,10 +348,10 @@ def index_category(params):
     category_men_url = row['men_url']
     store = row.get('store', 'nykaa')
     id = type + "_" + str(row['category_id']) + "_" + variant + "_" + store
-    
+
     url = "/search/result/?" + str(urllib.parse.urlencode({'q': variant}))
     men_url = "/search/result/?" + str(urllib.parse.urlencode({'q': variant}))
-    
+
     doc = {
       "_id": createId(id),
       "entity": variant,
@@ -352,25 +365,25 @@ def index_category(params):
     }
     doc = add_store_popularity(doc, row)
     return doc
-  
+
   docs = []
   tablename = params.get('table')
   type = params.get('type')
   searchengine = params.get('searchengine')
   collection = params.get('collection')
-  
+
   mysql_conn = DiscUtils.mysqlConnection()
   query = "SELECT id as category_id, name as category_name, url, men_url, category_popularity, store_popularity, store " \
           "FROM %s order by name, category_popularity desc" % tablename
   results = DiscUtils.fetchResults(mysql_conn, query)
   name = type + 'Indexing - ' + searchengine
   ctr = LoopCounter(name=name)
-  
+
   for row in results:
     ctr += 1
     if ctr.should_print():
       print(ctr.summary)
-    
+
     variants = getVariants(row['category_id'])
     if variants:
       for variant in variants:
@@ -379,11 +392,11 @@ def index_category(params):
     else:
       categoryDoc = getCategoryDoc(row, row['category_name'], type)
       docs.append(categoryDoc)
-    
+
     if len(docs) >= 100:
       index_docs(searchengine, docs, collection)
       docs = []
-  
+
   index_docs(searchengine, docs, collection)
 
 
@@ -395,7 +408,7 @@ def index_categories(collection, searchengine):
     'type': 'category'
   }
   index_category(params)
-  
+
 
 def index_l1_categories(collection, searchengine):
   params = {
@@ -405,7 +418,7 @@ def index_l1_categories(collection, searchengine):
     'type': 'l1_category'
   }
   index_category(params)
-  
+
 
 def index_brands_categories(collection, searchengine):
 
@@ -438,7 +451,7 @@ def index_brands_categories(collection, searchengine):
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Brand Category Indexing - ' + searchengine)
   for row in results:
-    ctr += 1 
+    ctr += 1
     if ctr.should_print():
       print(ctr.summary)
     variants = getVariants(row['category_id'])
@@ -464,7 +477,7 @@ def index_category_facets(collection, searchengine):
   results = DiscUtils.fetchResults(mysql_conn, query)
   ctr = LoopCounter(name='Category Facet Indexing - ' + searchengine)
   for row in results:
-    ctr += 1 
+    ctr += 1
     if ctr.should_print():
       print(ctr.summary)
 
@@ -589,7 +602,7 @@ def index_products(collection, searchengine):
         continue
 
       required_keys = set(["product_url", 'image', 'title', 'image_base'])
-      missing_keys = required_keys - set(list(product.keys())) 
+      missing_keys = required_keys - set(list(product.keys()))
       if missing_keys:
         #print("[ERROR] Required keys missing for %s: %s" % (parent_id, missing_keys))
         cnt_missing_keys+= 1
@@ -617,9 +630,9 @@ def index_products(collection, searchengine):
       for store in STORE_LIST:
         if store in product['catalog_tag']:
           store_popularity[store] = popularity_to_store
-          
+
       product['store_popularity'] = json.dumps(store_popularity)
-      
+
       doc = {
           "_id": unique_id,
           "entity": product['title'],
@@ -712,7 +725,7 @@ def fetch_products_from_es(size):
   return results
 
 
-def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_custom_queries_arg=False, index_all=False, force_run=False, allowed_min_docs=0 ):
+def index_engine(engine, collection=None, active=None, inactive=None, swap=False, index_search_queries_arg=False, index_products_arg=False, index_categories_arg=False, index_brands_arg=False,index_brands_categories_arg=False, index_category_facets_arg=False, index_custom_queries_arg=False, index_all=False, force_run=False, allowed_min_docs=0):
     assert len([x for x in [collection, active, inactive] if x]) == 1, "Only one of the following should be true"
 
     if index_all:
@@ -725,15 +738,15 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_category_facets_arg = True
       index_custom_queries_arg = True
       index_l1_categories_arg = True
-
-    print(locals())
+    #print("--------------------------")
+    #print(locals())
     assert engine == 'elasticsearch'
     EngineUtils = EsUtils
 
     index = None
     print('Starting %s Processing' % engine)
-    if collection: 
-      index = collection 
+    if collection:
+      index = collection
     elif active:
       index = EngineUtils.get_active_inactive_indexes('autocomplete')['active_index']
     elif inactive:
@@ -752,17 +765,18 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
 
     if index:
       print("Indexing: %s" % index)
+
       def index_parallel(_types, **kwargs):
         threads = []
         for _type in _types:
-          arg = kwargs["index_" + _type + "_arg"] 
-          func = globals()["index_" + _type ] 
+          arg = kwargs["index_" + _type + "_arg"]
+          func = globals()["index_" + _type ]
           if arg:
             t = threading.Thread(target=func, args=(index, engine))
             threads.append((_type,t))
             t.start()
 
-        for _type, t in threads: 
+        for _type, t in threads:
           print("Waiting for thread: %s" % _type)
           t.join()
           print("Thread %s is complete" % _type)
@@ -774,11 +788,11 @@ def index_engine(engine, collection=None, active=None, inactive=None, swap=False
       index_parallel(['l1_categories'], **kwargs)
       index_parallel(['categories', 'brands', 'brands_categories'], **kwargs)
       index_parallel(['custom_queries'], **kwargs)
-    
+
 
       print('Done processing ',  engine)
       restart_apache_memcached()
-    
+
     if swap:
       print("Swapping Index")
       validate_min_count(force_run=force_run, allowed_min_docs=allowed_min_docs)
@@ -811,7 +825,7 @@ if __name__ == '__main__':
   collection_state.add_argument("--inactive", action='store_true')
   collection_state.add_argument("--active", action='store_true')
   collection_state.add_argument("--collection")
-  
+
   parser.add_argument("--swap", action='store_true', help="Swap the Core")
 
   argv = vars(parser.parse_args())
@@ -819,6 +833,7 @@ if __name__ == '__main__':
   GLOBAL_FAST_INDEXING = argv['fast']
 
   required_args = ['category', 'brand', 'search_query', 'product', 'brand_category', 'category_facet', 'custom_queries']
+  #print([argv[x] for x in required_args])
   index_all = not any([argv[x] for x in required_args]) and not argv['buildonly']
 
   startts = time.time()

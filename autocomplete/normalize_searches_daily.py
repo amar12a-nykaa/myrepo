@@ -43,9 +43,11 @@ POPULARITY_DECAY_FACTOR = 0.5
 
 client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
+search_terms_daily_men = client['search']['search_terms_daily_men']
 search_terms_normalized = client['search']['search_terms_normalized_daily']
+search_terms_normalized_men = client['search']['search_terms_normalized_daily_men']
 corrected_search_query = client['search']['corrected_search_query']
-search_click_data = client['search']['search_click_data']
+
 ensure_mongo_indices_now()
 
 correct_term_list = ["correct words","everyuth","kerastase","farsali","krylon","armaf","Cosrx","focallure","ennscloset",
@@ -68,6 +70,10 @@ def create_missing_indices():
   if 'query_1' not in [x['name'] for x in indices]:
     print("Creating missing index .. ")
     search_terms_daily.create_index([("query", pymongo.ASCENDING)])
+  indices_men = search_terms_daily_men.list_indexes()
+  if 'query_1' not in [x['name'] for x in indices_men]:
+    print("Creating missing index .. ")
+    search_terms_daily_men.create_index([("query", pymongo.ASCENDING)])
 
 create_missing_indices()
 
@@ -96,38 +102,9 @@ def special_chars_present(query):
     return False
 
 
-def get_low_ctr_terms():
-    DAYS = -15
-    enddate = arrow.now().datetime.replace(tzinfo=None)
-    startdate = arrow.now().replace(days=DAYS, hour=0, minute=0, second=0, microsecond=0, tzinfo=None).datetime.replace(
-        tzinfo=None)
-    bucket_results = []
-
-    # remove data older than DAYS days
-    search_click_data.remove({"date": {"$lt": startdate}})
-
-    for term in search_click_data.aggregate([
-        {"$match": {"date": {"$gte": startdate, "$lte": enddate}}},
-        {"$project": {"query": {"$toLower": "$query"},
-                      "search_count": "$search_instance",
-                      "click_count": "$click_instance"}},
-        {"$group": {"_id": "$query",
-                    "search_count": {"$sum": "$search_count"},
-                    "click_count": {"$sum": "$click_count"}}}
-    ], allowDiskUse=True):
-        term['id'] = term.pop("_id")
-        bucket_results.append(term)
-
-    df = pd.DataFrame(bucket_results)
-    df['ctr'] = df.apply(lambda x: (100*float(x['click_count']))/ x['search_count'] if x['search_count'] else 0, axis=1)
-    df = df[df.ctr < 15]
-    return df
-
-
-
 CORRECTIONS_MAP = get_corrections_map()
 
-def is_result_present(query):
+def is_result_present(query,store):
     must_not = []
     must = []
 
@@ -144,8 +121,13 @@ def is_result_present(query):
             }
         }
     )
+    if store == 'men':
+        must.append({"terms": {"catalog_tag.keyword": ['men']}})
+    else:
+        must.append({"terms": {"catalog_tag.keyword": ['nykaa']}})
     count_querydsl = {"query": {"bool": {"must": must, "must_not": must_not}}}
     es = DiscUtils.esConn()
+    #print("Count query dsl:", count_querydsl)
     response_count = es.count(body=count_querydsl, index='livecore')
     docs_count = response_count['count']
     if docs_count > 0:
@@ -208,8 +190,16 @@ def normalize(a):
         return 0
     return (a - min(a)) / (max(a) - min(a))
 
-def normalize_search_terms():
-
+def normalize_search_terms(store):
+    assert store in ['nykaa', 'men']
+    if store == 'nykaa':
+        coll_search_terms = search_terms_daily
+        coll_search_normalized = search_terms_normalized
+    else:
+        coll_search_terms = search_terms_daily_men
+        coll_search_normalized = search_terms_normalized_men
+    coll_search_normalized.remove({})
+    print("Normalizing:", store)
     date_buckets = [(0,15),(16,30),(31,45),(46,60),(61,75),(76,90),(91,105),(106,120),(121,135),(136,150),(151,165),(165,180)]
     dfs = []
     ignore_window_start = arrow.get('2020-03-24', 'YYYY-MM-DD').datetime.replace(tzinfo=None)
@@ -230,15 +220,14 @@ def normalize_search_terms():
         print("calculating for %s %s"%(startdate, enddate))
         bucket_results = []
         # TODO need to set count sum to count
-
-        for term in search_terms_daily.aggregate([
+        for term in coll_search_terms.aggregate([
             {"$match": {"date": {"$gte": startdate, "$lte": enddate},"internal_search_term_conversion_instance": {"$gte": DAILY_THRESHOLD}}},
             {"$project": {"term": {"$toLower": "$term"}, "date": "$date","count": "$internal_search_term_conversion_instance"}},
             {"$group": {"_id": "$term", "count": {"$sum": "$count"}}},
-            {"$sort": {"count": -1}},
-        ], allowDiskUse=True):
+            {"$sort": {"count": -1}},], allowDiskUse=True):
             term['id'] = term.pop("_id")
             bucket_results.append(term)
+        
 
         if not bucket_results:
             print("Skipping popularity computation")
@@ -256,12 +245,6 @@ def normalize_search_terms():
         for i in range(1, len(dfs)):
             final_df = pd.DataFrame.add(final_df, dfs[i], fill_value=0)
         final_df.popularity = final_df.popularity.fillna(0)
-        final_df = final_df.reset_index()
-        low_ctr_terms = get_low_ctr_terms()
-        final_df = pd.merge(final_df, low_ctr_terms, how='left', on='id')
-        final_df.ctr = final_df.ctr.fillna(100)
-        final_df = final_df[final_df.ctr == 100]
-        final_df = final_df[['id', 'popularity']]
         # final_df['popularity_recent'] = 100 * normalize(final_df['popularity'])
         # final_df.drop(['popularity'], axis=1, inplace=True)
         #print(final_df)
@@ -297,7 +280,8 @@ def normalize_search_terms():
     corrections = []
     #brand_index = normalize_array("select brand as term from nykaa.brands where brand like 'l%'")
     #category_index = normalize_array("select name as term from nykaa.l3_categories")
-    search_terms_normalized.remove({})
+
+    coll_search_normalized.remove({})
     cats_stemmed = set([ps.stem(x['name']) for x in PasUtils.mysql_read("select name from l3_categories ")])
     brands_stemmed = set([ps.stem(x['brand']) for x in PasUtils.mysql_read("select brand from brands")])
     cats_brands_stemmed = cats_stemmed | brands_stemmed
@@ -321,24 +305,38 @@ def normalize_search_terms():
 
         try:
             suggested_query = getQuerySuggestion(query_id, query, algo)
-            nz_query = is_result_present(suggested_query)
-            requests.append(UpdateOne({"_id":  query_id},
-                                      {"$set": {"query": row['id'].lower(), 'popularity': row['popularity'],
+            nz_query = is_result_present(suggested_query, store)
+            #print("suggested_query: ",suggested_query)
+            #print("nzquery:", nz_query)
+            if store == 'men' and nz_query is False:
+                pass
+            else:
+                requests.append(UpdateOne({"_id":  query_id}, {"$set": {"query": row['id'].lower(), 'popularity': row['popularity'],
                                         "suggested_query": suggested_query.lower(), "nz_query": nz_query}}, upsert=True))
+
             corrections.append(UpdateOne({"_id":  query_id},
                                          {"$set": {"query": row['id'].lower(),"suggested_query": suggested_query.lower(), "algo": algo}},upsert=True))
         except:
             print(traceback.format_exc())
             print(row)
+        #print("--------------Writing in MongoDb in batch of 10,000-------------     "+str(startdate)+"------"+str(enddate))
         if i % 10000 == 0:
-            search_terms_normalized.bulk_write(requests)
+            if requests:
+                print("---------------Writing in Normalized_search of: ------------------",store)
+                coll_search_normalized.bulk_write(requests)
+                print("-------------Writing ends here----------------------------------",store)
+            else:
+                print("Requests is empty !! Nothing to write in collection_search_normalized of:",store)
             corrected_search_query.bulk_write(corrections)
             requests = []
             corrections = []
     if requests:
-        search_terms_normalized.bulk_write(requests)
+        coll_search_normalized.bulk_write(requests)
         corrected_search_query.bulk_write(corrections)
 
 
+
+
 if __name__ == "__main__":
-  normalize_search_terms()
+    for store in ['nykaa']:
+        normalize_search_terms(store)

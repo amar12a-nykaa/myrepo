@@ -13,7 +13,7 @@ import subprocess
 import sys
 import time 
 import traceback
-#from loopcounter import LoopCounter
+from loopcounter import LoopCounter
 
 from IPython import embed
 from collections import OrderedDict
@@ -47,6 +47,7 @@ DAILY_COUNT_THRESHOLD = 2
 
 client = MongoUtils.getClient()
 search_terms_daily = client['search']['search_terms_daily']
+search_terms_daily_men = client['search']['search_terms_daily_men']
 search_terms_formatted = client['search']['search_terms_daily_formatted']
 ensure_mongo_indices_now()
 
@@ -59,7 +60,7 @@ def format_term(term):
 
 def normalize_array(query):
     index = set()
-    for row in PasUtils.mysql_read(query): 
+    for row in PasUtils.mysql_read(query):
         row = row['term']
         for term in row.split(" "):
             term = format_term(term)
@@ -73,15 +74,18 @@ def myconverter(o):
     if isinstance(o, datetime.datetime):
         return o.__str__()
 
-
 def create_missing_indices():
   indices = search_terms_daily.list_indexes()
   if 'date_1_platform_1_term_1' not in [x['name'] for x in indices]:
     search_terms_daily.create_index([("date", pymongo.ASCENDING), ("platform", pymongo.ASCENDING), ("term", pymongo.ASCENDING)])
 
+  indices_men = search_terms_daily_men.list_indexes()
+  if 'date_1_platform_1_term_1' not in [x['name'] for x in indices_men]:
+    search_terms_daily_men.create_index([("date", pymongo.ASCENDING), ("platform", pymongo.ASCENDING), ("term", pymongo.ASCENDING)])
+
 create_missing_indices()
 
-def read_file_by_dates(startdate, enddate, platform, dryrun=False, limit=0, product_id=None, debug=False):
+def read_file_by_dates(startdate, enddate, platform, store, dryrun=False, limit=0, product_id=None, debug=False):
 
   startdate = datetime.datetime.strptime(startdate,  "%Y-%m-%d") if isinstance(startdate, str) else startdate
   enddate = datetime.datetime.strptime(enddate,  "%Y-%m-%d") if isinstance(enddate, str) else enddate
@@ -97,31 +101,46 @@ def read_file_by_dates(startdate, enddate, platform, dryrun=False, limit=0, prod
 
   for single_date in daterange(startdate, enddate):
     print(single_date.strftime("%Y-%m-%d"))
-    read_file_by_date(single_date, platform, dryrun=dryrun, limit=limit, product_id=product_id, debug=debug)
+    read_file_by_date(single_date, platform, store, dryrun=dryrun, limit=limit, product_id=product_id, debug=debug)
 
-def read_file_by_date(date, platform, dryrun=False, limit=0, product_id=None, debug=False):
+def read_file_by_date(date, platform, store, dryrun=False, limit=0, product_id=None, debug=False):
   date = datetime.datetime.strptime(date,  "%Y-%m-%d") if isinstance(date, str) else date
   assert isinstance(date, datetime.datetime) or  isinstance(date, datetime.date), "Bad date format"
+  if store == 'nykaa':
+    if platform == 'web':
+        filename = '/nykaa/adminftp/search_terms_website_%s.csv' %  date.strftime("%Y%m%d")
+        if not os.path.exists(filename):
+            filename = '/nykaa/adminftp/search_terms_website_%s.zip' %  date.strftime("%Y%m%d")
 
-  if platform == 'web':
-    filename = '/nykaa/adminftp/search_terms_website_%s.csv' %  date.strftime("%Y%m%d")
-    if not os.path.exists(filename): 
-      filename = '/nykaa/adminftp/search_terms_website_%s.zip' %  date.strftime("%Y%m%d") 
+    elif platform == 'app':
+        filename = '/nykaa/adminftp/search_terms_app_%s.csv' %  date.strftime("%Y%m%d")
+        if not os.path.exists(filename):
+            filename = '/nykaa/adminftp/search_terms_app_%s.zip' %  date.strftime("%Y%m%d")
+  else:
+      if platform == 'web':
+          filename = '/nykaa/adminftp/search_terms_website_%s_%s.csv' % (store, date.strftime("%Y%m%d"))
+          if not os.path.exists(filename):
+              filename = '/nykaa/adminftp/search_terms_website_%s_%s.zip' % (store, date.strftime("%Y%m%d"))
 
-  elif platform == 'app':
-    filename = '/nykaa/adminftp/search_terms_app_%s.csv' %  date.strftime("%Y%m%d")
-    if not os.path.exists(filename): 
-      filename = '/nykaa/adminftp/search_terms_app_%s.zip' %  date.strftime("%Y%m%d")
+      elif platform == 'app':
+          filename = '/nykaa/adminftp/search_terms_app_%s_%s.csv' % (store, date.strftime("%Y%m%d"))
+          if not os.path.exists(filename):
+              filename = '/nykaa/adminftp/search_terms_app_%s_%s.zip' % (store, date.strftime("%Y%m%d"))
 
+  #filename='/home/amarjeet.yadav/Downloads/search_terms_app_men_20200819.csv'
   print(filename)
-  return read_file(filename, platform, dryrun, limit=limit, product_id=product_id, debug=debug)
+  return read_file(filename, platform, store, dryrun, limit=limit, product_id=product_id, debug=debug)
 
-def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False):
+def read_file(filepath, platform, store, dryrun, limit=0, product_id=None, debug=False):
   product_id_arg = product_id
   assert platform in ['app', 'web']
+  assert store in ['nykaa', 'men']
 
   client = MongoUtils.getClient()
-  search_terms_daily = client['search']['search_terms_daily']
+  if store == 'nykaa':
+    search_terms_daily = client['search']['search_terms_daily']
+  else :
+    search_terms_daily_men = client['search']['search_terms_daily_men']
 
 
   def unzip_file(path_to_zip_file):
@@ -140,7 +159,6 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
   extention = os.path.splitext(filepath)[1]
   if extention == '.zip':
     csvfilepath = os.path.splitext(filepath)[0] + '.csv'
-    os.system("rm %s")
     try:
       os.remove(csvfilepath)
     except OSError:
@@ -162,6 +180,7 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
     for r in csvfile:
       r=r.strip().split(",")
       row = [r[0] , ",".join(r[1:-2]) ]  + r[-2:]
+      #print(row)
       if first_row:
         first_row = False
         headers = row
@@ -284,7 +303,11 @@ def read_file(filepath, platform, dryrun, limit=0, product_id=None, debug=False)
 
       if not dryrun:
         try:
-          ret = search_terms_daily.update_one(filt, {"$set": update}, upsert=True) 
+          if store == 'nykaa':
+            ret = search_terms_daily.update_one(filt, {"$set": update}, upsert=True)
+          else:
+            ret = search_terms_daily_men.update_one(filt, {"$set": update}, upsert=True)
+
         except:
           print("filt: %s" % filt)
           raise
@@ -294,8 +317,9 @@ if __name__ == '__main__':
 
   parser = argparse.ArgumentParser()
   parser.add_argument("--platform", '-p', required=True, help="app or web")
+  parser.add_argument("--store", '-s', required=True, help="nykaa or men")
   parser.add_argument("--filepath", '-f')
-  parser.add_argument("--dryrun",  action='store_true')
+  parser.add_argument("--dryrun", action='store_true')
   parser.add_argument("--debug",  action='store_true')
   parser.add_argument("--limit", type=int, default=0)
   parser.add_argument("--id", default=0)
@@ -306,14 +330,17 @@ if __name__ == '__main__':
     read_file(filepath=argv['filepath'], platform=argv['platform'], dryrun=argv['dryrun'], limit=argv['limit'], product_id=argv['id'], debug=argv['debug'])
   else:
     print(argv['startdate'])
-    read_file_by_dates(startdate=argv['startdate'], enddate=argv['enddate'], platform=argv['platform'], dryrun=argv['dryrun'], limit=argv['limit'], product_id=argv['id'], debug=argv['debug'])
+    read_file_by_dates(startdate=argv['startdate'], enddate=argv['enddate'], platform=argv['platform'],store=argv['store'], dryrun=argv['dryrun'], limit=argv['limit'], product_id=argv['id'], debug=argv['debug'])
 
   exit()
   offset = 0
   limit = 1000000
 
   while True:
-      queries = search_terms_daily.find()[offset:(offset+limit)]
+      if(argv['store'] == 'nykaa'):
+        queries = search_terms_daily.find()[offset:(offset+limit)]
+      else:
+        queries = search_terms_daily_men.find()[offset:(offset+limit)]
       if queries:
           break
       formatted_queries = []
